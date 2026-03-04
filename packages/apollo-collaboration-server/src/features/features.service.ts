@@ -1,5 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import type {
+  FeatureRepository,
+  RefSeqRepository,
+} from '@apollo-annotation/common'
+import {
+  MikroOrmFeatureRepository,
+  MikroOrmRefSeqRepository,
+} from '@apollo-annotation/entities'
 import {
   Feature,
   FeatureDocument,
@@ -7,7 +17,14 @@ import {
   RefSeqDocument,
 } from '@apollo-annotation/schemas'
 import { GetFeaturesOperation } from '@apollo-annotation/shared'
-import { Injectable, Logger, NotFoundException } from '@nestjs/common'
+import { EntityManager } from '@mikro-orm/core'
+import {
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  Optional,
+} from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { Model } from 'mongoose'
 
@@ -26,15 +43,36 @@ export class FeaturesService {
     private readonly featureModel: Model<FeatureDocument>,
     @InjectModel(RefSeq.name)
     private readonly refSeqModel: Model<RefSeqDocument>,
+    @Optional() @Inject(EntityManager) private readonly em?: EntityManager,
   ) {}
 
   private readonly logger = new Logger(FeaturesService.name)
+
+  private get useV2Backend() {
+    const dbBackend = process.env.DB_BACKEND
+    return dbBackend && dbBackend !== 'mongodb' && this.em !== undefined
+  }
+
+  private getRepositories() {
+    if (!this.em) {
+      throw new Error('EntityManager not available')
+    }
+    const em = this.em.fork()
+    return {
+      featureRepository: new MikroOrmFeatureRepository(em) as FeatureRepository,
+      refSeqRepository: new MikroOrmRefSeqRepository(em) as RefSeqRepository,
+    }
+  }
 
   findAll() {
     return this.featureModel.find().exec()
   }
 
   async getFeatureCount(featureCountRequest: FeatureCountRequest) {
+    if (this.useV2Backend) {
+      return this.getFeatureCountV2(featureCountRequest)
+    }
+
     let count = 0
     const { assemblyId, end, refSeqId, start } = featureCountRequest
     const filter: Record<
@@ -62,7 +100,6 @@ export class FeaturesService {
         count += await this.featureModel.countDocuments(filter)
       }
     } else {
-      // returns count of all documents or in the range (start, end)
       count = await this.featureModel.countDocuments(filter)
     }
 
@@ -70,14 +107,49 @@ export class FeaturesService {
     return count
   }
 
-  /**
-   * Get feature by featureId. When retrieving features by id, the features and any of its children are returned, but not any of its parent or sibling features.
-   * @param featureId - featureId
-   * @param topLevel - If true, return the top level feature and its children. If false, return the requested feature and its children.
-   * @returns Return the feature(s) if search was successful. Otherwise throw exception
-   */
+  private async getFeatureCountV2(featureCountRequest: FeatureCountRequest) {
+    const { assemblyId, end, refSeqId, start } = featureCountRequest
+    const { featureRepository, refSeqRepository } = this.getRepositories()
+
+    let count = 0
+    if (refSeqId) {
+      const features = await featureRepository.findByRange(
+        refSeqId,
+        start ?? 0,
+        end ?? Number.MAX_SAFE_INTEGER,
+      )
+      count = features.length
+    } else if (assemblyId) {
+      const refSeqs = await refSeqRepository.findByAssembly(assemblyId)
+      for (const refSeq of refSeqs) {
+        const features = await featureRepository.findByRange(
+          refSeq._id,
+          start ?? 0,
+          end ?? Number.MAX_SAFE_INTEGER,
+        )
+        count += features.length
+      }
+    } else {
+      const refSeqs = await refSeqRepository.findAll()
+      for (const refSeq of refSeqs) {
+        const features = await featureRepository.findByRange(
+          refSeq._id,
+          0,
+          Number.MAX_SAFE_INTEGER,
+        )
+        count += features.length
+      }
+    }
+
+    this.logger.debug(`Number of features is ${count}`)
+    return count
+  }
+
   async findById(featureId: string, topLevel?: boolean) {
-    // Search correct feature
+    if (this.useV2Backend) {
+      return this.findByIdV2(featureId, topLevel)
+    }
+
     const topLevelFeature = await this.featureModel
       .findOne({ allIds: featureId })
       .exec()
@@ -88,7 +160,6 @@ export class FeaturesService {
       throw new NotFoundException(errMsg)
     }
 
-    // Now we need to find correct top level feature or sub-feature inside the feature
     const foundFeature = this.getFeatureFromId(
       topLevelFeature,
       featureId,
@@ -103,12 +174,17 @@ export class FeaturesService {
     return foundFeature
   }
 
-  /**
-   * Get single feature by featureId
-   * @param featureOrDocument -
-   * @param featureId -
-   * @returns
-   */
+  private async findByIdV2(featureId: string, _topLevel?: boolean) {
+    const { featureRepository } = this.getRepositories()
+    const feature = await featureRepository.findById(featureId)
+    if (!feature) {
+      const errMsg = `ERROR: The following featureId was not found in database ='${featureId}'`
+      this.logger.error(errMsg)
+      throw new NotFoundException(errMsg)
+    }
+    return feature
+  }
+
   getFeatureFromId(
     feature: Feature,
     featureId: string,
@@ -126,8 +202,6 @@ export class FeaturesService {
       }
       return feature
     }
-    // Check if there is also childFeatures in parent feature and it's not empty
-    // Let's get featureId from recursive method
     this.logger.debug(
       'FeatureId was not found on top level so lets make recursive call...',
     )
@@ -172,6 +246,10 @@ export class FeaturesService {
   }
 
   async searchFeatures(searchDto: { term: string; assemblies: string }) {
+    if (this.useV2Backend) {
+      return this.searchFeaturesV2(searchDto)
+    }
+
     const { assemblies, term } = searchDto
     const assemblyIds = assemblies.split(',')
     const refSeqs = await this.refSeqModel
@@ -180,5 +258,26 @@ export class FeaturesService {
     return this.featureModel
       .find({ $text: { $search: `"${term}"` }, refSeq: refSeqs })
       .exec()
+  }
+
+  private async searchFeaturesV2(searchDto: {
+    term: string
+    assemblies: string
+  }) {
+    const { assemblies, term } = searchDto
+    const assemblyIds = assemblies.split(',')
+    const { featureRepository, refSeqRepository } = this.getRepositories()
+
+    const results = []
+    for (const assemblyId of assemblyIds) {
+      const refSeqs = await refSeqRepository.findByAssembly(assemblyId)
+      for (const refSeq of refSeqs) {
+        const features = await featureRepository.searchText(refSeq._id, term)
+        for (const feature of features) {
+          results.push(feature)
+        }
+      }
+    }
+    return results
   }
 }

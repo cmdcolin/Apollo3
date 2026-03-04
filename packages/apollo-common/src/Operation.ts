@@ -94,8 +94,15 @@ export interface ServerDataStoreV2 {
   jbrowseConfigRepository: JBrowseConfigRepository
   unitOfWork: UnitOfWork
   filesService: {
-    getFileStream(file: { _id: string }): ReadableStream<Uint8Array>
-    getFileHandle(file: { _id: string }): GenericFilehandle
+    getFileStream(file: {
+      _id: string
+      checksum: string
+    }): ReadableStream<Uint8Array>
+    getFileHandle(file: {
+      _id: string
+      checksum: string
+      type: string
+    }): GenericFilehandle
     parseGFF3(
       stream: ReadableStream<Uint8Array>,
       parseOptions?: { bufferSize?: number },

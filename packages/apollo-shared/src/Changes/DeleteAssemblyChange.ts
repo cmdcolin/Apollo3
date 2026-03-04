@@ -8,6 +8,7 @@ import {
   type LocalGFF3DataStore,
   type SerializedAssemblySpecificChange,
   type ServerDataStore,
+  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { getSession } from '@jbrowse/core/util'
 
@@ -69,6 +70,23 @@ export class DeleteAssemblyChange extends AssemblySpecificChange {
     await assemblyModel.findByIdAndDelete(assembly).exec()
 
     logger.debug?.(`Assembly "${assembly}" deleted from database.`)
+  }
+
+  async executeOnServerV2(backend: ServerDataStoreV2) {
+    const { assembly, logger } = this
+    const assemblyRow = await backend.assemblyRepository.findById(assembly)
+    if (!assemblyRow) {
+      const errMsg = `Assembly with id "${assembly}" not found`
+      logger.error(errMsg)
+      throw new Error(errMsg)
+    }
+    const refSeqs = await backend.refSeqRepository.findByAssembly(assembly)
+    const refSeqIds = refSeqs.map((r) => r._id)
+    await backend.refSeqChunkRepository.deleteByRefSeqs(refSeqIds)
+    await backend.featureRepository.deleteByRefSeqs(refSeqIds)
+    await backend.refSeqRepository.deleteByAssembly(assembly)
+    await backend.assemblyRepository.deleteById(assembly)
+    logger.debug?.(`Assembly "${assembly}" deleted via V2.`)
   }
 
   async executeOnLocalGFF3(_backend: LocalGFF3DataStore) {

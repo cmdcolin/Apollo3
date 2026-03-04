@@ -7,9 +7,11 @@ import {
   type LocalGFF3DataStore,
   type SerializedFeatureChange,
   type ServerDataStore,
+  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { type AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
 
+import { flattenFeatureSnapshot } from './AddFeatureChange'
 import { MergeExonsChange } from './MergeExonsChange'
 
 interface SerializedUndoMergeExonsChangeBase extends SerializedFeatureChange {
@@ -93,6 +95,35 @@ export class UndoMergeExonsChange extends FeatureChange {
         topLevelFeature.allIds.push(exon._id, ...childIds)
       }
       await topLevelFeature.save()
+    }
+  }
+
+  async executeOnServerV2(backend: ServerDataStoreV2) {
+    const { featureRepository } = backend
+    const { changes } = this
+    for (const change of changes) {
+      const { exonsToRestore, parentFeatureId } = change
+      if (exonsToRestore.length !== 2) {
+        throw new Error(
+          `Expected exactly two exons to restore. Got: ${exonsToRestore.length}`,
+        )
+      }
+      const parentRow = await featureRepository.findById(parentFeatureId)
+      if (!parentRow) {
+        throw new Error(`Could not find feature with ID "${parentFeatureId}"`)
+      }
+      // Delete the merged exon (first exon's ID) and its descendants
+      await featureRepository.deleteDescendants(exonsToRestore[0]._id)
+      await featureRepository.deleteById(exonsToRestore[0]._id)
+      // Re-create both original exons
+      for (const exon of exonsToRestore) {
+        const rows = flattenFeatureSnapshot(
+          exon,
+          parentRow.refSeq,
+          parentFeatureId,
+        )
+        await featureRepository.createMany(rows)
+      }
     }
   }
 

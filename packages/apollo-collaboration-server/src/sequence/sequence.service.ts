@@ -1,5 +1,21 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-base-to-string */
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
+import type {
+  AssemblyRepository,
+  FileRepository,
+  RefSeqChunkRepository,
+  RefSeqRepository,
+} from '@apollo-annotation/common'
+import {
+  MikroOrmAssemblyRepository,
+  MikroOrmFileRepository,
+  MikroOrmRefSeqChunkRepository,
+  MikroOrmRefSeqRepository,
+} from '@apollo-annotation/entities'
 import {
   File,
   FileDocument,
@@ -9,7 +25,8 @@ import {
   RefSeqDocument,
 } from '@apollo-annotation/schemas'
 import { BgzipIndexedFasta, IndexedFasta } from '@gmod/indexedfasta'
-import { Injectable, Logger } from '@nestjs/common'
+import { EntityManager } from '@mikro-orm/core'
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { RemoteFile } from 'generic-filehandle'
 import { Model } from 'mongoose'
@@ -30,11 +47,38 @@ export class SequenceService {
     @InjectModel(RefSeq.name)
     private readonly refSeqModel: Model<RefSeqDocument>,
     private readonly assembliesService: AssembliesService,
+    @Optional() @Inject(EntityManager) private readonly em?: EntityManager,
   ) {}
 
   private readonly logger = new Logger(SequenceService.name)
 
+  private get useV2Backend() {
+    const dbBackend = process.env.DB_BACKEND
+    return dbBackend && dbBackend !== 'mongodb' && this.em !== undefined
+  }
+
+  private getRepositories() {
+    if (!this.em) {
+      throw new Error('EntityManager not available')
+    }
+    const em = this.em.fork()
+    return {
+      refSeqRepository: new MikroOrmRefSeqRepository(em) as RefSeqRepository,
+      assemblyRepository: new MikroOrmAssemblyRepository(
+        em,
+      ) as AssemblyRepository,
+      fileRepository: new MikroOrmFileRepository(em) as FileRepository,
+      refSeqChunkRepository: new MikroOrmRefSeqChunkRepository(
+        em,
+      ) as RefSeqChunkRepository,
+    }
+  }
+
   async getSequence({ end, refSeq: refSeqId, start }: GetSequenceDto) {
+    if (this.useV2Backend) {
+      return this.getSequenceV2({ end, refSeq: refSeqId, start })
+    }
+
     const refSeq = await this.refSeqModel.findById(refSeqId)
     if (!refSeq) {
       throw new Error(`RefSeq "${refSeqId}" not found`)
@@ -106,6 +150,101 @@ export class SequenceService {
       })
       .sort({ n: 1 })) {
       const { n, sequence } = refSeqChunk
+      if (n === startChunk || n === endChunk) {
+        seq.push(
+          sequence.slice(
+            n === startChunk ? start - n * chunkSize : undefined,
+            n === endChunk ? end - n * chunkSize : undefined,
+          ),
+        )
+      } else {
+        seq.push(sequence)
+      }
+    }
+    return seq.join('')
+  }
+
+  private async getSequenceV2({
+    end,
+    refSeq: refSeqId,
+    start,
+  }: GetSequenceDto) {
+    const {
+      assemblyRepository,
+      fileRepository,
+      refSeqChunkRepository,
+      refSeqRepository,
+    } = this.getRepositories()
+
+    const refSeq = await refSeqRepository.findById(refSeqId)
+    if (!refSeq) {
+      throw new Error(`RefSeq "${refSeqId}" not found`)
+    }
+
+    const { assembly, chunkSize, name } = refSeq
+    const assemblyRow = await assemblyRepository.findById(assembly)
+
+    if (assemblyRow?.externalLocation) {
+      const { fa, fai, gzi } = assemblyRow.externalLocation
+
+      const sequenceAdapter = gzi
+        ? new BgzipIndexedFasta({
+            fasta: new RemoteFile(fa, { fetch }),
+            fai: new RemoteFile(fai, { fetch }),
+            gzi: new RemoteFile(gzi, { fetch }),
+          })
+        : new IndexedFasta({
+            fasta: new RemoteFile(fa, { fetch }),
+            fai: new RemoteFile(fai, { fetch }),
+          })
+      const sequence = await sequenceAdapter.getSequence(name, start, end)
+      if (sequence === undefined) {
+        throw new Error('Sequence not found')
+      }
+      return sequence
+    }
+
+    if (assemblyRow?.fileIds?.fai) {
+      const { fa: faId, fai: faiId, gzi: gziId } = assemblyRow.fileIds
+      const faRow = await fileRepository.findById(faId)
+      if (!faRow) {
+        throw new Error(`No checksum for file document ${faId}`)
+      }
+
+      const faiRow = await fileRepository.findById(faiId)
+      if (!faiRow) {
+        throw new Error(`File document not found for ${faiId}`)
+      }
+
+      const gziRow = await fileRepository.findById(gziId)
+      if (!gziRow) {
+        throw new Error(`File document not found for ${gziId}`)
+      }
+
+      const fasta = this.filesService.getFileHandle(faRow)
+      const fai = this.filesService.getFileHandle(faiRow)
+      const gzi = gziId ? this.filesService.getFileHandle(gziRow) : undefined
+      const sequenceAdapter = gziId
+        ? new BgzipIndexedFasta({ fasta, fai, gzi })
+        : new IndexedFasta({ fasta, fai })
+      const sequence = await sequenceAdapter.getSequence(name, start, end)
+      await Promise.all([fasta.close(), fai.close(), gzi?.close()])
+      if (sequence === undefined) {
+        throw new Error('Sequence not found')
+      }
+      return sequence
+    }
+
+    const startChunk = Math.floor(start / chunkSize)
+    const endChunk = Math.floor(end / chunkSize)
+    const chunks = await refSeqChunkRepository.findByRefSeqAndRange(
+      refSeqId,
+      startChunk,
+      endChunk,
+    )
+    const seq: string[] = []
+    for (const chunk of chunks) {
+      const { n, sequence } = chunk
       if (n === startChunk || n === endChunk) {
         seq.push(
           sequence.slice(

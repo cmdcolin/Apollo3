@@ -69,7 +69,7 @@ export class FilesService {
   }
 
   getFileStream(
-    file: FileDocument,
+    file: { checksum: string },
     compressed = false,
   ): ReadableStream<Uint8Array> {
     const fileUploadFolder = this.configService.get('FILE_UPLOAD_FOLDER', {
@@ -85,7 +85,7 @@ export class FilesService {
     return fileStream.pipeThrough(gunzip) as ReadableStream<Uint8Array>
   }
 
-  getFileHandle(file: FileDocument): GenericFilehandle {
+  getFileHandle(file: { checksum: string; type: string }): GenericFilehandle {
     const fileUploadFolder = this.configService.get('FILE_UPLOAD_FOLDER', {
       infer: true,
     })

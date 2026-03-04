@@ -28,6 +28,15 @@ export class MikroOrmRefSeqChunkRepository implements RefSeqChunkRepository {
     return entities.map(toRow)
   }
 
+  async findByRefSeqAndRange(refSeqId: string, startN: number, endN: number) {
+    const entities = await this.em.find(
+      RefSeqChunkEntity,
+      { refSeq: refSeqId, n: { $gte: startN, $lte: endN } },
+      { orderBy: { n: 'asc' } },
+    )
+    return entities.map(toRow)
+  }
+
   async create(row: RefSeqChunkRow) {
     const entity = this.em.create(RefSeqChunkEntity, {
       _id: row._id,
@@ -39,5 +48,28 @@ export class MikroOrmRefSeqChunkRepository implements RefSeqChunkRepository {
     })
     await this.em.persistAndFlush(entity)
     return toRow(entity)
+  }
+
+  async deleteByRefSeqs(refSeqIds: string[]) {
+    return this.em.nativeDelete(RefSeqChunkEntity, {
+      refSeq: { $in: refSeqIds },
+    })
+  }
+
+  async createMany(rows: RefSeqChunkRow[]) {
+    const entities: RefSeqChunkEntity[] = []
+    for (const row of rows) {
+      const entity = this.em.create(RefSeqChunkEntity, {
+        _id: row._id,
+        refSeq: row.refSeq,
+        n: row.n,
+        sequence: row.sequence,
+        status: row.status,
+        user: row.user,
+      })
+      entities.push(entity)
+    }
+    await this.em.persistAndFlush(entities)
+    return entities.map(toRow)
   }
 }

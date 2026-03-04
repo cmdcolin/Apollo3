@@ -22,4 +22,7 @@ export interface RefSeqRepository {
     name: string,
     assemblyId: string,
   ): Promise<RefSeqRow | undefined>
+  findAll(): Promise<RefSeqRow[]>
+  deleteByAssembly(assemblyId: string): Promise<number>
+  createMany(rows: RefSeqRow[]): Promise<RefSeqRow[]>
 }

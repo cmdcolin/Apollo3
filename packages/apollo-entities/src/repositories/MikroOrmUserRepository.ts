@@ -51,7 +51,7 @@ export class MikroOrmUserRepository implements UserRepository {
     if (!entity) {
       return undefined
     }
-    this.em.assign(entity, data)
+    this.em.assign(entity, data as Record<string, unknown>)
     await this.em.flush()
     return toRow(entity)
   }

@@ -65,6 +65,35 @@ export class MikroOrmRefSeqRepository implements RefSeqRepository {
     return undefined
   }
 
+  async deleteByAssembly(assemblyId: string) {
+    return this.em.nativeDelete(RefSeqEntity, { assembly: assemblyId })
+  }
+
+  async createMany(rows: RefSeqRow[]) {
+    const entities: RefSeqEntity[] = []
+    for (const row of rows) {
+      const entity = this.em.create(RefSeqEntity, {
+        _id: row._id,
+        assembly: row.assembly,
+        name: row.name,
+        description: row.description,
+        aliases: row.aliases,
+        length: row.length,
+        chunkSize: row.chunkSize,
+        status: row.status,
+        user: row.user,
+      })
+      entities.push(entity)
+    }
+    await this.em.persistAndFlush(entities)
+    return entities.map(toRow)
+  }
+
+  async findAll() {
+    const entities = await this.em.find(RefSeqEntity, {})
+    return entities.map(toRow)
+  }
+
   async updateById(id: string, data: Partial<Omit<RefSeqRow, '_id'>>) {
     const entity = await this.em.findOne(RefSeqEntity, { _id: id })
     if (!entity) {

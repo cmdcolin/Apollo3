@@ -8,9 +8,11 @@ import {
   type LocalGFF3DataStore,
   type SerializedFeatureChange,
   type ServerDataStore,
+  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { type AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
 
+import { flattenFeatureSnapshot } from './AddFeatureChange'
 import { findAndDeleteChildFeature } from './DeleteFeatureChange'
 import { UndoSplitExonChange } from './UndoSplitExonChange'
 
@@ -147,6 +149,47 @@ export class SplitExonChange extends FeatureChange {
       )
       topLevelFeature.allIds.push(leftExon._id, rightExon._id)
       await topLevelFeature.save()
+    }
+  }
+
+  async executeOnServerV2(backend: ServerDataStoreV2) {
+    const { featureRepository } = backend
+    const { changes, logger } = this
+    for (const change of changes) {
+      const {
+        exonToBeSplit,
+        parentFeatureId,
+        upstreamCut,
+        downstreamCut,
+        leftExonId,
+        rightExonId,
+      } = change
+      const parentRow = await featureRepository.findById(parentFeatureId)
+      if (!parentRow) {
+        const errMsg = `Feature not found: ${parentFeatureId}`
+        logger.error(errMsg)
+        throw new Error(errMsg)
+      }
+      const [leftExon, rightExon] = this.makeSplitExons(
+        exonToBeSplit,
+        upstreamCut,
+        downstreamCut,
+        leftExonId,
+        rightExonId,
+      )
+      const leftRows = flattenFeatureSnapshot(
+        leftExon,
+        parentRow.refSeq,
+        parentFeatureId,
+      )
+      const rightRows = flattenFeatureSnapshot(
+        rightExon,
+        parentRow.refSeq,
+        parentFeatureId,
+      )
+      await featureRepository.createMany([...leftRows, ...rightRows])
+      await featureRepository.deleteDescendants(exonToBeSplit._id)
+      await featureRepository.deleteById(exonToBeSplit._id)
     }
   }
 

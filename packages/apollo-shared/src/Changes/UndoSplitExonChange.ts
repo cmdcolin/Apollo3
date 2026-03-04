@@ -7,9 +7,11 @@ import {
   type LocalGFF3DataStore,
   type SerializedFeatureChange,
   type ServerDataStore,
+  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { type AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
 
+import { flattenFeatureSnapshot } from './AddFeatureChange'
 import { findAndDeleteChildFeature } from './DeleteFeatureChange'
 import { SplitExonChange } from './SplitExonChange'
 
@@ -114,6 +116,28 @@ export class UndoSplitExonChange extends FeatureChange {
         findAndDeleteChildFeature(topLevelFeature, id, this),
       )
       await topLevelFeature.save()
+    }
+  }
+
+  async executeOnServerV2(backend: ServerDataStoreV2) {
+    const { featureRepository } = backend
+    const { changes } = this
+    for (const change of changes) {
+      const { exonToRestore, parentFeatureId, idsToDelete } = change
+      const parentRow = await featureRepository.findById(parentFeatureId)
+      if (!parentRow) {
+        throw new Error(`Could not find feature with ID "${parentFeatureId}"`)
+      }
+      const rows = flattenFeatureSnapshot(
+        exonToRestore,
+        parentRow.refSeq,
+        parentFeatureId,
+      )
+      await featureRepository.createMany(rows)
+      for (const id of idsToDelete) {
+        await featureRepository.deleteDescendants(id)
+        await featureRepository.deleteById(id)
+      }
     }
   }
 

@@ -7,9 +7,11 @@ import {
   type LocalGFF3DataStore,
   type SerializedFeatureChange,
   type ServerDataStore,
+  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { type AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
 
+import { flattenFeatureSnapshot } from './AddFeatureChange'
 import { MergeTranscriptsChange } from './MergeTranscriptsChange'
 
 interface SerializedUndoMergeTranscriptsChangeBase
@@ -97,6 +99,35 @@ export class UndoMergeTranscriptsChange extends FeatureChange {
         topLevelFeature.allIds.push(transcript._id, ...childIds)
       }
       await topLevelFeature.save()
+    }
+  }
+
+  async executeOnServerV2(backend: ServerDataStoreV2) {
+    const { featureRepository } = backend
+    const { changes } = this
+    for (const change of changes) {
+      const { transcriptsToRestore, parentFeatureId } = change
+      if (transcriptsToRestore.length !== 2) {
+        throw new Error(
+          `Expected exactly two transcripts to restore. Got: ${transcriptsToRestore.length}`,
+        )
+      }
+      const parentRow = await featureRepository.findById(parentFeatureId)
+      if (!parentRow) {
+        throw new Error(`Could not find feature with ID "${parentFeatureId}"`)
+      }
+      // Delete the merged transcript and all its descendants
+      await featureRepository.deleteDescendants(transcriptsToRestore[0]._id)
+      await featureRepository.deleteById(transcriptsToRestore[0]._id)
+      // Re-create both original transcripts
+      for (const transcript of transcriptsToRestore) {
+        const rows = flattenFeatureSnapshot(
+          transcript,
+          parentRow.refSeq,
+          parentFeatureId,
+        )
+        await featureRepository.createMany(rows)
+      }
     }
   }
 
