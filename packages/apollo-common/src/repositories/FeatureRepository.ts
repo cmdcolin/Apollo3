@@ -1,0 +1,35 @@
+export interface FeatureRow {
+  _id: string
+  parentId?: string
+  refSeq: string
+  type: string
+  min: number
+  max: number
+  strand?: 1 | -1
+  phase?: 0 | 1 | 2
+  attributes?: Record<string, string[]>
+  status?: number
+  user?: string
+  createdAt?: Date
+  updatedAt?: Date
+}
+
+export interface FeatureRepository {
+  findById(id: string): Promise<FeatureRow | undefined>
+  findByRange(
+    refSeqId: string,
+    start: number,
+    end: number,
+  ): Promise<FeatureRow[]>
+  findChildren(parentId: string): Promise<FeatureRow[]>
+  findDescendants(rootId: string): Promise<FeatureRow[]>
+  create(row: FeatureRow): Promise<FeatureRow>
+  createMany(rows: FeatureRow[]): Promise<FeatureRow[]>
+  updateById(
+    id: string,
+    data: Partial<Omit<FeatureRow, '_id'>>,
+  ): Promise<FeatureRow | undefined>
+  deleteById(id: string): Promise<boolean>
+  deleteDescendants(id: string): Promise<number>
+  searchText(refSeqId: string, query: string): Promise<FeatureRow[]>
+}
