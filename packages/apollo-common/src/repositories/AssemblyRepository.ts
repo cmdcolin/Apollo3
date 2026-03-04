@@ -21,4 +21,5 @@ export interface AssemblyRepository {
     data: Partial<Omit<AssemblyRow, '_id'>>,
   ): Promise<AssemblyRow | undefined>
   deleteById(id: string): Promise<boolean>
+  findAll(): Promise<AssemblyRow[]>
 }

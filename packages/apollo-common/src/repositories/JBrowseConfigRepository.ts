@@ -6,4 +6,5 @@ export interface JBrowseConfigRow {
 export interface JBrowseConfigRepository {
   findOne(): Promise<JBrowseConfigRow | undefined>
   upsert(row: JBrowseConfigRow): Promise<JBrowseConfigRow>
+  deleteAll(): Promise<void>
 }

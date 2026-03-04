@@ -18,4 +18,8 @@ export interface RefSeqRepository {
     id: string,
     data: Partial<Omit<RefSeqRow, '_id'>>,
   ): Promise<RefSeqRow | undefined>
+  findByNameAndAssembly(
+    name: string,
+    assemblyId: string,
+  ): Promise<RefSeqRow | undefined>
 }

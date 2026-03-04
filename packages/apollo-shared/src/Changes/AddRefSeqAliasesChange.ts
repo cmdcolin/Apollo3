@@ -6,6 +6,7 @@ import {
   type LocalGFF3DataStore,
   type SerializedAssemblySpecificChange,
   type ServerDataStore,
+  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { getSession } from '@jbrowse/core/util'
 
@@ -68,6 +69,19 @@ export class AddRefSeqAliasesChange extends AssemblySpecificChange {
       await refSeqModel
         .updateOne({ assembly, name: refName }, { $set: { aliases } })
         .session(session)
+    }
+  }
+
+  async executeOnServerV2(backend: ServerDataStoreV2) {
+    const { assembly, refSeqAliases } = this
+    for (const { aliases, refName } of refSeqAliases) {
+      const refSeq = await backend.refSeqRepository.findByNameAndAssembly(
+        refName,
+        assembly,
+      )
+      if (refSeq) {
+        await backend.refSeqRepository.updateById(refSeq._id, { aliases })
+      }
     }
   }
 

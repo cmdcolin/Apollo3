@@ -8,6 +8,7 @@ import {
   type LocalGFF3DataStore,
   type SerializedFeatureChange,
   type ServerDataStore,
+  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { type AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
 import { type Feature } from '@apollo-annotation/schemas'
@@ -117,6 +118,21 @@ export class DeleteFeatureChange extends FeatureChange {
       logger.debug?.(
         `Feature "${deletedFeature._id}" deleted from document "${featureDoc._id}"`,
       )
+    }
+  }
+
+  async executeOnServerV2(backend: ServerDataStoreV2) {
+    const { changes, logger } = this
+    for (const change of changes) {
+      const { deletedFeature } = change
+      const row = await backend.featureRepository.findById(deletedFeature._id)
+      if (!row) {
+        const errMsg = `Feature not found: ${deletedFeature._id}`
+        logger.error(errMsg)
+        throw new Error(errMsg)
+      }
+      await backend.featureRepository.deleteDescendants(deletedFeature._id)
+      await backend.featureRepository.deleteById(deletedFeature._id)
     }
   }
 

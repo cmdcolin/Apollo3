@@ -6,6 +6,7 @@ import {
   type LocalGFF3DataStore,
   type SerializedAssemblySpecificChange,
   type ServerDataStore,
+  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { getSession } from '@jbrowse/core/util'
 
@@ -56,6 +57,11 @@ export class AddAssemblyAliasesChange extends AssemblySpecificChange {
     }
     asm.aliases = aliases
     await asm.save()
+  }
+
+  async executeOnServerV2(backend: ServerDataStoreV2) {
+    const { assembly, aliases } = this
+    await backend.assemblyRepository.updateById(assembly, { aliases })
   }
 
   executeOnLocalGFF3(_backend: LocalGFF3DataStore): Promise<unknown> {

@@ -26,6 +26,10 @@ export class MikroOrmJBrowseConfigRepository
     return undefined
   }
 
+  async deleteAll() {
+    await this.em.nativeDelete(JBrowseConfigEntity, {})
+  }
+
   async upsert(row: JBrowseConfigRow) {
     let entity = await this.em.findOne(JBrowseConfigEntity, {
       _id: row._id,

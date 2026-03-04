@@ -33,9 +33,24 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
     return undefined
   }
 
+  async findByIds(ids: string[]) {
+    const entities = await this.em.find(FeatureEntity, { _id: { $in: ids } })
+    return entities.map(toRow)
+  }
+
   async findByRange(refSeqId: string, start: number, end: number) {
     const entities = await this.em.find(FeatureEntity, {
       refSeq: refSeqId,
+      min: { $lte: end },
+      max: { $gte: start },
+    })
+    return entities.map(toRow)
+  }
+
+  async findRootsByRange(refSeqId: string, start: number, end: number) {
+    const entities = await this.em.find(FeatureEntity, {
+      refSeq: refSeqId,
+      parent: null,
       min: { $lte: end },
       max: { $gte: start },
     })

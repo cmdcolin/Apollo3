@@ -6,6 +6,7 @@ import {
   type LocalGFF3DataStore,
   type SerializedChange,
   type ServerDataStore,
+  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 
 export interface SerializedUserChangeBase extends SerializedChange {
@@ -60,6 +61,19 @@ export class UserChange extends Change {
         .findByIdAndUpdate(userId, { role })
         .session(session)
         .exec()
+      if (!user) {
+        const errMsg = `*** ERROR: User with id "${userId}" not found`
+        logger.error(errMsg)
+        throw new Error(errMsg)
+      }
+    }
+  }
+
+  async executeOnServerV2(backend: ServerDataStoreV2) {
+    const { changes, logger, userId } = this
+    for (const change of changes) {
+      const { role } = change
+      const user = await backend.userRepository.updateById(userId, { role })
       if (!user) {
         const errMsg = `*** ERROR: User with id "${userId}" not found`
         logger.error(errMsg)
