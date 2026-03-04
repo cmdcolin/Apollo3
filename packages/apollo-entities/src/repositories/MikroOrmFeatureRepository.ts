@@ -186,6 +186,12 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
     return count
   }
 
+  async deleteByRefSeqs(refSeqIds: string[]) {
+    return this.em.nativeDelete(FeatureEntity, {
+      refSeq: { $in: refSeqIds },
+    })
+  }
+
   async searchText(refSeqId: string, query: string) {
     const entities = await this.em.find(FeatureEntity, {
       refSeq: refSeqId,

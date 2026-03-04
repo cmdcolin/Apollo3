@@ -135,12 +135,8 @@ export class ChangesService {
 
   private buildV2FilesService(): ServerDataStoreV2['filesService'] {
     return {
-      getFileStream: (_file) => {
-        throw new Error('filesService.getFileStream not yet supported in V2')
-      },
-      getFileHandle: (_file) => {
-        throw new Error('filesService.getFileHandle not yet supported in V2')
-      },
+      getFileStream: (file) => this.filesService.getFileStream(file),
+      getFileHandle: (file) => this.filesService.getFileHandle(file),
       parseGFF3: (stream) => this.filesService.parseGFF3(stream),
       create: (dto) => {
         void this.filesService.create(dto)

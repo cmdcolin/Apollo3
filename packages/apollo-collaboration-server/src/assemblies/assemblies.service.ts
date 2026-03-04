@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import type { AssemblyRepository } from '@apollo-annotation/common'
+import { MikroOrmAssemblyRepository } from '@apollo-annotation/entities'
 import {
   Assembly,
   AssemblyDocument,
@@ -5,10 +9,13 @@ import {
   CheckDocument,
 } from '@apollo-annotation/schemas'
 import { GetAssembliesOperation } from '@apollo-annotation/shared'
+import { EntityManager } from '@mikro-orm/core'
 import {
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
   UnprocessableEntityException,
 } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
@@ -33,25 +40,42 @@ export class AssembliesService {
     private readonly checksService: ChecksService,
     private readonly featuresService: FeaturesService,
     private readonly refSeqsService: RefSeqsService,
+    @Optional() @Inject(EntityManager) private readonly em?: EntityManager,
   ) {}
 
   private readonly logger = new Logger(AssembliesService.name)
+
+  private get useV2Backend() {
+    const dbBackend = process.env.DB_BACKEND
+    return dbBackend && dbBackend !== 'mongodb' && this.em !== undefined
+  }
+
+  private get assemblyRepository(): AssemblyRepository {
+    if (!this.em) {
+      throw new Error('EntityManager not available')
+    }
+    return new MikroOrmAssemblyRepository(this.em.fork())
+  }
 
   async create(createAssemblyDto: CreateAssemblyDto) {
     return this.assemblyModel.create(createAssemblyDto)
   }
 
   async updateChecks(_id: string, checks: string[]) {
-    try {
-      await this.assemblyModel.updateOne(
-        { $and: [{ _id, status: 0 }] },
-        { $set: { checks } },
-      )
-    } catch (error) {
-      this.logger.debug(
-        '*** UPDATE STATUS EXCEPTION - Could not update checks in assembly document!',
-      )
-      throw new UnprocessableEntityException(String(error))
+    if (this.useV2Backend) {
+      await this.assemblyRepository.updateById(_id, { checks })
+    } else {
+      try {
+        await this.assemblyModel.updateOne(
+          { $and: [{ _id, status: 0 }] },
+          { $set: { checks } },
+        )
+      } catch (error) {
+        this.logger.debug(
+          '*** UPDATE STATUS EXCEPTION - Could not update checks in assembly document!',
+        )
+        throw new UnprocessableEntityException(String(error))
+      }
     }
 
     // Delete checks that are no longer registered
@@ -84,6 +108,13 @@ export class AssembliesService {
   }
 
   async findOne(id: string) {
+    if (this.useV2Backend) {
+      const assembly = await this.assemblyRepository.findById(id)
+      if (!assembly) {
+        throw new NotFoundException(`Assembly with id "${id}" not found`)
+      }
+      return assembly
+    }
     const assembly = await this.assemblyModel
       .findOne({ _id: id, status: 0 })
       .exec()

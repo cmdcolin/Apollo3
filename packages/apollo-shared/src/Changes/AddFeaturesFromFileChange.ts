@@ -5,6 +5,7 @@ import {
   type LocalGFF3DataStore,
   type SerializedAssemblySpecificChange,
   type ServerDataStore,
+  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { type GFF3Feature } from '@gmod/gff'
 
@@ -111,6 +112,41 @@ export class AddFeaturesFromFileChange extends FromFileBaseChange {
       }
     }
     logger.debug?.('New features added into database!')
+  }
+
+  async executeOnServerV2(backend: ServerDataStoreV2) {
+    const { changes, deleteExistingFeatures, logger } = this
+
+    if (deleteExistingFeatures) {
+      await this.removeExistingFeaturesV2(backend)
+    }
+
+    for (const change of changes) {
+      const { fileId, parseOptions } = change
+      const fileRow = await backend.fileRepository.findById(fileId)
+      if (!fileRow) {
+        throw new Error(`File "${fileId}" not found`)
+      }
+      logger.debug?.(`FileId "${fileId}", checksum "${fileRow.checksum}"`)
+
+      const { bufferSize = 10_000 } = parseOptions ?? {}
+      const featureStream = backend.filesService.parseGFF3(
+        backend.filesService.getFileStream(fileRow),
+        { bufferSize },
+      )
+      let featureCount = 0
+      // @ts-expect-error type is wrong here
+      // eslint-disable-next-line @typescript-eslint/await-thenable
+      for await (const f of featureStream) {
+        const gff3Feature = f as GFF3Feature
+        await this.addFeatureIntoDbV2(gff3Feature, backend)
+        featureCount++
+        if (featureCount % 1000 === 0) {
+          logger.debug?.(`Processed ${featureCount} features`)
+        }
+      }
+    }
+    logger.debug?.('New features added into database via V2!')
   }
 
   async executeOnLocalGFF3(_backend: LocalGFF3DataStore) {

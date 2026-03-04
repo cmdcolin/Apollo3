@@ -1,5 +1,6 @@
 export { MikroOrmAssemblyRepository } from './MikroOrmAssemblyRepository'
 export { MikroOrmCheckRepository } from './MikroOrmCheckRepository'
+export { MikroOrmCounterRepository } from './MikroOrmCounterRepository'
 export { MikroOrmCheckResultRepository } from './MikroOrmCheckResultRepository'
 export { MikroOrmFeatureRepository } from './MikroOrmFeatureRepository'
 export { MikroOrmFileRepository } from './MikroOrmFileRepository'

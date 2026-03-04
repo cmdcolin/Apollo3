@@ -7,10 +7,13 @@ import {
   type ChangeOptions,
   type ClientDataStore,
   type LocalGFF3DataStore,
+  type RefSeqRow,
   type SerializedAssemblySpecificChange,
   type ServerDataStore,
+  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { BgzipIndexedFasta, IndexedFasta } from '@gmod/indexedfasta'
+import ObjectID from 'bson-objectid'
 import { RemoteFile } from 'generic-filehandle'
 
 export interface SerializedAddAssemblyFromExternalChangeBase
@@ -126,6 +129,65 @@ export class AddAssemblyFromExternalChange extends AssemblySpecificChange {
         ])
         logger.debug?.(
           `Added new refSeq "${sequenceName}", docId "${newRefSeqDoc._id}"`,
+        )
+      }
+    }
+  }
+
+  async executeOnServerV2(backend: ServerDataStoreV2) {
+    const { assembly, changes, logger } = this
+    const { CHUNK_SIZE } = process.env
+    const customChunkSize = CHUNK_SIZE && Number(CHUNK_SIZE)
+
+    for (const change of changes) {
+      const { assemblyName, externalLocation } = change
+      const { fa, fai, gzi } = externalLocation
+      const sequenceAdapter = gzi
+        ? new BgzipIndexedFasta({
+            fasta: new RemoteFile(fa, { fetch }),
+            fai: new RemoteFile(fai, { fetch }),
+            gzi: new RemoteFile(gzi, { fetch }),
+          })
+        : new IndexedFasta({
+            fasta: new RemoteFile(fa, { fetch }),
+            fai: new RemoteFile(fai, { fetch }),
+          })
+      const allSequenceSizes = await sequenceAdapter.getSequenceSizes()
+
+      if (!allSequenceSizes) {
+        throw new Error('No data read from indexed fasta getSequenceSizes')
+      }
+
+      const existingAssembly =
+        await backend.assemblyRepository.findByName(assemblyName)
+      if (existingAssembly) {
+        throw new Error(`Assembly "${assemblyName}" already exists`)
+      }
+      const checkRows = await backend.checkRepository.findDefaults()
+      const checks = checkRows.map((c) => c._id)
+      await backend.assemblyRepository.create({
+        _id: assembly,
+        name: assemblyName,
+        user: backend.user,
+        status: -1,
+        externalLocation,
+        checks,
+      })
+      logger.debug?.(`Added new assembly "${assemblyName}", id "${assembly}"`)
+
+      for (const sequenceName in allSequenceSizes) {
+        const refSeqRow: RefSeqRow = {
+          _id: new ObjectID().toHexString(),
+          name: sequenceName,
+          assembly,
+          length: allSequenceSizes[sequenceName] ?? 0,
+          chunkSize: customChunkSize ?? 262_144,
+          user: backend.user,
+          status: -1,
+        }
+        await backend.refSeqRepository.create(refSeqRow)
+        logger.debug?.(
+          `Added new refSeq "${sequenceName}", id "${refSeqRow._id}"`,
         )
       }
     }

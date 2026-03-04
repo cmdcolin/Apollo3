@@ -6,9 +6,11 @@ import {
   type ChangeOptions,
   type ClientDataStore,
   FeatureChange,
+  type FeatureRow,
   type LocalGFF3DataStore,
   type SerializedFeatureChange,
   type ServerDataStore,
+  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import {
   type AnnotationFeature,
@@ -20,6 +22,7 @@ import { getSnapshot } from 'mobx-state-tree'
 
 import { attributesToRecords, stringifyAttributes } from '../util'
 
+import { flattenFeatureSnapshot } from './AddFeatureChange'
 import { findAndDeleteChildFeature } from './DeleteFeatureChange'
 import { UndoMergeTranscriptsChange } from './UndoMergeTranscriptsChange'
 
@@ -240,6 +243,141 @@ export class MergeTranscriptsChange extends FeatureChange {
       // This secondFeatureChild has no overlap with any feature in the
       // receiving transcript so we add it as it is to the receiving transcript
       this.addChild(firstTranscript, secondFeatureChild)
+    }
+  }
+
+  async executeOnServerV2(backend: ServerDataStoreV2) {
+    const { featureRepository } = backend
+    const { changes, logger } = this
+    for (const change of changes) {
+      const { firstTranscript, secondTranscript } = change
+      const firstRow = await featureRepository.findById(firstTranscript._id)
+      if (!firstRow) {
+        const errMsg = `Feature not found: ${firstTranscript._id}`
+        logger.error(errMsg)
+        throw new Error(errMsg)
+      }
+      const mergedAttributes: Record<string, string[]> = firstRow.attributes
+        ? JSON.parse(JSON.stringify(firstRow.attributes))
+        : {}
+      if (secondTranscript.attributes) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        const existing = mergedAttributes.merged_with ?? []
+        existing.push(
+          stringifyAttributes(attributesToRecords(secondTranscript.attributes)),
+        )
+        mergedAttributes.merged_with = existing
+      }
+      await featureRepository.updateById(firstTranscript._id, {
+        min: Math.min(firstRow.min, secondTranscript.min),
+        max: Math.max(firstRow.max, secondTranscript.max),
+        attributes: mergedAttributes,
+      })
+
+      if (secondTranscript.children) {
+        for (const secondChild of Object.values(secondTranscript.children)) {
+          await this.mergeFeatureIntoTranscriptV2(
+            secondChild,
+            firstTranscript._id,
+            firstRow.refSeq,
+            featureRepository,
+          )
+        }
+      }
+
+      // Delete the second transcript row only (children were reparented)
+      await featureRepository.deleteById(secondTranscript._id)
+    }
+  }
+
+  private async mergeFeatureIntoTranscriptV2(
+    secondChild: AnnotationFeatureSnapshot,
+    firstTranscriptId: string,
+    refSeq: string,
+    featureRepository: ServerDataStoreV2['featureRepository'],
+  ) {
+    const firstChildren =
+      await featureRepository.findChildren(firstTranscriptId)
+    let merged = false
+    let mrgChild: FeatureRow | undefined
+    let toDelete: FeatureRow | undefined
+
+    for (const firstChild of firstChildren) {
+      if (!merged || !mrgChild) {
+        toDelete = undefined
+        mrgChild = firstChild
+      } else {
+        toDelete = firstChild
+      }
+      if (
+        mrgChild.type === secondChild.type &&
+        mrgChild.type === firstChild.type &&
+        doesIntersect2(
+          secondChild.min,
+          secondChild.max,
+          mrgChild.min,
+          mrgChild.max,
+        ) &&
+        doesIntersect2(
+          firstChild.min,
+          firstChild.max,
+          mrgChild.min,
+          mrgChild.max,
+        )
+      ) {
+        const newMin = Math.min(secondChild.min, mrgChild.min, firstChild.min)
+        const newMax = Math.max(secondChild.max, mrgChild.max, firstChild.max)
+
+        const mrgChildAttr: Record<string, string[]> = mrgChild.attributes
+          ? JSON.parse(JSON.stringify(mrgChild.attributes))
+          : {}
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        const existingMergedWith = mrgChildAttr.merged_with ?? []
+        existingMergedWith.push(
+          stringifyAttributes(attributesToRecords(secondChild.attributes)),
+        )
+
+        if (toDelete) {
+          const recs: Record<string, string[] | undefined> = toDelete.attributes
+            ? JSON.parse(JSON.stringify(toDelete.attributes))
+            : undefined
+          existingMergedWith.push(stringifyAttributes(recs))
+          // Reparent toDelete's children to mrgChild
+          const grandchildren = await featureRepository.findChildren(
+            toDelete._id,
+          )
+          for (const gc of grandchildren) {
+            await featureRepository.updateById(gc._id, {
+              parentId: mrgChild._id,
+            })
+          }
+          await featureRepository.deleteById(toDelete._id)
+        }
+
+        mrgChildAttr.merged_with = [...new Set(existingMergedWith)]
+        await featureRepository.updateById(mrgChild._id, {
+          min: newMin,
+          max: newMax,
+          attributes: mrgChildAttr,
+        })
+        merged = true
+      }
+    }
+
+    if (merged && mrgChild && secondChild.children) {
+      for (const child of Object.values(secondChild.children)) {
+        const rows = flattenFeatureSnapshot(child, refSeq, mrgChild._id)
+        await featureRepository.createMany(rows)
+      }
+    }
+
+    if (!merged) {
+      const rows = flattenFeatureSnapshot(
+        secondChild,
+        refSeq,
+        firstTranscriptId,
+      )
+      await featureRepository.createMany(rows)
     }
   }
 

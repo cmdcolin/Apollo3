@@ -37,5 +37,6 @@ export interface FeatureRepository {
   ): Promise<FeatureRow | undefined>
   deleteById(id: string): Promise<boolean>
   deleteDescendants(id: string): Promise<number>
+  deleteByRefSeqs(refSeqIds: string[]): Promise<number>
   searchText(refSeqId: string, query: string): Promise<FeatureRow[]>
 }

@@ -251,7 +251,7 @@ export function isAddFeatureChange(
   return (change as AddFeatureChange).typeName === 'AddFeatureChange'
 }
 
-function flattenFeatureSnapshot(
+export function flattenFeatureSnapshot(
   snapshot: AnnotationFeatureSnapshot,
   refSeq: string,
   parentId?: string,

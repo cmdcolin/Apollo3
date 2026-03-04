@@ -9,6 +9,7 @@ import {
   type LocalGFF3DataStore,
   type SerializedFeatureChange,
   type ServerDataStore,
+  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { type AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
 
@@ -111,6 +112,33 @@ export class MergeExonsChange extends FeatureChange {
         (id) => !deletedIds.includes(id),
       )
       await topLevelFeature.save()
+    }
+  }
+
+  async executeOnServerV2(backend: ServerDataStoreV2) {
+    const { featureRepository } = backend
+    const { changes, logger } = this
+    for (const change of changes) {
+      const { firstExon, secondExon } = change
+      const firstExonRow = await featureRepository.findById(firstExon._id)
+      if (!firstExonRow) {
+        const errMsg = `Feature not found: ${firstExon._id}`
+        logger.error(errMsg)
+        throw new Error(errMsg)
+      }
+      const mergedAttributes: Record<string, string[]> = firstExonRow.attributes
+        ? JSON.parse(JSON.stringify(firstExonRow.attributes))
+        : {}
+      mergedAttributes.merged_with = [
+        stringifyAttributes(attributesToRecords(secondExon.attributes)),
+      ]
+      await featureRepository.updateById(firstExon._id, {
+        min: Math.min(firstExon.min, secondExon.min),
+        max: Math.max(firstExon.max, secondExon.max),
+        attributes: mergedAttributes,
+      })
+      await featureRepository.deleteDescendants(secondExon._id)
+      await featureRepository.deleteById(secondExon._id)
     }
   }
 
