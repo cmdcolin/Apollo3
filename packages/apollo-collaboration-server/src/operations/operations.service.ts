@@ -1,4 +1,19 @@
-import { Operation, operationRegistry } from '@apollo-annotation/common'
+import {
+  Operation,
+  type ServerDataStoreV2,
+  operationRegistry,
+} from '@apollo-annotation/common'
+import {
+  MikroOrmAssemblyRepository,
+  MikroOrmCheckRepository,
+  MikroOrmCheckResultRepository,
+  MikroOrmFeatureRepository,
+  MikroOrmFileRepository,
+  MikroOrmJBrowseConfigRepository,
+  MikroOrmRefSeqChunkRepository,
+  MikroOrmRefSeqRepository,
+  MikroOrmUserRepository,
+} from '@apollo-annotation/entities'
 import {
   Assembly,
   AssemblyDocument,
@@ -17,7 +32,8 @@ import {
   User,
   UserDocument,
 } from '@apollo-annotation/schemas'
-import { Injectable, Logger } from '@nestjs/common'
+import { EntityManager } from '@mikro-orm/core'
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common'
 import { InjectConnection, InjectModel } from '@nestjs/mongoose'
 import { Connection, Model } from 'mongoose'
 
@@ -48,13 +64,82 @@ export class OperationsService {
     private readonly countersService: CountersService,
     private readonly pluginsService: PluginsService,
     @InjectConnection() private connection: Connection,
+    @Optional() @Inject(EntityManager) private readonly em?: EntityManager,
   ) {}
+
+  private get useV2Backend() {
+    const dbBackend = process.env.DB_BACKEND
+    return dbBackend && dbBackend !== 'mongodb' && this.em !== undefined
+  }
+
+  private buildServerDataStoreV2(): ServerDataStoreV2 {
+    if (!this.em) {
+      throw new Error('EntityManager not available')
+    }
+    const em = this.em.fork()
+    return {
+      typeName: 'ServerV2',
+      featureRepository: new MikroOrmFeatureRepository(em),
+      assemblyRepository: new MikroOrmAssemblyRepository(em),
+      refSeqRepository: new MikroOrmRefSeqRepository(em),
+      refSeqChunkRepository: new MikroOrmRefSeqChunkRepository(em),
+      checkRepository: new MikroOrmCheckRepository(em),
+      checkResultRepository: new MikroOrmCheckResultRepository(em),
+      fileRepository: new MikroOrmFileRepository(em),
+      userRepository: new MikroOrmUserRepository(em),
+      jbrowseConfigRepository: new MikroOrmJBrowseConfigRepository(em),
+      unitOfWork: {
+        async commit() {
+          await em.flush()
+        },
+        rollback() {
+          em.clear()
+          return Promise.resolve()
+        },
+      },
+      filesService: this.buildV2FilesService(),
+      pluginsService: this.pluginsService,
+      counterService: this.countersService,
+      user: '',
+    }
+  }
+
+  private buildV2FilesService(): ServerDataStoreV2['filesService'] {
+    return {
+      getFileStream: (_file) => {
+        throw new Error('filesService.getFileStream not yet supported in V2')
+      },
+      getFileHandle: (_file) => {
+        throw new Error('filesService.getFileHandle not yet supported in V2')
+      },
+      parseGFF3: (stream) => this.filesService.parseGFF3(stream),
+      create: (dto) => {
+        void this.filesService.create(dto)
+      },
+      remove: (id) => {
+        void this.filesService.remove(id)
+      },
+    }
+  }
 
   private readonly logger = new Logger(OperationsService.name)
 
   async executeOperation<T extends Operation>(
     serializedOperation: ReturnType<T['toJSON']>,
   ): Promise<ReturnType<T['executeOnServer']>> {
+    const { logger } = this
+    const OperationType = operationRegistry.getOperationType(
+      serializedOperation.typeName,
+    )
+    const operation = new OperationType(serializedOperation, { logger })
+
+    if (this.useV2Backend) {
+      const v2Backend = this.buildServerDataStoreV2()
+      return (await operation.execute(v2Backend)) as ReturnType<
+        T['executeOnServer']
+      >
+    }
+
     const {
       assemblyModel,
       checkModel,
@@ -64,16 +149,11 @@ export class OperationsService {
       fileModel,
       filesService,
       jbrowseConfigModel,
-      logger,
       pluginsService,
       refSeqChunkModel,
       refSeqModel,
       userModel,
     } = this
-    const OperationType = operationRegistry.getOperationType(
-      serializedOperation.typeName,
-    )
-    const operation = new OperationType(serializedOperation, { logger })
     const session = await connection.startSession()
     const result = (await operation.execute({
       typeName: 'Server',

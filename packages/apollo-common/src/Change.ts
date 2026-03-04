@@ -68,7 +68,11 @@ export abstract class Change extends Operation {
 
   async execute(backend: DataStore): Promise<unknown> {
     const backendType = backend.typeName
-    if (backendType === 'LocalGFF3' || backendType === 'Server') {
+    if (
+      backendType === 'LocalGFF3' ||
+      backendType === 'Server' ||
+      backendType === 'ServerV2'
+    ) {
       return super.execute(backend)
     }
     if (backendType === 'Client') {

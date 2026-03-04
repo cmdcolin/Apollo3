@@ -1,9 +1,21 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import {
   Change as BaseChange,
+  type ServerDataStoreV2,
   isAssemblySpecificChange,
   isFeatureChange,
 } from '@apollo-annotation/common'
+import {
+  MikroOrmAssemblyRepository,
+  MikroOrmCheckRepository,
+  MikroOrmCheckResultRepository,
+  MikroOrmFeatureRepository,
+  MikroOrmFileRepository,
+  MikroOrmJBrowseConfigRepository,
+  MikroOrmRefSeqChunkRepository,
+  MikroOrmRefSeqRepository,
+  MikroOrmUserRepository,
+} from '@apollo-annotation/entities'
 import {
   Assembly,
   AssemblyDocument,
@@ -32,9 +44,12 @@ import {
   makeUserSessionId,
   validationRegistry,
 } from '@apollo-annotation/shared'
+import { EntityManager } from '@mikro-orm/core'
 import {
+  Inject,
   Logger,
   NotFoundException,
+  Optional,
   UnprocessableEntityException,
 } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
@@ -78,7 +93,63 @@ export class ChangesService {
     private readonly countersService: CountersService,
     private readonly pluginsService: PluginsService,
     private readonly messagesGateway: MessagesGateway,
+    @Optional() @Inject(EntityManager) private readonly em?: EntityManager,
   ) {}
+
+  private get useV2Backend() {
+    const dbBackend = process.env.DB_BACKEND
+    return dbBackend && dbBackend !== 'mongodb' && this.em !== undefined
+  }
+
+  private buildServerDataStoreV2(user: string): ServerDataStoreV2 {
+    if (!this.em) {
+      throw new Error('EntityManager not available')
+    }
+    const em = this.em.fork()
+    return {
+      typeName: 'ServerV2',
+      featureRepository: new MikroOrmFeatureRepository(em),
+      assemblyRepository: new MikroOrmAssemblyRepository(em),
+      refSeqRepository: new MikroOrmRefSeqRepository(em),
+      refSeqChunkRepository: new MikroOrmRefSeqChunkRepository(em),
+      checkRepository: new MikroOrmCheckRepository(em),
+      checkResultRepository: new MikroOrmCheckResultRepository(em),
+      fileRepository: new MikroOrmFileRepository(em),
+      userRepository: new MikroOrmUserRepository(em),
+      jbrowseConfigRepository: new MikroOrmJBrowseConfigRepository(em),
+      unitOfWork: {
+        async commit() {
+          await em.flush()
+        },
+        rollback() {
+          em.clear()
+          return Promise.resolve()
+        },
+      },
+      filesService: this.buildV2FilesService(),
+      pluginsService: this.pluginsService,
+      counterService: this.countersService,
+      user,
+    }
+  }
+
+  private buildV2FilesService(): ServerDataStoreV2['filesService'] {
+    return {
+      getFileStream: (_file) => {
+        throw new Error('filesService.getFileStream not yet supported in V2')
+      },
+      getFileHandle: (_file) => {
+        throw new Error('filesService.getFileHandle not yet supported in V2')
+      },
+      parseGFF3: (stream) => this.filesService.parseGFF3(stream),
+      create: (dto) => {
+        void this.filesService.create(dto)
+      },
+      remove: (id) => {
+        void this.filesService.remove(id)
+      },
+    }
+  }
 
   private readonly logger = new Logger(ChangesService.name)
 
@@ -115,6 +186,54 @@ export class ChangesService {
           }
         }
       }
+    }
+
+    if (this.useV2Backend) {
+      const v2Backend = this.buildServerDataStoreV2(uniqUserId)
+      try {
+        await change.execute(v2Backend)
+        await v2Backend.unitOfWork.commit()
+      } catch (error) {
+        await v2Backend.unitOfWork.rollback()
+        throw new UnprocessableEntityException(String(error))
+      }
+
+      const [savedChangedLogDoc] = await this.changeModel.create([
+        // eslint-disable-next-line @typescript-eslint/no-misused-spread
+        { ...change, user: user.email, sequence },
+      ])
+      const changeDoc = savedChangedLogDoc
+      if (!changeDoc) {
+        throw new UnprocessableEntityException('could not create change')
+      }
+
+      if (isAssemblySpecificChange(change)) {
+        const messages: ChangeMessage[] = []
+        const userSessionId = makeUserSessionId(user)
+        if (isFeatureChange(change)) {
+          for (const refName of refNames) {
+            messages.push({
+              changeInfo: change.toJSON(),
+              userName: user.username,
+              userSessionId,
+              channel: `${change.assembly}-${refName}`,
+              changeSequence: changeDoc.sequence,
+            })
+          }
+        } else {
+          messages.push({
+            changeInfo: change.toJSON(),
+            userName: user.username,
+            userSessionId,
+            channel: 'COMMON',
+            changeSequence: changeDoc.sequence,
+          })
+        }
+        for (const message of messages) {
+          await this.messagesGateway.create(message.channel, message)
+        }
+      }
+      return changeDoc
     }
 
     let changeDoc: ChangeDocument | undefined

@@ -12,4 +12,8 @@ export interface UserRepository {
   findByEmail(email: string): Promise<UserRow | undefined>
   create(row: UserRow): Promise<UserRow>
   deleteById(id: string): Promise<boolean>
+  updateById(
+    id: string,
+    data: Partial<Omit<UserRow, '_id'>>,
+  ): Promise<UserRow | undefined>
 }

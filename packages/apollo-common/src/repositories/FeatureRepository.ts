@@ -16,7 +16,13 @@ export interface FeatureRow {
 
 export interface FeatureRepository {
   findById(id: string): Promise<FeatureRow | undefined>
+  findByIds(ids: string[]): Promise<FeatureRow[]>
   findByRange(
+    refSeqId: string,
+    start: number,
+    end: number,
+  ): Promise<FeatureRow[]>
+  findRootsByRange(
     refSeqId: string,
     start: number,
     end: number,

@@ -5,6 +5,8 @@ import {
   type OperationOptions,
   type SerializedOperation,
   type ServerDataStore,
+  type ServerDataStoreV2,
+  assembleFeatureTrees,
 } from '@apollo-annotation/common'
 
 interface SerializedGetFeaturesOperation extends SerializedOperation {
@@ -50,6 +52,28 @@ export class GetFeaturesOperation extends Operation {
         status: 0,
       })
       .exec()
+  }
+
+  async executeOnServerV2(backend: ServerDataStoreV2) {
+    const { featureRepository } = backend
+    const rootRows = await featureRepository.findRootsByRange(
+      this.refSeq,
+      this.start,
+      this.end,
+    )
+    const publishedRoots = rootRows.filter((r) => r.status === 0)
+    const allRows = [...publishedRoots]
+    const seen = new Set(publishedRoots.map((r) => r._id))
+    for (const root of publishedRoots) {
+      const descendants = await featureRepository.findDescendants(root._id)
+      for (const d of descendants) {
+        if (!seen.has(d._id)) {
+          seen.add(d._id)
+          allRows.push(d)
+        }
+      }
+    }
+    return assembleFeatureTrees(allRows)
   }
 
   async executeOnLocalGFF3(_backend: LocalGFF3DataStore) {

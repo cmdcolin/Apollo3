@@ -46,6 +46,16 @@ export class MikroOrmUserRepository implements UserRepository {
     return toRow(entity)
   }
 
+  async updateById(id: string, data: Partial<Omit<UserRow, '_id'>>) {
+    const entity = await this.em.findOne(UserEntity, { _id: id })
+    if (!entity) {
+      return undefined
+    }
+    this.em.assign(entity, data)
+    await this.em.flush()
+    return toRow(entity)
+  }
+
   async deleteById(id: string) {
     const entity = await this.em.findOne(UserEntity, { _id: id })
     if (!entity) {

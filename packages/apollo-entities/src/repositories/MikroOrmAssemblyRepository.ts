@@ -66,6 +66,11 @@ export class MikroOrmAssemblyRepository implements AssemblyRepository {
     return toRow(entity)
   }
 
+  async findAll() {
+    const entities = await this.em.find(AssemblyEntity, {})
+    return entities.map(toRow)
+  }
+
   async deleteById(id: string) {
     const entity = await this.em.findOne(AssemblyEntity, { _id: id })
     if (!entity) {

@@ -5,9 +5,11 @@ import {
   type ChangeOptions,
   type ClientDataStore,
   FeatureChange,
+  type FeatureRow,
   type LocalGFF3DataStore,
   type SerializedFeatureChange,
   type ServerDataStore,
+  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { type AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
 
@@ -155,6 +157,33 @@ export class AddFeatureChange extends FeatureChange {
     logger.debug?.(`Added ${featureCnt} new feature(s) into database.`)
   }
 
+  async executeOnServerV2(backend: ServerDataStoreV2) {
+    const { changes, logger } = this
+
+    for (const change of changes) {
+      const { addedFeature, copyFeature, parentFeatureId } = change
+      const rows = flattenFeatureSnapshot(addedFeature, addedFeature.refSeq)
+
+      if (copyFeature) {
+        for (const row of rows) {
+          row.status = -1
+        }
+        await backend.featureRepository.createMany(rows)
+      } else if (parentFeatureId) {
+        if (rows.length > 0) {
+          rows[0].parentId = parentFeatureId
+        }
+        await backend.featureRepository.createMany(rows)
+      } else {
+        if (rows.length > 0) {
+          rows[0].status = 0
+        }
+        await backend.featureRepository.createMany(rows)
+      }
+    }
+    logger.debug?.('Added features via V2')
+  }
+
   async executeOnLocalGFF3(_backend: LocalGFF3DataStore) {
     throw new Error('executeOnLocalGFF3 not implemented')
   }
@@ -220,4 +249,32 @@ export function isAddFeatureChange(
   change: unknown,
 ): change is AddFeatureChange {
   return (change as AddFeatureChange).typeName === 'AddFeatureChange'
+}
+
+function flattenFeatureSnapshot(
+  snapshot: AnnotationFeatureSnapshot,
+  refSeq: string,
+  parentId?: string,
+) {
+  const rows: FeatureRow[] = []
+  const row: FeatureRow = {
+    _id: snapshot._id,
+    refSeq,
+    parentId,
+    type: snapshot.type,
+    min: snapshot.min,
+    max: snapshot.max,
+    strand: snapshot.strand,
+    attributes: snapshot.attributes as Record<string, string[]> | undefined,
+  }
+  rows.push(row)
+  if (snapshot.children) {
+    for (const child of Object.values(snapshot.children)) {
+      const childRows = flattenFeatureSnapshot(child, refSeq, snapshot._id)
+      for (const cr of childRows) {
+        rows.push(cr)
+      }
+    }
+  }
+  return rows
 }

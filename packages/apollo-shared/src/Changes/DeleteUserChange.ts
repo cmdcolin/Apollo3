@@ -6,6 +6,7 @@ import {
   type LocalGFF3DataStore,
   type SerializedChange,
   type ServerDataStore,
+  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 
 export interface SerializedDeleteUserChangeBase extends SerializedChange {
@@ -53,6 +54,16 @@ export class DeleteUserChange extends Change {
       .session(session)
       .exec()
     if (!user) {
+      const errMsg = `*** ERROR: User with id "${userId}" not found`
+      logger.error(errMsg)
+      throw new Error(errMsg)
+    }
+  }
+
+  async executeOnServerV2(backend: ServerDataStoreV2) {
+    const { logger, userId } = this
+    const deleted = await backend.userRepository.deleteById(userId)
+    if (!deleted) {
       const errMsg = `*** ERROR: User with id "${userId}" not found`
       logger.error(errMsg)
       throw new Error(errMsg)

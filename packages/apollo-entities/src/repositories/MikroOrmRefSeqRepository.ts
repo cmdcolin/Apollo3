@@ -54,6 +54,17 @@ export class MikroOrmRefSeqRepository implements RefSeqRepository {
     return toRow(entity)
   }
 
+  async findByNameAndAssembly(name: string, assemblyId: string) {
+    const entity = await this.em.findOne(RefSeqEntity, {
+      name,
+      assembly: assemblyId,
+    })
+    if (entity) {
+      return toRow(entity)
+    }
+    return undefined
+  }
+
   async updateById(id: string, data: Partial<Omit<RefSeqRow, '_id'>>) {
     const entity = await this.em.findOne(RefSeqEntity, { _id: id })
     if (!entity) {

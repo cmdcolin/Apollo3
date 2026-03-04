@@ -8,6 +8,7 @@ import {
   type LocalGFF3DataStore,
   type SerializedFeatureChange,
   type ServerDataStore,
+  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { type Feature, type FeatureDocument } from '@apollo-annotation/schemas'
 
@@ -118,6 +119,26 @@ export class TypeChange extends FeatureChange {
           topLevelFeature,
         )}`,
       )
+    }
+  }
+
+  async executeOnServerV2(backend: ServerDataStoreV2) {
+    const { featureRepository } = backend
+    const { changes, logger } = this
+    for (const change of changes) {
+      const { featureId, oldType, newType } = change
+      const row = await featureRepository.findById(featureId)
+      if (!row) {
+        const errMsg = `Feature not found: ${featureId}`
+        logger.error(errMsg)
+        throw new Error(errMsg)
+      }
+      if (row.type !== oldType) {
+        const errMsg = `Feature's current type "${row.type}" doesn't match with expected value "${oldType}"`
+        logger.error(errMsg)
+        throw new Error(errMsg)
+      }
+      await featureRepository.updateById(featureId, { type: newType })
     }
   }
 

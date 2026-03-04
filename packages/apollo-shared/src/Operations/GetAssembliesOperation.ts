@@ -4,6 +4,7 @@ import {
   Operation,
   type SerializedOperation,
   type ServerDataStore,
+  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 
 interface SerializedGetAssembliesOperation extends SerializedOperation {
@@ -20,6 +21,11 @@ export class GetAssembliesOperation extends Operation {
 
   executeOnServer(backend: ServerDataStore) {
     return backend.assemblyModel.find({ status: 0 }).exec()
+  }
+
+  async executeOnServerV2(backend: ServerDataStoreV2) {
+    const rows = await backend.assemblyRepository.findAll()
+    return rows.filter((r) => r.status === 0)
   }
 
   async executeOnLocalGFF3(_backend: LocalGFF3DataStore) {

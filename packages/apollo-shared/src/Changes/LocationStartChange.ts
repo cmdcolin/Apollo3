@@ -8,6 +8,7 @@ import {
   type LocalGFF3DataStore,
   type SerializedFeatureChange,
   type ServerDataStore,
+  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { type Feature, type FeatureDocument } from '@apollo-annotation/schemas'
 
@@ -125,6 +126,26 @@ export class LocationStartChange extends FeatureChange {
         logger.debug?.(`*** FAILED: ${error}`)
         throw error
       }
+    }
+  }
+
+  async executeOnServerV2(backend: ServerDataStoreV2) {
+    const { featureRepository } = backend
+    const { changes, logger } = this
+    for (const change of changes) {
+      const { featureId, oldStart, newStart } = change
+      const row = await featureRepository.findById(featureId)
+      if (!row) {
+        const errMsg = `Feature not found: ${featureId}`
+        logger.error(errMsg)
+        throw new Error(errMsg)
+      }
+      if (row.min !== oldStart) {
+        const errMsg = 'Expected previous min does not match'
+        logger.error(errMsg)
+        throw new Error(errMsg)
+      }
+      await featureRepository.updateById(featureId, { min: newStart })
     }
   }
 

@@ -5,7 +5,9 @@ import {
   type ClientDataStore,
   type LocalGFF3DataStore,
   type ServerDataStore,
+  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
+import ObjectID from 'bson-objectid'
 
 interface JBrowseAssembly {
   sequence: { adapter: { type: string } }
@@ -108,6 +110,19 @@ export class ImportJBrowseConfigChange extends Change {
     }
     const filteredConfig = filterJBrowseConfig(newJBrowseConfig)
     await jbrowseConfigModel.create(filteredConfig)
+    logger.debug?.('Stored new JBrowse Config')
+  }
+
+  async executeOnServerV2(backend: ServerDataStoreV2) {
+    const { logger, newJBrowseConfig } = this
+    await backend.jbrowseConfigRepository.deleteAll()
+    if (newJBrowseConfig) {
+      const filtered = filterJBrowseConfig(newJBrowseConfig)
+      await backend.jbrowseConfigRepository.upsert({
+        _id: new ObjectID().toHexString(),
+        config: filtered as Record<string, unknown>,
+      })
+    }
     logger.debug?.('Stored new JBrowse Config')
   }
 
