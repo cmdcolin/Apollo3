@@ -18,6 +18,18 @@ import { type LoggerService } from '@nestjs/common'
 import { type GenericFilehandle } from 'generic-filehandle'
 import { type ClientSession, type Model } from 'mongoose'
 
+import type {
+  AssemblyRepository,
+  CheckRepository,
+  CheckResultRepository,
+  FeatureRepository,
+  FileRepository,
+  JBrowseConfigRepository,
+  RefSeqChunkRepository,
+  RefSeqRepository,
+  UserRepository,
+} from './repositories'
+
 export interface LocalGFF3DataStore {
   typeName: 'LocalGFF3'
   gff3Handle: FileHandle
@@ -64,11 +76,54 @@ export interface ServerDataStore {
   }
   user: string
 }
+export interface UnitOfWork {
+  commit(): Promise<void>
+  rollback(): Promise<void>
+}
+
+export interface ServerDataStoreV2 {
+  typeName: 'ServerV2'
+  featureRepository: FeatureRepository
+  assemblyRepository: AssemblyRepository
+  refSeqRepository: RefSeqRepository
+  refSeqChunkRepository: RefSeqChunkRepository
+  checkRepository: CheckRepository
+  checkResultRepository: CheckResultRepository
+  fileRepository: FileRepository
+  userRepository: UserRepository
+  jbrowseConfigRepository: JBrowseConfigRepository
+  unitOfWork: UnitOfWork
+  filesService: {
+    getFileStream(file: { _id: string }): ReadableStream<Uint8Array>
+    getFileHandle(file: { _id: string }): GenericFilehandle
+    parseGFF3(
+      stream: ReadableStream<Uint8Array>,
+      parseOptions?: { bufferSize?: number },
+    ): ReadableStream<GFF3Feature>
+    create(createFileDto: CreateFileDto): void
+    remove(id: string): void
+  }
+  pluginsService: {
+    evaluateExtensionPoint(
+      extensionPointName: string,
+      extendee: unknown,
+      props?: Record<string, unknown>,
+    ): void
+  }
+  counterService: {
+    getNextSequenceValue(sequenceName: string): Promise<number>
+  }
+  user: string
+}
+
 export interface SerializedOperation {
   typeName: string
 }
 
-export type BackendDataStore = ServerDataStore | LocalGFF3DataStore
+export type BackendDataStore =
+  | ServerDataStore
+  | ServerDataStoreV2
+  | LocalGFF3DataStore
 
 export interface OperationOptions {
   logger: LoggerService
@@ -94,6 +149,14 @@ export abstract class Operation implements SerializedOperation {
         { operation: this, backend },
       )
     }
+    if (backendType === 'ServerV2') {
+      const initialResult = this.executeOnServerV2(backend)
+      return backend.pluginsService.evaluateExtensionPoint(
+        `${this.typeName}-transformResults`,
+        initialResult,
+        { operation: this, backend },
+      )
+    }
     if (backendType === 'LocalGFF3') {
       return this.executeOnLocalGFF3(backend)
     }
@@ -104,4 +167,8 @@ export abstract class Operation implements SerializedOperation {
 
   abstract executeOnServer(backend: ServerDataStore): Promise<unknown>
   abstract executeOnLocalGFF3(backend: LocalGFF3DataStore): Promise<unknown>
+
+  executeOnServerV2(_backend: ServerDataStoreV2): Promise<unknown> {
+    throw new Error(`${this.typeName} does not implement executeOnServerV2`)
+  }
 }

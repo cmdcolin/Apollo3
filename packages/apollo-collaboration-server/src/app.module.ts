@@ -18,6 +18,7 @@ import { FilesModule } from './files/files.module'
 import { HealthModule } from './health/health.module'
 import { JBrowseModule } from './jbrowse/jbrowse.module'
 import { MessagesModule } from './messages/messages.module'
+import { ApolloMikroOrmModule } from './mikro-orm/mikro-orm.module'
 import { OperationsModule } from './operations/operations.module'
 import { PluginsModule } from './plugins/plugins.module'
 import { RefSeqChunksModule } from './refSeqChunks/refSeqChunks.module'
@@ -167,6 +168,7 @@ async function mongoDBURIFactory(
     SequenceModule,
     UsersModule,
     JBrowseModule,
+    ApolloMikroOrmModule.forRoot(),
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
