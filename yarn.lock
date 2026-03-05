@@ -511,6 +511,7 @@ __metadata:
   resolution: "@apollo-annotation/jbrowse-plugin-apollo@workspace:packages/jbrowse-plugin-apollo"
   dependencies:
     "@apollo-annotation/common": "workspace:^"
+    "@apollo-annotation/entities": "workspace:^"
     "@apollo-annotation/mst": "workspace:^"
     "@apollo-annotation/shared": "workspace:^"
     "@emotion/react": "npm:^11.10.6"
@@ -522,6 +523,8 @@ __metadata:
     "@jbrowse/plugin-authentication": "npm:^3.6.5"
     "@jbrowse/plugin-linear-genome-view": "npm:^3.6.5"
     "@jest/globals": "npm:^29.0.3"
+    "@mikro-orm/better-sqlite": "npm:^6.4.0"
+    "@mikro-orm/core": "npm:^6.4.0"
     "@mui/icons-material": "npm:^6.5.0"
     "@mui/material": "npm:^7.0.0"
     "@mui/x-data-grid": "npm:^8.0.0"

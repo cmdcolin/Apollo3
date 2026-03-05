@@ -28,10 +28,12 @@ import {
   type Region,
   getSession,
   isAbstractMenuManager,
+  isElectron,
 } from '@jbrowse/core/util'
 import { type LinearGenomeViewStateModel } from '@jbrowse/plugin-linear-genome-view'
 import AddIcon from '@mui/icons-material/Add'
 import { alpha } from '@mui/material'
+import React from 'react'
 
 import { version } from '../package.json'
 
@@ -62,6 +64,7 @@ import {
   stateModelFactory as LinearApolloSixFrameDisplayStateModelFactory,
 } from './LinearApolloSixFrameDisplay'
 import { AddFeature } from './components'
+import { ApolloStartScreenLaunchPanel } from './components/ApolloStartScreenLaunchPanel'
 import ApolloPluginConfigurationSchema from './config'
 import {
   annotationFromJBrowseFeature,
@@ -372,6 +375,42 @@ export default class ApolloPlugin extends Plugin {
             }
           })
           return handle
+        },
+      )
+    }
+
+    if (isElectron) {
+      pluginManager.addToExtensionPoint(
+        'Desktop-StartScreenMenuItems',
+        (items: { label: string; onClick: () => void }[]) => {
+          return [
+            ...items,
+            {
+              label: 'New Apollo annotation session...',
+              onClick: () => {
+                document.dispatchEvent(
+                  new CustomEvent('apollo-open-new-project-dialog'),
+                )
+              },
+            },
+          ]
+        },
+      )
+
+      pluginManager.addToExtensionPoint(
+        'Desktop-StartScreenLaunchPanel',
+        (
+          DefaultComponent: React.ComponentType<Record<string, unknown>>,
+          extraProps: Record<string, unknown>,
+        ) => {
+          return function ApolloWrappedLaunchPanel(
+            props: Record<string, unknown>,
+          ) {
+            return React.createElement(ApolloStartScreenLaunchPanel, {
+              DefaultComponent,
+              props: { ...props, ...extraProps },
+            })
+          }
         },
       )
     }

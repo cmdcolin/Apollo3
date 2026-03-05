@@ -6,6 +6,7 @@ export type BackendDriverType =
   | 'CollaborationServerDriver'
   | 'InMemoryFileDriver'
   | 'DesktopFileDriver'
+  | 'DesktopSQLiteDriver'
 
 export const ApolloAssembly = types
   .model('ApolloAssembly', {
@@ -17,6 +18,7 @@ export const ApolloAssembly = types
         'CollaborationServerDriver',
         'InMemoryFileDriver',
         'DesktopFileDriver',
+        'DesktopSQLiteDriver',
       ]),
       'CollaborationServerDriver',
     ),

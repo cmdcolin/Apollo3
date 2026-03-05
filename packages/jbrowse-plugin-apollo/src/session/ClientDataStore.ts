@@ -36,6 +36,7 @@ import {
   type BackendDriver,
   CollaborationServerDriver,
   DesktopFileDriver,
+  DesktopSQLiteDriver,
   InMemoryFileDriver,
 } from '../BackendDrivers'
 import { ChangeManager } from '../ChangeManager'
@@ -166,6 +167,9 @@ export function clientDataStoreFactory(
       desktopFileDriver: isElectron
         ? new DesktopFileDriver(self as unknown as ClientDataStoreType)
         : undefined,
+      desktopSQLiteDriver: isElectron
+        ? new DesktopSQLiteDriver(self as unknown as ClientDataStoreType)
+        : undefined,
     }))
     .actions((self) => ({
       afterCreate() {
@@ -240,10 +244,17 @@ export function clientDataStoreFactory(
         if (!assembly) {
           return
         }
-        const { file, internetAccountConfigId } = getConf(assembly, [
+        const { file, internetAccountConfigId, sqliteDb } = getConf(assembly, [
           'sequence',
           'metadata',
-        ]) as { internetAccountConfigId?: string; file: string }
+        ]) as {
+          internetAccountConfigId?: string
+          file?: string
+          sqliteDb?: string
+        }
+        if (isElectron && sqliteDb) {
+          return self.desktopSQLiteDriver
+        }
         if (isElectron && file) {
           return self.desktopFileDriver
         }
