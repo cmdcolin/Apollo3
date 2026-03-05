@@ -1,0 +1,42 @@
+name: Desktop E2E
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  desktop-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install system deps
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Clone jbrowse-components
+        run:
+          git clone --depth 1 https://github.com/GMOD/jbrowse-components.git
+          ~/jbrowse-components2
+
+      - name: Install Apollo deps
+        run: yarn --immutable
+
+      - name: Build and setup
+        run: bash packages/jbrowse-plugin-apollo/test/e2e-desktop-setup.sh
+        env:
+          JBROWSE_REPO: ~/jbrowse-components2
+
+      - name: Run e2e tests
+        run:
+          xvfb-run --auto-servernum yarn tsx
+          packages/jbrowse-plugin-apollo/test/e2e-desktop.ts --headless
+        env:
+          JBROWSE_DESKTOP_BINARY: ~/jbrowse-components2/products/jbrowse-desktop/dist/unpacked/jbrowse-desktop-linux-x64/jbrowse-desktop
+          TEST_DATA_DIR: ~/jbrowse-components2/test_data/volvox

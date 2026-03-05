@@ -18,6 +18,7 @@ import { getConf } from '@jbrowse/core/configuration'
 import { type Region, getSession } from '@jbrowse/core/util'
 import { getSnapshot } from 'mobx-state-tree'
 
+import { type SubmitOpts } from '../ChangeManager'
 import { checkFeatures, loadAssemblyIntoClient } from '../util'
 
 import { BackendDriver, type RefNameAliases } from './BackendDriver'
@@ -107,7 +108,10 @@ export class DesktopFileDriver extends BackendDriver {
     })
   }
 
-  async submitChange(change: Change | AssemblySpecificChange) {
+  async submitChange(
+    change: Change | AssemblySpecificChange,
+    _opts?: SubmitOpts,
+  ) {
     if (!isAssemblySpecificChange(change)) {
       throw new Error(
         `Cannot use this type of change with local file: "${change.typeName}"`,

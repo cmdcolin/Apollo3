@@ -35,21 +35,24 @@ interface SQLiteAssemblyMetadata {
 }
 
 export class DesktopSQLiteDriver extends BackendDriver {
-  private orm: MikroORM | undefined
-  private initPromise: Promise<void> | undefined
+  private ormMap = new Map<string, MikroORM>()
+  private initPromises = new Map<string, Promise<MikroORM>>()
   private importedAssemblies = new Set<string>()
 
   private async ensureORM(dbPath: string) {
-    if (this.orm) {
-      return this.orm
+    const existing = this.ormMap.get(dbPath)
+    if (existing) {
+      return existing
     }
-    if (this.initPromise) {
-      await this.initPromise
-      return this.orm!
+    const pending = this.initPromises.get(dbPath)
+    if (pending) {
+      return pending
     }
-    this.initPromise = this.initORM(dbPath)
-    await this.initPromise
-    return this.orm!
+    const promise = this.initORM(dbPath)
+    this.initPromises.set(dbPath, promise)
+    const orm = await promise
+    this.initPromises.delete(dbPath)
+    return orm
   }
 
   private async initORM(dbPath: string) {
@@ -58,12 +61,14 @@ export class DesktopSQLiteDriver extends BackendDriver {
     const { MikroORM: MikroORMClass } =
       require('@mikro-orm/core') as typeof import('@mikro-orm/core')
     const config = createMikroOrmConfig('sqlite', dbPath)
-    this.orm = await MikroORMClass.init({
+    const orm = await MikroORMClass.init({
       ...config,
       driver: require('@mikro-orm/better-sqlite').BetterSqliteDriver,
     })
-    const generator = this.orm.getSchemaGenerator()
+    const generator = orm.getSchemaGenerator()
     await generator.updateSchema()
+    this.ormMap.set(dbPath, orm)
+    return orm
   }
 
   private getAssemblyMetadata(
