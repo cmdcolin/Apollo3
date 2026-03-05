@@ -23,6 +23,8 @@ import { type Region, getSession } from '@jbrowse/core/util'
 type MikroORM = import('@mikro-orm/core').MikroORM
 import ObjectID from 'bson-objectid'
 
+import { type SubmitOpts } from '../ChangeManager'
+
 import { BackendDriver, type RefNameAliases } from './BackendDriver'
 import { createLocalDataStore } from './createLocalDataStore'
 
@@ -95,12 +97,17 @@ export class DesktopSQLiteDriver extends BackendDriver {
     }
 
     const metadata = this.getAssemblyMetadata(assemblyName)
-    if (!metadata?.gff3File) {
-      this.importedAssemblies.add(assemblyName)
-      return
+    if (metadata?.gff3File) {
+      try {
+        await this.importGFF3(assemblyName, metadata.gff3File, orm)
+      } catch (error) {
+        console.error(
+          `Failed to import GFF3 for assembly ${assemblyName}:`,
+          error,
+        )
+        throw error
+      }
     }
-
-    await this.importGFF3(assemblyName, metadata.gff3File, orm)
     this.importedAssemblies.add(assemblyName)
   }
 
@@ -285,7 +292,7 @@ export class DesktopSQLiteDriver extends BackendDriver {
     }))
   }
 
-  async submitChange(change: Change | AssemblySpecificChange) {
+  async submitChange(change: Change, _opts: SubmitOpts) {
     if (!isAssemblySpecificChange(change)) {
       throw new Error(
         `Cannot use this type of change with desktop SQLite: "${change.typeName}"`,
@@ -293,7 +300,13 @@ export class DesktopSQLiteDriver extends BackendDriver {
     }
     const orm = await this.getOrmForAssembly(change.assembly)
     const dataStore = createLocalDataStore(orm)
-    await change.execute(dataStore)
+    try {
+      await change.execute(dataStore)
+      await dataStore.unitOfWork.commit()
+    } catch (error) {
+      await dataStore.unitOfWork.rollback()
+      throw error
+    }
     return new ValidationResultSet()
   }
 

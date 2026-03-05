@@ -28,7 +28,7 @@ export abstract class FromFileBaseChange extends AssemblySpecificChange {
     const { logger } = this
     const { filesService, refSeqChunkModel, refSeqModel, user } = backend
     const { CHUNK_SIZE } = process.env
-    const customChunkSize = CHUNK_SIZE && Number(CHUNK_SIZE)
+    const customChunkSize = CHUNK_SIZE ? Number(CHUNK_SIZE) : undefined
     let chunkIndex = 0
     let refSeqLen = 0
     let refSeqDoc: RefSeqDocument | undefined
@@ -182,7 +182,7 @@ export abstract class FromFileBaseChange extends AssemblySpecificChange {
     const { filesService, refSeqChunkRepository, refSeqRepository, user } =
       backend
     const { CHUNK_SIZE } = process.env
-    const customChunkSize = CHUNK_SIZE && Number(CHUNK_SIZE)
+    const customChunkSize = CHUNK_SIZE ? Number(CHUNK_SIZE) : undefined
     const defaultChunkSize = customChunkSize ?? 262_144
     let chunkIndex = 0
     let refSeqLen = 0
