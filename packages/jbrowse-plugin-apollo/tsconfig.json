@@ -12,6 +12,7 @@
   "exclude": ["**/dist/"],
   "references": [
     { "path": "../apollo-common" },
+    { "path": "../apollo-entities" },
     { "path": "../apollo-mst" },
     { "path": "../apollo-shared" },
   ],

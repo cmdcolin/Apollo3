@@ -49,6 +49,7 @@
   },
   "dependencies": {
     "@apollo-annotation/common": "workspace:^",
+    "@apollo-annotation/entities": "workspace:^",
     "@apollo-annotation/mst": "workspace:^",
     "@apollo-annotation/shared": "workspace:^",
     "@emotion/react": "^11.10.6",
@@ -56,6 +57,8 @@
     "@gmod/gff": "^2.0.0",
     "@jbrowse/plugin-authentication": "^3.6.5",
     "@jbrowse/plugin-linear-genome-view": "^3.6.5",
+    "@mikro-orm/better-sqlite": "^6.4.0",
+    "@mikro-orm/core": "^6.4.0",
     "@mui/icons-material": "^6.5.0",
     "@types/jsonpath": "^0.2.0",
     "autosuggest-highlight": "^3.3.4",
