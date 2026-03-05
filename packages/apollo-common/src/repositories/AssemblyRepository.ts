@@ -7,7 +7,7 @@ export interface AssemblyRow {
   status?: number
   user?: string
   externalLocation?: { fa: string; fai: string; gzi?: string }
-  fileIds?: { fa: string; fai: string; gzi: string }
+  fileIds?: { fa: string } | { fa: string; fai: string; gzi: string }
   checks?: string[]
   file?: string
 }

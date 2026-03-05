@@ -83,7 +83,7 @@ export class AddAssemblyFromFileChange extends FromFileBaseChange {
     fileIds: { fa: string; fai: string; gzi: string },
   ) {
     const { CHUNK_SIZE } = process.env
-    const customChunkSize = CHUNK_SIZE && Number(CHUNK_SIZE)
+    const customChunkSize = CHUNK_SIZE ? Number(CHUNK_SIZE) : undefined
 
     const { FILE_UPLOAD_FOLDER } = process.env
     if (!FILE_UPLOAD_FOLDER) {
@@ -226,7 +226,7 @@ export class AddAssemblyFromFileChange extends FromFileBaseChange {
     fileIds: { fa: string; fai: string; gzi: string },
   ) {
     const { CHUNK_SIZE } = process.env
-    const customChunkSize = CHUNK_SIZE && Number(CHUNK_SIZE)
+    const customChunkSize = CHUNK_SIZE ? Number(CHUNK_SIZE) : undefined
     const { fa: faId, fai: faiId, gzi: gziId } = fileIds
 
     const faDoc = await backend.fileRepository.findById(faId)

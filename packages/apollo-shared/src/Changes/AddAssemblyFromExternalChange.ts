@@ -73,7 +73,7 @@ export class AddAssemblyFromExternalChange extends AssemblySpecificChange {
     const { assemblyModel, checkModel, refSeqModel, user } = backend
     const { assembly, changes, logger } = this
     const { CHUNK_SIZE } = process.env
-    const customChunkSize = CHUNK_SIZE && Number(CHUNK_SIZE)
+    const customChunkSize = CHUNK_SIZE ? Number(CHUNK_SIZE) : undefined
 
     for (const change of changes) {
       const { assemblyName, externalLocation } = change
@@ -137,7 +137,7 @@ export class AddAssemblyFromExternalChange extends AssemblySpecificChange {
   async executeOnServerV2(backend: ServerDataStoreV2) {
     const { assembly, changes, logger } = this
     const { CHUNK_SIZE } = process.env
-    const customChunkSize = CHUNK_SIZE && Number(CHUNK_SIZE)
+    const customChunkSize = CHUNK_SIZE ? Number(CHUNK_SIZE) : undefined
 
     for (const change of changes) {
       const { assemblyName, externalLocation } = change
