@@ -40,20 +40,17 @@ export function createMikroOrmConfig(
   if (dbType === 'postgresql') {
     return {
       ...base,
-      type: 'postgresql' as const,
       clientUrl: connectionUrl,
     }
   }
   if (dbType === 'sqlite') {
     return {
       ...base,
-      type: 'sqlite' as const,
       dbName: connectionUrl,
     }
   }
   return {
     ...base,
-    type: 'mongo' as const,
     clientUrl: connectionUrl,
   }
 }

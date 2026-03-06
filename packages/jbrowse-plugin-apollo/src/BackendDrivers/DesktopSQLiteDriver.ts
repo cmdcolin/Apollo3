@@ -27,6 +27,7 @@ import { type SubmitOpts } from '../ChangeManager'
 
 import { BackendDriver, type RefNameAliases } from './BackendDriver'
 import { createLocalDataStore } from './createLocalDataStore'
+import { getElectronRequire } from './electronRequire'
 
 interface SQLiteAssemblyMetadata {
   apollo: boolean
@@ -56,14 +57,17 @@ export class DesktopSQLiteDriver extends BackendDriver {
   }
 
   private async initORM(dbPath: string) {
-    const { createMikroOrmConfig } =
-      require('@apollo-annotation/entities') as typeof import('@apollo-annotation/entities')
-    const { MikroORM: MikroORMClass } =
-      require('@mikro-orm/core') as typeof import('@mikro-orm/core')
+    const electronRequire = getElectronRequire()
+    const { createMikroOrmConfig } = electronRequire(
+      '@apollo-annotation/entities',
+    ) as typeof import('@apollo-annotation/entities')
+    const { MikroORM: MikroORMClass } = electronRequire(
+      '@mikro-orm/core',
+    ) as typeof import('@mikro-orm/core')
     const config = createMikroOrmConfig('sqlite', dbPath)
     const orm = await MikroORMClass.init({
       ...config,
-      driver: require('@mikro-orm/better-sqlite').BetterSqliteDriver,
+      driver: electronRequire('@mikro-orm/libsql').LibSqlDriver,
     })
     const generator = orm.getSchemaGenerator()
     await generator.updateSchema()
@@ -112,8 +116,40 @@ export class DesktopSQLiteDriver extends BackendDriver {
         )
         throw error
       }
+    } else {
+      // FASTA-only project: create the assembly and refSeq rows in SQLite
+      // so that features can be added with valid foreign keys.
+      await this.createEmptyAssembly(assemblyName, orm)
     }
     this.importedAssemblies.add(assemblyName)
+  }
+
+  private async createEmptyAssembly(assemblyName: string, orm: MikroORM) {
+    const dataStore = createLocalDataStore(orm)
+    const assemblyId = new ObjectID().toHexString()
+    await dataStore.assemblyRepository.create({
+      _id: assemblyId,
+      name: assemblyName,
+    })
+
+    const { assemblyManager } = getSession(this.clientStore)
+    const assembly = assemblyManager.get(assemblyName)
+    const regions = assembly?.regions ?? []
+
+    const refSeqRows: RefSeqRow[] = []
+    for (const region of regions) {
+      const refSeqId = new ObjectID().toHexString()
+      refSeqRows.push({
+        _id: refSeqId,
+        assembly: assemblyId,
+        name: region.refName,
+        length: region.end - region.start,
+        chunkSize: 256 * 1024,
+      })
+    }
+    if (refSeqRows.length > 0) {
+      await dataStore.refSeqRepository.createMany(refSeqRows)
+    }
   }
 
   private async importGFF3(
@@ -121,9 +157,11 @@ export class DesktopSQLiteDriver extends BackendDriver {
     gff3File: string,
     orm: MikroORM,
   ) {
-    const fs = require('node:fs') as typeof import('fs')
-    const { parseStringSync } =
-      require('@gmod/gff') as typeof import('@gmod/gff')
+    const electronRequire = getElectronRequire()
+    const fs = electronRequire('node:fs') as typeof import('fs')
+    const { parseStringSync } = electronRequire(
+      '@gmod/gff',
+    ) as typeof import('@gmod/gff')
 
     const fileContents = await fs.promises.readFile(gff3File, 'utf8')
     const gff3Result = parseStringSync(fileContents)
@@ -297,13 +335,41 @@ export class DesktopSQLiteDriver extends BackendDriver {
     }))
   }
 
+  private async buildRefNameToIdMap(assemblyName: string, orm: MikroORM) {
+    const dataStore = createLocalDataStore(orm)
+    const assemblyRow =
+      await dataStore.assemblyRepository.findByName(assemblyName)
+    if (!assemblyRow) {
+      return new Map<string, string>()
+    }
+    const refSeqs = await dataStore.refSeqRepository.findByAssembly(
+      assemblyRow._id,
+    )
+    const map = new Map<string, string>()
+    for (const rs of refSeqs) {
+      map.set(rs.name, rs._id)
+    }
+    return map
+  }
+
   async submitChange(change: Change, _opts: SubmitOpts) {
     if (!isAssemblySpecificChange(change)) {
       throw new Error(
         `Cannot use this type of change with desktop SQLite: "${change.typeName}"`,
       )
     }
-    const orm = await this.getOrmForAssembly(change.assembly)
+    const assemblyChange = change as AssemblySpecificChange
+    const orm = await this.getOrmForAssembly(assemblyChange.assembly)
+
+    // Translate refNames to refSeq IDs in the change's feature snapshots.
+    // The client uses refNames (e.g. 'ctgA') but SQLite FKs require the
+    // refSeq row's _id.
+    const refNameMap = await this.buildRefNameToIdMap(
+      assemblyChange.assembly,
+      orm,
+    )
+    this.patchRefSeqIds(change, refNameMap)
+
     const dataStore = createLocalDataStore(orm)
     try {
       await change.execute(dataStore)
@@ -313,6 +379,34 @@ export class DesktopSQLiteDriver extends BackendDriver {
       throw error
     }
     return new ValidationResultSet()
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private patchRefSeqIds(change: Change, refNameMap: Map<string, string>) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const c = change as Record<string, unknown>
+    if ('changes' in c && Array.isArray(c.changes)) {
+      for (const sub of c.changes) {
+        if (sub.addedFeature) {
+          this.patchFeatureRefSeq(sub.addedFeature, refNameMap)
+        }
+      }
+    }
+  }
+
+  private patchFeatureRefSeq(
+    feature: AnnotationFeatureSnapshot,
+    refNameMap: Map<string, string>,
+  ) {
+    const mapped = refNameMap.get(feature.refSeq)
+    if (mapped) {
+      feature.refSeq = mapped
+    }
+    if (feature.children) {
+      for (const child of Object.values(feature.children)) {
+        this.patchFeatureRefSeq(child, refNameMap)
+      }
+    }
   }
 
   async searchFeatures(
