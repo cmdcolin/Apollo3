@@ -22,6 +22,7 @@ import { type SubmitOpts } from '../ChangeManager'
 import { checkFeatures, loadAssemblyIntoClient } from '../util'
 
 import { BackendDriver, type RefNameAliases } from './BackendDriver'
+import { getElectronRequire } from './electronRequire'
 
 export class DesktopFileDriver extends BackendDriver {
   async loadAssembly(assemblyName: string) {
@@ -34,8 +35,7 @@ export class DesktopFileDriver extends BackendDriver {
       file: string
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/consistent-type-imports
-    const fs = require('node:fs') as typeof import('fs')
+    const fs = getElectronRequire()('node:fs') as typeof import('fs')
     const fileContents = await fs.promises.readFile(file, 'utf8')
     return loadAssemblyIntoClient(assemblyName, fileContents, this.clientStore)
   }
@@ -171,8 +171,7 @@ export class DesktopFileDriver extends BackendDriver {
 
     const gff3Contents = formatSync(gff3Items)
 
-    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/consistent-type-imports
-    const fs = require('node:fs') as typeof import('fs')
+    const fs = getElectronRequire()('node:fs') as typeof import('fs')
     await fs.promises.writeFile(file, gff3Contents, 'utf8')
 
     const results = new ValidationResultSet()

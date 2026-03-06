@@ -525,6 +525,7 @@ __metadata:
     "@jest/globals": "npm:^29.0.3"
     "@mikro-orm/better-sqlite": "npm:^6.4.0"
     "@mikro-orm/core": "npm:^6.4.0"
+    "@mikro-orm/libsql": "npm:^6.4.0"
     "@mui/icons-material": "npm:^6.5.0"
     "@mui/material": "npm:^7.0.0"
     "@mui/x-data-grid": "npm:^8.0.0"
@@ -6855,6 +6856,69 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@libsql/darwin-arm64@npm:0.5.22":
+  version: 0.5.22
+  resolution: "@libsql/darwin-arm64@npm:0.5.22"
+  conditions: os=darwin & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@libsql/darwin-x64@npm:0.5.22":
+  version: 0.5.22
+  resolution: "@libsql/darwin-x64@npm:0.5.22"
+  conditions: os=darwin & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@libsql/linux-arm-gnueabihf@npm:0.5.22":
+  version: 0.5.22
+  resolution: "@libsql/linux-arm-gnueabihf@npm:0.5.22"
+  conditions: os=linux & cpu=arm
+  languageName: node
+  linkType: hard
+
+"@libsql/linux-arm-musleabihf@npm:0.5.22":
+  version: 0.5.22
+  resolution: "@libsql/linux-arm-musleabihf@npm:0.5.22"
+  conditions: os=linux & cpu=arm
+  languageName: node
+  linkType: hard
+
+"@libsql/linux-arm64-gnu@npm:0.5.22":
+  version: 0.5.22
+  resolution: "@libsql/linux-arm64-gnu@npm:0.5.22"
+  conditions: os=linux & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@libsql/linux-arm64-musl@npm:0.5.22":
+  version: 0.5.22
+  resolution: "@libsql/linux-arm64-musl@npm:0.5.22"
+  conditions: os=linux & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@libsql/linux-x64-gnu@npm:0.5.22":
+  version: 0.5.22
+  resolution: "@libsql/linux-x64-gnu@npm:0.5.22"
+  conditions: os=linux & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@libsql/linux-x64-musl@npm:0.5.22":
+  version: 0.5.22
+  resolution: "@libsql/linux-x64-musl@npm:0.5.22"
+  conditions: os=linux & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@libsql/win32-x64-msvc@npm:0.5.22":
+  version: 0.5.22
+  resolution: "@libsql/win32-x64-msvc@npm:0.5.22"
+  conditions: os=win32 & cpu=x64
+  languageName: node
+  linkType: hard
+
 "@lukeed/csprng@npm:^1.0.0":
   version: 1.1.0
   resolution: "@lukeed/csprng@npm:1.1.0"
@@ -6973,6 +7037,20 @@ __metadata:
     mariadb:
       optional: true
   checksum: 10c0/4dc693201a0507dd4fa336dff2df401a99489aaf254ed033293d62b1948249a1fe39338d89436baf486fd1b3d5447bedc04b00842aea80c4fa199bc7a06e0423
+  languageName: node
+  linkType: hard
+
+"@mikro-orm/libsql@npm:^6.4.0":
+  version: 6.6.8
+  resolution: "@mikro-orm/libsql@npm:6.6.8"
+  dependencies:
+    "@mikro-orm/knex": "npm:6.6.8"
+    fs-extra: "npm:11.3.3"
+    libsql: "npm:0.5.22"
+    sqlstring-sqlite: "npm:0.1.1"
+  peerDependencies:
+    "@mikro-orm/core": ^6.0.0
+  checksum: 10c0/7ae51f894f4fd7a80f0de5be3933c772fea55735c90a2b0bf332b27ac1ba4145d6001e9311b31ad9e57d8ffa66b9f32736a6b395d128ef92fbb2ffc007683c4b
   languageName: node
   linkType: hard
 
@@ -7444,6 +7522,13 @@ __metadata:
     "@emnapi/runtime": "npm:^1.4.3"
     "@tybys/wasm-util": "npm:^0.10.0"
   checksum: 10c0/6d07922c0613aab30c6a497f4df297ca7c54e5b480e00035e0209b872d5c6aab7162fc49477267556109c2c7ed1eb9c65a174e27e9b87568106a87b0a6e3ca7d
+  languageName: node
+  linkType: hard
+
+"@neon-rs/load@npm:^0.0.4":
+  version: 0.0.4
+  resolution: "@neon-rs/load@npm:0.0.4"
+  checksum: 10c0/546fa4e48aa9cdb402f0a3524b591b1cac863bcfdd0217432323dba42ad37ece24b736019e6196e34326201db6b6deb410d7a983ac3c54f322619c9b6bd568bb
   languageName: node
   linkType: hard
 
@@ -15891,6 +15976,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"detect-libc@npm:2.0.2":
+  version: 2.0.2
+  resolution: "detect-libc@npm:2.0.2"
+  checksum: 10c0/a9f4ffcd2701525c589617d98afe5a5d0676c8ea82bcc4ed6f3747241b79f781d36437c59a5e855254c864d36a3e9f8276568b6b531c28d6e53b093a15703f11
+  languageName: node
+  linkType: hard
+
 "detect-libc@npm:^2.0.0":
   version: 2.1.2
   resolution: "detect-libc@npm:2.1.2"
@@ -22493,6 +22585,45 @@ __metadata:
     "@librpc/ee": "npm:1.0.4"
     serialize-error: "npm:^8.1.0"
   checksum: 10c0/20ec9e2f256ef3cd3054081403d47cc5663e29018968afa7cec8e77e6ccd5bb3c51d97657631cf973ff32c4772d9ae40987dd62f65e708657111a9f1f947282b
+  languageName: node
+  linkType: hard
+
+"libsql@npm:0.5.22":
+  version: 0.5.22
+  resolution: "libsql@npm:0.5.22"
+  dependencies:
+    "@libsql/darwin-arm64": "npm:0.5.22"
+    "@libsql/darwin-x64": "npm:0.5.22"
+    "@libsql/linux-arm-gnueabihf": "npm:0.5.22"
+    "@libsql/linux-arm-musleabihf": "npm:0.5.22"
+    "@libsql/linux-arm64-gnu": "npm:0.5.22"
+    "@libsql/linux-arm64-musl": "npm:0.5.22"
+    "@libsql/linux-x64-gnu": "npm:0.5.22"
+    "@libsql/linux-x64-musl": "npm:0.5.22"
+    "@libsql/win32-x64-msvc": "npm:0.5.22"
+    "@neon-rs/load": "npm:^0.0.4"
+    detect-libc: "npm:2.0.2"
+  dependenciesMeta:
+    "@libsql/darwin-arm64":
+      optional: true
+    "@libsql/darwin-x64":
+      optional: true
+    "@libsql/linux-arm-gnueabihf":
+      optional: true
+    "@libsql/linux-arm-musleabihf":
+      optional: true
+    "@libsql/linux-arm64-gnu":
+      optional: true
+    "@libsql/linux-arm64-musl":
+      optional: true
+    "@libsql/linux-x64-gnu":
+      optional: true
+    "@libsql/linux-x64-musl":
+      optional: true
+    "@libsql/win32-x64-msvc":
+      optional: true
+  checksum: 10c0/6c34f08fc7408ebee16708ba12e5def9d1b2a4fa166070c956a120133ba9be68ec532e2d0b76bdc7005ef9ef69bf70d2ba7208ed824c4288c2a3d881edd5eaf6
+  conditions: (os=darwin | os=linux | os=win32) & (cpu=x64 | cpu=arm64 | cpu=wasm32 | cpu=arm)
   languageName: node
   linkType: hard
 

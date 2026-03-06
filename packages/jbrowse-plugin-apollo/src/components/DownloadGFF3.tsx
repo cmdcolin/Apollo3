@@ -144,11 +144,10 @@ export function DownloadGFF3({ handleClose, session }: DownloadGFF3Props) {
       return
     }
     const gff3Items: GFF3Item[] = [{ directive: 'gff-version', value: '3' }]
-    const sequenceFeatures = getConf(selectedAssembly, [
-      'sequence',
-      'adapter',
-      'features',
-    ]) as { refName: string; start: number; end: number; seq: string }[]
+    const sequenceFeatures =
+      (getConf(selectedAssembly, ['sequence', 'adapter', 'features']) as
+        | { refName: string; start: number; end: number; seq: string }[]
+        | undefined) ?? []
     for (const sequenceFeature of sequenceFeatures) {
       const { end, refName, start } = sequenceFeature
       gff3Items.push({
