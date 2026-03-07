@@ -12,3 +12,17 @@ Monorepo for Apollo3 development
 | [jbrowse-plugin-apollo](./packages/jbrowse-plugin-apollo/)             | Client-side code (as a JBrowse 2 plugin)                   |
 
 See [the contribution guide](./CONTRIBUTING.md) for instructions to developers.
+
+● To boot up the dev server, run:
+
+yarn start
+
+This runs three things in parallel:
+
+1. start:shared — builds/watches @apollo-annotation/shared
+2. start:server — starts the collaboration server
+   (@apollo-annotation/collaboration-server)
+3. start:plugin — starts the JBrowse plugin
+   (@apollo-annotation/jbrowse-plugin-apollo)
+
+Make sure you've run yarn install first if you haven't already.
