@@ -60,7 +60,6 @@
     "@gmod/gff": "^2.0.0",
     "@jbrowse/plugin-authentication": "^3.6.5",
     "@jbrowse/plugin-linear-genome-view": "^3.6.5",
-    "@mikro-orm/better-sqlite": "^6.4.0",
     "@mikro-orm/core": "^6.4.0",
     "@mikro-orm/libsql": "^6.4.0",
     "@mui/icons-material": "^6.5.0",
