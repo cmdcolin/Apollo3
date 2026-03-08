@@ -2,14 +2,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import type {
-  FeatureRepository,
-  RefSeqRepository,
-} from '@apollo-annotation/common'
-import {
-  MikroOrmFeatureRepository,
-  MikroOrmRefSeqRepository,
-} from '@apollo-annotation/entities'
 import {
   Feature,
   FeatureDocument,
@@ -17,19 +9,13 @@ import {
   RefSeqDocument,
 } from '@apollo-annotation/schemas'
 import { GetFeaturesOperation } from '@apollo-annotation/shared'
-import { EntityManager } from '@mikro-orm/core'
-import {
-  Inject,
-  Injectable,
-  Logger,
-  NotFoundException,
-  Optional,
-} from '@nestjs/common'
+import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { Model } from 'mongoose'
 
 import { ChecksService } from '../checks/checks.service'
 import { FeatureRangeSearchDto } from '../entity/gff3Object.dto'
+import { DatabaseService } from '../mikro-orm/database.service'
 import { OperationsService } from '../operations/operations.service'
 
 import { FeatureCountRequest } from './dto/feature.dto'
@@ -39,37 +25,38 @@ export class FeaturesService {
   constructor(
     private readonly operationsService: OperationsService,
     private readonly checksService: ChecksService,
+    @Optional()
     @InjectModel(Feature.name)
     private readonly featureModel: Model<FeatureDocument>,
+    @Optional()
     @InjectModel(RefSeq.name)
     private readonly refSeqModel: Model<RefSeqDocument>,
-    @Optional() @Inject(EntityManager) private readonly em?: EntityManager,
+    private readonly db: DatabaseService,
   ) {}
 
   private readonly logger = new Logger(FeaturesService.name)
 
-  private get useV2Backend() {
-    const dbBackend = process.env.DB_BACKEND
-    return dbBackend && dbBackend !== 'mongodb' && this.em !== undefined
-  }
-
-  private getRepositories() {
-    if (!this.em) {
-      throw new Error('EntityManager not available')
+  async findAll() {
+    if (this.db.useV2Backend) {
+      const refSeqs = await this.db.refSeq.findAll()
+      const features = []
+      for (const refSeq of refSeqs) {
+        const refFeatures = await this.db.feature.findByRange(
+          refSeq._id,
+          0,
+          Number.MAX_SAFE_INTEGER,
+        )
+        for (const f of refFeatures) {
+          features.push(f)
+        }
+      }
+      return features
     }
-    const em = this.em.fork()
-    return {
-      featureRepository: new MikroOrmFeatureRepository(em) as FeatureRepository,
-      refSeqRepository: new MikroOrmRefSeqRepository(em) as RefSeqRepository,
-    }
-  }
-
-  findAll() {
     return this.featureModel.find().exec()
   }
 
   async getFeatureCount(featureCountRequest: FeatureCountRequest) {
-    if (this.useV2Backend) {
+    if (this.db.useV2Backend) {
       return this.getFeatureCountV2(featureCountRequest)
     }
 
@@ -109,20 +96,19 @@ export class FeaturesService {
 
   private async getFeatureCountV2(featureCountRequest: FeatureCountRequest) {
     const { assemblyId, end, refSeqId, start } = featureCountRequest
-    const { featureRepository, refSeqRepository } = this.getRepositories()
 
     let count = 0
     if (refSeqId) {
-      const features = await featureRepository.findByRange(
+      const features = await this.db.feature.findByRange(
         refSeqId,
         start ?? 0,
         end ?? Number.MAX_SAFE_INTEGER,
       )
       count = features.length
     } else if (assemblyId) {
-      const refSeqs = await refSeqRepository.findByAssembly(assemblyId)
+      const refSeqs = await this.db.refSeq.findByAssembly(assemblyId)
       for (const refSeq of refSeqs) {
-        const features = await featureRepository.findByRange(
+        const features = await this.db.feature.findByRange(
           refSeq._id,
           start ?? 0,
           end ?? Number.MAX_SAFE_INTEGER,
@@ -130,9 +116,9 @@ export class FeaturesService {
         count += features.length
       }
     } else {
-      const refSeqs = await refSeqRepository.findAll()
+      const refSeqs = await this.db.refSeq.findAll()
       for (const refSeq of refSeqs) {
-        const features = await featureRepository.findByRange(
+        const features = await this.db.feature.findByRange(
           refSeq._id,
           0,
           Number.MAX_SAFE_INTEGER,
@@ -146,7 +132,7 @@ export class FeaturesService {
   }
 
   async findById(featureId: string, topLevel?: boolean) {
-    if (this.useV2Backend) {
+    if (this.db.useV2Backend) {
       return this.findByIdV2(featureId, topLevel)
     }
 
@@ -175,8 +161,7 @@ export class FeaturesService {
   }
 
   private async findByIdV2(featureId: string, _topLevel?: boolean) {
-    const { featureRepository } = this.getRepositories()
-    const feature = await featureRepository.findById(featureId)
+    const feature = await this.db.feature.findById(featureId)
     if (!feature) {
       const errMsg = `ERROR: The following featureId was not found in database ='${featureId}'`
       this.logger.error(errMsg)
@@ -238,6 +223,9 @@ export class FeaturesService {
   }
 
   async checkFeature(featureId: string, checkTimestamps = true) {
+    if (this.db.useV2Backend) {
+      return this.checksService.checkFeatureV2(featureId, checkTimestamps)
+    }
     const topLevelFeature = await this.featureModel.findById(featureId).exec()
     if (!topLevelFeature) {
       return
@@ -246,7 +234,7 @@ export class FeaturesService {
   }
 
   async searchFeatures(searchDto: { term: string; assemblies: string }) {
-    if (this.useV2Backend) {
+    if (this.db.useV2Backend) {
       return this.searchFeaturesV2(searchDto)
     }
 
@@ -266,13 +254,11 @@ export class FeaturesService {
   }) {
     const { assemblies, term } = searchDto
     const assemblyIds = assemblies.split(',')
-    const { featureRepository, refSeqRepository } = this.getRepositories()
-
     const results = []
     for (const assemblyId of assemblyIds) {
-      const refSeqs = await refSeqRepository.findByAssembly(assemblyId)
+      const refSeqs = await this.db.refSeq.findByAssembly(assemblyId)
       for (const refSeq of refSeqs) {
-        const features = await featureRepository.searchText(refSeq._id, term)
+        const features = await this.db.feature.searchText(refSeq._id, term)
         for (const feature of features) {
           results.push(feature)
         }

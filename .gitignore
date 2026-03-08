@@ -128,3 +128,6 @@ packages/apollo-collaboration-server/test/uploaded
 
 # Python
 __pycache__/
+
+# SQLite databases
+*.sqlite

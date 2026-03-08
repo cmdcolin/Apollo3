@@ -69,7 +69,44 @@ export class MikroOrmCheckResultRepository implements CheckResultRepository {
     return entities.map(toRow)
   }
 
+  async findByFeatureId(featureId: string) {
+    const all = await this.em.find(CheckResultEntity, {})
+    return all.filter((e) => e.ids.includes(featureId)).map(toRow)
+  }
+
+  async findByRefSeqIds(refSeqIds: string[]) {
+    const filter = refSeqIds.length > 0 ? { refSeq: { $in: refSeqIds } } : {}
+    const entities = await this.em.find(CheckResultEntity, filter)
+    return entities.map(toRow)
+  }
+
+  async deleteByIds(ids: string[]) {
+    return this.em.nativeDelete(CheckResultEntity, { _id: { $in: ids } })
+  }
+
   async deleteByRefSeq(refSeqId: string) {
     return this.em.nativeDelete(CheckResultEntity, { refSeq: refSeqId })
+  }
+
+  async deleteByFeatureIdsAndName(featureIds: string[], checkName: string) {
+    const all = await this.em.find(CheckResultEntity, { name: checkName })
+    const toDelete = all.filter((e) =>
+      e.ids.some((id) => featureIds.includes(id)),
+    )
+    if (toDelete.length === 0) {
+      return 0
+    }
+    const ids = toDelete.map((e) => e._id)
+    return this.em.nativeDelete(CheckResultEntity, { _id: { $in: ids } })
+  }
+
+  async updateById(id: string, data: Partial<Omit<CheckResultRow, '_id'>>) {
+    const entity = await this.em.findOne(CheckResultEntity, { _id: id })
+    if (!entity) {
+      return undefined
+    }
+    this.em.assign(entity, data)
+    await this.em.flush()
+    return toRow(entity)
   }
 }

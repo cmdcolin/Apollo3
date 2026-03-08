@@ -1,4 +1,5 @@
 import { Options } from '@mikro-orm/core'
+import { defineConfig as defineLibSqlConfig } from '@mikro-orm/libsql'
 
 import { AssemblyEntity } from './entities/AssemblyEntity'
 import { ChangeEntity } from './entities/ChangeEntity'
@@ -31,23 +32,17 @@ const allEntities = [
 export function createMikroOrmConfig(
   dbType: 'postgresql' | 'sqlite' | 'mongo',
   connectionUrl: string,
-) {
-  const base: Options = {
+): Options {
+  const base = {
     entities: allEntities,
     debug: process.env.MIKRO_ORM_DEBUG === 'true',
   }
 
-  if (dbType === 'postgresql') {
-    return {
-      ...base,
-      clientUrl: connectionUrl,
-    }
-  }
   if (dbType === 'sqlite') {
-    return {
+    return defineLibSqlConfig({
       ...base,
       dbName: connectionUrl,
-    }
+    })
   }
   return {
     ...base,

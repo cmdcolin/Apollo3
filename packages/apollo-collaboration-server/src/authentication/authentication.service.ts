@@ -194,7 +194,7 @@ export class AuthenticationService {
       username: user.username,
       email: user.email,
       role: user.role,
-      id: user.id,
+      id: String(user._id),
     }
     // Return token with SUCCESS status
     const returnToken = this.jwtService.sign(payload)

@@ -1,7 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import type { AssemblyRepository } from '@apollo-annotation/common'
-import { MikroOrmAssemblyRepository } from '@apollo-annotation/entities'
 import {
   Assembly,
   AssemblyDocument,
@@ -9,9 +7,7 @@ import {
   CheckDocument,
 } from '@apollo-annotation/schemas'
 import { GetAssembliesOperation } from '@apollo-annotation/shared'
-import { EntityManager } from '@mikro-orm/core'
 import {
-  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -19,11 +15,13 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
+import { ObjectId } from 'mongodb'
 import { Model } from 'mongoose'
 import { FeaturesService } from 'src/features/features.service'
 import { RefSeqsService } from 'src/refSeqs/refSeqs.service'
 
 import { ChecksService } from '../checks/checks.service'
+import { DatabaseService } from '../mikro-orm/database.service'
 import { OperationsService } from '../operations/operations.service'
 
 import { CreateAssemblyDto } from './dto/create-assembly.dto'
@@ -32,38 +30,38 @@ import { UpdateAssemblyDto } from './dto/update-assembly.dto'
 @Injectable()
 export class AssembliesService {
   constructor(
+    @Optional()
     @InjectModel(Assembly.name)
     private readonly assemblyModel: Model<AssemblyDocument>,
+    @Optional()
     @InjectModel(Check.name)
     private readonly checkModel: Model<CheckDocument>,
     private readonly operationsService: OperationsService,
     private readonly checksService: ChecksService,
     private readonly featuresService: FeaturesService,
     private readonly refSeqsService: RefSeqsService,
-    @Optional() @Inject(EntityManager) private readonly em?: EntityManager,
+    private readonly db: DatabaseService,
   ) {}
 
   private readonly logger = new Logger(AssembliesService.name)
 
-  private get useV2Backend() {
-    const dbBackend = process.env.DB_BACKEND
-    return dbBackend && dbBackend !== 'mongodb' && this.em !== undefined
-  }
-
-  private get assemblyRepository(): AssemblyRepository {
-    if (!this.em) {
-      throw new Error('EntityManager not available')
-    }
-    return new MikroOrmAssemblyRepository(this.em.fork())
-  }
-
   async create(createAssemblyDto: CreateAssemblyDto) {
+    if (this.db.useV2Backend) {
+      return this.db.assembly.create({
+        _id: new ObjectId().toHexString(),
+        name: createAssemblyDto.name,
+        displayName: createAssemblyDto.displayName,
+        description: createAssemblyDto.description,
+        aliases: createAssemblyDto.aliases,
+        status: 0,
+      })
+    }
     return this.assemblyModel.create(createAssemblyDto)
   }
 
   async updateChecks(_id: string, checks: string[]) {
-    if (this.useV2Backend) {
-      await this.assemblyRepository.updateById(_id, { checks })
+    if (this.db.useV2Backend) {
+      await this.db.assembly.updateById(_id, { checks })
     } else {
       try {
         await this.assemblyModel.updateOne(
@@ -108,8 +106,8 @@ export class AssembliesService {
   }
 
   async findOne(id: string) {
-    if (this.useV2Backend) {
-      const assembly = await this.assemblyRepository.findById(id)
+    if (this.db.useV2Backend) {
+      const assembly = await this.db.assembly.findById(id)
       if (!assembly) {
         throw new NotFoundException(`Assembly with id "${id}" not found`)
       }
@@ -124,7 +122,10 @@ export class AssembliesService {
     return assembly
   }
 
-  update(id: string, updateAssemblyDto: UpdateAssemblyDto) {
+  async update(id: string, updateAssemblyDto: UpdateAssemblyDto) {
+    if (this.db.useV2Backend) {
+      return this.db.assembly.updateById(id, updateAssemblyDto)
+    }
     return this.assemblyModel
       .findByIdAndUpdate({ id, status: 0 }, updateAssemblyDto, {
         runValidators: true,
@@ -132,7 +133,10 @@ export class AssembliesService {
       .exec()
   }
 
-  remove(id: string) {
+  async remove(id: string) {
+    if (this.db.useV2Backend) {
+      return this.db.assembly.deleteById(id)
+    }
     return this.assemblyModel.findByIdAndDelete(id).exec()
   }
 }

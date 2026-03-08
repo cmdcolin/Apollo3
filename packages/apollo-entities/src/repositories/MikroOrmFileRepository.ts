@@ -23,6 +23,19 @@ export class MikroOrmFileRepository implements FileRepository {
     return undefined
   }
 
+  async findByChecksum(checksum: string) {
+    const entity = await this.em.findOne(FileEntity, { checksum })
+    if (entity) {
+      return toRow(entity)
+    }
+    return undefined
+  }
+
+  async findAll() {
+    const entities = await this.em.find(FileEntity, {})
+    return entities.map(toRow)
+  }
+
   async create(row: FileRow) {
     const entity = this.em.create(FileEntity, {
       _id: row._id,

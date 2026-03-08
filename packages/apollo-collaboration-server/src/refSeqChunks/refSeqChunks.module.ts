@@ -4,19 +4,25 @@ import { Module } from '@nestjs/common'
 import { MongooseModule, getConnectionToken } from '@nestjs/mongoose'
 import idValidator from 'mongoose-id-validator'
 
+import { useMongoose } from '../utils/constants'
+
 @Module({
   imports: [
-    MongooseModule.forFeatureAsync([
-      {
-        name: RefSeqChunk.name,
-        useFactory: (connection) => {
-          RefSeqChunkSchema.plugin(idValidator, { connection })
-          return RefSeqChunkSchema
-        },
-        inject: [getConnectionToken()],
-      },
-    ]),
+    ...(useMongoose
+      ? [
+          MongooseModule.forFeatureAsync([
+            {
+              name: RefSeqChunk.name,
+              useFactory: (connection) => {
+                RefSeqChunkSchema.plugin(idValidator, { connection })
+                return RefSeqChunkSchema
+              },
+              inject: [getConnectionToken()],
+            },
+          ]),
+        ]
+      : []),
   ],
-  exports: [MongooseModule],
+  exports: [...(useMongoose ? [MongooseModule] : [])],
 })
 export class RefSeqChunksModule {}

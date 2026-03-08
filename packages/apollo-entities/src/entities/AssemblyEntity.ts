@@ -29,7 +29,7 @@ export class AssemblyEntity {
   externalLocation?: { fa: string; fai: string; gzi?: string }
 
   @Property({ type: 'json', nullable: true })
-  fileIds?: { fa: string; fai: string; gzi: string }
+  fileIds?: { fa: string } | { fa: string; fai: string; gzi: string }
 
   @Property({ type: 'json', nullable: true })
   checks?: string[]

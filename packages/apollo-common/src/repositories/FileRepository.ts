@@ -12,6 +12,8 @@ export interface FileRow {
 
 export interface FileRepository {
   findById(id: string): Promise<FileRow | undefined>
+  findByChecksum(checksum: string): Promise<FileRow | undefined>
+  findAll(): Promise<FileRow[]>
   create(row: FileRow): Promise<FileRow>
   deleteById(id: string): Promise<boolean>
 }

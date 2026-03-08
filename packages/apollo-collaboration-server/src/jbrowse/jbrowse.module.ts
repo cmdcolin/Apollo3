@@ -6,6 +6,7 @@ import idValidator from 'mongoose-id-validator'
 
 import { AssembliesModule } from '../assemblies/assemblies.module'
 import { RefSeqsModule } from '../refSeqs/refSeqs.module'
+import { useMongoose } from '../utils/constants'
 
 import { JBrowseController } from './jbrowse.controller'
 import { JBrowseService } from './jbrowse.service'
@@ -15,19 +16,23 @@ import { JBrowseService } from './jbrowse.service'
   imports: [
     // AssembliesModule,
     forwardRef(() => AssembliesModule),
-    MongooseModule.forFeatureAsync([
-      {
-        name: JBrowseConfig.name,
-        useFactory: (connection) => {
-          JBrowseConfigSchema.plugin(idValidator, { connection })
-          return JBrowseConfigSchema
-        },
-        inject: [getConnectionToken()],
-      },
-    ]),
+    ...(useMongoose
+      ? [
+          MongooseModule.forFeatureAsync([
+            {
+              name: JBrowseConfig.name,
+              useFactory: (connection) => {
+                JBrowseConfigSchema.plugin(idValidator, { connection })
+                return JBrowseConfigSchema
+              },
+              inject: [getConnectionToken()],
+            },
+          ]),
+        ]
+      : []),
     RefSeqsModule,
   ],
   providers: [JBrowseService],
-  exports: [MongooseModule, JBrowseService],
+  exports: [...(useMongoose ? [MongooseModule] : []), JBrowseService],
 })
 export class JBrowseModule {}

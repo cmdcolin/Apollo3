@@ -1,11 +1,13 @@
 import fs from 'node:fs/promises'
 
-import { Module } from '@nestjs/common'
+import { type DynamicModule, Module } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { APP_GUARD } from '@nestjs/core'
 import { MongooseModule, MongooseModuleFactoryOptions } from '@nestjs/mongoose'
 import Joi from 'joi'
 import { Connection } from 'mongoose'
+
+import { useMongoose } from './utils/constants'
 
 import { AssembliesModule } from './assemblies/assemblies.module'
 import { AuthenticationModule } from './authentication/authentication.module'
@@ -109,8 +111,10 @@ const validationSchema = Joi.object({
     })
     .default(''),
   PLUGIN_URLS_FILE: Joi.string(),
+  DB_BACKEND: Joi.string().valid('mongodb', 'sqlite', 'postgresql'),
+  DB_CONNECTION_URL: Joi.string(),
 })
-  .xor('MONGODB_URI', 'MONGODB_URI_FILE')
+  .oxor('MONGODB_URI', 'MONGODB_URI_FILE')
   .oxor('GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_ID_FILE')
   .oxor('GOOGLE_CLIENT_SECRET', 'GOOGLE_CLIENT_SECRET_FILE')
   .oxor('MICROSOFT_CLIENT_ID', 'MICROSOFT_CLIENT_ID_FILE')
@@ -141,34 +145,38 @@ async function mongoDBURIFactory(
 
 @Module({
   imports: [
-    AssembliesModule,
-    AuthenticationModule,
-    ChangesModule,
-    ChecksModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: nodeEnv === 'production' ? '.env' : '.development.env',
       validationSchema,
     }),
-    CountersModule,
-    ExportModule,
-    FeaturesModule,
-    FilesModule,
     HealthModule,
     MessagesModule,
-    MongooseModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: mongoDBURIFactory,
-      inject: [ConfigService],
-    }),
-    OperationsModule,
+    ApolloMikroOrmModule.forRoot(),
+    ...(useMongoose
+      ? [
+          MongooseModule.forRootAsync({
+            imports: [ConfigModule],
+            useFactory: mongoDBURIFactory,
+            inject: [ConfigService],
+          }) as DynamicModule,
+        ]
+      : []),
     PluginsModule.registerAsync(),
+    CountersModule,
     RefSeqChunksModule,
     RefSeqsModule,
-    SequenceModule,
     UsersModule,
+    FilesModule,
+    ChecksModule,
+    SequenceModule,
+    OperationsModule,
+    FeaturesModule,
+    AssembliesModule,
     JBrowseModule,
-    ApolloMikroOrmModule.forRoot(),
+    ExportModule,
+    ChangesModule,
+    AuthenticationModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

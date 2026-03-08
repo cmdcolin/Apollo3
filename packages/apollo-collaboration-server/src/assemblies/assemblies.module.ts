@@ -6,6 +6,7 @@ import { RefSeqsModule } from 'src/refSeqs/refSeqs.module'
 
 import { ChecksModule } from '../checks/checks.module'
 import { OperationsModule } from '../operations/operations.module'
+import { useMongoose } from '../utils/constants'
 
 import { AssembliesController } from './assemblies.controller'
 import { AssembliesService } from './assemblies.service'
@@ -14,14 +15,18 @@ import { AssembliesService } from './assemblies.service'
   controllers: [AssembliesController],
   providers: [AssembliesService],
   imports: [
-    MongooseModule.forFeature([
-      { name: Assembly.name, schema: AssemblySchema },
-    ]),
+    ...(useMongoose
+      ? [
+          MongooseModule.forFeature([
+            { name: Assembly.name, schema: AssemblySchema },
+          ]),
+        ]
+      : []),
     ChecksModule,
     FeaturesModule,
     OperationsModule,
     RefSeqsModule,
   ],
-  exports: [MongooseModule, AssembliesService],
+  exports: [...(useMongoose ? [MongooseModule] : []), AssembliesService],
 })
 export class AssembliesModule {}

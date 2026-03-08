@@ -1,6 +1,6 @@
 import 'reflect-metadata'
 
-import type { MikroORM } from '@mikro-orm/better-sqlite'
+import type { MikroORM } from '@mikro-orm/core'
 
 import { createTestORM } from '../test-utils'
 import { MikroOrmAssemblyRepository } from './MikroOrmAssemblyRepository'

@@ -11,11 +11,15 @@ import {
   InternalServerErrorException,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { InjectModel } from '@nestjs/mongoose'
+import { ObjectId } from 'mongodb'
 import { GenericFilehandle, LocalFile } from 'generic-filehandle'
 import { Model } from 'mongoose'
+
+import { DatabaseService } from '../mikro-orm/database.service'
 
 import { CreateFileDto } from './dto/create-file.dto'
 import {
@@ -27,12 +31,14 @@ import {
 @Injectable()
 export class FilesService {
   constructor(
+    @Optional()
     @InjectModel(File.name)
     private readonly fileModel: Model<FileDocument>,
     private readonly configService: ConfigService<
       { FILE_UPLOAD_FOLDER: string },
       true
     >,
+    private readonly db: DatabaseService,
   ) {}
 
   private readonly logger = new Logger(FilesService.name)
@@ -53,14 +59,29 @@ export class FilesService {
     )
   }
 
-  create(createFileDto: CreateFileDto) {
+  async create(createFileDto: CreateFileDto) {
     this.logger.debug(
-      `Add uploaded file info into Mongo: ${JSON.stringify(createFileDto)}`,
+      `Add uploaded file info into DB: ${JSON.stringify(createFileDto)}`,
     )
+    if (this.db.useV2Backend) {
+      return this.db.file.create({
+        _id: new ObjectId().toHexString(),
+        basename: createFileDto.basename,
+        checksum: createFileDto.checksum,
+        type: createFileDto.type,
+      })
+    }
     return this.fileModel.create(createFileDto)
   }
 
   async findOne(id: string) {
+    if (this.db.useV2Backend) {
+      const file = await this.db.file.findById(id)
+      if (!file) {
+        throw new NotFoundException(`File with id "${id}" not found`)
+      }
+      return file
+    }
     const file = await this.fileModel.findById(id).exec()
     if (!file) {
       throw new NotFoundException(`File with id "${id}" not found`)
@@ -100,6 +121,9 @@ export class FilesService {
       case 'text/x-fasta': {
         return new LocalFile(fileName)
       }
+      default: {
+        throw new Error(`Unsupported file type: ${file.type}`)
+      }
     }
   }
 
@@ -126,13 +150,42 @@ export class FilesService {
    * @returns
    */
   async remove(id: string) {
+    if (this.db.useV2Backend) {
+      const file = await this.db.file.findById(id)
+      if (!file) {
+        throw new NotFoundException(`File with id "${id}" not found`)
+      }
+      await this.db.file.deleteById(id)
+
+      const otherFiles = await this.db.file.findByChecksum(file.checksum)
+      if (!otherFiles) {
+        const fileUploadFolder = this.configService.get('FILE_UPLOAD_FOLDER', {
+          infer: true,
+        })
+        const compressedFullFileName = path.join(
+          fileUploadFolder,
+          file.checksum,
+        )
+        this.logger.debug(
+          `Delete the file "${compressedFullFileName}" from server folder`,
+        )
+
+        try {
+          await unlink(compressedFullFileName)
+        } catch {
+          throw new InternalServerErrorException(
+            `File "${compressedFullFileName}" could not be deleted from server`,
+          )
+        }
+      }
+      return
+    }
     const file = await this.fileModel.findById(id).exec()
     if (!file) {
       throw new NotFoundException(`File with id "${id}" not found`)
     }
     await this.fileModel.findByIdAndDelete(id).exec()
 
-    // If same file is not used anywhere else then we delete the file from server folder
     const otherFiles = await this.fileModel
       .findOne({ checksum: file.checksum })
       .exec()
@@ -157,6 +210,9 @@ export class FilesService {
   }
 
   async findAll() {
+    if (this.db.useV2Backend) {
+      return this.db.file.findAll()
+    }
     return this.fileModel.find().exec()
   }
 }

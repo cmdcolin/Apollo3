@@ -1,4 +1,5 @@
-import { MikroORM } from '@mikro-orm/better-sqlite'
+import { MikroORM as LibSqlORM } from '@mikro-orm/libsql'
+import { MikroORM as PostgreSqlORM } from '@mikro-orm/postgresql'
 
 import { AssemblyEntity } from './entities/AssemblyEntity'
 import { ChangeEntity } from './entities/ChangeEntity'
@@ -29,7 +30,20 @@ const allEntities = [
 ]
 
 export async function createTestORM() {
-  const orm = await MikroORM.init({
+  const dbBackend = process.env.DB_BACKEND
+  const connectionUrl = process.env.DB_CONNECTION_URL
+
+  if (dbBackend === 'postgresql' && connectionUrl) {
+    const orm = await PostgreSqlORM.init({
+      entities: allEntities,
+      clientUrl: connectionUrl,
+    })
+    const generator = orm.getSchemaGenerator()
+    await generator.refreshDatabase()
+    return orm
+  }
+
+  const orm = await LibSqlORM.init({
     entities: allEntities,
     dbName: ':memory:',
   })

@@ -7,6 +7,7 @@ import { FeaturesModule } from '../features/features.module'
 import { FilesModule } from '../files/files.module'
 import { RefSeqChunksModule } from '../refSeqChunks/refSeqChunks.module'
 import { RefSeqsModule } from '../refSeqs/refSeqs.module'
+import { useMongoose } from '../utils/constants'
 
 import { ExportController } from './export.controller'
 import { ExportService } from './export.service'
@@ -16,7 +17,13 @@ import { ExportService } from './export.service'
     AssembliesModule,
     FeaturesModule,
     FilesModule,
-    MongooseModule.forFeature([{ name: Export.name, schema: ExportSchema }]),
+    ...(useMongoose
+      ? [
+          MongooseModule.forFeature([
+            { name: Export.name, schema: ExportSchema },
+          ]),
+        ]
+      : []),
     RefSeqsModule,
     RefSeqChunksModule,
   ],

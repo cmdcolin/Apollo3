@@ -4,18 +4,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-base-to-string */
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
-import type {
-  AssemblyRepository,
-  FileRepository,
-  RefSeqChunkRepository,
-  RefSeqRepository,
-} from '@apollo-annotation/common'
-import {
-  MikroOrmAssemblyRepository,
-  MikroOrmFileRepository,
-  MikroOrmRefSeqChunkRepository,
-  MikroOrmRefSeqRepository,
-} from '@apollo-annotation/entities'
 import {
   File,
   FileDocument,
@@ -25,57 +13,38 @@ import {
   RefSeqDocument,
 } from '@apollo-annotation/schemas'
 import { BgzipIndexedFasta, IndexedFasta } from '@gmod/indexedfasta'
-import { EntityManager } from '@mikro-orm/core'
-import { Inject, Injectable, Logger, Optional } from '@nestjs/common'
+import { Injectable, Logger, Optional } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { RemoteFile } from 'generic-filehandle'
 import { Model } from 'mongoose'
 
 import { AssembliesService } from '../assemblies/assemblies.service'
 import { FilesService } from '../files/files.service'
+import { DatabaseService } from '../mikro-orm/database.service'
 
 import { GetSequenceDto } from './dto/get-sequence.dto'
 
 @Injectable()
 export class SequenceService {
   constructor(
+    @Optional()
     @InjectModel(File.name)
     private readonly fileModel: Model<FileDocument>,
     private readonly filesService: FilesService,
+    @Optional()
     @InjectModel(RefSeqChunk.name)
     private readonly refSeqChunkModel: Model<RefSeqChunkDocument>,
+    @Optional()
     @InjectModel(RefSeq.name)
     private readonly refSeqModel: Model<RefSeqDocument>,
     private readonly assembliesService: AssembliesService,
-    @Optional() @Inject(EntityManager) private readonly em?: EntityManager,
+    private readonly db: DatabaseService,
   ) {}
 
   private readonly logger = new Logger(SequenceService.name)
 
-  private get useV2Backend() {
-    const dbBackend = process.env.DB_BACKEND
-    return dbBackend && dbBackend !== 'mongodb' && this.em !== undefined
-  }
-
-  private getRepositories() {
-    if (!this.em) {
-      throw new Error('EntityManager not available')
-    }
-    const em = this.em.fork()
-    return {
-      refSeqRepository: new MikroOrmRefSeqRepository(em) as RefSeqRepository,
-      assemblyRepository: new MikroOrmAssemblyRepository(
-        em,
-      ) as AssemblyRepository,
-      fileRepository: new MikroOrmFileRepository(em) as FileRepository,
-      refSeqChunkRepository: new MikroOrmRefSeqChunkRepository(
-        em,
-      ) as RefSeqChunkRepository,
-    }
-  }
-
   async getSequence({ end, refSeq: refSeqId, start }: GetSequenceDto) {
-    if (this.useV2Backend) {
+    if (this.db.useV2Backend) {
       return this.getSequenceV2({ end, refSeq: refSeqId, start })
     }
 
@@ -109,7 +78,7 @@ export class SequenceService {
       return sequence
     }
 
-    if (assemblyDoc?.fileIds?.fai) {
+    if (assemblyDoc?.fileIds && 'fai' in assemblyDoc.fileIds) {
       const { fa: faId, fai: faiId, gzi: gziId } = assemblyDoc.fileIds
       const faDoc = await this.fileModel.findById(faId)
       if (!faDoc) {
@@ -170,11 +139,11 @@ export class SequenceService {
     start,
   }: GetSequenceDto) {
     const {
-      assemblyRepository,
-      fileRepository,
-      refSeqChunkRepository,
-      refSeqRepository,
-    } = this.getRepositories()
+      assembly: assemblyRepository,
+      file: fileRepository,
+      refSeqChunk: refSeqChunkRepository,
+      refSeq: refSeqRepository,
+    } = this.db
 
     const refSeq = await refSeqRepository.findById(refSeqId)
     if (!refSeq) {
@@ -204,7 +173,7 @@ export class SequenceService {
       return sequence
     }
 
-    if (assemblyRow?.fileIds?.fai) {
+    if (assemblyRow?.fileIds && 'fai' in assemblyRow.fileIds) {
       const { fa: faId, fai: faiId, gzi: gziId } = assemblyRow.fileIds
       const faRow = await fileRepository.findById(faId)
       if (!faRow) {

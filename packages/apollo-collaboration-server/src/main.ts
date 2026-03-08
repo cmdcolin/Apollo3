@@ -28,6 +28,7 @@ import mongoose from 'mongoose'
 
 import { AppModule } from './app.module'
 import { GlobalExceptionsFilter } from './global-exceptions.filter'
+import { useMongoose } from './utils/constants'
 import { AuthorizationValidation } from './utils/validation/AuthorizationValidation'
 
 const MongoDBStore = connectMongoDBSession(session)
@@ -53,12 +54,16 @@ async function bootstrap() {
   if (!PORT) {
     throw new Error('No PORT found in .env file')
   }
-  let mongodbURI = MONGODB_URI
-  if (!mongodbURI) {
-    if (!MONGODB_URI_FILE) {
-      throw new Error('No MONGODB_URI or MONGODB_URI_FILE found in .env file')
+
+  let mongodbURI: string | undefined
+  if (useMongoose) {
+    mongodbURI = MONGODB_URI
+    if (!mongodbURI) {
+      if (!MONGODB_URI_FILE) {
+        throw new Error('No MONGODB_URI or MONGODB_URI_FILE found in .env file')
+      }
+      mongodbURI = fs.readFileSync(MONGODB_URI_FILE, 'utf8').trim()
     }
-    mongodbURI = fs.readFileSync(MONGODB_URI_FILE, 'utf8').trim()
   }
 
   let sessionSecret = SESSION_SECRET
@@ -101,39 +106,51 @@ async function bootstrap() {
   app.use(json({ limit: '50mb' }))
   app.use(urlencoded({ extended: true, limit: '50mb' }))
 
-  app.use(
-    session({
-      secret: sessionSecret,
-      resave: false,
-      saveUninitialized: false,
-      store: new MongoDBStore({
-        uri: mongodbURI,
-        collection: 'expressSessions',
+  if (useMongoose && mongodbURI) {
+    app.use(
+      session({
+        secret: sessionSecret,
+        resave: false,
+        saveUninitialized: false,
+        store: new MongoDBStore({
+          uri: mongodbURI,
+          collection: 'expressSessions',
+        }),
       }),
-    }),
-  )
+    )
+  } else {
+    app.use(
+      session({
+        secret: sessionSecret,
+        resave: false,
+        saveUninitialized: false,
+      }),
+    )
+  }
 
   const server = await app.listen(PORT)
   server.headersTimeout = 24 * 60 * 60 * 1000 // one day
   server.requestTimeout = 24 * 60 * 60 * 1000 // one day
 
-  // Add/update checks if needed
-  const checksMap: Map<string, Check> = checkRegistry.getChecks()
-  await mongoose.connect(mongodbURI, {})
-  const ChecksModel = mongoose.model('checks', CheckSchema)
-  for (const [key, check] of checksMap.entries()) {
-    const checkByName = await ChecksModel.find({ name: key }).exec()
-    if (checkByName.length > 0) {
-      const checkByNameAndVersion = await ChecksModel.find({
-        name: key,
-        version: check.version,
-      }).exec()
-      if (checkByNameAndVersion.length === 0) {
-        checkByName[0].version = check.version
-        await checkByName[0].save()
+  if (useMongoose && mongodbURI) {
+    // Add/update checks if needed
+    const checksMap: Map<string, Check> = checkRegistry.getChecks()
+    await mongoose.connect(mongodbURI, {})
+    const ChecksModel = mongoose.model('checks', CheckSchema)
+    for (const [key, check] of checksMap.entries()) {
+      const checkByName = await ChecksModel.find({ name: key }).exec()
+      if (checkByName.length > 0) {
+        const checkByNameAndVersion = await ChecksModel.find({
+          name: key,
+          version: check.version,
+        }).exec()
+        if (checkByNameAndVersion.length === 0) {
+          checkByName[0].version = check.version
+          await checkByName[0].save()
+        }
+      } else {
+        await ChecksModel.create(check)
       }
-    } else {
-      await ChecksModel.create(check)
     }
   }
   // eslint-disable-next-line no-console
