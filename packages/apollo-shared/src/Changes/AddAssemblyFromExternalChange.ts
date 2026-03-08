@@ -6,11 +6,9 @@ import {
   AssemblySpecificChange,
   type ChangeOptions,
   type ClientDataStore,
-  type LocalGFF3DataStore,
   type RefSeqRow,
   type SerializedAssemblySpecificChange,
   type ServerDataStore,
-  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { BgzipIndexedFasta, IndexedFasta } from '@gmod/indexedfasta'
 import ObjectID from 'bson-objectid'
@@ -64,77 +62,7 @@ export class AddAssemblyFromExternalChange extends AssemblySpecificChange {
     return { typeName, assembly, changes }
   }
 
-  /**
-   * Applies the required change to database
-   * @param backend - parameters from backend
-   * @returns
-   */
   async executeOnServer(backend: ServerDataStore) {
-    const { assemblyModel, checkModel, refSeqModel, user } = backend
-    const { assembly, changes, logger } = this
-    const { CHUNK_SIZE } = process.env
-    const customChunkSize = CHUNK_SIZE ? Number(CHUNK_SIZE) : undefined
-
-    for (const change of changes) {
-      const { assemblyName, externalLocation } = change
-      const { fa, fai, gzi } = externalLocation
-      const sequenceAdapter = gzi
-        ? new BgzipIndexedFasta({
-            fasta: new RemoteFile(fa, { fetch }),
-            fai: new RemoteFile(fai, { fetch }),
-            gzi: new RemoteFile(gzi, { fetch }),
-          })
-        : new IndexedFasta({
-            fasta: new RemoteFile(fa, { fetch }),
-            fai: new RemoteFile(fai, { fetch }),
-          })
-      const allSequenceSizes = await sequenceAdapter.getSequenceSizes()
-
-      if (!allSequenceSizes) {
-        throw new Error('No data read from indexed fasta getSequenceSizes')
-      }
-
-      const assemblyDoc = await assemblyModel
-        .findOne({ name: assemblyName })
-        .exec()
-      if (assemblyDoc) {
-        throw new Error(`Assembly "${assemblyName}" already exists`)
-      }
-      const checkDocs = await checkModel.find({ default: true }).exec()
-      const checks = checkDocs.map((checkDoc) => checkDoc._id.toHexString())
-      const [newAssemblyDoc] = await assemblyModel.create([
-        {
-          _id: assembly,
-          name: assemblyName,
-          user,
-          status: -1,
-          externalLocation,
-          checks,
-        },
-      ])
-      logger.debug?.(
-        `Added new assembly "${assemblyName}", docId "${newAssemblyDoc._id}"`,
-      )
-
-      for (const sequenceName in allSequenceSizes) {
-        const [newRefSeqDoc] = await refSeqModel.create([
-          {
-            name: sequenceName,
-            assembly: newAssemblyDoc._id,
-            length: allSequenceSizes[sequenceName],
-            ...(customChunkSize ? { chunkSize: customChunkSize } : null),
-            user,
-            status: -1,
-          },
-        ])
-        logger.debug?.(
-          `Added new refSeq "${sequenceName}", docId "${newRefSeqDoc._id}"`,
-        )
-      }
-    }
-  }
-
-  async executeOnServerV2(backend: ServerDataStoreV2) {
     const { assembly, changes, logger } = this
     const { CHUNK_SIZE } = process.env
     const customChunkSize = CHUNK_SIZE ? Number(CHUNK_SIZE) : undefined
@@ -192,11 +120,6 @@ export class AddAssemblyFromExternalChange extends AssemblySpecificChange {
       }
     }
   }
-
-  async executeOnLocalGFF3(_backend: LocalGFF3DataStore) {
-    throw new Error('executeOnLocalGFF3 not implemented')
-  }
-
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   async executeOnClient(_dataStore: ClientDataStore) {}
 

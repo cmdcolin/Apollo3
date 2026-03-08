@@ -6,7 +6,7 @@ import {
 } from '@apollo-annotation/shared'
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { ObjectId } from 'mongodb'
+import { randomBytes } from 'node:crypto'
 
 import { MessagesGateway } from '../messages/messages.gateway'
 import { DatabaseService } from '../mikro-orm/database.service'
@@ -67,7 +67,7 @@ export class UsersService {
 
   async addNew(user: CreateUserDto) {
     return this.db.user.create({
-      _id: new ObjectId().toHexString(),
+      _id: randomBytes(12).toString('hex'),
       email: user.email,
       username: user.username,
       role: user.role ?? 'none',

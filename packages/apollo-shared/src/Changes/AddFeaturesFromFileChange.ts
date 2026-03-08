@@ -2,10 +2,8 @@
 import {
   type ChangeOptions,
   type ClientDataStore,
-  type LocalGFF3DataStore,
   type SerializedAssemblySpecificChange,
   type ServerDataStore,
-  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { type GFF3Feature } from '@gmod/gff'
 
@@ -63,62 +61,11 @@ export class AddFeaturesFromFileChange extends FromFileBaseChange {
     return { typeName, assembly, changes, deleteExistingFeatures }
   }
 
-  /**
-   * Applies the required change to database
-   * @param backend - parameters from backend
-   * @returns
-   */
   async executeOnServer(backend: ServerDataStore) {
-    const { fileModel, filesService } = backend
     const { changes, deleteExistingFeatures, logger } = this
 
     if (deleteExistingFeatures) {
       await this.removeExistingFeatures(backend)
-    }
-
-    for (const change of changes) {
-      const { fileId, parseOptions } = change
-
-      const { FILE_UPLOAD_FOLDER } = process.env
-      if (!FILE_UPLOAD_FOLDER) {
-        throw new Error('No FILE_UPLOAD_FOLDER found in .env file')
-      }
-      // Get file checksum
-      const fileDoc = await fileModel.findById(fileId).exec()
-      if (!fileDoc) {
-        throw new Error(`File "${fileId}" not found in Mongo`)
-      }
-      logger.debug?.(`FileId "${fileId}", checksum "${fileDoc.checksum}"`)
-
-      // Read data from compressed file and parse the content
-      const { bufferSize = 10_000 } = parseOptions ?? {}
-      const featureStream = filesService.parseGFF3(
-        filesService.getFileStream(fileDoc),
-        { bufferSize },
-      )
-      let featureCount = 0
-      // @ts-expect-error type is wrong here
-      // eslint-disable-next-line @typescript-eslint/await-thenable
-      for await (const f of featureStream) {
-        const gff3Feature = f as GFF3Feature
-
-        // Add new feature into database
-        // We cannot use Mongo 'session' / transaction here because Mongo has 16 MB limit for transaction
-        await this.addFeatureIntoDb(gff3Feature, backend)
-        featureCount++
-        if (featureCount % 1000 === 0) {
-          logger.debug?.(`Processed ${featureCount} features`)
-        }
-      }
-    }
-    logger.debug?.('New features added into database!')
-  }
-
-  async executeOnServerV2(backend: ServerDataStoreV2) {
-    const { changes, deleteExistingFeatures, logger } = this
-
-    if (deleteExistingFeatures) {
-      await this.removeExistingFeaturesV2(backend)
     }
 
     for (const change of changes) {
@@ -139,20 +86,15 @@ export class AddFeaturesFromFileChange extends FromFileBaseChange {
       // eslint-disable-next-line @typescript-eslint/await-thenable
       for await (const f of featureStream) {
         const gff3Feature = f as GFF3Feature
-        await this.addFeatureIntoDbV2(gff3Feature, backend)
+        await this.addFeatureIntoDb(gff3Feature, backend)
         featureCount++
         if (featureCount % 1000 === 0) {
           logger.debug?.(`Processed ${featureCount} features`)
         }
       }
     }
-    logger.debug?.('New features added into database via V2!')
+    logger.debug?.('New features added into database')
   }
-
-  async executeOnLocalGFF3(_backend: LocalGFF3DataStore) {
-    throw new Error('executeOnLocalGFF3 not implemented')
-  }
-
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   async executeOnClient(_dataStore: ClientDataStore) {}
 

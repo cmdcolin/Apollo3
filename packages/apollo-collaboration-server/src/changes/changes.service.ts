@@ -1,6 +1,6 @@
 import {
   Change as BaseChange,
-  type ServerDataStoreV2,
+  type ServerDataStore,
   isAssemblySpecificChange,
   isFeatureChange,
 } from '@apollo-annotation/common'
@@ -41,10 +41,10 @@ export class ChangesService {
     private readonly db: DatabaseService,
   ) {}
 
-  private buildServerDataStore(user: string): ServerDataStoreV2 {
+  private buildServerDataStore(user: string): ServerDataStore {
     const uow = this.db.createUnitOfWork()
     return {
-      typeName: 'ServerV2',
+      typeName: 'Server',
       featureRepository: uow.feature,
       assemblyRepository: uow.assembly,
       refSeqRepository: uow.refSeq,

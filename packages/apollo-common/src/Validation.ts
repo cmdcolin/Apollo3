@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/require-await */
-import { type FeatureDocument } from '@apollo-annotation/schemas'
 import { type ExecutionContext } from '@nestjs/common'
 import { type Reflector } from '@nestjs/core'
-import { type ClientSession, type Model } from 'mongoose'
 
 import { type Change, type ClientDataStore } from './Change'
 
@@ -35,13 +33,6 @@ export abstract class Validation {
 
   async backendPreValidate(
     _changeOrContext: Change | Context,
-  ): Promise<ValidationResult> {
-    return { validationName: this.name }
-  }
-
-  async backendPostValidate(
-    _change: Change,
-    _context: { session: ClientSession; featureModel: Model<FeatureDocument> },
   ): Promise<ValidationResult> {
     return { validationName: this.name }
   }

@@ -1,11 +1,9 @@
 /* eslint-disable @typescript-eslint/require-await */
 import {
-  type LocalGFF3DataStore,
   Operation,
   type OperationOptions,
   type SerializedOperation,
   type ServerDataStore,
-  type ServerDataStoreV2,
   assembleFeatureTrees,
 } from '@apollo-annotation/common'
 
@@ -37,24 +35,7 @@ export class GetFeaturesOperation extends Operation {
     return { typeName, refSeq, start, end }
   }
 
-  /**
-   * Fetch features based on Reference seq, Start and End -values
-   * @param request - Contain search criteria i.e. refSeq, start and end -parameters
-   * @returns Return Array of features if search was successful
-   * or if search data was not found or in case of error throw exception
-   */
-  executeOnServer(backend: ServerDataStore) {
-    return backend.featureModel
-      .find({
-        refSeq: this.refSeq,
-        min: { $lte: this.end },
-        max: { $gte: this.start },
-        status: 0,
-      })
-      .exec()
-  }
-
-  async executeOnServerV2(backend: ServerDataStoreV2) {
+  async executeOnServer(backend: ServerDataStore) {
     const { featureRepository } = backend
     const rootRows = await featureRepository.findRootsByRange(
       this.refSeq,
@@ -74,9 +55,5 @@ export class GetFeaturesOperation extends Operation {
       }
     }
     return assembleFeatureTrees(allRows)
-  }
-
-  async executeOnLocalGFF3(_backend: LocalGFF3DataStore) {
-    throw new Error('executeOnLocalGFF3 not implemented')
   }
 }

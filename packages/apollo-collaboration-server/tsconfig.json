@@ -18,7 +18,6 @@
   "references": [
     { "path": "../apollo-common" },
     { "path": "../apollo-entities" },
-    { "path": "../apollo-schemas" },
     { "path": "../apollo-shared" },
   ],
 }

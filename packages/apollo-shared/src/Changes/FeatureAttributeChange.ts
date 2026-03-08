@@ -5,12 +5,9 @@ import {
   type ChangeOptions,
   type ClientDataStore,
   FeatureChange,
-  type LocalGFF3DataStore,
   type SerializedFeatureChange,
   type ServerDataStore,
-  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
-import { type Feature, type FeatureDocument } from '@apollo-annotation/schemas'
 
 interface SerializedFeatureAttributeChangeBase extends SerializedFeatureChange {
   typeName: 'FeatureAttributeChange'
@@ -60,73 +57,7 @@ export class FeatureAttributeChange extends FeatureChange {
     return { typeName, changedIds, assembly, changes }
   }
 
-  /**
-   * Applies the required change to database
-   * @param backend - parameters from backend
-   * @returns
-   */
   async executeOnServer(backend: ServerDataStore) {
-    const { featureModel, session } = backend
-    const { changes, logger } = this
-
-    const featuresForChanges: {
-      feature: Feature
-      topLevelFeature: FeatureDocument
-    }[] = []
-    // Loop the changes and check that all features are found
-    for (const change of changes) {
-      const { featureId } = change
-
-      // Search correct feature
-      const topLevelFeature = await featureModel
-        .findOne({ allIds: featureId })
-        .session(session)
-        .exec()
-
-      if (!topLevelFeature) {
-        const errMsg = `*** ERROR: The following featureId was not found in database ='${featureId}'`
-        logger.error(errMsg)
-        throw new Error(errMsg)
-        // throw new NotFoundException(errMsg)  -- This is causing runtime error because Exception comes from @nestjs/common!!!
-      }
-      logger.debug?.(`*** Feature found: ${JSON.stringify(topLevelFeature)}`)
-
-      const foundFeature = this.getFeatureFromId(topLevelFeature, featureId)
-      if (!foundFeature) {
-        const errMsg = 'ERROR when searching feature by featureId'
-        logger.error(errMsg)
-        throw new Error(errMsg)
-      }
-      logger.debug?.(`*** Found feature: ${JSON.stringify(foundFeature)}`)
-      featuresForChanges.push({ feature: foundFeature, topLevelFeature })
-    }
-
-    // Let's update objects
-    for (const [idx, change] of changes.entries()) {
-      const { newAttributes } = change
-      const { feature, topLevelFeature } = featuresForChanges[idx]
-      feature.attributes = newAttributes
-      if (topLevelFeature._id.equals(feature._id)) {
-        topLevelFeature.markModified('attributes') // Mark as modified. Without this save() -method is not updating data in database
-      } else {
-        topLevelFeature.markModified('children') // Mark as modified. Without this save() -method is not updating data in database
-      }
-
-      try {
-        await topLevelFeature.save()
-      } catch (error) {
-        logger.debug?.(`*** FAILED: ${error}`)
-        throw error
-      }
-      logger.debug?.(
-        `*** Feature attributes modified (added, edited or deleted), docId: ${JSON.stringify(
-          topLevelFeature,
-        )}`,
-      )
-    }
-  }
-
-  async executeOnServerV2(backend: ServerDataStoreV2) {
     const { featureRepository } = backend
     const { changes, logger } = this
     for (const change of changes) {
@@ -142,11 +73,6 @@ export class FeatureAttributeChange extends FeatureChange {
       })
     }
   }
-
-  async executeOnLocalGFF3(_backend: LocalGFF3DataStore) {
-    throw new Error('applyToLocalGFF3 not implemented')
-  }
-
   async executeOnClient(dataStore: ClientDataStore) {
     if (!dataStore) {
       throw new Error('No data store')

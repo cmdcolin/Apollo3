@@ -12,7 +12,7 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { ObjectId } from 'mongodb'
+import { randomBytes } from 'node:crypto'
 import { GenericFilehandle, LocalFile } from 'generic-filehandle'
 
 import { DatabaseService } from '../mikro-orm/database.service'
@@ -57,7 +57,7 @@ export class FilesService {
       `Add uploaded file info into DB: ${JSON.stringify(createFileDto)}`,
     )
     return this.db.file.create({
-      _id: new ObjectId().toHexString(),
+      _id: randomBytes(12).toString('hex'),
       basename: createFileDto.basename,
       checksum: createFileDto.checksum,
       type: createFileDto.type,

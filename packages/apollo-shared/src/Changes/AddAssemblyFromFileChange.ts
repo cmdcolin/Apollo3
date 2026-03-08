@@ -3,11 +3,9 @@
 import {
   type ChangeOptions,
   type ClientDataStore,
-  type LocalGFF3DataStore,
   type RefSeqRow,
   type SerializedAssemblySpecificChange,
   type ServerDataStore,
-  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { BgzipIndexedFasta } from '@gmod/indexedfasta'
 import ObjectID from 'bson-objectid'
@@ -62,166 +60,19 @@ export class AddAssemblyFromFileChange extends FromFileBaseChange {
     return { typeName, assembly, changes }
   }
 
-  /**
-   * Applies the required change to database
-   * @param backend - parameters from backend
-   * @returns
-   */
   async executeOnServer(backend: ServerDataStore) {
-    const { changes } = this
+    const { changes, logger } = this
     for (const change of changes) {
       const { assemblyName, fileIds } = change
       await ('gzi' in fileIds
         ? this.executeOnServerIndexed(backend, assemblyName, fileIds)
         : this.executeOnServerFasta(backend, assemblyName, fileIds.fa))
     }
+    logger.debug?.('Assembly added')
   }
 
-  async executeOnServerIndexed(
+  private async executeOnServerIndexed(
     backend: ServerDataStore,
-    assemblyName: string,
-    fileIds: { fa: string; fai: string; gzi: string },
-  ) {
-    const { CHUNK_SIZE } = process.env
-    const customChunkSize = CHUNK_SIZE ? Number(CHUNK_SIZE) : undefined
-
-    const { FILE_UPLOAD_FOLDER } = process.env
-    if (!FILE_UPLOAD_FOLDER) {
-      throw new Error('No FILE_UPLOAD_FOLDER found in .env file')
-    }
-
-    const { fa: faId, fai: faiId, gzi: gziId } = fileIds
-    const {
-      assemblyModel,
-      checkModel,
-      fileModel,
-      filesService,
-      refSeqModel,
-      user,
-    } = backend
-
-    const faDoc = await fileModel.findById(faId)
-    const faChecksum = faDoc?.checksum
-    if (!faChecksum) {
-      throw new Error(`No checksum for file document ${faDoc?.id}`)
-    }
-
-    const faiDoc = await fileModel.findById(faiId)
-    const faiChecksum = faiDoc?.checksum
-    if (!faiChecksum) {
-      throw new Error(`No checksum for file document ${faiDoc?.id}`)
-    }
-
-    const gziDoc = await fileModel.findById(gziId)
-    const gziChecksum = gziDoc?.checksum
-    if (!gziChecksum) {
-      throw new Error(`No checksum for file document ${gziDoc?.id}`)
-    }
-
-    const fasta = filesService.getFileHandle(faDoc)
-    const fai = filesService.getFileHandle(faiDoc)
-    const gzi = filesService.getFileHandle(gziDoc)
-    const sequenceAdapter = new BgzipIndexedFasta({ fasta, fai, gzi })
-    const allSequenceSizes = await sequenceAdapter.getSequenceSizes()
-    await Promise.all([fasta.close(), fai.close(), gzi.close()])
-
-    const assemblyDoc = await assemblyModel
-      .findOne({ name: assemblyName })
-      .exec()
-    if (assemblyDoc) {
-      throw new Error(`Assembly "${assemblyName}" already exists`)
-    }
-    const checkDocs = await checkModel.find({ isDefault: true }).exec()
-    const checks = checkDocs.map((checkDoc) => checkDoc._id.toHexString())
-    const [newAssemblyDoc] = await assemblyModel.create([
-      {
-        _id: this.assembly,
-        name: assemblyName,
-        user,
-        status: -1,
-        fileIds,
-        checks,
-      },
-    ])
-    this.logger.debug?.(
-      `Added new assembly "${assemblyName}", docId "${newAssemblyDoc._id}"`,
-    )
-
-    for (const sequenceName in allSequenceSizes) {
-      const [newRefSeqDoc] = await refSeqModel.create([
-        {
-          name: sequenceName,
-          assembly: newAssemblyDoc._id,
-          length: allSequenceSizes[sequenceName],
-          ...(customChunkSize ? { chunkSize: customChunkSize } : null),
-          user,
-          status: -1,
-        },
-      ])
-      this.logger.debug?.(
-        `Added new refSeq "${sequenceName}", docId "${newRefSeqDoc._id}"`,
-      )
-    }
-  }
-
-  async executeOnServerFasta(
-    backend: ServerDataStore,
-    assemblyName: string,
-    fileId: string,
-  ) {
-    const { assemblyModel, checkModel, fileModel, user } = backend
-    // Get file checksum
-    const fileDoc = await fileModel.findById(fileId).exec()
-    if (!fileDoc) {
-      throw new Error(`File "${fileId}" not found in Mongo`)
-    }
-    this.logger.debug?.(`FileId "${fileId}", checksum "${fileDoc.checksum}"`)
-
-    // Check and add new assembly
-    const assemblyDoc = await assemblyModel
-      .findOne({ name: assemblyName })
-      .exec()
-    if (assemblyDoc) {
-      throw new Error(`Assembly "${assemblyName}" already exists`)
-    }
-    const checkDocs = await checkModel.find({ default: true }).exec()
-    const checks = checkDocs.map((checkDoc) => checkDoc._id.toHexString())
-    // Add assembly
-    const [newAssemblyDoc] = await assemblyModel.create([
-      {
-        _id: this.assembly,
-        name: assemblyName,
-        user,
-        status: -1,
-        fileIds: { fa: fileId },
-        checks,
-      },
-    ])
-    this.logger.debug?.(
-      `Added new assembly "${assemblyName}", docId "${newAssemblyDoc._id}"`,
-    )
-    this.logger.debug?.(
-      `File type: "${fileDoc.type}", assemblyId: "${newAssemblyDoc._id}"`,
-    )
-
-    // Add refSeqs
-    // We cannot use Mongo 'session' / transaction here because Mongo has 16 MB limit for transaction
-    await this.addRefSeqIntoDb(fileDoc, newAssemblyDoc._id.toString(), backend)
-  }
-
-  async executeOnServerV2(backend: ServerDataStoreV2) {
-    const { changes, logger } = this
-    for (const change of changes) {
-      const { assemblyName, fileIds } = change
-      await ('gzi' in fileIds
-        ? this.executeOnServerIndexedV2(backend, assemblyName, fileIds)
-        : this.executeOnServerFastaV2(backend, assemblyName, fileIds.fa))
-    }
-    logger.debug?.('Assembly added via V2')
-  }
-
-  private async executeOnServerIndexedV2(
-    backend: ServerDataStoreV2,
     assemblyName: string,
     fileIds: { fa: string; fai: string; gzi: string },
   ) {
@@ -285,8 +136,8 @@ export class AddAssemblyFromFileChange extends FromFileBaseChange {
     }
   }
 
-  private async executeOnServerFastaV2(
-    backend: ServerDataStoreV2,
+  private async executeOnServerFasta(
+    backend: ServerDataStore,
     assemblyName: string,
     fileId: string,
   ) {
@@ -315,13 +166,8 @@ export class AddAssemblyFromFileChange extends FromFileBaseChange {
       `Added new assembly "${assemblyName}", id "${this.assembly}"`,
     )
 
-    await this.addRefSeqIntoDbV2(fileRow, this.assembly, backend)
+    await this.addRefSeqIntoDb(fileRow, this.assembly, backend)
   }
-
-  async executeOnLocalGFF3(_backend: LocalGFF3DataStore) {
-    throw new Error('executeOnLocalGFF3 not implemented')
-  }
-
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   async executeOnClient(_dataStore: ClientDataStore) {}
 

@@ -136,7 +136,6 @@ the database or by name and assembly or by identifier.'
         strand: feature.strand,
       },
       copyFeature: true,
-      allIds: [newId],
     }
     const url = new URL(localhostToAddress(`${address}/changes`))
     const auth = {

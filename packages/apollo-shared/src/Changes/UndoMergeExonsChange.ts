@@ -4,10 +4,8 @@ import {
   type ChangeOptions,
   type ClientDataStore,
   FeatureChange,
-  type LocalGFF3DataStore,
   type SerializedFeatureChange,
   type ServerDataStore,
-  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { type AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
 
@@ -61,44 +59,6 @@ export class UndoMergeExonsChange extends FeatureChange {
   }
 
   async executeOnServer(backend: ServerDataStore) {
-    const { featureModel, session } = backend
-    const { changes } = this
-    for (const change of changes) {
-      const { exonsToRestore, parentFeatureId } = change
-      if (exonsToRestore.length !== 2) {
-        throw new Error(
-          `Expected exactly two exons to restore. Got :${exonsToRestore.length}`,
-        )
-      }
-      const topLevelFeature = await featureModel
-        .findOne({ allIds: parentFeatureId })
-        .session(session)
-        .exec()
-      if (!topLevelFeature) {
-        throw new Error(`Could not find feature with ID "${parentFeatureId}"`)
-      }
-      const parentFeature = this.getFeatureFromId(
-        topLevelFeature,
-        parentFeatureId,
-      )
-      if (!parentFeature) {
-        throw new Error(
-          `Could not find feature with ID "${parentFeatureId}" in feature "${topLevelFeature._id.toString()}"`,
-        )
-      }
-      if (!parentFeature.children) {
-        parentFeature.children = new Map()
-      }
-      for (const exon of exonsToRestore) {
-        this.addChild(parentFeature, exon)
-        const childIds = this.getChildFeatureIds(exon)
-        topLevelFeature.allIds.push(exon._id, ...childIds)
-      }
-      await topLevelFeature.save()
-    }
-  }
-
-  async executeOnServerV2(backend: ServerDataStoreV2) {
     const { featureRepository } = backend
     const { changes } = this
     for (const change of changes) {
@@ -126,11 +86,6 @@ export class UndoMergeExonsChange extends FeatureChange {
       }
     }
   }
-
-  async executeOnLocalGFF3(_backend: LocalGFF3DataStore) {
-    throw new Error('executeOnLocalGFF3 not implemented')
-  }
-
   async executeOnClient(dataStore: ClientDataStore) {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!dataStore) {

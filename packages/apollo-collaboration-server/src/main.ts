@@ -9,7 +9,6 @@ import {
 import {
   CDSCheck,
   CoreValidation,
-  ParentChildValidation,
   TranscriptCheck,
   changes,
   operations,
@@ -64,7 +63,6 @@ async function bootstrap() {
 
   validationRegistry.registerValidation(new CoreValidation())
   validationRegistry.registerValidation(new AuthorizationValidation())
-  validationRegistry.registerValidation(new ParentChildValidation())
 
   const cors = convertToBoolean(CORS)
 

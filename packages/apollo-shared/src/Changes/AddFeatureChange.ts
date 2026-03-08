@@ -6,10 +6,8 @@ import {
   type ClientDataStore,
   FeatureChange,
   type FeatureRow,
-  type LocalGFF3DataStore,
   type SerializedFeatureChange,
   type ServerDataStore,
-  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { type AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
 
@@ -23,7 +21,6 @@ export interface AddFeatureChangeDetails {
   addedFeature: AnnotationFeatureSnapshot
   parentFeatureId?: string // Parent feature to where feature will be added
   copyFeature?: boolean // Are we copying or adding a new child feature
-  allIds?: string[]
 }
 
 interface SerializedAddFeatureChangeSingle
@@ -55,7 +52,7 @@ export class AddFeatureChange extends FeatureChange {
   toJSON(): SerializedAddFeatureChange {
     const { assembly, changedIds, changes, typeName } = this
     if (changes.length === 1) {
-      const [{ addedFeature, allIds, copyFeature, parentFeatureId }] = changes
+      const [{ addedFeature, copyFeature, parentFeatureId }] = changes
       return {
         typeName,
         changedIds,
@@ -63,101 +60,12 @@ export class AddFeatureChange extends FeatureChange {
         addedFeature,
         parentFeatureId,
         copyFeature,
-        allIds,
       }
     }
     return { typeName, changedIds, assembly, changes }
   }
 
-  /**
-   * Applies the required change to database
-   * @param backend - parameters from backend
-   * @returns
-   */
   async executeOnServer(backend: ServerDataStore) {
-    const { assemblyModel, featureModel, refSeqModel, session, user } = backend
-    const { assembly, changes, logger } = this
-
-    const assemblyDoc = await assemblyModel
-      .findById(assembly)
-      .session(session)
-      .exec()
-    if (!assemblyDoc) {
-      const errMsg = `*** ERROR: Assembly with id "${assembly}" not found`
-      logger.error(errMsg)
-      throw new Error(errMsg)
-    }
-
-    let featureCnt = 0
-    logger.debug?.(`changes: ${JSON.stringify(changes)}`)
-
-    // Loop the changes
-    for (const change of changes) {
-      logger.debug?.(`change: ${JSON.stringify(change)}`)
-      const { addedFeature, allIds, copyFeature, parentFeatureId } = change
-      const { _id, refSeq } = addedFeature
-      const refSeqDoc = await refSeqModel
-        .findById(refSeq)
-        .session(session)
-        .exec()
-      if (!refSeqDoc) {
-        throw new Error(
-          `RefSeq was not found by assembly "${assembly}" and seq_id "${refSeq}" not found`,
-        )
-      }
-
-      // CopyFeature is called from CopyFeature.tsx
-      if (copyFeature) {
-        // Add into Mongo
-        const [newFeatureDoc] = await featureModel.create(
-          [{ ...addedFeature, allIds, status: -1, user }],
-          { session },
-        )
-        logger.debug?.(
-          `Copied feature, docId "${newFeatureDoc._id}" to assembly "${assembly}"`,
-        )
-        featureCnt++
-      } else {
-        // Adding new child feature
-        if (parentFeatureId) {
-          const topLevelFeature = await featureModel
-            .findOne({ allIds: parentFeatureId })
-            .session(session)
-            .exec()
-          if (!topLevelFeature) {
-            throw new Error(
-              `Could not find feature with ID "${parentFeatureId}"`,
-            )
-          }
-          const parentFeature = this.getFeatureFromId(
-            topLevelFeature,
-            parentFeatureId,
-          )
-          if (!parentFeature) {
-            throw new Error(
-              `Could not find feature with ID "${parentFeatureId}" in feature "${topLevelFeature._id}"`,
-            )
-          }
-          this.addChild(parentFeature, addedFeature)
-          const childIds = this.getChildFeatureIds(addedFeature)
-          topLevelFeature.allIds.push(_id, ...childIds)
-          await topLevelFeature.save()
-        } else {
-          const childIds = this.getChildFeatureIds(addedFeature)
-          const allIdsV2 = [_id, ...childIds]
-          const [newFeatureDoc] = await featureModel.create(
-            [{ allIds: allIdsV2, status: 0, ...addedFeature }],
-            { session },
-          )
-          logger.verbose?.(`Added docId "${newFeatureDoc._id}"`)
-        }
-      }
-      featureCnt++
-    }
-    logger.debug?.(`Added ${featureCnt} new feature(s) into database.`)
-  }
-
-  async executeOnServerV2(backend: ServerDataStoreV2) {
     const { changes, logger } = this
 
     for (const change of changes) {
@@ -181,13 +89,8 @@ export class AddFeatureChange extends FeatureChange {
         await backend.featureRepository.createMany(rows)
       }
     }
-    logger.debug?.('Added features via V2')
+    logger.debug?.('Added features')
   }
-
-  async executeOnLocalGFF3(_backend: LocalGFF3DataStore) {
-    throw new Error('executeOnLocalGFF3 not implemented')
-  }
-
   async executeOnClient(dataStore: ClientDataStore) {
     if (!dataStore) {
       throw new Error('No data store')

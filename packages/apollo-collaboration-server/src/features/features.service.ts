@@ -71,7 +71,7 @@ export class FeaturesService {
     return count
   }
 
-  async findById(featureId: string, _topLevel?: boolean) {
+  async findById(featureId: string) {
     const feature = await this.db.feature.findById(featureId)
     if (!feature) {
       const errMsg = `ERROR: The following featureId was not found in database ='${featureId}'`

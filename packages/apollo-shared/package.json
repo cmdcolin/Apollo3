@@ -12,7 +12,6 @@
   "dependencies": {
     "@apollo-annotation/common": "workspace:^",
     "@apollo-annotation/mst": "workspace:^",
-    "@apollo-annotation/schemas": "workspace:^",
     "@gmod/gff": "^2.0.0",
     "@gmod/indexedfasta": "^2.0.4",
     "@jbrowse/core": "^3.6.5",
@@ -31,7 +30,6 @@
     "glob": "^11.0.0",
     "mobx": "^6.6.1",
     "mobx-state-tree": "^5.4.0",
-    "mongoose": "^6.12.0",
     "react-dom": "^18.2.0",
     "rimraf": "^3.0.2",
     "rxjs": "^7.4.0",

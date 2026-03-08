@@ -3,10 +3,8 @@ import {
   Change,
   type ChangeOptions,
   type ClientDataStore,
-  type LocalGFF3DataStore,
   type SerializedChange,
   type ServerDataStore,
-  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 
 export interface SerializedDeleteUserChangeBase extends SerializedChange {
@@ -47,20 +45,6 @@ export class DeleteUserChange extends Change {
   }
 
   async executeOnServer(backend: ServerDataStore) {
-    const { session, userModel } = backend
-    const { logger, userId } = this
-    const user = await userModel
-      .findOneAndDelete({ _id: userId })
-      .session(session)
-      .exec()
-    if (!user) {
-      const errMsg = `*** ERROR: User with id "${userId}" not found`
-      logger.error(errMsg)
-      throw new Error(errMsg)
-    }
-  }
-
-  async executeOnServerV2(backend: ServerDataStoreV2) {
     const { logger, userId } = this
     const deleted = await backend.userRepository.deleteById(userId)
     if (!deleted) {
@@ -69,11 +53,6 @@ export class DeleteUserChange extends Change {
       throw new Error(errMsg)
     }
   }
-
-  async executeOnLocalGFF3(_backend: LocalGFF3DataStore) {
-    throw new Error('executeOnLocalGFF3 not implemented')
-  }
-
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   async executeOnClient(_dataStore: ClientDataStore) {}
 
