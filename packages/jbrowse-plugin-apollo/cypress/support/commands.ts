@@ -11,9 +11,7 @@ function getGuestToken() {
 Cypress.Commands.add('loginAsGuest', () => {
   cy.visit('/?config=http://localhost:3999/jbrowse/config.json')
   cy.contains('Continue as Guest', { timeout: 10_000 }).click()
-  // eslint-disable-next-line cypress/no-unnecessary-waiting
-  cy.wait(2000)
-  cy.reload()
+  cy.contains('Launch view', { timeout: 10_000 })
 })
 
 Cypress.Commands.add('deleteAssemblies', () => {
@@ -158,8 +156,6 @@ Cypress.Commands.add(
     }
     const menuItemPathPrefix = menuItemPath.slice(0, -1)
     cy.wrap(Cypress.$('body')).within(() => {
-      // eslint-disable-next-line cypress/no-unnecessary-waiting
-      cy.wait(3000)
       cy.get('button', { timeout: 10_000 })
         .contains('Apollo')
         .click({ force: true, timeout: 10_000 })
@@ -207,9 +203,6 @@ Cypress.Commands.add(
       .parent()
       .should('contain', 'All operations successful')
     cy.get('button[aria-label="Close drawer"]', { timeout: 10_000 }).click()
-    // eslint-disable-next-line cypress/no-unnecessary-waiting
-    cy.wait(1000)
-    cy.reload()
     if (launch) {
       cy.contains('Launch view').click()
     }
