@@ -1,11 +1,26 @@
-import { Controller, Get, Logger, Param, Query } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Get,
+  Logger,
+  Param,
+  ParseBoolPipe,
+  Post,
+  Query,
+} from '@nestjs/common'
 
-import { FeatureRangeSearchDto } from '../entity/gff3Object.dto'
-import { Role } from '../utils/role/role.enum'
-import { Validations } from '../utils/validation/validatation.decorator'
+import type {
+  FeatureIdsSearchDto,
+  FeatureRangeSearchDto,
+} from '../entity/gff3Object.dto.js'
+import { Role } from '../utils/role/role.enum.js'
+import { Validations } from '../utils/validation/validatation.decorator.js'
 
-import { FeatureCountRequest } from './dto/feature.dto'
-import { FeaturesService } from './features.service'
+import type {
+  FeatureCountRequest,
+  GetByIndexedIdRequest,
+} from './dto/feature.dto.js'
+import { FeaturesService } from './features.service.js'
 
 @Validations(Role.ReadOnly)
 @Controller('features')
@@ -30,12 +45,21 @@ export class FeaturesController {
    * or if search data was not found or in case of error throw exception
    */
   @Get('getFeatures')
-  getFeatures(@Query() request: FeatureRangeSearchDto) {
+  getFeaturesByRange(@Query() request: FeatureRangeSearchDto) {
     this.logger.debug(
-      `getFeaturesByCriteria -method: refSeq: ${request.refSeq}, start: ${request.start}, end: ${request.end}`,
+      `getFeatures endpoint: refSeq: ${request.refSeq}, start: ${request.start}, end: ${request.end}`,
     )
 
     return this.featuresService.findByRange(request)
+  }
+
+  @Post('getByIds')
+  findByFeatureIds(@Body() request: FeatureIdsSearchDto) {
+    this.logger.debug(`: featureIds: ${JSON.stringify(request.featureIds)}`)
+    return this.featuresService.findByFeatureIds(
+      request.featureIds,
+      request.topLevel,
+    )
   }
 
   @Get('count')
@@ -48,6 +72,11 @@ export class FeaturesController {
     return { count }
   }
 
+  @Get('getByIndexedId')
+  async getById(@Query() getByIndexedIdRequest: GetByIndexedIdRequest) {
+    return this.featuresService.getByIndexedId(getByIndexedIdRequest)
+  }
+
   /**
    * Get feature by featureId. When retrieving features by id, the features and any of its children are returned, but not any of its parent or sibling features.
    * @param featureid - featureId
@@ -55,9 +84,13 @@ export class FeaturesController {
    * or if search data was not found or in case of error throw exception
    */
   @Get(':featureid')
-  getFeature(@Param('featureid') featureid: string) {
+  getFeature(
+    @Param('featureid') featureid: string,
+    @Query('topLevel', new ParseBoolPipe({ optional: true }))
+    topLevel: boolean | undefined,
+  ) {
     this.logger.debug(`Get feature by featureId: ${featureid}`)
-    return this.featuresService.findById(featureid)
+    return this.featuresService.findById(featureid, topLevel)
   }
 
   @Get('check/:featureid')

@@ -1,7 +1,7 @@
-import { type AnnotationFeature } from '@apollo-annotation/mst'
+import type { AnnotationFeature } from '@apollo-annotation/mst'
 import { readConfObject } from '@jbrowse/core/configuration'
-import { type BaseDisplayModel } from '@jbrowse/core/pluggableElementTypes'
-import { type MenuItem } from '@jbrowse/core/ui'
+import type { BaseDisplayModel } from '@jbrowse/core/pluggableElementTypes'
+import type { MenuItem } from '@jbrowse/core/ui'
 import {
   type AbstractSessionModel,
   getContainingView,
@@ -9,11 +9,12 @@ import {
   intersection2,
   isSessionModelWithWidgets,
 } from '@jbrowse/core/util'
-import { type LinearGenomeViewModel } from '@jbrowse/plugin-linear-genome-view'
+import type { LinearGenomeViewModel } from '@jbrowse/plugin-linear-genome-view'
 import { alpha } from '@mui/material'
 
-import { type OntologyRecord } from '../../OntologyManager'
+import type { OntologyRecord } from '../../OntologyManager'
 import { MergeExons, MergeTranscripts, SplitExon } from '../../components'
+import { DuplicateTranscript } from '../../components/DuplicateTranscript'
 import {
   type MousePosition,
   type MousePositionWithFeature,
@@ -30,13 +31,13 @@ import {
   selectFeatureAndOpenWidget,
 } from '../../util'
 import { getRelatedFeatures } from '../../util/annotationFeatureUtils'
-import { type LinearApolloDisplay } from '../stateModel'
-import { type LinearApolloDisplayMouseEvents } from '../stateModel/mouseEvents'
-import { type LinearApolloDisplayRendering } from '../stateModel/rendering'
-import { type CanvasMouseEvent } from '../types'
+import type { LinearApolloDisplay } from '../stateModel'
+import type { LinearApolloDisplayMouseEvents } from '../stateModel/mouseEvents'
+import type { LinearApolloDisplayRendering } from '../stateModel/rendering'
+import type { CanvasMouseEvent } from '../types'
 
 import { boxGlyph } from './BoxGlyph'
-import { type Glyph } from './Glyph'
+import type { Glyph } from './Glyph'
 
 let forwardFillLight: CanvasPattern | null = null
 let backwardFillLight: CanvasPattern | null = null
@@ -950,32 +951,57 @@ function getContextMenuItems(
         )
       }
       if (isTranscriptFeature(feature, session)) {
-        contextMenuItemsForFeature.push({
-          label: 'Merge transcript',
-          onClick: () => {
-            ;(session as unknown as AbstractSessionModel).queueDialog(
-              (doneCallback) => [
-                MergeTranscripts,
-                {
-                  session,
-                  handleClose: () => {
-                    doneCallback()
+        contextMenuItemsForFeature.push(
+          {
+            label: 'Merge transcript',
+            onClick: () => {
+              ;(session as unknown as AbstractSessionModel).queueDialog(
+                (doneCallback) => [
+                  MergeTranscripts,
+                  {
+                    session,
+                    handleClose: () => {
+                      doneCallback()
+                    },
+                    changeManager,
+                    sourceFeature: feature,
+                    sourceAssemblyId: currentAssemblyId,
+                    selectedFeature,
+                    setSelectedFeature: (feature?: AnnotationFeature) => {
+                      display.setSelectedFeature(feature)
+                    },
                   },
-                  changeManager,
-                  sourceFeature: feature,
-                  sourceAssemblyId: currentAssemblyId,
-                  selectedFeature,
-                  setSelectedFeature: (feature?: AnnotationFeature) => {
-                    display.setSelectedFeature(feature)
-                  },
-                },
-              ],
-            )
+                ],
+              )
+            },
           },
-        })
+          {
+            label: 'Duplicate feature',
+            onClick: () => {
+              ;(session as unknown as AbstractSessionModel).queueDialog(
+                (doneCallback) => [
+                  DuplicateTranscript,
+                  {
+                    session,
+                    handleClose: () => {
+                      doneCallback()
+                    },
+                    changeManager,
+                    sourceFeature: feature,
+                    sourceAssemblyId: currentAssemblyId,
+                    selectedFeature,
+                    setSelectedFeature: (feature?: AnnotationFeature) => {
+                      display.setSelectedFeature(feature)
+                    },
+                  },
+                ],
+              )
+            },
+          },
+        )
         if (isSessionModelWithWidgets(session)) {
-          contextMenuItemsForFeature.push({
-            label: 'Open transcript details',
+          contextMenuItemsForFeature.splice(1, 0, {
+            label: 'Open transcript editor',
             onClick: () => {
               const apolloTranscriptWidget = session.addWidget(
                 'ApolloTranscriptDetails',

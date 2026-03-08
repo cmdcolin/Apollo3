@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common'
 
-import { RefSeqsController } from './refSeqs.controller'
-import { RefSeqsService } from './refSeqs.service'
+import { RefSeqsController } from './refSeqs.controller.js'
+import { RefSeqsService } from './refSeqs.service.js'
 
 @Module({
   imports: [],

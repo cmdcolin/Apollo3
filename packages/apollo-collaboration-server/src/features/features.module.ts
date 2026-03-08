@@ -1,10 +1,10 @@
 import { Module, forwardRef } from '@nestjs/common'
 
-import { ChecksModule } from '../checks/checks.module'
-import { OperationsModule } from '../operations/operations.module'
+import { ChecksModule } from '../checks/checks.module.js'
+import { OperationsModule } from '../operations/operations.module.js'
 
-import { FeaturesController } from './features.controller'
-import { FeaturesService } from './features.service'
+import { FeaturesController } from './features.controller.js'
+import { FeaturesService } from './features.service.js'
 
 @Module({
   controllers: [FeaturesController],

@@ -10,19 +10,20 @@ import {
   type FeatureChange,
   isFeatureChange,
 } from '@apollo-annotation/common'
-import {
-  type AnnotationFeatureSnapshot,
-  type ApolloRefSeqI,
-  type CheckResultSnapshot,
+import type {
+  AnnotationFeatureSnapshot,
+  ApolloRefSeqI,
+  CheckResultSnapshot,
 } from '@apollo-annotation/mst'
 import {
   type ChangeMessage,
   ValidationResultSet,
+  makeUserSessionId,
 } from '@apollo-annotation/shared'
 import { getConf } from '@jbrowse/core/configuration'
-import { type BaseInternetAccountModel } from '@jbrowse/core/pluggableElementTypes'
+import type { BaseInternetAccountModel } from '@jbrowse/core/pluggableElementTypes'
 import { type Region, getSession } from '@jbrowse/core/util'
-import { type Socket } from 'socket.io-client'
+import type { Socket } from 'socket.io-client'
 
 import { ChangeManager, type SubmitOpts } from '../ChangeManager'
 import { createFetchErrorMessage } from '../util'
@@ -154,6 +155,10 @@ export class CollaborationServerDriver extends BackendDriver {
   ) {
     const { socket } = internetAccount
     const token = internetAccount.retrieveToken()
+    if (!token) {
+      return
+    }
+    const localSessionId = makeUserSessionId(token)
     const channel = `${assembly}-${refSeq}`
     const changeManager = new ChangeManager(this.clientStore)
 
@@ -163,11 +168,12 @@ export class CollaborationServerDriver extends BackendDriver {
         internetAccount.setLastChangeSequenceNumber(
           Number(message.changeSequence),
         )
-        if (message.userSessionId !== token && message.channel === channel) {
-          const change = Change.fromJSON(message.changeInfo)
-          if (isFeatureChange(change) && this.haveDataForChange(change)) {
-            await changeManager.submit(change, { submitToBackend: false })
-          }
+        if (message.userSessionId === localSessionId) {
+          return // we did this change, no need to apply it again
+        }
+        const change = Change.fromJSON(message.changeInfo)
+        if (isFeatureChange(change) && this.haveDataForChange(change)) {
+          await changeManager.submit(change, { submitToBackend: false })
         }
       })
     }

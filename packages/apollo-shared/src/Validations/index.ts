@@ -1,3 +1,3 @@
-export * from './Validation'
-export * from './ValidationSet'
-export * from './CoreValidation'
+export * from './Validation.js'
+export * from './ValidationSet.js'
+export * from './CoreValidation.js'

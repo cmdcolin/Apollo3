@@ -2,9 +2,9 @@ import type {
   RefSeqChunkRepository,
   RefSeqChunkRow,
 } from '@apollo-annotation/common'
-import { EntityManager } from '@mikro-orm/core'
+import type { EntityManager } from '@mikro-orm/core'
 
-import { RefSeqChunkEntity } from '../entities/RefSeqChunkEntity'
+import { RefSeqChunkEntity } from '../entities/RefSeqChunkEntity.js'
 
 function toRow(entity: RefSeqChunkEntity): RefSeqChunkRow {
   return {

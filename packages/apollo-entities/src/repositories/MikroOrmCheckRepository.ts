@@ -1,7 +1,7 @@
 import type { CheckRepository, CheckRow } from '@apollo-annotation/common'
-import { EntityManager } from '@mikro-orm/core'
+import type { EntityManager } from '@mikro-orm/core'
 
-import { CheckEntity } from '../entities/CheckEntity'
+import { CheckEntity } from '../entities/CheckEntity.js'
 
 function toRow(entity: CheckEntity): CheckRow {
   return {

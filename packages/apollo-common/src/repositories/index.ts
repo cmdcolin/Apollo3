@@ -1,20 +1,20 @@
-export type { AssemblyRepository, AssemblyRow } from './AssemblyRepository'
-export type { ChangeRepository, ChangeRow } from './ChangeRepository'
-export type { CounterRepository } from './CounterRepository'
+export type { AssemblyRepository, AssemblyRow } from './AssemblyRepository.js'
+export type { ChangeRepository, ChangeRow } from './ChangeRepository.js'
+export type { CounterRepository } from './CounterRepository.js'
 export type {
   CheckResultRepository,
   CheckResultRow,
-} from './CheckResultRepository'
-export type { CheckRepository, CheckRow } from './CheckRepository'
-export type { FeatureRepository, FeatureRow } from './FeatureRepository'
-export type { FileRepository, FileRow } from './FileRepository'
+} from './CheckResultRepository.js'
+export type { CheckRepository, CheckRow } from './CheckRepository.js'
+export type { FeatureRepository, FeatureRow } from './FeatureRepository.js'
+export type { FileRepository, FileRow } from './FileRepository.js'
 export type {
   JBrowseConfigRepository,
   JBrowseConfigRow,
-} from './JBrowseConfigRepository'
+} from './JBrowseConfigRepository.js'
 export type {
   RefSeqChunkRepository,
   RefSeqChunkRow,
-} from './RefSeqChunkRepository'
-export type { RefSeqRepository, RefSeqRow } from './RefSeqRepository'
-export type { UserRepository, UserRow } from './UserRepository'
+} from './RefSeqChunkRepository.js'
+export type { RefSeqRepository, RefSeqRow } from './RefSeqRepository.js'
+export type { UserRepository, UserRow } from './UserRepository.js'

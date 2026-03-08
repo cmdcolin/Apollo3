@@ -1,5 +1,5 @@
 {
-  "extends": "../../tsconfig-base.json",
+  "extends": "../../tsconfig",
   "compilerOptions": {
     "composite": true,
     "incremental": true,
@@ -7,7 +7,9 @@
     "rootDir": "./src",
     "target": "ES2022",
     "lib": ["ES2022"],
-    "module": "CommonJS",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "verbatimModuleSyntax": true,
     "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,

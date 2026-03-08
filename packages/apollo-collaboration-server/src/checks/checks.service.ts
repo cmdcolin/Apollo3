@@ -3,13 +3,13 @@ import {
   checkRegistry,
   type NestedFeature,
 } from '@apollo-annotation/common'
-import { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
+import type { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
 import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common'
 
-import { FeatureRangeSearchDto } from '../entity/gff3Object.dto'
-import { DatabaseService } from '../mikro-orm/database.service'
-import { RefSeqsService } from '../refSeqs/refSeqs.service'
-import { SequenceService } from '../sequence/sequence.service'
+import type { FeatureRangeSearchDto } from '../entity/gff3Object.dto.js'
+import { DatabaseService } from '../mikro-orm/database.service.js'
+import { RefSeqsService } from '../refSeqs/refSeqs.service.js'
+import { SequenceService } from '../sequence/sequence.service.js'
 
 function collectAllIds(tree: NestedFeature): string[] {
   const ids = [tree._id]
@@ -28,7 +28,7 @@ export class ChecksService {
   constructor(
     private readonly refSeqsService: RefSeqsService,
     @Inject(forwardRef(() => SequenceService))
-    private readonly sequenceService: SequenceService,
+    private readonly sequenceService: Readonly<SequenceService>,
     private readonly db: DatabaseService,
   ) {}
 
@@ -81,6 +81,9 @@ export class ChecksService {
       return
     }
     const tree = trees[0]
+    if (!tree) {
+      return
+    }
     const allIds = collectAllIds(tree)
     const snapshot = tree as AnnotationFeatureSnapshot
 

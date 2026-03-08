@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common'
 
-import { CountersModule } from '../counters/counters.module'
-import { FilesModule } from '../files/files.module'
-import { MessagesModule } from '../messages/messages.module'
+import { CountersModule } from '../counters/counters.module.js'
+import { FilesModule } from '../files/files.module.js'
+import { MessagesModule } from '../messages/messages.module.js'
 
-import { ChangesController } from './changes.controller'
-import { ChangesService } from './changes.service'
+import { ChangesController } from './changes.controller.js'
+import { ChangesService } from './changes.service.js'
 
 @Module({
   controllers: [ChangesController],

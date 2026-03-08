@@ -1,7 +1,7 @@
 import type { FileRepository, FileRow } from '@apollo-annotation/common'
-import { EntityManager } from '@mikro-orm/core'
+import type { EntityManager } from '@mikro-orm/core'
 
-import { FileEntity, FileType } from '../entities/FileEntity'
+import { FileEntity, FileType } from '../entities/FileEntity.js'
 
 function toRow(entity: FileEntity): FileRow {
   return {

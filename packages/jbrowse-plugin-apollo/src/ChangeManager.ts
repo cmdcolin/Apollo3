@@ -11,9 +11,9 @@ import {
   validationRegistry,
 } from '@apollo-annotation/shared'
 import { getSession } from '@jbrowse/core/util'
-import { type IAnyStateTreeNode } from 'mobx-state-tree'
+import type { IAnyStateTreeNode } from '@jbrowse/mobx-state-tree'
 
-import { type ApolloSessionModel } from './session'
+import type { ApolloSessionModel } from './session'
 
 export interface SubmitOpts {
   /** defaults to true */
@@ -42,21 +42,36 @@ export class ChangeManager {
     const session = getSession(this.dataStore)
     const controller = new AbortController()
 
-    const { jobsManager, isLocked } = getSession(
-      this.dataStore,
-    ) as unknown as ApolloSessionModel
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    const { jobsManager, isLocked, changeInProgress, setChangeInProgress } =
+      getSession(this.dataStore) as unknown as ApolloSessionModel
 
     if (isLocked) {
       session.notify('Cannot submit changes in locked mode')
+      setChangeInProgress(false)
       return
     }
+
+    if (changeInProgress) {
+      session.notify(
+        'Could not submit change, there is another change still in progress',
+      )
+      return
+    }
+
+    setChangeInProgress(true)
 
     const job = {
       name: change.typeName,
       statusMessage: 'Pre-validating',
       progressPct: 0,
       cancelCallback: () => {
-        controller.abort()
+        controller.abort(
+          new DOMException(
+            `Cancelling change "${change.typeName}"`,
+            'AbortError',
+          ),
+        )
       },
     }
 
@@ -71,6 +86,7 @@ export class ChangeManager {
         jobsManager.abortJob(job.name, msg)
       }
       session.notify(msg, 'error')
+      setChangeInProgress(false)
       return
     }
 
@@ -86,6 +102,7 @@ export class ChangeManager {
         `Error encountered in client: ${String(error)}. Data may be out of sync, please refresh the page`,
         'error',
       )
+      setChangeInProgress(false)
       return
     }
 
@@ -120,6 +137,7 @@ export class ChangeManager {
         console.error(error)
         session.notify(String(error), 'error')
         await this.undo(change, false)
+        setChangeInProgress(false)
         return
       }
       if (!backendResult.ok) {
@@ -129,6 +147,7 @@ export class ChangeManager {
         }
         session.notify(msg, 'error')
         await this.undo(change, false)
+        setChangeInProgress(false)
         return
       }
       if (change.notification) {
@@ -143,6 +162,7 @@ export class ChangeManager {
     if (updateJobsManager) {
       jobsManager.done(job)
     }
+    setChangeInProgress(false)
   }
 
   async undo(change: Change, submitToBackend = true) {

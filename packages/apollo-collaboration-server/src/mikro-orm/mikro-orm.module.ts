@@ -1,8 +1,8 @@
 import { createMikroOrmConfig } from '@apollo-annotation/entities'
 import { MikroORM, EntityManager } from '@mikro-orm/core'
-import { DynamicModule, Logger, Module } from '@nestjs/common'
+import { type DynamicModule, Logger, Module } from '@nestjs/common'
 
-import { DatabaseService } from './database.service'
+import { DatabaseService } from './database.service.js'
 
 @Module({})
 export class ApolloMikroOrmModule {

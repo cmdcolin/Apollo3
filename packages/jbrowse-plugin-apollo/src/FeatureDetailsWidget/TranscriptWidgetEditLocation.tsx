@@ -3,10 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import {
-  type AnnotationFeature,
-  type TranscriptPart,
-} from '@apollo-annotation/mst'
+import type { AnnotationFeature, TranscriptPart } from '@apollo-annotation/mst'
 import {
   LocationEndChange,
   LocationStartChange,
@@ -32,8 +29,8 @@ import {
 import { observer } from 'mobx-react'
 import React, { useRef } from 'react'
 
-import { type OntologyRecord } from '../OntologyManager'
-import { type ApolloSessionModel } from '../session'
+import type { OntologyRecord } from '../OntologyManager'
+import type { ApolloSessionModel } from '../session'
 import { copyToClipboard } from '../util/copyToClipboard'
 
 import { StyledAccordionSummary } from './ApolloTranscriptDetailsWidget'
@@ -113,6 +110,7 @@ export const TranscriptWidgetEditLocation = observer(
     const refData = currentAssembly?.getByRefName(refName)
     const { changeManager } = session.apolloDataStore
     const seqRef = useRef<HTMLDivElement>(null)
+    const { changeInProgress } = session
 
     if (!refData) {
       return null
@@ -724,12 +722,15 @@ export const TranscriptWidgetEditLocation = observer(
             <Typography
               component={'span'}
               style={{
-                backgroundColor: 'yellow',
+                backgroundColor: changeInProgress ? 'lightgray' : 'yellow',
                 cursor: 'pointer',
                 border: '1px solid black',
               }}
               key={codonGenomicPos}
               onClick={() => {
+                if (changeInProgress) {
+                  return
+                }
                 // NOTE: codonGenomicPos is important here for calculating the genomic location
                 // of the start codon. We are using the codonGenomicPos as the key in the typography
                 // elements to maintain the genomic postion of the codon start
@@ -848,7 +849,7 @@ export const TranscriptWidgetEditLocation = observer(
 
       // Trim any sequence before first start codon and after stop codon
       const startCodonIndex = translationSequence.indexOf('M')
-      const stopCodonIndex = translationSequence.indexOf('*') + 1
+      const stopCodonIndex = translationSequence.indexOf('*')
 
       const startCodonPos =
         translSeqCodonStartGenomicPosArr[startCodonIndex].codonGenomicPos
@@ -861,7 +862,7 @@ export const TranscriptWidgetEditLocation = observer(
       const startCodonGenomicLoc = getCodonGenomicLocation(
         startCodonPos as unknown as number,
       )
-      const stopCodonGenomicLoc = getCodonGenomicLocation(
+      let stopCodonGenomicLoc = getCodonGenomicLocation(
         stopCodonPos as unknown as number,
       )
 
@@ -874,6 +875,7 @@ export const TranscriptWidgetEditLocation = observer(
           return
         }
         let promise
+        stopCodonGenomicLoc += 3 // move to end of stop codon
         if (startCodonGenomicLoc !== cdsMin) {
           promise = new Promise((resolve) => {
             updateCDSLocation(
@@ -909,6 +911,7 @@ export const TranscriptWidgetEditLocation = observer(
           return
         }
         let promise
+        stopCodonGenomicLoc -= 3 // move to end of stop codon
         if (startCodonGenomicLoc !== cdsMax) {
           promise = new Promise((resolve) => {
             updateCDSLocation(
@@ -978,16 +981,22 @@ export const TranscriptWidgetEditLocation = observer(
                   }}
                 >
                   <Tooltip title="Copy">
-                    <ContentCopyIcon
-                      style={{ fontSize: 15, cursor: 'pointer' }}
+                    <button
                       onClick={onCopyClick}
-                    />
+                      style={{ border: 'none', background: 'none', padding: 0 }}
+                      disabled={changeInProgress}
+                    >
+                      <ContentCopyIcon style={{ fontSize: 15 }} />
+                    </button>
                   </Tooltip>
                   <Tooltip title="Trim">
-                    <ContentCutIcon
-                      style={{ fontSize: 15, cursor: 'pointer' }}
+                    <button
                       onClick={trimTranslationSequence}
-                    />
+                      style={{ border: 'none', background: 'none', padding: 0 }}
+                      disabled={changeInProgress}
+                    >
+                      <ContentCutIcon style={{ fontSize: 15 }} />
+                    </button>
                   </Tooltip>
                 </div>
               </AccordionDetails>
@@ -1014,6 +1023,7 @@ export const TranscriptWidgetEditLocation = observer(
                       )
                     }}
                     style={{ border: '1px solid black', borderRadius: 5 }}
+                    disabled={changeInProgress}
                   />
                 </Grid>
               ) : (
@@ -1031,6 +1041,7 @@ export const TranscriptWidgetEditLocation = observer(
                       )
                     }}
                     style={{ border: '1px solid black', borderRadius: 5 }}
+                    disabled={changeInProgress}
                   />
                 </Grid>
               )}
@@ -1052,6 +1063,7 @@ export const TranscriptWidgetEditLocation = observer(
                       )
                     }}
                     style={{ border: '1px solid black', borderRadius: 5 }}
+                    disabled={changeInProgress}
                   />
                 </Grid>
               ) : (
@@ -1069,6 +1081,7 @@ export const TranscriptWidgetEditLocation = observer(
                       )
                     }}
                     style={{ border: '1px solid black', borderRadius: 5 }}
+                    disabled={changeInProgress}
                   />
                 </Grid>
               )}
@@ -1113,6 +1126,7 @@ export const TranscriptWidgetEditLocation = observer(
                               true,
                             )
                           }}
+                          disabled={changeInProgress}
                         />
                       </Grid>
                     ) : (
@@ -1129,6 +1143,7 @@ export const TranscriptWidgetEditLocation = observer(
                               false,
                             )
                           }}
+                          disabled={changeInProgress}
                         />
                       </Grid>
                     )}
@@ -1149,6 +1164,7 @@ export const TranscriptWidgetEditLocation = observer(
                               false,
                             )
                           }}
+                          disabled={changeInProgress}
                         />
                       </Grid>
                     ) : (
@@ -1165,6 +1181,7 @@ export const TranscriptWidgetEditLocation = observer(
                               true,
                             )
                           }}
+                          disabled={changeInProgress}
                         />
                       </Grid>
                     )}

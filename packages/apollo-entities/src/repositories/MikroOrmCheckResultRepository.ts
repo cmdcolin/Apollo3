@@ -2,9 +2,9 @@ import type {
   CheckResultRepository,
   CheckResultRow,
 } from '@apollo-annotation/common'
-import { EntityManager } from '@mikro-orm/core'
+import type { EntityManager } from '@mikro-orm/core'
 
-import { CheckResultEntity } from '../entities/CheckResultEntity'
+import { CheckResultEntity } from '../entities/CheckResultEntity.js'
 
 function toRow(entity: CheckResultEntity): CheckResultRow {
   return {

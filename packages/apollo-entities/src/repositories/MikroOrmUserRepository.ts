@@ -1,7 +1,7 @@
 import type { UserRepository, UserRow } from '@apollo-annotation/common'
-import { EntityManager } from '@mikro-orm/core'
+import type { EntityManager } from '@mikro-orm/core'
 
-import { UserEntity, UserRole } from '../entities/UserEntity'
+import { UserEntity, UserRole } from '../entities/UserEntity.js'
 
 function toRow(entity: UserEntity): UserRow {
   return {

@@ -2,14 +2,14 @@ import 'reflect-metadata'
 
 import type { MikroORM } from '@mikro-orm/core'
 
-import { createTestORM } from '../test-utils'
-import { MikroOrmAssemblyRepository } from './MikroOrmAssemblyRepository'
-import { MikroOrmChangeRepository } from './MikroOrmChangeRepository'
-import { MikroOrmCounterRepository } from './MikroOrmCounterRepository'
-import { MikroOrmFeatureRepository } from './MikroOrmFeatureRepository'
-import { MikroOrmFileRepository } from './MikroOrmFileRepository'
-import { MikroOrmRefSeqChunkRepository } from './MikroOrmRefSeqChunkRepository'
-import { MikroOrmRefSeqRepository } from './MikroOrmRefSeqRepository'
+import { createTestORM } from '../test-utils.js'
+import { MikroOrmAssemblyRepository } from './MikroOrmAssemblyRepository.js'
+import { MikroOrmChangeRepository } from './MikroOrmChangeRepository.js'
+import { MikroOrmCounterRepository } from './MikroOrmCounterRepository.js'
+import { MikroOrmFeatureRepository } from './MikroOrmFeatureRepository.js'
+import { MikroOrmFileRepository } from './MikroOrmFileRepository.js'
+import { MikroOrmRefSeqChunkRepository } from './MikroOrmRefSeqChunkRepository.js'
+import { MikroOrmRefSeqRepository } from './MikroOrmRefSeqRepository.js'
 
 let orm: MikroORM
 

@@ -1,11 +1,12 @@
 import fs from 'node:fs'
 
-import { Injectable, Logger } from '@nestjs/common'
+import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { PassportStrategy } from '@nestjs/passport'
+import { HttpsProxyAgent } from 'https-proxy-agent'
 import { Strategy } from 'passport-microsoft'
 
-import { AuthenticationService } from '../../authentication/authentication.service'
+import { AuthenticationService } from '../../authentication/authentication.service.js'
 
 export interface Profile {
   provider: 'microsoft'
@@ -22,6 +23,7 @@ interface ConfigValues {
   MICROSOFT_CLIENT_SECRET_FILE?: string
   URL: string
   PORT: number
+  OAUTH_HTTP_PROXY?: string
 }
 
 @Injectable()
@@ -29,7 +31,8 @@ export class MicrosoftStrategy extends PassportStrategy(Strategy) {
   private readonly logger = new Logger(MicrosoftStrategy.name)
 
   constructor(
-    private readonly authService: AuthenticationService,
+    @Inject(forwardRef(() => AuthenticationService))
+    private readonly authService: Readonly<AuthenticationService>,
     configService: ConfigService<ConfigValues, true>,
   ) {
     let clientID = configService.get('MICROSOFT_CLIENT_ID', { infer: true })
@@ -72,6 +75,23 @@ export class MicrosoftStrategy extends PassportStrategy(Strategy) {
       scope: ['user.read'],
       store: true,
     })
+
+    // Apply proxy to OAuth2 instance
+    const proxy = configService.get('OAUTH_HTTP_PROXY', { infer: true })
+    if (proxy) {
+      const agent = new HttpsProxyAgent(proxy)
+
+      // Access the internal OAuth2 instance and set the agent
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+      const oauth2 = (this as any)._oauth2
+      if (oauth2) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+        oauth2.setAgent(agent)
+        this.logger.debug(
+          `Microsoft Strategy configured to use proxy: ${proxy}`,
+        )
+      }
+    }
   }
 
   async validate(accessToken: string, refreshToken: string, profile: Profile) {

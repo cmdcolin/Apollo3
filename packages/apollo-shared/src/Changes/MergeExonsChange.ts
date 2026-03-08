@@ -9,11 +9,11 @@ import {
   type SerializedFeatureChange,
   type ServerDataStore,
 } from '@apollo-annotation/common'
-import { type AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
+import type { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
 
-import { attributesToRecords, stringifyAttributes } from '../util'
+import { attributesToRecords, stringifyAttributes } from '../util.js'
 
-import { UndoMergeExonsChange } from './UndoMergeExonsChange'
+import { UndoMergeExonsChange } from './UndoMergeExonsChange.js'
 
 interface SerializedMergeExonsChangeBase extends SerializedFeatureChange {
   typeName: 'MergeExonsChange'

@@ -1,11 +1,11 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { randomBytes } from 'node:crypto'
 
-import { DatabaseService } from '../mikro-orm/database.service'
+import { DatabaseService } from '../mikro-orm/database.service.js'
 
-import { CreateRefSeqDto } from './dto/create-refSeq.dto'
-import { FindRefSeqDto } from './dto/find-refSeq.dto'
-import { UpdateRefSeqDto } from './dto/update-refSeq.dto'
+import { CreateRefSeqDto } from './dto/create-refSeq.dto.js'
+import { FindRefSeqDto } from './dto/find-refSeq.dto.js'
+import { UpdateRefSeqDto } from './dto/update-refSeq.dto.js'
 
 @Injectable()
 export class RefSeqsService {
