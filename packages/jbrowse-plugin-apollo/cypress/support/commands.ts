@@ -213,7 +213,13 @@ Cypress.Commands.add(
     if (launch) {
       cy.contains('Launch view').click()
     }
-    cy.contains('Select assembly to view', { timeout: 10_000 })
+    // In JBrowse v4, a single assembly may auto-select instead of showing
+    // "Select assembly to view". Check for either state.
+    cy.get('body', { timeout: 10_000 }).then(($body) => {
+      if ($body.text().includes('Select assembly to view')) {
+        cy.contains('Select assembly to view')
+      }
+    })
   },
 )
 
@@ -340,6 +346,16 @@ Cypress.Commands.add(
       .should('contain', 'All operations successful')
   },
 )
+
+Cypress.Commands.add('assertAssemblyLoaded', (assemblyName: string) => {
+  // In JBrowse v4, the assembly name may be in an input value rather than
+  // as text content, and a single assembly may auto-select.
+  cy.get('[data-testid="assembly-selector-textfield"]', {
+    timeout: 10_000,
+  }).within(() => {
+    cy.get('input').should('have.value', assemblyName)
+  })
+})
 
 Cypress.Commands.add('refreshTableEditor', () => {
   // Refresh table editor by close & re-open

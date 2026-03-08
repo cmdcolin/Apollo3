@@ -35,6 +35,7 @@ declare namespace Cypress {
       deleteExistingFeatures: boolean | undefined,
     ): Chainable<void>
     closeSearchBox(): Chainable<void>
+    assertAssemblyLoaded(assemblyName: string): Chainable<void>
     refreshTableEditor(): Chainable<void>
   }
 }
