@@ -1,5 +1,13 @@
 import { type IDBPDatabase, openDB } from 'idb'
 
+const API_BASE = 'http://localhost:3999'
+
+function getGuestToken() {
+  return cy
+    .request({ url: `${API_BASE}/auth/guest`, failOnStatusCode: false })
+    .then((res) => res.body.token as string)
+}
+
 Cypress.Commands.add('loginAsGuest', () => {
   cy.visit('/?config=http://localhost:3999/jbrowse/config.json')
   cy.contains('Continue as Guest', { timeout: 10_000 }).click()
@@ -9,12 +17,24 @@ Cypress.Commands.add('loginAsGuest', () => {
 })
 
 Cypress.Commands.add('deleteAssemblies', () => {
-  for (const x of ['assemblies', 'features']) {
-    cy.log(x)
-    cy.deleteMany({}, { collection: x }).then((results: undefined) => {
-      cy.log(`Collection ${x}: ${results}` as unknown as string)
+  getGuestToken().then((token) => {
+    const headers = { Authorization: `Bearer ${token}` }
+    cy.request({ url: `${API_BASE}/assemblies`, headers }).then((res) => {
+      const assemblies = res.body as { _id: string }[]
+      for (const assembly of assemblies) {
+        cy.request({
+          method: 'POST',
+          url: `${API_BASE}/changes`,
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: {
+            typeName: 'DeleteAssemblyChange',
+            assembly: assembly._id,
+          },
+          failOnStatusCode: false,
+        })
+      }
     })
-  }
+  })
 })
 
 type OntologyKey = 'nodes' | 'edges' | 'meta'
@@ -66,26 +86,36 @@ async function loadOntology(
 }
 
 Cypress.Commands.add('addOntologies', () => {
-  cy.deleteMany({}, { collection: 'jbrowseconfigs' })
-  cy.insertOne(
-    {
-      configuration: {
-        ApolloPlugin: {
-          ontologies: [
-            {
-              name: 'Sequence Ontology',
-              version: 'unversioned',
-              source: {
-                uri: 'http://localhost:9000/test_data/so-v3.1.json',
-                locationType: 'UriLocation',
-              },
+  getGuestToken().then((token) => {
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    }
+    cy.request({
+      method: 'POST',
+      url: `${API_BASE}/changes`,
+      headers,
+      body: {
+        typeName: 'ImportJBrowseConfigChange',
+        newJBrowseConfig: {
+          configuration: {
+            ApolloPlugin: {
+              ontologies: [
+                {
+                  name: 'Sequence Ontology',
+                  version: 'unversioned',
+                  source: {
+                    uri: 'http://localhost:9000/test_data/so-v3.1.json',
+                    locationType: 'UriLocation',
+                  },
+                },
+              ],
             },
-          ],
+          },
         },
       },
-    },
-    { collection: 'jbrowseconfigs' },
-  )
+    })
+  })
   cy.readFile('cypress/data/so.json.gz', null).then((soGZip: Buffer) => {
     cy.wrap<Promise<void>>(
       loadOntology(

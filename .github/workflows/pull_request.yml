@@ -35,11 +35,6 @@ jobs:
       - name: Get latest JBrowse
         run: yarn run jbrowse create --nightly .jbrowse
         working-directory: packages/jbrowse-plugin-apollo
-      - name: Start MongoDB
-        uses: supercharge/mongodb-github-action@1.10.0
-        with:
-          mongodb-version: 7
-          mongodb-replica-set: test-rs
       - name: Start local file server
         run:
           yarn --cwd packages/apollo-collaboration-server/test/data/ serve
