@@ -15,6 +15,7 @@ export class RefSeqsController {
 
   @Get()
   findAll(@Query() request: FindRefSeqDto) {
+    this.logger.debug(`refSeqs findAll called with: ${JSON.stringify(request)}`)
     return this.refSeqsService.findAll(request)
   }
 

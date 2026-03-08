@@ -23,6 +23,9 @@ export class JBrowseController {
       throw new Error('No user for request')
     }
     const { role, id } = user
+    this.logger.debug(
+      `config.json requested: user.id=${id}, user.role=${role}, passing role=${id ? role : undefined}`,
+    )
     return this.jbrowseService.getConfig(id ? role : undefined)
   }
 }

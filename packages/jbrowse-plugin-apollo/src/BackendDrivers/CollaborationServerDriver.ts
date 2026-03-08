@@ -320,7 +320,7 @@ export class CollaborationServerDriver extends BackendDriver {
     const refSeqMap = new Map<string, RefSeq>(
       refSeqs.map((refSeq) => [
         refSeq.name,
-        { refName: refSeq.name, id: refSeq._id, aliases: refSeq.aliases },
+        { refName: refSeq.name, id: refSeq._id, aliases: refSeq.aliases ?? [] },
       ]),
     )
     this.refSeqMaps.set(assemblyName, refSeqMap)
@@ -328,12 +328,19 @@ export class CollaborationServerDriver extends BackendDriver {
   }
 
   async getRefNameAliases(assemblyName: string): Promise<RefNameAliases[]> {
+    console.warn(
+      `[apollo-debug] CollaborationServerDriver.getRefNameAliases: assemblyName=${assemblyName}`,
+    )
     const refSeqMap = await this.getRefSeqMapping(assemblyName)
-    return [...refSeqMap.values()].map((refSeq) => ({
+    const result = [...refSeqMap.values()].map((refSeq) => ({
       refName: refSeq.refName,
       aliases: [...new Set([refSeq.id, ...refSeq.aliases])],
       uniqueId: `alias-${refSeq.id}`,
     }))
+    console.warn(
+      `[apollo-debug] CollaborationServerDriver.getRefNameAliases: returning ${result.length} aliases`,
+    )
+    return result
   }
 
   async getRefSeqId(assemblyName: string, refName: string) {
@@ -346,6 +353,9 @@ export class CollaborationServerDriver extends BackendDriver {
   }
 
   async getRegions(assemblyName: string): Promise<Region[]> {
+    console.warn(
+      `[apollo-debug] CollaborationServerDriver.getRegions: assemblyName=${assemblyName}`,
+    )
     const { assemblyManager } = getSession(this.clientStore)
     const assembly = assemblyManager.get(assemblyName)
     if (!assembly) {
@@ -355,12 +365,21 @@ export class CollaborationServerDriver extends BackendDriver {
       assemblyName,
     ) as ApolloInternetAccount
     const { baseURL } = internetAccount
+    console.warn(
+      `[apollo-debug] CollaborationServerDriver.getRegions: baseURL=${baseURL}, internetAccountId=${internetAccount.internetAccountId}`,
+    )
     const url = new URL('refSeqs', baseURL)
     const searchParams = new URLSearchParams({ assembly: assemblyName })
     url.search = searchParams.toString()
     const uri = url.toString()
+    console.warn(
+      `[apollo-debug] CollaborationServerDriver.getRegions: fetching ${uri}`,
+    )
 
     const response = await this.fetch(internetAccount, uri)
+    console.warn(
+      `[apollo-debug] CollaborationServerDriver.getRegions: response status=${response.status}`,
+    )
     if (!response.ok) {
       let errorMessage
       try {
@@ -375,6 +394,9 @@ export class CollaborationServerDriver extends BackendDriver {
       )
     }
     const refSeqs = await response.json()
+    console.warn(
+      `[apollo-debug] CollaborationServerDriver.getRegions: got ${refSeqs.length} refSeqs`,
+    )
     return refSeqs.map((refSeq: { name: string; length: number }) => ({
       refName: refSeq.name,
       start: 0,

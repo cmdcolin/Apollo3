@@ -246,17 +246,21 @@ export function clientDataStoreFactory(
         const session = getSession(self)
         const { assemblyManager } = session
         const assembly = assemblyManager.get(assemblyId)
+        console.warn(
+          `[apollo-debug] getBackendDriver: assemblyId=${assemblyId}, assembly=${!!assembly}`,
+        )
         if (!assembly) {
           return
         }
-        const { file, internetAccountConfigId, sqliteDb } = getConf(assembly, [
-          'sequence',
-          'metadata',
-        ]) as {
+        const metadata = getConf(assembly, ['sequence', 'metadata']) as {
           internetAccountConfigId?: string
           file?: string
           sqliteDb?: string
         }
+        const { file, internetAccountConfigId, sqliteDb } = metadata
+        console.warn(
+          `[apollo-debug] getBackendDriver: metadata=${JSON.stringify(metadata)}, isElectron=${isElectron}`,
+        )
         if (isElectron && sqliteDb) {
           return self.desktopSQLiteDriver
         }
