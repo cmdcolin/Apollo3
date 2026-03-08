@@ -44,11 +44,15 @@ export class ApolloTextSearchAdapter
 
   async searchIndex(args: BaseTextSearchArgs): Promise<BaseResult[]> {
     const query = args.queryString
+    console.warn(
+      `[apollo-debug] ApolloTextSearchAdapter.searchIndex: query="${query}", assemblyNames=${JSON.stringify(this.assemblyNames)}`,
+    )
     const results: BaseResult[] = []
     const session = this.pluginManager?.rootModel?.session as
       | ApolloSessionModel
       | undefined
     if (!session) {
+      console.warn('[apollo-debug] ApolloTextSearchAdapter: no session')
       return results
     }
     const { apolloDataStore } = session
@@ -57,12 +61,22 @@ export class ApolloTextSearchAdapter
       const backendDriver = apolloDataStore.getBackendDriver(assemblyName)
       const assembly = assemblyManager.get(assemblyName)
       if (!(backendDriver && assembly)) {
+        console.warn(
+          `[apollo-debug] ApolloTextSearchAdapter: skipping ${assemblyName}, backendDriver=${!!backendDriver}, assembly=${!!assembly}`,
+        )
         continue
       }
-      const features = await backendDriver.searchFeatures(args.queryString, [
-        assemblyName,
-      ])
-      results.push(...this.mapBaseResult(features, assembly, query))
+      try {
+        const features = await backendDriver.searchFeatures(args.queryString, [
+          assemblyName,
+        ])
+        console.warn(
+          `[apollo-debug] ApolloTextSearchAdapter: found ${features.length} features for "${query}" in ${assemblyName}`,
+        )
+        results.push(...this.mapBaseResult(features, assembly, query))
+      } catch (e) {
+        console.warn(`[apollo-debug] ApolloTextSearchAdapter ERROR: ${e}`)
+      }
     }
 
     return results

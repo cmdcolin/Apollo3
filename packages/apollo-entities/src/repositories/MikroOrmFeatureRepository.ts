@@ -193,17 +193,27 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
   }
 
   async searchText(refSeqId: string, query: string) {
-    const qb = this.em.createQueryBuilder(FeatureEntity)
-    const entities = await qb
-      .where({ refSeq: refSeqId })
-      .andWhere({
-        $or: [
-          { type: { $like: `%${query}%` } },
-          { attributes: { $like: `%${query}%` } },
-        ],
-      })
-      .getResultList()
-    return entities.map(toRow)
+    const conn = this.em.getConnection()
+    const rows = await conn.execute(
+      `SELECT * FROM feature WHERE feature_ref_seq_id = ? AND (type LIKE ? OR attributes LIKE ?)`,
+      [refSeqId, `%${query}%`, `%${query}%`],
+    )
+    return (rows as Record<string, unknown>[]).map((row) => ({
+      _id: row._id as string,
+      parentId: row.feature_parent_id as string | undefined,
+      refSeq: row.feature_ref_seq_id as string,
+      type: row.type as string,
+      min: row.min as number,
+      max: row.max as number,
+      strand: row.strand as 1 | -1 | undefined,
+      phase: row.phase as 0 | 1 | 2 | undefined,
+      attributes:
+        typeof row.attributes === 'string'
+          ? JSON.parse(row.attributes)
+          : (row.attributes as Record<string, string[]> | undefined),
+      status: row.status as number | undefined,
+      user: row.user as string | undefined,
+    }))
   }
 
   async activateByUser(user: string) {
