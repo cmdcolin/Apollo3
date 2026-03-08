@@ -2,9 +2,9 @@ import type {
   JBrowseConfigRepository,
   JBrowseConfigRow,
 } from '@apollo-annotation/common'
-import { EntityManager } from '@mikro-orm/core'
+import type { EntityManager } from '@mikro-orm/core'
 
-import { JBrowseConfigEntity } from '../entities/JBrowseConfigEntity'
+import { JBrowseConfigEntity } from '../entities/JBrowseConfigEntity.js'
 
 function toRow(entity: JBrowseConfigEntity): JBrowseConfigRow {
   return {
@@ -19,9 +19,9 @@ export class MikroOrmJBrowseConfigRepository
   constructor(private readonly em: EntityManager) {}
 
   async findOne() {
-    const entities = await this.em.findAll(JBrowseConfigEntity, { limit: 1 })
-    if (entities.length > 0) {
-      return toRow(entities[0])
+    const entity = await this.em.findOne(JBrowseConfigEntity, {})
+    if (entity) {
+      return toRow(entity)
     }
     return undefined
   }

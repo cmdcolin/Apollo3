@@ -5,8 +5,8 @@ import {
   isFeatureChange,
 } from '@apollo-annotation/common'
 import {
-  ChangeMessage,
-  DecodedJWT,
+  type ChangeMessage,
+  type DecodedJWT,
   makeUserSessionId,
   validationRegistry,
 } from '@apollo-annotation/shared'
@@ -16,13 +16,13 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common'
 
-import { CountersService } from '../counters/counters.service'
-import { FilesService } from '../files/files.service'
-import { MessagesGateway } from '../messages/messages.gateway'
-import { DatabaseService } from '../mikro-orm/database.service'
-import { PluginsService } from '../plugins/plugins.service'
+import { CountersService } from '../counters/counters.service.js'
+import { FilesService } from '../files/files.service.js'
+import { MessagesGateway } from '../messages/messages.gateway.js'
+import { DatabaseService } from '../mikro-orm/database.service.js'
+import { PluginsService } from '../plugins/plugins.service.js'
 
-import { FindChangeDto } from './dto/find-change.dto'
+import { FindChangeDto } from './dto/find-change.dto.js'
 
 const STATUS_ZERO_CHANGE_TYPES = new Set([
   'AddAssemblyAndFeaturesFromFileChange',
@@ -95,7 +95,10 @@ export class ChangesService {
       for (const changedId of changedIds) {
         const features = await this.db.feature.findByIds([changedId])
         if (features.length > 0) {
-          const refSeq = await this.db.refSeq.findById(features[0].refSeq)
+          const firstFeature = features[0]
+          const refSeq = firstFeature
+            ? await this.db.refSeq.findById(firstFeature.refSeq)
+            : undefined
           if (refSeq) {
             refNames.push(refSeq.name)
           }

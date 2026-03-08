@@ -1,9 +1,9 @@
-import {
-  type Change,
-  type ClientDataStore,
-  type Context,
-  type Validation,
-  type ValidationResult,
+import type {
+  Change,
+  ClientDataStore,
+  Context,
+  Validation,
+  ValidationResult,
 } from '@apollo-annotation/common'
 
 export class ValidationResultSet {

@@ -2,10 +2,10 @@ import { BgzipIndexedFasta, IndexedFasta } from '@gmod/indexedfasta'
 import { Injectable, Logger } from '@nestjs/common'
 import { RemoteFile } from 'generic-filehandle'
 
-import { FilesService } from '../files/files.service'
-import { DatabaseService } from '../mikro-orm/database.service'
+import { FilesService } from '../files/files.service.js'
+import { DatabaseService } from '../mikro-orm/database.service.js'
 
-import { GetSequenceDto } from './dto/get-sequence.dto'
+import { GetSequenceDto } from './dto/get-sequence.dto.js'
 
 @Injectable()
 export class SequenceService {

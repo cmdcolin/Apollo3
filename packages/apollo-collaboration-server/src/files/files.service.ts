@@ -13,16 +13,16 @@ import {
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { randomBytes } from 'node:crypto'
-import { GenericFilehandle, LocalFile } from 'generic-filehandle'
+import { type GenericFilehandle, LocalFile } from 'generic-filehandle'
 
-import { DatabaseService } from '../mikro-orm/database.service'
+import { DatabaseService } from '../mikro-orm/database.service.js'
 
-import { CreateFileDto } from './dto/create-file.dto'
+import { CreateFileDto } from './dto/create-file.dto.js'
 import {
-  FileRequest,
+  type FileRequest,
   LocalFileGzip,
   writeFileAndCalculateHash,
-} from './filesUtil'
+} from './filesUtil.js'
 
 @Injectable()
 export class FilesService {

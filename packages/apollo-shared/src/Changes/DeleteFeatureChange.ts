@@ -8,9 +8,9 @@ import {
   type SerializedFeatureChange,
   type ServerDataStore,
 } from '@apollo-annotation/common'
-import { type AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
+import type { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
 
-import { AddFeatureChange } from './AddFeatureChange'
+import { AddFeatureChange } from './AddFeatureChange.js'
 
 interface SerializedDeleteFeatureChangeBase extends SerializedFeatureChange {
   typeName: 'DeleteFeatureChange'

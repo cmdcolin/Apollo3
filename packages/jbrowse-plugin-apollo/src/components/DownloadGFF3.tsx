@@ -3,11 +3,12 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 /* eslint-disable @typescript-eslint/no-misused-promises */
-import { type ApolloAssembly } from '@apollo-annotation/mst'
+import type { ApolloAssembly } from '@apollo-annotation/mst'
 import { annotationFeatureToGFF3 } from '@apollo-annotation/shared'
 import { type GFF3Item, formatSync } from '@gmod/gff'
-import { type Assembly } from '@jbrowse/core/assemblyManager/assembly'
+import type { Assembly } from '@jbrowse/core/assemblyManager/assembly'
 import { getConf } from '@jbrowse/core/configuration'
+import { type IMSTMap, getSnapshot } from '@jbrowse/mobx-state-tree'
 import {
   Button,
   Checkbox,
@@ -21,17 +22,14 @@ import {
   type SelectChangeEvent,
 } from '@mui/material'
 import { saveAs } from 'file-saver'
-import { type IMSTMap, getSnapshot } from 'mobx-state-tree'
 import React, { useState } from 'react'
 
-import {
-  type ApolloInternetAccount,
-  type CollaborationServerDriver,
-  type DesktopFileDriver,
-  type DesktopSQLiteDriver,
-  type InMemoryFileDriver,
+import type {
+  ApolloInternetAccount,
+  CollaborationServerDriver,
+  InMemoryFileDriver,
 } from '../BackendDrivers'
-import { type ApolloSessionModel } from '../session'
+import type { ApolloSessionModel } from '../session'
 import { createFetchErrorMessage } from '../util'
 
 import { Dialog } from './Dialog'
@@ -46,27 +44,18 @@ export function DownloadGFF3({ handleClose, session }: DownloadGFF3Props) {
   const [selectedAssembly, setSelectedAssembly] = useState<Assembly>()
   const [errorMessage, setErrorMessage] = useState('')
 
-  const {
-    collaborationServerDriver,
-    desktopFileDriver,
-    desktopSQLiteDriver,
-    getInternetAccount,
-    inMemoryFileDriver,
-  } = session.apolloDataStore as {
-    collaborationServerDriver: CollaborationServerDriver
-    desktopFileDriver?: DesktopFileDriver
-    desktopSQLiteDriver?: DesktopSQLiteDriver
-    inMemoryFileDriver: InMemoryFileDriver
-    getInternetAccount(
-      assemblyName?: string,
-      internetAccountId?: string,
-    ): ApolloInternetAccount
-  }
+  const { collaborationServerDriver, getInternetAccount, inMemoryFileDriver } =
+    session.apolloDataStore as {
+      collaborationServerDriver: CollaborationServerDriver
+      inMemoryFileDriver: InMemoryFileDriver
+      getInternetAccount(
+        assemblyName?: string,
+        internetAccountId?: string,
+      ): ApolloInternetAccount
+    }
   const assemblies = [
     ...collaborationServerDriver.getAssemblies(),
     ...inMemoryFileDriver.getAssemblies(),
-    ...(desktopFileDriver?.getAssemblies() ?? []),
-    ...(desktopSQLiteDriver?.getAssemblies() ?? []),
   ]
 
   function handleChangeAssembly(e: SelectChangeEvent) {
@@ -82,14 +71,12 @@ export function DownloadGFF3({ handleClose, session }: DownloadGFF3Props) {
       return
     }
 
-    const { internetAccountConfigId, sqliteDb } = getConf(selectedAssembly, [
+    const { internetAccountConfigId } = getConf(selectedAssembly, [
       'sequence',
       'metadata',
-    ]) as { internetAccountConfigId?: string; sqliteDb?: string }
+    ]) as { internetAccountConfigId?: string }
     if (internetAccountConfigId) {
       await exportFromCollaborationServer(internetAccountConfigId)
-    } else if (sqliteDb && desktopSQLiteDriver) {
-      await exportFromSQLite(selectedAssembly.name)
     } else {
       exportFromMemory(session)
     }
@@ -140,30 +127,6 @@ export function DownloadGFF3({ handleClose, session }: DownloadGFF3Props) {
     window.open(exportUri, '_blank')
   }
 
-  async function exportFromSQLite(assemblyName: string) {
-    if (!desktopSQLiteDriver) {
-      setErrorMessage('SQLite driver not available')
-      return
-    }
-    const regions = await desktopSQLiteDriver.getRegions(assemblyName)
-    const gff3Items: GFF3Item[] = [{ directive: 'gff-version', value: '3' }]
-    for (const region of regions) {
-      gff3Items.push({
-        directive: 'sequence-region',
-        value: `${region.refName} ${region.start + 1} ${region.end}`,
-      })
-    }
-    for (const region of regions) {
-      const [snapshots] = await desktopSQLiteDriver.getFeatures(region)
-      for (const snapshot of snapshots) {
-        gff3Items.push(annotationFeatureToGFF3(snapshot))
-      }
-    }
-    const gff3 = formatSync(gff3Items)
-    const gff3Blob = new Blob([gff3], { type: 'text/plain;charset=utf-8' })
-    saveAs(gff3Blob, `${assemblyName}.gff3`)
-  }
-
   function exportFromMemory(session: ApolloSessionModel) {
     if (!selectedAssembly) {
       setErrorMessage('Must select assembly to download')
@@ -181,10 +144,11 @@ export function DownloadGFF3({ handleClose, session }: DownloadGFF3Props) {
       return
     }
     const gff3Items: GFF3Item[] = [{ directive: 'gff-version', value: '3' }]
-    const sequenceFeatures =
-      (getConf(selectedAssembly, ['sequence', 'adapter', 'features']) as
-        | { refName: string; start: number; end: number; seq: string }[]
-        | undefined) ?? []
+    const sequenceFeatures = getConf(selectedAssembly, [
+      'sequence',
+      'adapter',
+      'features',
+    ]) as { refName: string; start: number; end: number; seq: string }[]
     for (const sequenceFeature of sequenceFeatures) {
       const { end, refName, start } = sequenceFeature
       gff3Items.push({

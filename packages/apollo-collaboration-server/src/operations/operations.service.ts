@@ -5,10 +5,10 @@ import {
 } from '@apollo-annotation/common'
 import { Injectable, Logger } from '@nestjs/common'
 
-import { CountersService } from '../counters/counters.service'
-import { FilesService } from '../files/files.service'
-import { DatabaseService } from '../mikro-orm/database.service'
-import { PluginsService } from '../plugins/plugins.service'
+import { CountersService } from '../counters/counters.service.js'
+import { FilesService } from '../files/files.service.js'
+import { DatabaseService } from '../mikro-orm/database.service.js'
+import { PluginsService } from '../plugins/plugins.service.js'
 
 @Injectable()
 export class OperationsService {

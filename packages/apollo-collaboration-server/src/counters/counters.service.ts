@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common'
 
-import { DatabaseService } from '../mikro-orm/database.service'
+import { DatabaseService } from '../mikro-orm/database.service.js'
 
 @Injectable()
 export class CountersService {

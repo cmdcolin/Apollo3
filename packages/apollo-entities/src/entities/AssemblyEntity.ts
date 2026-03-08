@@ -1,6 +1,6 @@
 import { Entity, ManyToOne, PrimaryKey, Property } from '@mikro-orm/core'
 
-import { FileEntity } from './FileEntity'
+import { FileEntity } from './FileEntity.js'
 
 @Entity({ tableName: 'assembly' })
 export class AssemblyEntity {

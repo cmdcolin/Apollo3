@@ -1,6 +1,6 @@
 import { Entity, Index, ManyToOne, PrimaryKey, Property } from '@mikro-orm/core'
 
-import { RefSeqEntity } from './RefSeqEntity'
+import { RefSeqEntity } from './RefSeqEntity.js'
 
 @Entity({ tableName: 'check_result' })
 @Index({ properties: ['refSeq', 'start'] })

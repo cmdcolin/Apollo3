@@ -1,12 +1,16 @@
+import type { FeatureRow } from '@apollo-annotation/common'
 import { GetFeaturesOperation } from '@apollo-annotation/shared'
 import { Injectable, Logger, NotFoundException } from '@nestjs/common'
 
-import { ChecksService } from '../checks/checks.service'
-import { FeatureRangeSearchDto } from '../entity/gff3Object.dto'
-import { DatabaseService } from '../mikro-orm/database.service'
-import { OperationsService } from '../operations/operations.service'
+import { ChecksService } from '../checks/checks.service.js'
+import type { FeatureRangeSearchDto } from '../entity/gff3Object.dto.js'
+import { DatabaseService } from '../mikro-orm/database.service.js'
+import { OperationsService } from '../operations/operations.service.js'
 
-import { FeatureCountRequest } from './dto/feature.dto'
+import type {
+  FeatureCountRequest,
+  GetByIndexedIdRequest,
+} from './dto/feature.dto.js'
 
 @Injectable()
 export class FeaturesService {
@@ -71,12 +75,100 @@ export class FeaturesService {
     return count
   }
 
-  async findById(featureId: string) {
+  async getByIndexedId(getByIndexedIdRequest: GetByIndexedIdRequest) {
+    const { assemblies, id, topLevel } = getByIndexedIdRequest
+    let refSeqIds: string[] | undefined
+    if (assemblies) {
+      const assemblyIds = assemblies.split(',')
+      const refSeqs = []
+      for (const assemblyId of assemblyIds) {
+        const rs = await this.db.refSeq.findByAssembly(assemblyId)
+        for (const r of rs) {
+          refSeqs.push(r)
+        }
+      }
+      refSeqIds = refSeqs.map((rs) => rs._id)
+    }
+    const topLevelFeatures = await this.db.feature.findByIndexedId(
+      id,
+      refSeqIds,
+    )
+    if (topLevelFeatures.length === 0) {
+      return []
+    }
+    if (topLevel) {
+      return topLevelFeatures
+    }
+    const results: FeatureRow[] = []
+    for (const rootFeature of topLevelFeatures) {
+      const match = await this.findIndexedIdInTree(id, rootFeature)
+      if (match) {
+        results.push(match)
+      }
+    }
+    return results
+  }
+
+  async findIndexedIdInTree(
+    id: string,
+    feature: FeatureRow,
+  ): Promise<FeatureRow | undefined> {
+    if (feature.attributes) {
+      for (const attributeValue of Object.values(feature.attributes)) {
+        if (attributeValue.includes(id)) {
+          return feature
+        }
+      }
+    }
+    const descendants = await this.db.feature.findDescendants(feature._id)
+    for (const descendant of descendants) {
+      if (descendant.attributes) {
+        for (const attributeValue of Object.values(descendant.attributes)) {
+          if (attributeValue.includes(id)) {
+            return descendant
+          }
+        }
+      }
+    }
+    return undefined
+  }
+
+  async findByFeatureIds(featureIds: string[], topLevel?: boolean) {
+    const foundFeatures: FeatureRow[] = []
+    const fetchedFeatureIds = new Set<string>()
+
+    for (const featureId of featureIds) {
+      if (fetchedFeatureIds.has(featureId)) {
+        this.logger.debug(`FeatureId ${featureId} already fetched, skipping...`)
+        continue
+      }
+
+      try {
+        const feature = await this.findById(featureId, topLevel)
+        foundFeatures.push(feature)
+        fetchedFeatureIds.add(featureId)
+      } catch (error) {
+        this.logger.error(
+          `Error occurred while fetching feature ${featureId}`,
+          error instanceof Error ? error.stack : String(error),
+        )
+      }
+    }
+    return foundFeatures
+  }
+
+  async findById(featureId: string, topLevel?: boolean) {
     const feature = await this.db.feature.findById(featureId)
     if (!feature) {
       const errMsg = `ERROR: The following featureId was not found in database ='${featureId}'`
       this.logger.error(errMsg)
       throw new NotFoundException(errMsg)
+    }
+    if (topLevel && feature.parentId) {
+      const rootFeature = await this.db.feature.findRootParent(featureId)
+      if (rootFeature) {
+        return rootFeature
+      }
     }
     return feature
   }

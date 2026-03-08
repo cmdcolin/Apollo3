@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/require-await */
-import { type ExecutionContext } from '@nestjs/common'
-import { type Reflector } from '@nestjs/core'
+import type { ExecutionContext } from '@nestjs/common'
+import type { Reflector } from '@nestjs/core'
 
-import { type Change, type ClientDataStore } from './Change'
+import type { Change, ClientDataStore } from './Change.js'
 
 export interface Context {
   context: ExecutionContext

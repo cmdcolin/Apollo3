@@ -3,25 +3,25 @@ import { ConfigModule } from '@nestjs/config'
 import { APP_GUARD } from '@nestjs/core'
 import Joi from 'joi'
 
-import { AssembliesModule } from './assemblies/assemblies.module'
-import { AuthenticationModule } from './authentication/authentication.module'
-import { ChangesModule } from './changes/changes.module'
-import { ChecksModule } from './checks/checks.module'
-import { CountersModule } from './counters/counters.module'
-import { ExportModule } from './export/export.module'
-import { FeaturesModule } from './features/features.module'
-import { FilesModule } from './files/files.module'
-import { HealthModule } from './health/health.module'
-import { JBrowseModule } from './jbrowse/jbrowse.module'
-import { MessagesModule } from './messages/messages.module'
-import { ApolloMikroOrmModule } from './mikro-orm/mikro-orm.module'
-import { OperationsModule } from './operations/operations.module'
-import { PluginsModule } from './plugins/plugins.module'
-import { RefSeqsModule } from './refSeqs/refSeqs.module'
-import { SequenceModule } from './sequence/sequence.module'
-import { UsersModule } from './users/users.module'
-import { JwtAuthGuard } from './utils/jwt-auth.guard'
-import { ValidationGuard } from './utils/validation/validation.guards'
+import { AssembliesModule } from './assemblies/assemblies.module.js'
+import { AuthenticationModule } from './authentication/authentication.module.js'
+import { ChangesModule } from './changes/changes.module.js'
+import { ChecksModule } from './checks/checks.module.js'
+import { CountersModule } from './counters/counters.module.js'
+import { ExportModule } from './export/export.module.js'
+import { FeaturesModule } from './features/features.module.js'
+import { FilesModule } from './files/files.module.js'
+import { HealthModule } from './health/health.module.js'
+import { JBrowseModule } from './jbrowse/jbrowse.module.js'
+import { MessagesModule } from './messages/messages.module.js'
+import { ApolloMikroOrmModule } from './mikro-orm/mikro-orm.module.js'
+import { OperationsModule } from './operations/operations.module.js'
+import { PluginsModule } from './plugins/plugins.module.js'
+import { RefSeqsModule } from './refSeqs/refSeqs.module.js'
+import { SequenceModule } from './sequence/sequence.module.js'
+import { UsersModule } from './users/users.module.js'
+import { JwtAuthGuard } from './utils/jwt-auth.guard.js'
+import { ValidationGuard } from './utils/validation/validation.guards.js'
 
 const nodeEnv = process.env.NODE_ENV ?? 'production'
 
@@ -46,6 +46,7 @@ const validationSchema = Joi.object({
   DESCRIPTION: Joi.string(),
   FEATURE_TYPE_ONTOLOGY_LOCATION: Joi.string(),
   PLUGIN_LOCATION: Joi.string(),
+  INDEXED_IDS: Joi.string().default('gff_id'),
   ALLOW_ROOT_USER: Joi.boolean().default(false),
   ROOT_USER_PASSWORD: Joi.string(),
   ROOT_USER_PASSWORD_FILE: Joi.string(),
@@ -98,6 +99,7 @@ const validationSchema = Joi.object({
   PLUGIN_URLS_FILE: Joi.string(),
   DB_BACKEND: Joi.string().valid('sqlite', 'postgresql'),
   DB_CONNECTION_URL: Joi.string(),
+  OAUTH_HTTP_PROXY: Joi.string(),
 })
   .oxor('GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_ID_FILE')
   .oxor('GOOGLE_CLIENT_SECRET', 'GOOGLE_CLIENT_SECRET_FILE')

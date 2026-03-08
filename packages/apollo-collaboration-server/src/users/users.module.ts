@@ -1,9 +1,9 @@
-import { Logger, Module, OnApplicationBootstrap } from '@nestjs/common'
+import { Logger, Module, type OnApplicationBootstrap } from '@nestjs/common'
 
-import { MessagesModule } from '../messages/messages.module'
+import { MessagesModule } from '../messages/messages.module.js'
 
-import { UsersController } from './users.controller'
-import { UsersService } from './users.service'
+import { UsersController } from './users.controller.js'
+import { UsersService } from './users.service.js'
 
 @Module({
   controllers: [UsersController],

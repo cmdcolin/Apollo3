@@ -1,14 +1,17 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/require-await */
 
-import {
-  type ChangeOptions,
-  type ClientDataStore,
-  type SerializedAssemblySpecificChange,
-  type ServerDataStore,
+import type {
+  ChangeOptions,
+  ClientDataStore,
+  SerializedAssemblySpecificChange,
+  ServerDataStore,
 } from '@apollo-annotation/common'
-import { type GFF3Feature } from '@gmod/gff'
 
-import { FromFileBaseChange } from './FromFileBaseChange'
+import { FromFileBaseChange } from './FromFileBaseChange.js'
 
 export interface SerializedAddAssemblyAndFeaturesFromFileChangeBase
   extends SerializedAssemblySpecificChange {
@@ -95,10 +98,7 @@ export class AddAssemblyAndFeaturesFromFileChange extends FromFileBaseChange {
         backend.filesService.getFileStream(fileRow),
         { bufferSize },
       )
-      // @ts-expect-error type is wrong here
-      // eslint-disable-next-line @typescript-eslint/await-thenable
-      for await (const f of featureStream) {
-        const gff3Feature = f as GFF3Feature
+      for await (const gff3Feature of featureStream) {
         logger.verbose?.(`ENTRY=${JSON.stringify(gff3Feature)}`)
         await this.addFeatureIntoDb(gff3Feature, backend)
       }

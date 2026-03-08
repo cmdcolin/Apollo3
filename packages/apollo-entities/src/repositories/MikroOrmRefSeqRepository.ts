@@ -1,7 +1,7 @@
 import type { RefSeqRepository, RefSeqRow } from '@apollo-annotation/common'
-import { EntityManager } from '@mikro-orm/core'
+import type { EntityManager } from '@mikro-orm/core'
 
-import { RefSeqEntity } from '../entities/RefSeqEntity'
+import { RefSeqEntity } from '../entities/RefSeqEntity.js'
 
 function toRow(entity: RefSeqEntity): RefSeqRow {
   return {

@@ -7,12 +7,12 @@ import {
   type RefSeqRow,
   type ServerDataStore,
 } from '@apollo-annotation/common'
-import { type GFF3Feature } from '@gmod/gff'
+import type { GFF3Feature } from '@gmod/gff'
 import ObjectID from 'bson-objectid'
 
-import { gff3ToAnnotationFeature } from '../GFF3'
+import { gff3ToAnnotationFeature } from '../GFF3/index.js'
 
-import { flattenFeatureSnapshot } from './AddFeatureChange'
+import { flattenFeatureSnapshot } from './AddFeatureChange.js'
 
 export abstract class FromFileBaseChange extends AssemblySpecificChange {
   async addRefSeqIntoDb(
@@ -40,8 +40,6 @@ export abstract class FromFileBaseChange extends AssemblySpecificChange {
     logger.debug?.('starting sequence stream')
     let lineCount = 0
     const decoder = new TextDecoder()
-    // @ts-expect-error type is wrong here
-    // eslint-disable-next-line @typescript-eslint/await-thenable
     for await (const data of sequenceStream) {
       const chunk = decoder.decode(data)
       lastLineIsIncomplete = !chunk.endsWith('\n')
@@ -195,12 +193,7 @@ export abstract class FromFileBaseChange extends AssemblySpecificChange {
         `RefSeq was not found by assembly "${assembly}" and seq_id "${refName}" not found`,
       )
     }
-    const featureIds: string[] = []
-    const newFeature = gff3ToAnnotationFeature(
-      gff3Feature,
-      refSeqRow._id,
-      featureIds,
-    )
+    const newFeature = gff3ToAnnotationFeature(gff3Feature, refSeqRow._id)
     const rows = flattenFeatureSnapshot(newFeature, refSeqRow._id)
     for (const row of rows) {
       row.user = backend.user

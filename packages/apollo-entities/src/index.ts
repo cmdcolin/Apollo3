@@ -1,3 +1,3 @@
-export * from './entities'
-export * from './repositories'
-export { createMikroOrmConfig } from './mikro-orm.config'
+export * from './entities/index.js'
+export * from './repositories/index.js'
+export { createMikroOrmConfig } from './mikro-orm.config.js'

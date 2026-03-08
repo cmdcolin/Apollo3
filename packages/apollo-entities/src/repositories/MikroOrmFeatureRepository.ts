@@ -1,7 +1,7 @@
 import type { FeatureRepository, FeatureRow } from '@apollo-annotation/common'
-import { EntityManager } from '@mikro-orm/core'
+import type { EntityManager } from '@mikro-orm/core'
 
-import { FeatureEntity } from '../entities/FeatureEntity'
+import { FeatureEntity } from '../entities/FeatureEntity.js'
 
 function toRow(entity: FeatureEntity): FeatureRow {
   return {
@@ -206,5 +206,62 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
       { status: -1, user },
       { status: 0 },
     )
+  }
+
+  async findByIndexedId(id: string, refSeqIds?: string[]) {
+    const filter: Record<string, unknown> = {
+      parent: null,
+    }
+    if (refSeqIds && refSeqIds.length > 0) {
+      filter.refSeq = { $in: refSeqIds }
+    }
+    const roots = await this.em.find(FeatureEntity, filter)
+    const results: FeatureRow[] = []
+    for (const root of roots) {
+      if (await this.treeContainsIndexedId(root, id)) {
+        results.push(toRow(root))
+      }
+    }
+    return results
+  }
+
+  private async treeContainsIndexedId(
+    entity: FeatureEntity,
+    id: string,
+  ): Promise<boolean> {
+    if (entity.attributes) {
+      for (const values of Object.values(entity.attributes)) {
+        if (values.includes(id)) {
+          return true
+        }
+      }
+    }
+    const children = await this.em.find(FeatureEntity, {
+      parent: entity._id,
+    })
+    for (const child of children) {
+      if (await this.treeContainsIndexedId(child, id)) {
+        return true
+      }
+    }
+    return false
+  }
+
+  async findRootParent(id: string) {
+    const initial = await this.em.findOne(FeatureEntity, { _id: id })
+    if (!initial) {
+      return undefined
+    }
+    let entity: FeatureEntity = initial
+    while (entity.parent) {
+      const parentId =
+        typeof entity.parent === 'string' ? entity.parent : entity.parent._id
+      const parent = await this.em.findOne(FeatureEntity, { _id: parentId })
+      if (!parent) {
+        break
+      }
+      entity = parent
+    }
+    return toRow(entity)
   }
 }

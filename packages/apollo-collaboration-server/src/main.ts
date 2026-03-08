@@ -14,15 +14,15 @@ import {
   operations,
   validationRegistry,
 } from '@apollo-annotation/shared'
-import { type LogLevel } from '@nestjs/common'
+import type { LogLevel } from '@nestjs/common'
 import { HttpAdapterHost, NestFactory } from '@nestjs/core'
 import { json, urlencoded } from 'express'
 import session from 'express-session'
 
-import { AppModule } from './app.module'
-import { GlobalExceptionsFilter } from './global-exceptions.filter'
-import { DatabaseService } from './mikro-orm/database.service'
-import { AuthorizationValidation } from './utils/validation/AuthorizationValidation'
+import { AppModule } from './app.module.js'
+import { GlobalExceptionsFilter } from './global-exceptions.filter.js'
+import { DatabaseService } from './mikro-orm/database.service.js'
+import { AuthorizationValidation } from './utils/validation/AuthorizationValidation.js'
 
 async function bootstrap() {
   const { CORS, LOG_LEVELS, PORT, SESSION_SECRET, SESSION_SECRET_FILE } =

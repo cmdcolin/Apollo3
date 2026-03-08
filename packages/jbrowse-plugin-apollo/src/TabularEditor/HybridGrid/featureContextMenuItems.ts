@@ -1,21 +1,22 @@
-import { type AnnotationFeature } from '@apollo-annotation/mst'
-import { type MenuItem } from '@jbrowse/core/ui'
+import type { AnnotationFeature } from '@apollo-annotation/mst'
+import type { MenuItem } from '@jbrowse/core/ui'
 import {
   type AbstractSessionModel,
   type SessionWithWidgets,
   isSessionModelWithWidgets,
 } from '@jbrowse/core/util'
 
-import { type ChangeManager } from '../../ChangeManager'
+import type { ChangeManager } from '../../ChangeManager'
 import {
   AddChildFeature,
   CopyFeature,
   DeleteFeature,
+  DuplicateTranscript,
   MergeExons,
   MergeTranscripts,
   SplitExon,
 } from '../../components'
-import { type ApolloSessionModel } from '../../session'
+import type { ApolloSessionModel } from '../../session'
 import { getApolloInternetAccount } from '../../util'
 
 export function featureContextMenuItems(
@@ -212,6 +213,27 @@ export function featureContextMenuItems(
               },
             )
             session.showWidget(apolloTranscriptWidget)
+          },
+        },
+        {
+          label: 'Duplicate feature',
+          onClick: () => {
+            ;(session as unknown as AbstractSessionModel).queueDialog(
+              (doneCallback) => [
+                DuplicateTranscript,
+                {
+                  session,
+                  handleClose: () => {
+                    doneCallback()
+                  },
+                  changeManager,
+                  sourceFeature: feature,
+                  sourceAssemblyId: currentAssemblyId,
+                  selectedFeature,
+                  setSelectedFeature,
+                },
+              ],
+            )
           },
         },
         {

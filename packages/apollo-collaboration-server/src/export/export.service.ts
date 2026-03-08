@@ -16,7 +16,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import StreamConcat from 'stream-concat'
 
-import { DatabaseService } from '../mikro-orm/database.service'
+import { DatabaseService } from '../mikro-orm/database.service.js'
 
 function featureRowToSnapshot(
   root: FeatureRow,

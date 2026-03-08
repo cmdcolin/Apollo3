@@ -1,7 +1,7 @@
 import type { AssemblyRepository, AssemblyRow } from '@apollo-annotation/common'
-import { EntityManager } from '@mikro-orm/core'
+import type { EntityManager } from '@mikro-orm/core'
 
-import { AssemblyEntity } from '../entities/AssemblyEntity'
+import { AssemblyEntity } from '../entities/AssemblyEntity.js'
 
 function toRow(entity: AssemblyEntity): AssemblyRow {
   return {

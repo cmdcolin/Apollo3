@@ -1,11 +1,11 @@
 import { Module, forwardRef } from '@nestjs/common'
 
-import { MessagesModule } from '../messages/messages.module'
-import { RefSeqsModule } from '../refSeqs/refSeqs.module'
-import { SequenceModule } from '../sequence/sequence.module'
+import { MessagesModule } from '../messages/messages.module.js'
+import { RefSeqsModule } from '../refSeqs/refSeqs.module.js'
+import { SequenceModule } from '../sequence/sequence.module.js'
 
-import { ChecksController } from './checks.controller'
-import { ChecksService } from './checks.service'
+import { ChecksController } from './checks.controller.js'
+import { ChecksService } from './checks.service.js'
 
 @Module({
   providers: [ChecksService],

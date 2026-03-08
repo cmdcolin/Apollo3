@@ -1,8 +1,9 @@
 import type { ChangeRepository, ChangeRow } from '@apollo-annotation/common'
-import { EntityManager, QueryOrder } from '@mikro-orm/core'
+import { QueryOrder } from '@mikro-orm/core'
+import type { EntityManager } from '@mikro-orm/core'
 import { randomBytes } from 'node:crypto'
 
-import { ChangeEntity } from '../entities/ChangeEntity'
+import { ChangeEntity } from '../entities/ChangeEntity.js'
 
 function generateId() {
   return randomBytes(12).toString('hex')

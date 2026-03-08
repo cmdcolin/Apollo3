@@ -1,4 +1,4 @@
-import { type IKeyValueMap } from 'mobx'
+import type { IKeyValueMap } from 'mobx'
 
 export function splitStringIntoChunks(
   input: string,

@@ -1,19 +1,19 @@
 import {
-  DecodedJWT,
-  RequestUserInformationMessage,
-  UserLocationMessage,
+  type DecodedJWT,
+  type RequestUserInformationMessage,
+  type UserLocationMessage,
   makeUserSessionId,
 } from '@apollo-annotation/shared'
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { randomBytes } from 'node:crypto'
 
-import { MessagesGateway } from '../messages/messages.gateway'
-import { DatabaseService } from '../mikro-orm/database.service'
-import { GUEST_USER_EMAIL, GUEST_USER_NAME } from '../utils/constants'
-import { Role } from '../utils/role/role.enum'
+import { MessagesGateway } from '../messages/messages.gateway.js'
+import { DatabaseService } from '../mikro-orm/database.service.js'
+import { GUEST_USER_EMAIL, GUEST_USER_NAME } from '../utils/constants.js'
+import { Role } from '../utils/role/role.enum.js'
 
-import { CreateUserDto, UserLocationDto } from './dto/create-user.dto'
+import { CreateUserDto, UserLocationDto } from './dto/create-user.dto.js'
 
 export interface User {
   email: string

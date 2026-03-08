@@ -1,7 +1,7 @@
-import { type CounterRepository } from '@apollo-annotation/common'
+import type { CounterRepository } from '@apollo-annotation/common'
 import type { EntityManager } from '@mikro-orm/core'
 
-import { CounterEntity } from '../entities/CounterEntity'
+import { CounterEntity } from '../entities/CounterEntity.js'
 
 export class MikroOrmCounterRepository implements CounterRepository {
   constructor(private readonly em: EntityManager) {}

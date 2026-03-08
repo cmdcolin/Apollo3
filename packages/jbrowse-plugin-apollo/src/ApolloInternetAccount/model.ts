@@ -22,17 +22,23 @@ import {
   isAbstractMenuManager,
   isElectron,
 } from '@jbrowse/core/util'
+import {
+  type Instance,
+  flow,
+  getRoot,
+  isAlive,
+  types,
+} from '@jbrowse/mobx-state-tree'
 import { autorun } from 'mobx'
-import { type Instance, flow, getRoot, isAlive, types } from 'mobx-state-tree'
 import { io } from 'socket.io-client'
 
 import { addTopLevelAdminMenus } from '../menus/topLevelMenuAdmin'
-import { type Collaborator } from '../session'
-import { type ApolloRootModel } from '../types'
+import type { Collaborator } from '../session'
+import type { ApolloRootModel } from '../types'
 import { createFetchErrorMessage } from '../util'
 
 import { AuthTypeSelector } from './components/AuthTypeSelector'
-import { type ApolloInternetAccountConfigModel } from './configSchema'
+import type { ApolloInternetAccountConfigModel } from './configSchema'
 
 type AuthType = 'google' | 'microsoft' | 'guest'
 
@@ -489,8 +495,12 @@ const stateModelFactory = (configSchema: ApolloInternetAccountConfigModel) => {
               return
             }
             if (self.role) {
-              await self.initialize(self.role)
-              reaction.dispose()
+              try {
+                await self.initialize(self.role)
+                reaction.dispose()
+              } catch {
+                // if initialize fails, do nothing so the autorun runs again
+              }
             }
           },
           { name: 'ApolloInternetAccount' },
@@ -499,7 +509,9 @@ const stateModelFactory = (configSchema: ApolloInternetAccountConfigModel) => {
       beforeDestroy() {
         self.removeBeforeUnloadListener()
         self.removeVisibilityChangeListener()
-        self.controller.abort('internet account beforeDestroy')
+        self.controller.abort(
+          new DOMException('Cleaning up Apollo connection', 'AbortError'),
+        )
         self.socket.close()
       },
     }))

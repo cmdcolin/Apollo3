@@ -8,10 +8,10 @@ import {
   type SerializedFeatureChange,
   type ServerDataStore,
 } from '@apollo-annotation/common'
-import { type AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
+import type { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
 
-import { flattenFeatureSnapshot } from './AddFeatureChange'
-import { UndoSplitExonChange } from './UndoSplitExonChange'
+import { flattenFeatureSnapshot } from './AddFeatureChange.js'
+import { UndoSplitExonChange } from './UndoSplitExonChange.js'
 
 interface SerializedSplitExonChangeBase extends SerializedFeatureChange {
   typeName: 'SplitExonChange'

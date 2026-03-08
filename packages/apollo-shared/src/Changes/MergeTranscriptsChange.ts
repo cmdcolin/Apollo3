@@ -10,17 +10,17 @@ import {
   type SerializedFeatureChange,
   type ServerDataStore,
 } from '@apollo-annotation/common'
-import {
-  type AnnotationFeature,
-  type AnnotationFeatureSnapshot,
+import type {
+  AnnotationFeature,
+  AnnotationFeatureSnapshot,
 } from '@apollo-annotation/mst'
 import { doesIntersect2 } from '@jbrowse/core/util'
-import { getSnapshot } from 'mobx-state-tree'
+import { getSnapshot } from '@jbrowse/mobx-state-tree'
 
-import { attributesToRecords, stringifyAttributes } from '../util'
+import { attributesToRecords, stringifyAttributes } from '../util.js'
 
-import { flattenFeatureSnapshot } from './AddFeatureChange'
-import { UndoMergeTranscriptsChange } from './UndoMergeTranscriptsChange'
+import { flattenFeatureSnapshot } from './AddFeatureChange.js'
+import { UndoMergeTranscriptsChange } from './UndoMergeTranscriptsChange.js'
 
 interface SerializedMergeTranscriptsChangeBase extends SerializedFeatureChange {
   typeName: 'MergeTranscriptsChange'

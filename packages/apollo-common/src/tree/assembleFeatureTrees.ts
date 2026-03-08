@@ -1,4 +1,4 @@
-import type { FeatureRow } from '../repositories/FeatureRepository'
+import type { FeatureRow } from '../repositories/FeatureRepository.js'
 
 export interface NestedFeature {
   _id: string

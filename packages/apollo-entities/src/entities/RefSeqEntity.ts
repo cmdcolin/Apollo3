@@ -1,6 +1,6 @@
 import { Entity, ManyToOne, PrimaryKey, Property } from '@mikro-orm/core'
 
-import { AssemblyEntity } from './AssemblyEntity'
+import { AssemblyEntity } from './AssemblyEntity.js'
 
 @Entity({ tableName: 'ref_seq' })
 export class RefSeqEntity {
