@@ -88,6 +88,43 @@ afterEach(() => {
   })
 })
 
+// Timing instrumentation for custom commands
+const timingStack: { name: string; start: number }[] = []
+function timedCommand(name: string, originalFn: () => void) {
+  const start = performance.now()
+  timingStack.push({ name, start })
+  originalFn()
+  cy.then(() => {
+    const entry = timingStack.pop()
+    if (entry) {
+      const elapsed = ((performance.now() - entry.start) / 1000).toFixed(1)
+      cy.task('log', `[timing] ${entry.name}: ${elapsed}s`, { log: false })
+    }
+  })
+}
+
+const originalOverwrite = Cypress.Commands.overwrite.bind(Cypress.Commands)
+for (const cmd of [
+  'loginAsGuest',
+  'deleteAssemblies',
+  'addAssemblyFromGff',
+  'selectAssemblyToView',
+  'addOntologies',
+  'selectFromApolloMenu',
+] as const) {
+  originalOverwrite(
+    cmd,
+    (originalFn: (...args: unknown[]) => void, ...args: unknown[]) => {
+      const start = performance.now()
+      originalFn(...args)
+      cy.then(() => {
+        const elapsed = ((performance.now() - start) / 1000).toFixed(1)
+        cy.task('log', `[timing] ${cmd}: ${elapsed}s`, { log: false })
+      })
+    },
+  )
+}
+
 // Cypress.on('uncaught:exception', (err, _runnable) => {
 //   if (err.message.includes('ResizeObserver')) {
 //     return false
