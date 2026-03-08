@@ -238,9 +238,9 @@ Cypress.Commands.add(
       })
     cy.intercept('POST', '/users/userLocation').as('selectAssemblyToViewDone')
     if (locationOrSearch) {
-      cy.get('input[placeholder="Search for location"]').type(
-        `{selectall}{backspace}${locationOrSearch}{enter}`,
-      )
+      cy.get('input[placeholder="Search for location"]', {
+        timeout: 10_000,
+      }).type(`{selectall}{backspace}${locationOrSearch}{enter}`)
     } else {
       cy.contains('button', /^Open$/, { matchCase: false }).click()
     }
@@ -348,12 +348,13 @@ Cypress.Commands.add(
 )
 
 Cypress.Commands.add('assertAssemblyLoaded', (assemblyName: string) => {
-  // In JBrowse v4, the assembly name may be in an input value rather than
-  // as text content, and a single assembly may auto-select.
+  // In JBrowse v4, the assembly selector is an autocomplete input where
+  // the input value is the assembly identifier (_id) but the displayed
+  // text (displayName) appears in the parent element.
   cy.get('[data-testid="assembly-selector-textfield"]', {
     timeout: 10_000,
   }).within(() => {
-    cy.get('input').should('have.value', assemblyName)
+    cy.contains(assemblyName)
   })
 })
 

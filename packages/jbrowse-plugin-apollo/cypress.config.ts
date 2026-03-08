@@ -24,6 +24,10 @@ export default defineConfig({
         readdirSync(path) {
           return fs.readdirSync(path)
         },
+        log(message) {
+          console.log('  [browser]', message)
+          return null
+        },
       })
       return config
     },

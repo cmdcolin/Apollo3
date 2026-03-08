@@ -54,20 +54,36 @@ export class ApolloSequenceAdapter extends BaseSequenceAdapter {
       return this.regions
     }
     const assemblyId = readConfObject(this.config, 'assemblyId')
+    console.warn(
+      `[apollo-debug] ApolloSequenceAdapter.getRegions: assemblyId=${assemblyId}, isInWebWorker=${isInWebWorker}`,
+    )
     if (!isInWebWorker) {
-      const dataStore = (
-        this.pluginManager?.rootModel?.session as ApolloSessionModel | undefined
-      )?.apolloDataStore
+      const session = this.pluginManager?.rootModel?.session as
+        | ApolloSessionModel
+        | undefined
+      const dataStore = session?.apolloDataStore
+      console.warn(
+        `[apollo-debug] getRegions: session=${!!session}, dataStore=${!!dataStore}`,
+      )
       if (!dataStore) {
         throw new Error('No Apollo data store found')
       }
       const backendDriver = dataStore.getBackendDriver(assemblyId)
+      console.warn(
+        `[apollo-debug] getRegions: backendDriver=${!!backendDriver}, type=${backendDriver?.constructor?.name}`,
+      )
       if (!backendDriver) {
         throw new Error('No backend driver found')
       }
-      const regions = await backendDriver.getRegions(assemblyId)
-      this.regions = regions
-      return regions
+      try {
+        const regions = await backendDriver.getRegions(assemblyId)
+        console.warn(`[apollo-debug] getRegions: got ${regions.length} regions`)
+        this.regions = regions
+        return regions
+      } catch (e) {
+        console.warn(`[apollo-debug] getRegions ERROR: ${e}`)
+        throw e
+      }
     }
     const regions = await new Promise(
       (

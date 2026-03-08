@@ -42,6 +42,9 @@ export default class RefNameAliasAdapter
 
   async getRefNameAliases() {
     const assemblyId = readConfObject(this.config, 'assemblyId') as string
+    console.warn(
+      `[apollo-debug] ApolloRefNameAliasAdapter.getRefNameAliases: assemblyId=${assemblyId}, isInWebWorker=${isInWebWorker}`,
+    )
     if (!isInWebWorker) {
       const dataStore = (
         this.pluginManager?.rootModel?.session as ApolloSessionModel | undefined
@@ -53,8 +56,16 @@ export default class RefNameAliasAdapter
       if (!backendDriver) {
         throw new Error('No backend driver found')
       }
-      const refNameAliases = await backendDriver.getRefNameAliases(assemblyId)
-      return refNameAliases
+      try {
+        const refNameAliases = await backendDriver.getRefNameAliases(assemblyId)
+        console.warn(
+          `[apollo-debug] ApolloRefNameAliasAdapter: got ${refNameAliases.length} aliases`,
+        )
+        return refNameAliases
+      } catch (e) {
+        console.warn(`[apollo-debug] ApolloRefNameAliasAdapter ERROR: ${e}`)
+        throw e
+      }
     }
     const refNameAliases = await new Promise(
       (
