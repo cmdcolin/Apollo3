@@ -1,15 +1,12 @@
-import { User as UserSchema, UserDocument } from '@apollo-annotation/schemas'
 import {
   DecodedJWT,
   RequestUserInformationMessage,
   UserLocationMessage,
   makeUserSessionId,
 } from '@apollo-annotation/shared'
-import { Injectable, Logger, Optional } from '@nestjs/common'
+import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { InjectModel } from '@nestjs/mongoose'
 import { ObjectId } from 'mongodb'
-import { Model } from 'mongoose'
 
 import { MessagesGateway } from '../messages/messages.gateway'
 import { DatabaseService } from '../mikro-orm/database.service'
@@ -29,9 +26,6 @@ export class UsersService {
   private readonly users: User[]
 
   constructor(
-    @Optional()
-    @InjectModel(UserSchema.name)
-    private readonly userModel: Model<UserDocument>,
     private readonly messagesGateway: MessagesGateway,
     private readonly configService: ConfigService<
       {
@@ -47,32 +41,20 @@ export class UsersService {
   private readonly logger = new Logger(UsersService.name)
 
   async findById(id: string) {
-    if (this.db.useV2Backend) {
-      return this.db.user.findById(id)
-    }
-    return this.userModel.findById(id).exec()
+    return this.db.user.findById(id)
   }
 
   async findByUsername(username: string) {
-    if (this.db.useV2Backend) {
-      const users = await this.db.user.findAll()
-      return users.find((u) => u.username === username)
-    }
-    return this.userModel.findOne({ username }).exec()
+    const users = await this.db.user.findAll()
+    return users.find((u) => u.username === username)
   }
 
   async findByEmail(email: string) {
-    if (this.db.useV2Backend) {
-      return this.db.user.findByEmail(email)
-    }
-    return this.userModel.findOne({ email }).exec()
+    return this.db.user.findByEmail(email)
   }
 
   async findByRole(role: Role) {
-    if (this.db.useV2Backend) {
-      return this.db.user.findByRole(role)
-    }
-    return this.userModel.findOne({ role }).sort('createdAt').exec()
+    return this.db.user.findByRole(role)
   }
 
   async findGuest() {
@@ -80,29 +62,20 @@ export class UsersService {
   }
 
   async findAll() {
-    if (this.db.useV2Backend) {
-      return this.db.user.findAll()
-    }
-    return this.userModel.find().exec()
+    return this.db.user.findAll()
   }
 
   async addNew(user: CreateUserDto) {
-    if (this.db.useV2Backend) {
-      return this.db.user.create({
-        _id: new ObjectId().toHexString(),
-        email: user.email,
-        username: user.username,
-        role: user.role ?? 'none',
-      })
-    }
-    return this.userModel.create(user)
+    return this.db.user.create({
+      _id: new ObjectId().toHexString(),
+      email: user.email,
+      username: user.username,
+      role: user.role ?? 'none',
+    })
   }
 
   async getCount() {
-    if (this.db.useV2Backend) {
-      return this.db.user.count()
-    }
-    return this.userModel.count().exec()
+    return this.db.user.count()
   }
 
   async bootstrapDB() {
@@ -126,17 +99,9 @@ export class UsersService {
     if (!guestUser) {
       return
     }
-    if (this.db.useV2Backend) {
-      return this.db.user.deleteByEmail(GUEST_USER_EMAIL)
-    }
-    return this.userModel.findOneAndDelete({ email: GUEST_USER_EMAIL }).exec()
+    return this.db.user.deleteByEmail(GUEST_USER_EMAIL)
   }
 
-  /**
-   * If BROADCAST_USER_LOCATION -environment variable is set to true then broadcast user's location to 'USER_LOCATION' -channel
-   * @param userLocation - user's location information
-   * @param token - user's token, email will be decoded from the token
-   */
   broadcastLocation(userLocations: UserLocationDto[], user: DecodedJWT) {
     const broadcast = this.configService.get('BROADCAST_USER_LOCATION', {
       infer: true,
@@ -169,10 +134,6 @@ export class UsersService {
     return this.messagesGateway.create(channel, msg)
   }
 
-  /**
-   * Request other users's current location after user has successfully logged in
-   * @param token - user's token
-   */
   requestUsersLocations(user: DecodedJWT) {
     const channel = 'REQUEST_INFORMATION'
     const userSessionId = makeUserSessionId(user)

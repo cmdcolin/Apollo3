@@ -1,32 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { RefSeq, RefSeqSchema } from '@apollo-annotation/schemas'
 import { Module } from '@nestjs/common'
-import { MongooseModule, getConnectionToken } from '@nestjs/mongoose'
-import idValidator from 'mongoose-id-validator'
-
-import { useMongoose } from '../utils/constants'
 
 import { RefSeqsController } from './refSeqs.controller'
 import { RefSeqsService } from './refSeqs.service'
 
 @Module({
-  imports: [
-    ...(useMongoose
-      ? [
-          MongooseModule.forFeatureAsync([
-            {
-              name: RefSeq.name,
-              useFactory: (connection) => {
-                RefSeqSchema.plugin(idValidator, { connection })
-                return RefSeqSchema
-              },
-              inject: [getConnectionToken()],
-            },
-          ]),
-        ]
-      : []),
-  ],
-  exports: [...(useMongoose ? [MongooseModule] : []), RefSeqsService],
+  imports: [],
+  exports: [RefSeqsService],
   controllers: [RefSeqsController],
   providers: [RefSeqsService],
 })
