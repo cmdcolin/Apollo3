@@ -3,10 +3,8 @@ import {
   type Change,
   type ChangeOptions,
   type ClientDataStore,
-  type LocalGFF3DataStore,
   type SerializedAssemblySpecificChange,
   type ServerDataStore,
-  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { getSession } from '@jbrowse/core/util'
 
@@ -46,28 +44,9 @@ export class AddAssemblyAliasesChange extends AssemblySpecificChange {
   }
 
   async executeOnServer(backend: ServerDataStore) {
-    const { assemblyModel } = backend
-    const { assembly, logger, aliases } = this
-    logger.debug?.(
-      `Updating assembly aliases for assembly: ${assembly}, aliases: ${JSON.stringify(aliases)}`,
-    )
-    const asm = await assemblyModel.findById(assembly)
-    if (!asm) {
-      throw new Error(`Assembly with ID ${assembly} not found`)
-    }
-    asm.aliases = aliases
-    await asm.save()
-  }
-
-  async executeOnServerV2(backend: ServerDataStoreV2) {
     const { assembly, aliases } = this
     await backend.assemblyRepository.updateById(assembly, { aliases })
   }
-
-  executeOnLocalGFF3(_backend: LocalGFF3DataStore): Promise<unknown> {
-    throw new Error('Method not implemented.')
-  }
-
   // eslint-disable-next-line @typescript-eslint/class-literal-property-style
   get notification(): string {
     return 'Assembly aliases have been added.'

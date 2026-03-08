@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common'
-import { ObjectId } from 'mongodb'
+import { randomBytes } from 'node:crypto'
 
 import { DatabaseService } from '../mikro-orm/database.service'
 
@@ -15,7 +15,7 @@ export class RefSeqsService {
 
   async create(createRefSeqDto: CreateRefSeqDto) {
     return this.db.refSeq.create({
-      _id: new ObjectId().toHexString(),
+      _id: randomBytes(12).toString('hex'),
       name: createRefSeqDto.name,
       description: createRefSeqDto.description,
       assembly: createRefSeqDto.assembly,

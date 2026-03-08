@@ -12,10 +12,10 @@ import { type AppRootModel, type Region } from '@jbrowse/core/util'
 
 import { changeRegistry } from './ChangeTypeRegistry'
 import {
-  type BackendDataStore,
   Operation,
   type OperationOptions,
   type SerializedOperation,
+  type ServerDataStore,
 } from './Operation'
 
 export interface ClientDataStore {
@@ -44,7 +44,7 @@ export interface ClientDataStore {
 export type SerializedChange = SerializedOperation
 export type ChangeOptions = OperationOptions
 
-export type DataStore = BackendDataStore | ClientDataStore
+export type DataStore = ServerDataStore | ClientDataStore
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function isChange(thing: any): thing is Change {
@@ -68,11 +68,7 @@ export abstract class Change extends Operation {
 
   async execute(backend: DataStore): Promise<unknown> {
     const backendType = backend.typeName
-    if (
-      backendType === 'LocalGFF3' ||
-      backendType === 'Server' ||
-      backendType === 'ServerV2'
-    ) {
+    if (backendType === 'Server') {
       return super.execute(backend)
     }
     if (backendType === 'Client') {

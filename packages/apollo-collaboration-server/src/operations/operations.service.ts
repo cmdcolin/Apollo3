@@ -1,6 +1,6 @@
 import {
   Operation,
-  type ServerDataStoreV2,
+  type ServerDataStore,
   operationRegistry,
 } from '@apollo-annotation/common'
 import { Injectable, Logger } from '@nestjs/common'
@@ -19,10 +19,10 @@ export class OperationsService {
     private readonly db: DatabaseService,
   ) {}
 
-  private buildServerDataStoreV2(): ServerDataStoreV2 {
+  private buildServerDataStore(): ServerDataStore {
     const uow = this.db.createUnitOfWork()
     return {
-      typeName: 'ServerV2',
+      typeName: 'Server',
       featureRepository: uow.feature,
       assemblyRepository: uow.assembly,
       refSeqRepository: uow.refSeq,
@@ -61,8 +61,8 @@ export class OperationsService {
     )
     const operation = new OperationType(serializedOperation, { logger })
 
-    const v2Backend = this.buildServerDataStoreV2()
-    return (await operation.execute(v2Backend)) as ReturnType<
+    const backend = this.buildServerDataStore()
+    return (await operation.execute(backend)) as ReturnType<
       T['executeOnServer']
     >
   }

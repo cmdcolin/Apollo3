@@ -5,15 +5,12 @@ import {
   type ChangeOptions,
   type ClientDataStore,
   FeatureChange,
-  type LocalGFF3DataStore,
   type SerializedFeatureChange,
   type ServerDataStore,
-  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { type AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
 
 import { flattenFeatureSnapshot } from './AddFeatureChange'
-import { findAndDeleteChildFeature } from './DeleteFeatureChange'
 import { UndoSplitExonChange } from './UndoSplitExonChange'
 
 interface SerializedSplitExonChangeBase extends SerializedFeatureChange {
@@ -84,75 +81,6 @@ export class SplitExonChange extends FeatureChange {
   }
 
   async executeOnServer(backend: ServerDataStore) {
-    const { featureModel, session } = backend
-    const { changes, logger } = this
-    for (const change of changes) {
-      const {
-        exonToBeSplit,
-        parentFeatureId,
-        upstreamCut,
-        downstreamCut,
-        leftExonId,
-        rightExonId,
-      } = change
-      const topLevelFeature = await featureModel
-        .findOne({ allIds: exonToBeSplit._id })
-        .session(session)
-        .exec()
-      if (!topLevelFeature) {
-        const errMsg = `*** ERROR: The following featureId was not found in database ='${exonToBeSplit._id}'`
-        logger.error(errMsg)
-        throw new Error(errMsg)
-      }
-      const tx = this.getFeatureFromId(topLevelFeature, parentFeatureId)
-      if (!tx?.children) {
-        throw new Error(
-          'ERROR: There should be at least one child (i.e. the exon to be split)',
-        )
-      }
-
-      const [leftExon, rightExon] = this.makeSplitExons(
-        exonToBeSplit,
-        upstreamCut,
-        downstreamCut,
-        leftExonId,
-        rightExonId,
-      )
-
-      tx.children.set(leftExon._id, {
-        allIds: [],
-        ...leftExon,
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
-        _id: leftExon._id,
-      })
-      tx.children.set(rightExon._id, {
-        allIds: [],
-        ...rightExon,
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
-        _id: rightExon._id,
-      })
-      // Child features should be sorted for click and drag of gene glyphs to work properly
-      tx.children = new Map(
-        [...tx.children.entries()].sort((a, b) => a[1].min - b[1].min),
-      )
-
-      const deletedIds = findAndDeleteChildFeature(
-        topLevelFeature,
-        exonToBeSplit._id,
-        this,
-      )
-      deletedIds.push(exonToBeSplit._id)
-      topLevelFeature.allIds = topLevelFeature.allIds.filter(
-        (id) => !deletedIds.includes(id),
-      )
-      topLevelFeature.allIds.push(leftExon._id, rightExon._id)
-      await topLevelFeature.save()
-    }
-  }
-
-  async executeOnServerV2(backend: ServerDataStoreV2) {
     const { featureRepository } = backend
     const { changes, logger } = this
     for (const change of changes) {
@@ -192,11 +120,6 @@ export class SplitExonChange extends FeatureChange {
       await featureRepository.deleteById(exonToBeSplit._id)
     }
   }
-
-  async executeOnLocalGFF3(_backend: LocalGFF3DataStore) {
-    throw new Error('executeOnLocalGFF3 not implemented')
-  }
-
   async executeOnClient(dataStore: ClientDataStore) {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!dataStore) {

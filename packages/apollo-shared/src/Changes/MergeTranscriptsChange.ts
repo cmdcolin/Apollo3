@@ -7,23 +7,19 @@ import {
   type ClientDataStore,
   FeatureChange,
   type FeatureRow,
-  type LocalGFF3DataStore,
   type SerializedFeatureChange,
   type ServerDataStore,
-  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import {
   type AnnotationFeature,
   type AnnotationFeatureSnapshot,
 } from '@apollo-annotation/mst'
-import { type Feature } from '@apollo-annotation/schemas'
 import { doesIntersect2 } from '@jbrowse/core/util'
 import { getSnapshot } from 'mobx-state-tree'
 
 import { attributesToRecords, stringifyAttributes } from '../util'
 
 import { flattenFeatureSnapshot } from './AddFeatureChange'
-import { findAndDeleteChildFeature } from './DeleteFeatureChange'
 import { UndoMergeTranscriptsChange } from './UndoMergeTranscriptsChange'
 
 interface SerializedMergeTranscriptsChangeBase extends SerializedFeatureChange {
@@ -80,173 +76,6 @@ export class MergeTranscriptsChange extends FeatureChange {
   }
 
   async executeOnServer(backend: ServerDataStore) {
-    const { featureModel, session } = backend
-    const { changes, logger } = this
-    for (const change of changes) {
-      const { firstTranscript, secondTranscript } = change
-      const topLevelFeature = await featureModel
-        .findOne({ allIds: firstTranscript._id })
-        .session(session)
-        .exec()
-      if (!topLevelFeature) {
-        const errMsg = `*** ERROR: The following featureId was not found in database ='${firstTranscript._id}'`
-        logger.error(errMsg)
-        throw new Error(errMsg)
-      }
-      const mergedTranscript = this.getFeatureFromId(
-        topLevelFeature,
-        firstTranscript._id,
-      )
-      if (!mergedTranscript) {
-        const errMsg = 'ERROR when searching feature by featureId'
-        logger.error(errMsg)
-        throw new Error(errMsg)
-      }
-      this.mergeTranscriptsOnServer(mergedTranscript, secondTranscript)
-      const deletedIds = findAndDeleteChildFeature(
-        topLevelFeature,
-        secondTranscript._id,
-        this,
-      )
-      deletedIds.push(secondTranscript._id)
-      topLevelFeature.allIds = topLevelFeature.allIds.filter(
-        (id) => !deletedIds.includes(id),
-      )
-      await topLevelFeature.save()
-    }
-  }
-
-  mergeTranscriptsOnServer(
-    firstTranscript: Feature,
-    secondTranscript: AnnotationFeatureSnapshot,
-  ) {
-    firstTranscript.min = Math.min(firstTranscript.min, secondTranscript.min)
-    firstTranscript.max = Math.max(firstTranscript.max, secondTranscript.max)
-
-    const mergedAttributes: Record<string, string[]> =
-      firstTranscript.attributes
-        ? JSON.parse(JSON.stringify(firstTranscript.attributes))
-        : {}
-    if (secondTranscript.attributes) {
-      if (!Object.keys(mergedAttributes).includes('merged_with')) {
-        mergedAttributes.merged_with = []
-      }
-      mergedAttributes.merged_with.push(
-        stringifyAttributes(attributesToRecords(secondTranscript.attributes)),
-      )
-    }
-    firstTranscript.attributes = mergedAttributes
-
-    if (secondTranscript.children) {
-      for (const [, secondFeatureChild] of Object.entries(
-        secondTranscript.children,
-      )) {
-        this.mergeFeatureIntoTranscriptOnServer(
-          secondFeatureChild,
-          firstTranscript,
-        )
-      }
-    }
-  }
-
-  mergeFeatureIntoTranscriptOnServer(
-    secondFeatureChild: AnnotationFeatureSnapshot,
-    firstTranscript: Feature,
-  ) {
-    if (!firstTranscript.children) {
-      firstTranscript.children = new Map<string, Feature>()
-    }
-    let merged = false
-    let mrgChild: Feature | undefined
-    let toDelete
-    for (const [, firstFeatureChild] of firstTranscript.children) {
-      if (!merged || !mrgChild) {
-        toDelete = false
-        mrgChild = firstFeatureChild
-      } else {
-        toDelete = true
-      }
-      if (
-        mrgChild.type === secondFeatureChild.type &&
-        mrgChild.type === firstFeatureChild.type &&
-        doesIntersect2(
-          secondFeatureChild.min,
-          secondFeatureChild.max,
-          mrgChild.min,
-          mrgChild.max,
-        ) &&
-        doesIntersect2(
-          firstFeatureChild.min,
-          firstFeatureChild.max,
-          mrgChild.min,
-          mrgChild.max,
-        )
-      ) {
-        mrgChild.min = Math.min(
-          secondFeatureChild.min,
-          mrgChild.min,
-          firstFeatureChild.min,
-        )
-        mrgChild.max = Math.max(
-          secondFeatureChild.max,
-          mrgChild.max,
-          firstFeatureChild.max,
-        )
-
-        if (!mrgChild.attributes) {
-          mrgChild.attributes = {}
-        }
-
-        const mrgChildAttr: Record<string, string[]> = JSON.parse(
-          JSON.stringify(mrgChild.attributes),
-        )
-
-        if (!Object.keys(mrgChildAttr).includes('merged_with')) {
-          mrgChildAttr.merged_with = []
-        }
-        const mergedWithAttributes = mrgChildAttr.merged_with
-        mergedWithAttributes.push(
-          stringifyAttributes(
-            attributesToRecords(secondFeatureChild.attributes),
-          ),
-        )
-
-        if (toDelete) {
-          const recs: Record<string, string[] | undefined> =
-            firstFeatureChild.attributes
-              ? JSON.parse(JSON.stringify(firstFeatureChild.attributes))
-              : undefined
-          mergedWithAttributes.push(stringifyAttributes(recs))
-          firstTranscript.children.delete(firstFeatureChild._id.toString())
-        }
-
-        mrgChildAttr.merged_with = [...new Set(mergedWithAttributes)]
-        mrgChild.attributes = mrgChildAttr
-        merged = true
-      }
-    }
-
-    if (merged && mrgChild && secondFeatureChild.children) {
-      // Add the children of the source feature
-      // (secondFeatureChild.children) to the merged feature (mrgChild)
-      Object.entries(secondFeatureChild.children).map(([, child]) => {
-        this.addChild(mrgChild, child)
-      })
-    }
-
-    if (merged && mrgChild) {
-      this.addChild(
-        firstTranscript,
-        mrgChild as unknown as AnnotationFeatureSnapshot,
-      )
-    } else {
-      // This secondFeatureChild has no overlap with any feature in the
-      // receiving transcript so we add it as it is to the receiving transcript
-      this.addChild(firstTranscript, secondFeatureChild)
-    }
-  }
-
-  async executeOnServerV2(backend: ServerDataStoreV2) {
     const { featureRepository } = backend
     const { changes, logger } = this
     for (const change of changes) {
@@ -276,7 +105,7 @@ export class MergeTranscriptsChange extends FeatureChange {
 
       if (secondTranscript.children) {
         for (const secondChild of Object.values(secondTranscript.children)) {
-          await this.mergeFeatureIntoTranscriptV2(
+          await this.mergeFeatureIntoTranscript(
             secondChild,
             firstTranscript._id,
             firstRow.refSeq,
@@ -290,11 +119,11 @@ export class MergeTranscriptsChange extends FeatureChange {
     }
   }
 
-  private async mergeFeatureIntoTranscriptV2(
+  private async mergeFeatureIntoTranscript(
     secondChild: AnnotationFeatureSnapshot,
     firstTranscriptId: string,
     refSeq: string,
-    featureRepository: ServerDataStoreV2['featureRepository'],
+    featureRepository: ServerDataStore['featureRepository'],
   ) {
     const firstChildren =
       await featureRepository.findChildren(firstTranscriptId)
@@ -501,11 +330,6 @@ export class MergeTranscriptsChange extends FeatureChange {
       firstTranscript.addChild(secondFeatureChild)
     }
   }
-
-  async executeOnLocalGFF3(_backend: LocalGFF3DataStore) {
-    throw new Error('executeOnLocalGFF3 not implemented')
-  }
-
   getInverse() {
     const { assembly, changedIds, changes, logger } = this
     const inverseChangedIds = [...changedIds].reverse()

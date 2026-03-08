@@ -3,9 +3,7 @@ import {
   Change,
   type ChangeOptions,
   type ClientDataStore,
-  type LocalGFF3DataStore,
   type ServerDataStore,
-  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import ObjectID from 'bson-objectid'
 
@@ -102,18 +100,6 @@ export class ImportJBrowseConfigChange extends Change {
   }
 
   async executeOnServer(backend: ServerDataStore) {
-    const { jbrowseConfigModel } = backend
-    const { logger, newJBrowseConfig } = this
-    await jbrowseConfigModel.deleteMany()
-    if (!newJBrowseConfig) {
-      return
-    }
-    const filteredConfig = filterJBrowseConfig(newJBrowseConfig)
-    await jbrowseConfigModel.create(filteredConfig)
-    logger.debug?.('Stored new JBrowse Config')
-  }
-
-  async executeOnServerV2(backend: ServerDataStoreV2) {
     const { logger, newJBrowseConfig } = this
     await backend.jbrowseConfigRepository.deleteAll()
     if (newJBrowseConfig) {
@@ -125,11 +111,6 @@ export class ImportJBrowseConfigChange extends Change {
     }
     logger.debug?.('Stored new JBrowse Config')
   }
-
-  async executeOnLocalGFF3(_backend: LocalGFF3DataStore) {
-    throw new Error('executeOnLocalGFF3 not implemented')
-  }
-
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   async executeOnClient(_dataStore: ClientDataStore) {}
 

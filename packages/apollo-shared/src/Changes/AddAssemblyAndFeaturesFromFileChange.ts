@@ -3,10 +3,8 @@
 import {
   type ChangeOptions,
   type ClientDataStore,
-  type LocalGFF3DataStore,
   type SerializedAssemblySpecificChange,
   type ServerDataStore,
-  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { type GFF3Feature } from '@gmod/gff'
 
@@ -61,74 +59,7 @@ export class AddAssemblyAndFeaturesFromFileChange extends FromFileBaseChange {
     return { typeName, assembly, changes }
   }
 
-  /**
-   * Applies the required change to database
-   * @param backend - parameters from backend
-   * @returns
-   */
   async executeOnServer(backend: ServerDataStore) {
-    const { assemblyModel, checkModel, fileModel, filesService, user } = backend
-    const { assembly, changes, logger } = this
-    for (const change of changes) {
-      const { assemblyName, fileIds, parseOptions } = change
-      const fileId = fileIds.fa
-
-      const { FILE_UPLOAD_FOLDER } = process.env
-      if (!FILE_UPLOAD_FOLDER) {
-        throw new Error('No FILE_UPLOAD_FOLDER found in .env file')
-      }
-      // Get file checksum
-      const fileDoc = await fileModel.findById(fileId).exec()
-      if (!fileDoc) {
-        throw new Error(`File "${fileId}" not found in Mongo`)
-      }
-      logger.debug?.(`FileId "${fileId}", checksum "${fileDoc.checksum}"`)
-
-      // Check and add new assembly
-      const assemblyDoc = await assemblyModel
-        .findOne({ name: assemblyName })
-        .exec()
-      if (assemblyDoc) {
-        throw new Error(`Assembly "${assemblyName}" already exists`)
-      }
-      // get checks
-      const checkDocs = await checkModel.find({ isDefault: true }).exec()
-
-      const checks = checkDocs.map((checkDoc) => checkDoc._id.toHexString())
-      // Add assembly
-      const [newAssemblyDoc] = await assemblyModel.create([
-        { _id: assembly, name: assemblyName, user, status: -1, fileId, checks },
-      ])
-      logger.debug?.(
-        `Added new assembly "${assemblyName}", docId "${newAssemblyDoc._id.toHexString()}"`,
-      )
-      logger.debug?.(`File type: "${fileDoc.type}"`)
-
-      // Add refSeqs
-      // We cannot use Mongo 'session' / transaction here because Mongo has 16 MB limit for transaction
-      await this.addRefSeqIntoDb(
-        fileDoc,
-        newAssemblyDoc._id.toString(),
-        backend,
-      )
-
-      const { bufferSize = 10_000 } = parseOptions ?? {}
-      const featureStream = filesService.parseGFF3(
-        filesService.getFileStream(fileDoc),
-        { bufferSize },
-      )
-      // @ts-expect-error type is wrong here
-      // eslint-disable-next-line @typescript-eslint/await-thenable
-      for await (const f of featureStream) {
-        const gff3Feature = f as GFF3Feature
-        logger.verbose?.(`ENTRY=${JSON.stringify(gff3Feature)}`)
-        // Add new feature into database
-        await this.addFeatureIntoDb(gff3Feature, backend)
-      }
-    }
-  }
-
-  async executeOnServerV2(backend: ServerDataStoreV2) {
     const { assembly, changes, logger } = this
     for (const change of changes) {
       const { assemblyName, fileIds, parseOptions } = change
@@ -157,7 +88,7 @@ export class AddAssemblyAndFeaturesFromFileChange extends FromFileBaseChange {
       })
       logger.debug?.(`Added new assembly "${assemblyName}", id "${assembly}"`)
 
-      await this.addRefSeqIntoDbV2(fileRow, assembly, backend)
+      await this.addRefSeqIntoDb(fileRow, assembly, backend)
 
       const { bufferSize = 10_000 } = parseOptions ?? {}
       const featureStream = backend.filesService.parseGFF3(
@@ -169,15 +100,10 @@ export class AddAssemblyAndFeaturesFromFileChange extends FromFileBaseChange {
       for await (const f of featureStream) {
         const gff3Feature = f as GFF3Feature
         logger.verbose?.(`ENTRY=${JSON.stringify(gff3Feature)}`)
-        await this.addFeatureIntoDbV2(gff3Feature, backend)
+        await this.addFeatureIntoDb(gff3Feature, backend)
       }
     }
   }
-
-  async executeOnLocalGFF3(_backend: LocalGFF3DataStore) {
-    throw new Error('executeOnLocalGFF3 not implemented')
-  }
-
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   async executeOnClient(_dataStore: ClientDataStore) {}
 

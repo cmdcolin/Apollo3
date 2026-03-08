@@ -5,13 +5,10 @@ import {
   type ChangeOptions,
   type ClientDataStore,
   FeatureChange,
-  type LocalGFF3DataStore,
   type SerializedFeatureChange,
   type ServerDataStore,
-  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { type AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
-import { type Feature } from '@apollo-annotation/schemas'
 
 import { AddFeatureChange } from './AddFeatureChange'
 
@@ -59,69 +56,7 @@ export class DeleteFeatureChange extends FeatureChange {
     return { typeName, changedIds, assembly, changes }
   }
 
-  /**
-   * Applies the required change to database
-   * @param backend - parameters from backend
-   * @returns
-   */
   async executeOnServer(backend: ServerDataStore) {
-    const { featureModel, session } = backend
-    const { changes, logger } = this
-
-    // Loop the changes
-    for (const change of changes) {
-      const { deletedFeature, parentFeatureId } = change
-
-      // Search feature
-      const featureDoc = await featureModel
-        .findOne({ allIds: deletedFeature._id })
-        .session(session)
-        .exec()
-      if (!featureDoc) {
-        const errMsg = `*** ERROR: The following featureId was not found in database ='${deletedFeature._id}'`
-        logger.error(errMsg)
-        throw new Error(errMsg)
-      }
-
-      // Check if feature is on top level, then simply delete the whole document (i.e. not just sub-feature inside document)
-      if (featureDoc._id.equals(deletedFeature._id)) {
-        if (parentFeatureId) {
-          throw new Error(
-            `Feature "${deletedFeature._id}" is top-level, but received a parent feature ID`,
-          )
-        }
-        await featureModel.findByIdAndDelete(featureDoc._id)
-        logger.debug?.(
-          `Feature "${deletedFeature._id}" deleted from document "${featureDoc._id}". Whole document deleted.`,
-        )
-        continue
-      }
-
-      const deletedIds = findAndDeleteChildFeature(
-        featureDoc,
-        deletedFeature._id,
-        this,
-      )
-      deletedIds.push(deletedFeature._id)
-      featureDoc.allIds = featureDoc.allIds.filter(
-        (id) => !deletedIds.includes(id),
-      )
-      // Save updated document in Mongo
-      featureDoc.markModified('children') // Mark as modified. Without this save() -method is not updating data in database
-      try {
-        await featureDoc.save()
-      } catch (error) {
-        logger.debug?.(`*** FAILED: ${error}`)
-        throw error
-      }
-
-      logger.debug?.(
-        `Feature "${deletedFeature._id}" deleted from document "${featureDoc._id}"`,
-      )
-    }
-  }
-
-  async executeOnServerV2(backend: ServerDataStoreV2) {
     const { changes, logger } = this
     for (const change of changes) {
       const { deletedFeature } = change
@@ -135,11 +70,6 @@ export class DeleteFeatureChange extends FeatureChange {
       await backend.featureRepository.deleteById(deletedFeature._id)
     }
   }
-
-  async executeOnLocalGFF3(_backend: LocalGFF3DataStore) {
-    throw new Error('executeOnLocalGFF3 not implemented')
-  }
-
   async executeOnClient(dataStore: ClientDataStore) {
     if (!dataStore) {
       throw new Error('No data store')
@@ -180,39 +110,6 @@ export class DeleteFeatureChange extends FeatureChange {
       { logger },
     )
   }
-}
-
-/**
- * Delete feature's subfeatures that match an ID and return the IDs of any
- * sub-subfeatures that were deleted
- * @param feature -
- * @param featureIdToDelete -
- * @returns - list of deleted feature IDs
- */
-export function findAndDeleteChildFeature(
-  feature: Feature,
-  featureIdToDelete: string,
-  change: FeatureChange,
-): string[] {
-  if (!feature.children) {
-    throw new Error(`Feature ${feature._id} has no children`)
-  }
-  const { _id, children } = feature
-  const child = children.get(featureIdToDelete)
-  if (child) {
-    const deletedIds = change.getChildFeatureIds(child)
-    children.delete(featureIdToDelete)
-    return deletedIds
-  }
-  for (const [, childFeature] of children) {
-    try {
-      return findAndDeleteChildFeature(childFeature, featureIdToDelete, change)
-    } catch {
-      // pass
-    }
-  }
-
-  throw new Error(`Feature "${featureIdToDelete}" not found in ${_id}`)
 }
 
 export function isDeleteFeatureChange(

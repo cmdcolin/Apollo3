@@ -5,7 +5,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common'
-import { ObjectId } from 'mongodb'
+import { randomBytes } from 'node:crypto'
 import { FeaturesService } from 'src/features/features.service'
 import { RefSeqsService } from 'src/refSeqs/refSeqs.service'
 
@@ -30,7 +30,7 @@ export class AssembliesService {
 
   async create(createAssemblyDto: CreateAssemblyDto) {
     return this.db.assembly.create({
-      _id: new ObjectId().toHexString(),
+      _id: randomBytes(12).toString('hex'),
       name: createAssemblyDto.name,
       displayName: createAssemblyDto.displayName,
       description: createAssemblyDto.description,

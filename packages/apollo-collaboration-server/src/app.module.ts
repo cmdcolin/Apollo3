@@ -17,7 +17,6 @@ import { MessagesModule } from './messages/messages.module'
 import { ApolloMikroOrmModule } from './mikro-orm/mikro-orm.module'
 import { OperationsModule } from './operations/operations.module'
 import { PluginsModule } from './plugins/plugins.module'
-import { RefSeqChunksModule } from './refSeqChunks/refSeqChunks.module'
 import { RefSeqsModule } from './refSeqs/refSeqs.module'
 import { SequenceModule } from './sequence/sequence.module'
 import { UsersModule } from './users/users.module'
@@ -120,7 +119,6 @@ const validationSchema = Joi.object({
     ApolloMikroOrmModule.forRoot(),
     PluginsModule.registerAsync(),
     CountersModule,
-    RefSeqChunksModule,
     RefSeqsModule,
     UsersModule,
     FilesModule,

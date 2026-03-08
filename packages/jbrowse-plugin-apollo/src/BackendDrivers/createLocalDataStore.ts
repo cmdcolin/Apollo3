@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable @typescript-eslint/consistent-type-imports */
-import type { ServerDataStoreV2, UnitOfWork } from '@apollo-annotation/common'
+import type { ServerDataStore, UnitOfWork } from '@apollo-annotation/common'
 
 import { getElectronRequire } from './electronRequire'
 
 type MikroORM = import('@mikro-orm/core').MikroORM
 
-export function createLocalDataStore(orm: MikroORM): ServerDataStoreV2 {
+export function createLocalDataStore(orm: MikroORM): ServerDataStore {
   const electronRequire = getElectronRequire()
   const {
     MikroOrmAssemblyRepository,
@@ -36,7 +36,7 @@ export function createLocalDataStore(orm: MikroORM): ServerDataStoreV2 {
   let counterValue = 0
 
   return {
-    typeName: 'ServerV2',
+    typeName: 'Server',
     featureRepository: new MikroOrmFeatureRepository(em),
     assemblyRepository: new MikroOrmAssemblyRepository(em),
     refSeqRepository: new MikroOrmRefSeqRepository(em),

@@ -1,12 +1,10 @@
-import { type Change, type ClientDataStore } from '@apollo-annotation/common'
-import { type FeatureDocument } from '@apollo-annotation/schemas'
-import { type ClientSession, type Model } from 'mongoose'
-
 import {
+  type Change,
+  type ClientDataStore,
   type Context,
   type Validation,
   type ValidationResult,
-} from './Validation'
+} from '@apollo-annotation/common'
 
 export class ValidationResultSet {
   results: ValidationResult[] = []
@@ -66,27 +64,6 @@ export class ValidationSet {
     const results = new ValidationResultSet()
     for (const v of this.validations) {
       const result = await v.backendPreValidate(change)
-      results.add(result)
-      if (result.error) {
-        break
-      }
-    }
-    return results
-  }
-
-  async backendPostValidate(
-    change: Change,
-    {
-      featureModel,
-      session,
-    }: { session: ClientSession; featureModel: Model<FeatureDocument> },
-  ): Promise<ValidationResultSet> {
-    const results = new ValidationResultSet()
-    for (const v of this.validations) {
-      const result = await v.backendPostValidate(change, {
-        featureModel,
-        session,
-      })
       results.add(result)
       if (result.error) {
         break

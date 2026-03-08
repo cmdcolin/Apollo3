@@ -5,10 +5,8 @@
 import {
   AssemblySpecificChange,
   type ClientDataStore,
-  type LocalGFF3DataStore,
   type SerializedAssemblySpecificChange,
   type ServerDataStore,
-  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { getSession } from '@jbrowse/core/util'
 
@@ -28,51 +26,7 @@ export class DeleteAssemblyChange extends AssemblySpecificChange {
     return { typeName, assembly }
   }
 
-  /**
-   * Applies the required change to database
-   * @param backend - parameters from backend
-   * @returns
-   */
   async executeOnServer(backend: ServerDataStore) {
-    const {
-      assemblyModel,
-      featureModel,
-      refSeqChunkModel,
-      refSeqModel,
-      session,
-    } = backend
-    const { assembly, logger } = this
-
-    const assemblyDoc = await assemblyModel
-      .findById(assembly)
-      .session(session)
-      .exec()
-    if (!assemblyDoc) {
-      const errMsg = `*** ERROR: Assembly with id "${assembly}" not found`
-      logger.error(errMsg)
-      throw new Error(errMsg)
-    }
-
-    // We cannot use Mongo 'session' / transaction here because Mongo has 16 MB limit for transaction
-
-    // Get RefSeqs
-    const refSeqs = await refSeqModel.find({ assembly }).exec()
-    const refSeqIds = refSeqs.map((refSeq) => refSeq._id)
-
-    // Get and delete RefSeqChunks
-    await refSeqChunkModel.deleteMany({ refSeq: refSeqIds }).exec()
-
-    // Get and delete Features
-    await featureModel.deleteMany({ refSeq: refSeqIds }).exec()
-
-    // Delete RefSeqs and Assembly
-    await refSeqModel.deleteMany({ assembly }).exec()
-    await assemblyModel.findByIdAndDelete(assembly).exec()
-
-    logger.debug?.(`Assembly "${assembly}" deleted from database.`)
-  }
-
-  async executeOnServerV2(backend: ServerDataStoreV2) {
     const { assembly, logger } = this
     const assemblyRow = await backend.assemblyRepository.findById(assembly)
     if (!assemblyRow) {
@@ -86,13 +40,8 @@ export class DeleteAssemblyChange extends AssemblySpecificChange {
     await backend.featureRepository.deleteByRefSeqs(refSeqIds)
     await backend.refSeqRepository.deleteByAssembly(assembly)
     await backend.assemblyRepository.deleteById(assembly)
-    logger.debug?.(`Assembly "${assembly}" deleted via V2.`)
+    logger.debug?.(`Assembly "${assembly}" deleted.`)
   }
-
-  async executeOnLocalGFF3(_backend: LocalGFF3DataStore) {
-    throw new Error('executeOnLocalGFF3 not implemented')
-  }
-
   async executeOnClient(dataStore: ClientDataStore) {
     const { assembly } = this
     if (!dataStore) {

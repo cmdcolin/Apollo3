@@ -5,7 +5,6 @@ import { changeRegistry, checkRegistry } from '@apollo-annotation/common'
 import {
   CDSCheck,
   CoreValidation,
-  ParentChildValidation,
   TranscriptCheck,
   changes,
   validationRegistry,
@@ -113,7 +112,6 @@ const transcriptCheck = new TranscriptCheck()
 checkRegistry.registerCheck(transcriptCheck.name, transcriptCheck)
 
 validationRegistry.registerValidation(new CoreValidation())
-validationRegistry.registerValidation(new ParentChildValidation())
 
 export default class ApolloPlugin extends Plugin {
   name = 'ApolloPlugin'

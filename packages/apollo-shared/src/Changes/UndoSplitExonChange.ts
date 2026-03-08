@@ -4,15 +4,12 @@ import {
   type ChangeOptions,
   type ClientDataStore,
   FeatureChange,
-  type LocalGFF3DataStore,
   type SerializedFeatureChange,
   type ServerDataStore,
-  type ServerDataStoreV2,
 } from '@apollo-annotation/common'
 import { type AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
 
 import { flattenFeatureSnapshot } from './AddFeatureChange'
-import { findAndDeleteChildFeature } from './DeleteFeatureChange'
 import { SplitExonChange } from './SplitExonChange'
 
 interface SerializedUndoSplitExonChangeBase extends SerializedFeatureChange {
@@ -82,44 +79,6 @@ export class UndoSplitExonChange extends FeatureChange {
   }
 
   async executeOnServer(backend: ServerDataStore) {
-    const { featureModel, session } = backend
-    const { changes } = this
-    for (const change of changes) {
-      const { exonToRestore, parentFeatureId, idsToDelete } = change
-      const topLevelFeature = await featureModel
-        .findOne({ allIds: parentFeatureId })
-        .session(session)
-        .exec()
-      if (!topLevelFeature) {
-        throw new Error(`Could not find feature with ID "${parentFeatureId}"`)
-      }
-      const parentFeature = this.getFeatureFromId(
-        topLevelFeature,
-        parentFeatureId,
-      )
-      if (!parentFeature) {
-        throw new Error(
-          `Could not find feature with ID "${parentFeatureId}" in feature "${topLevelFeature._id.toString()}"`,
-        )
-      }
-      if (!parentFeature.children) {
-        parentFeature.children = new Map()
-      }
-
-      this.addChild(parentFeature, exonToRestore)
-      const childIds = this.getChildFeatureIds(exonToRestore)
-      topLevelFeature.allIds.push(exonToRestore._id, ...childIds)
-      topLevelFeature.allIds = topLevelFeature.allIds.filter(
-        (id) => !idsToDelete.includes(id),
-      )
-      idsToDelete.map((id) =>
-        findAndDeleteChildFeature(topLevelFeature, id, this),
-      )
-      await topLevelFeature.save()
-    }
-  }
-
-  async executeOnServerV2(backend: ServerDataStoreV2) {
     const { featureRepository } = backend
     const { changes } = this
     for (const change of changes) {
@@ -140,11 +99,6 @@ export class UndoSplitExonChange extends FeatureChange {
       }
     }
   }
-
-  async executeOnLocalGFF3(_backend: LocalGFF3DataStore) {
-    throw new Error('executeOnLocalGFF3 not implemented')
-  }
-
   async executeOnClient(dataStore: ClientDataStore) {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!dataStore) {

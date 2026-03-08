@@ -18,7 +18,7 @@
 import { MikroORM } from '@mikro-orm/core'
 import { MongoClient } from 'mongodb'
 
-import { createMikroOrmConfig } from '@apollo-annotation/entities/mikro-orm.config'
+import { createMikroOrmConfig } from '@apollo-annotation/entities'
 
 interface MigrationArgs {
   mongoUri: string

@@ -5,7 +5,6 @@ import {
 } from '@apollo-annotation/common'
 import { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
 import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common'
-import { ObjectId } from 'mongodb'
 
 import { FeatureRangeSearchDto } from '../entity/gff3Object.dto'
 import { DatabaseService } from '../mikro-orm/database.service'
@@ -127,8 +126,8 @@ export class ChecksService {
     }
   }
 
-  async deleteChecks(checkIds: (string | ObjectId)[]) {
-    return this.db.check.deleteByIds(checkIds.map((id) => String(id)))
+  async deleteChecks(checkIds: string[]) {
+    return this.db.check.deleteByIds(checkIds)
   }
 
   async findByFeatureId(id: string) {

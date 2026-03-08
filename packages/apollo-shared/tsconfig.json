@@ -11,9 +11,5 @@
     "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
   },
   "include": ["./src"],
-  "references": [
-    { "path": "../apollo-mst" },
-    { "path": "../apollo-schemas" },
-    { "path": "../apollo-common" },
-  ],
+  "references": [{ "path": "../apollo-mst" }, { "path": "../apollo-common" }],
 }
