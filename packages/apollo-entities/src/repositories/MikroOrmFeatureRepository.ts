@@ -195,13 +195,13 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
   async searchText(refSeqId: string, query: string) {
     const conn = this.em.getConnection()
     const rows = await conn.execute(
-      `SELECT * FROM feature WHERE feature_ref_seq_id = ? AND (type LIKE ? OR attributes LIKE ?)`,
+      `SELECT * FROM feature WHERE ref_seq__id = ? AND (type LIKE ? OR attributes LIKE ?)`,
       [refSeqId, `%${query}%`, `%${query}%`],
     )
     return (rows as Record<string, unknown>[]).map((row) => ({
       _id: row._id as string,
-      parentId: row.feature_parent_id as string | undefined,
-      refSeq: row.feature_ref_seq_id as string,
+      parentId: row.parent__id as string | undefined,
+      refSeq: row.ref_seq__id as string,
       type: row.type as string,
       min: row.min as number,
       max: row.max as number,

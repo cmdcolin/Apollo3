@@ -206,6 +206,17 @@ export class FeaturesService {
       this.logger.debug(
         `searchFeatures: assemblyId=${assemblyId}, refSeqs=${refSeqs.length}`,
       )
+      if (refSeqs.length > 0) {
+        const allForFirst = await this.db.feature.searchText(refSeqs[0]._id, '')
+        this.logger.debug(
+          `searchFeatures DEBUG: all features for ${refSeqs[0].name}: ${allForFirst.length}`,
+        )
+        for (const f of allForFirst.slice(0, 3)) {
+          this.logger.debug(
+            `searchFeatures DEBUG: feature type=${f.type}, attrs=${JSON.stringify(f.attributes)?.slice(0, 200)}`,
+          )
+        }
+      }
       for (const refSeq of refSeqs) {
         try {
           const features = await this.db.feature.searchText(refSeq._id, term)
