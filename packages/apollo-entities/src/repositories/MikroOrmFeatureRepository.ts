@@ -192,10 +192,13 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
     })
   }
 
-  async searchText(refSeqId: string, query: string) {
+  async searchText(refSeqIds: string[], query: string) {
+    if (refSeqIds.length === 0) {
+      return []
+    }
     const pattern = `%${query}%`
     const entities = await this.em.find(FeatureEntity, {
-      refSeq: refSeqId,
+      refSeq: { $in: refSeqIds },
       $or: [
         { type: { $like: pattern } },
         { [raw('attributes')]: { $like: pattern } },
