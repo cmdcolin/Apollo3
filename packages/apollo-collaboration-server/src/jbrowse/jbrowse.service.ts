@@ -179,18 +179,18 @@ export class JBrowseService {
     const url = this.configService.get('URL', { infer: true })
     const assemblies = await this.assembliesService.findAll()
     return assemblies.map((assembly) => {
-      const trackId = `apollo_track_${assembly.id}`
+      const trackId = `apollo_track_${assembly._id}`
       return {
         type: 'ApolloTrack',
         trackId,
         name: `Annotations (${assembly.displayName || assembly.name})`,
-        assemblyNames: [assembly.id],
+        assemblyNames: [assembly._id],
         textSearching: {
           textSearchAdapter: {
             type: 'ApolloTextSearchAdapter',
             trackId,
-            assemblyNames: [assembly.id],
-            textSearchAdapterId: `apollo_search_${assembly.id}`,
+            assemblyNames: [assembly._id],
+            textSearchAdapterId: `apollo_search_${assembly._id}`,
             baseURL: {
               uri: url,
               locationType: 'UriLocation',

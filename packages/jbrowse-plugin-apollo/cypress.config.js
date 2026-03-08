@@ -7,7 +7,6 @@ const fs = require('node:fs')
 const { defineConfig } = require('cypress')
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 const getCompareSnapshotsPlugin = require('cypress-image-diff-js/plugin')
-const { configurePlugin } = require('cypress-mongodb')
 
 module.exports = defineConfig({
   // Make viewport long and thin to avoid the scrollbar on the right interfere
@@ -17,12 +16,6 @@ module.exports = defineConfig({
   retries: {
     runMode: 2,
   },
-  env: {
-    mongodb: {
-      uri: 'mongodb://localhost:27017/?directConnection=true',
-      database: 'apolloTestDb',
-    },
-  },
   screenshotOnRunFailure: false,
   video: false,
   e2e: {
@@ -30,7 +23,6 @@ module.exports = defineConfig({
     setupNodeEvents(on, config) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       getCompareSnapshotsPlugin(on, config)
-      configurePlugin(on)
       on('task', {
         readdirSync(path) {
           return fs.readdirSync(path)
