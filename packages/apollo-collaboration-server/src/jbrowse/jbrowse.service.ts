@@ -2,13 +2,14 @@ import {
   JBrowseConfig,
   JBrowseConfigDocument,
 } from '@apollo-annotation/schemas'
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable, Logger, Optional } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { InjectModel } from '@nestjs/mongoose'
 import merge from 'deepmerge'
 import { Model } from 'mongoose'
 
 import { AssembliesService } from '../assemblies/assemblies.service'
+import { DatabaseService } from '../mikro-orm/database.service'
 import { RefSeqsService } from '../refSeqs/refSeqs.service'
 import { Role } from '../utils/role/role.enum'
 
@@ -17,6 +18,7 @@ export class JBrowseService {
   constructor(
     private readonly assembliesService: AssembliesService,
     private readonly refSeqsService: RefSeqsService,
+    @Optional()
     @InjectModel(JBrowseConfig.name)
     private readonly jbrowseConfigModel: Model<JBrowseConfigDocument>,
     private readonly configService: ConfigService<
@@ -29,6 +31,7 @@ export class JBrowseService {
       },
       true
     >,
+    private readonly db: DatabaseService,
   ) {}
 
   private readonly logger = new Logger(JBrowseService.name)
@@ -206,6 +209,10 @@ export class JBrowseService {
   }
 
   async getJBrowseConfig() {
+    if (this.db.useV2Backend) {
+      const row = await this.db.jbrowseConfig.findOne()
+      return row?.config
+    }
     const document = await this.jbrowseConfigModel.findOne().exec()
     return document?.toJSON()
   }

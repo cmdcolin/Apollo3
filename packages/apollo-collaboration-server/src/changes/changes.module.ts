@@ -14,6 +14,7 @@ import { MessagesModule } from '../messages/messages.module'
 import { RefSeqChunksModule } from '../refSeqChunks/refSeqChunks.module'
 import { RefSeqsModule } from '../refSeqs/refSeqs.module'
 import { UsersModule } from '../users/users.module'
+import { useMongoose } from '../utils/constants'
 
 import { ChangesController } from './changes.controller'
 import { ChangesService } from './changes.service'
@@ -22,16 +23,20 @@ import { ChangesService } from './changes.service'
   controllers: [ChangesController],
   providers: [ChangesService],
   imports: [
-    MongooseModule.forFeatureAsync([
-      {
-        name: Change.name,
-        useFactory: (connection) => {
-          ChangeSchema.plugin(idValidator, { connection })
-          return ChangeSchema
-        },
-        inject: [getConnectionToken()],
-      },
-    ]),
+    ...(useMongoose
+      ? [
+          MongooseModule.forFeatureAsync([
+            {
+              name: Change.name,
+              useFactory: (connection) => {
+                ChangeSchema.plugin(idValidator, { connection })
+                return ChangeSchema
+              },
+              inject: [getConnectionToken()],
+            },
+          ]),
+        ]
+      : []),
     AssembliesModule,
     RefSeqsModule,
     RefSeqChunksModule,

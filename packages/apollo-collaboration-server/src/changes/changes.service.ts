@@ -6,17 +6,6 @@ import {
   isFeatureChange,
 } from '@apollo-annotation/common'
 import {
-  MikroOrmAssemblyRepository,
-  MikroOrmCheckRepository,
-  MikroOrmCheckResultRepository,
-  MikroOrmFeatureRepository,
-  MikroOrmFileRepository,
-  MikroOrmJBrowseConfigRepository,
-  MikroOrmRefSeqChunkRepository,
-  MikroOrmRefSeqRepository,
-  MikroOrmUserRepository,
-} from '@apollo-annotation/entities'
-import {
   Assembly,
   AssemblyDocument,
   Change,
@@ -44,9 +33,7 @@ import {
   makeUserSessionId,
   validationRegistry,
 } from '@apollo-annotation/shared'
-import { EntityManager } from '@mikro-orm/core'
 import {
-  Inject,
   Logger,
   NotFoundException,
   Optional,
@@ -58,6 +45,7 @@ import { FilterQuery, Model } from 'mongoose'
 import { CountersService } from '../counters/counters.service'
 import { FilesService } from '../files/files.service'
 import { MessagesGateway } from '../messages/messages.gateway'
+import { DatabaseService } from '../mikro-orm/database.service'
 import { PluginsService } from '../plugins/plugins.service'
 
 import { FindChangeDto } from './dto/find-change.dto'
@@ -71,79 +59,68 @@ const STATUS_ZERO_CHANGE_TYPES = new Set([
 
 export class ChangesService {
   constructor(
+    @Optional()
     @InjectModel(Feature.name)
     private readonly featureModel: Model<FeatureDocument>,
+    @Optional()
     @InjectModel(Assembly.name)
     private readonly assemblyModel: Model<AssemblyDocument>,
+    @Optional()
     @InjectModel(RefSeq.name)
     private readonly refSeqModel: Model<RefSeqDocument>,
+    @Optional()
     @InjectModel(RefSeqChunk.name)
     private readonly refSeqChunkModel: Model<RefSeqChunkDocument>,
+    @Optional()
     @InjectModel(File.name)
     private readonly fileModel: Model<FileDocument>,
+    @Optional()
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
+    @Optional()
     @InjectModel(JBrowseConfig.name)
     private readonly jbrowseConfigModel: Model<JBrowseConfigDocument>,
+    @Optional()
     @InjectModel(Change.name)
     private readonly changeModel: Model<ChangeDocument>,
+    @Optional()
     @InjectModel(Check.name)
     private readonly checkModel: Model<CheckDocument>,
     private readonly filesService: FilesService,
     private readonly countersService: CountersService,
     private readonly pluginsService: PluginsService,
     private readonly messagesGateway: MessagesGateway,
-    @Optional() @Inject(EntityManager) private readonly em?: EntityManager,
+    private readonly db: DatabaseService,
   ) {}
 
-  private get useV2Backend() {
-    const dbBackend = process.env.DB_BACKEND
-    return dbBackend && dbBackend !== 'mongodb' && this.em !== undefined
-  }
-
   private buildServerDataStoreV2(user: string): ServerDataStoreV2 {
-    if (!this.em) {
-      throw new Error('EntityManager not available')
-    }
-    const em = this.em.fork()
+    const uow = this.db.createUnitOfWork()
     return {
       typeName: 'ServerV2',
-      featureRepository: new MikroOrmFeatureRepository(em),
-      assemblyRepository: new MikroOrmAssemblyRepository(em),
-      refSeqRepository: new MikroOrmRefSeqRepository(em),
-      refSeqChunkRepository: new MikroOrmRefSeqChunkRepository(em),
-      checkRepository: new MikroOrmCheckRepository(em),
-      checkResultRepository: new MikroOrmCheckResultRepository(em),
-      fileRepository: new MikroOrmFileRepository(em),
-      userRepository: new MikroOrmUserRepository(em),
-      jbrowseConfigRepository: new MikroOrmJBrowseConfigRepository(em),
-      unitOfWork: {
-        async commit() {
-          await em.flush()
+      featureRepository: uow.feature,
+      assemblyRepository: uow.assembly,
+      refSeqRepository: uow.refSeq,
+      refSeqChunkRepository: uow.refSeqChunk,
+      checkRepository: uow.checkConfig,
+      checkResultRepository: uow.check,
+      fileRepository: uow.file,
+      userRepository: uow.user,
+      jbrowseConfigRepository: uow.jbrowseConfig,
+      unitOfWork: uow.unitOfWork,
+      filesService: {
+        getFileStream: (file) => this.filesService.getFileStream(file),
+        getFileHandle: (file) => this.filesService.getFileHandle(file),
+        parseGFF3: (stream) => this.filesService.parseGFF3(stream),
+        create: (dto) => {
+          void this.filesService.create(dto)
         },
-        rollback() {
-          em.clear()
-          return Promise.resolve()
+        remove: (id) => {
+          void this.filesService.remove(id)
         },
       },
-      filesService: this.buildV2FilesService(),
       pluginsService: this.pluginsService,
       counterService: this.countersService,
       user,
-    }
-  }
-
-  private buildV2FilesService(): ServerDataStoreV2['filesService'] {
-    return {
-      getFileStream: (file) => this.filesService.getFileStream(file),
-      getFileHandle: (file) => this.filesService.getFileHandle(file),
-      parseGFF3: (stream) => this.filesService.parseGFF3(stream),
-      create: (dto) => {
-        void this.filesService.create(dto)
-      },
-      remove: (id) => {
-        void this.filesService.remove(id)
-      },
     }
   }
 
@@ -184,7 +161,7 @@ export class ChangesService {
       }
     }
 
-    if (this.useV2Backend) {
+    if (this.db.useV2Backend) {
       const v2Backend = this.buildServerDataStoreV2(uniqUserId)
       try {
         await change.execute(v2Backend)

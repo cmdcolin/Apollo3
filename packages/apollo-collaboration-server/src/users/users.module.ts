@@ -1,8 +1,9 @@
 import { User, UserSchema } from '@apollo-annotation/schemas'
-import { Module, OnApplicationBootstrap } from '@nestjs/common'
+import { Logger, Module, OnApplicationBootstrap } from '@nestjs/common'
 import { MongooseModule } from '@nestjs/mongoose'
 
 import { MessagesModule } from '../messages/messages.module'
+import { useMongoose } from '../utils/constants'
 
 import { UsersController } from './users.controller'
 import { UsersService } from './users.service'
@@ -11,14 +12,24 @@ import { UsersService } from './users.service'
   controllers: [UsersController],
   providers: [UsersService],
   imports: [
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    ...(useMongoose
+      ? [MongooseModule.forFeature([{ name: User.name, schema: UserSchema }])]
+      : []),
     MessagesModule,
   ],
-  exports: [UsersService, MongooseModule],
+  exports: [UsersService, ...(useMongoose ? [MongooseModule] : [])],
 })
 export class UsersModule implements OnApplicationBootstrap {
+  private readonly logger = new Logger(UsersModule.name)
+
   constructor(private usersService: UsersService) {}
-  onApplicationBootstrap() {
-    return this.usersService.bootstrapDB()
+  async onApplicationBootstrap() {
+    this.logger.log('Bootstrapping users database...')
+    try {
+      await this.usersService.bootstrapDB()
+      this.logger.log('Users database bootstrapped')
+    } catch (error) {
+      this.logger.error(`Failed to bootstrap users database: ${error}`)
+    }
   }
 }

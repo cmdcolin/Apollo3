@@ -18,6 +18,15 @@ function toRow(entity: CheckEntity): CheckRow {
 export class MikroOrmCheckRepository implements CheckRepository {
   constructor(private readonly em: EntityManager) {}
 
+  async findAll() {
+    const entities = await this.em.find(
+      CheckEntity,
+      {},
+      { orderBy: { name: 'asc' } },
+    )
+    return entities.map(toRow)
+  }
+
   async findDefaults() {
     const entities = await this.em.find(CheckEntity, { isDefault: true })
     return entities.map(toRow)
@@ -29,6 +38,14 @@ export class MikroOrmCheckRepository implements CheckRepository {
       return toRow(entity)
     }
     return undefined
+  }
+
+  async findByIds(ids: string[]) {
+    if (ids.length === 0) {
+      return []
+    }
+    const entities = await this.em.find(CheckEntity, { _id: { $in: ids } })
+    return entities.map(toRow)
   }
 
   async upsert(row: CheckRow) {
