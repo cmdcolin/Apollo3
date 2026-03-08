@@ -197,16 +197,32 @@ export class FeaturesService {
   async searchFeatures(searchDto: { term: string; assemblies: string }) {
     const { assemblies, term } = searchDto
     const assemblyIds = assemblies.split(',')
+    this.logger.debug(
+      `searchFeatures: term="${term}", assemblies=${assemblies}`,
+    )
     const results = []
     for (const assemblyId of assemblyIds) {
       const refSeqs = await this.db.refSeq.findByAssembly(assemblyId)
+      this.logger.debug(
+        `searchFeatures: assemblyId=${assemblyId}, refSeqs=${refSeqs.length}`,
+      )
       for (const refSeq of refSeqs) {
-        const features = await this.db.feature.searchText(refSeq._id, term)
-        for (const feature of features) {
-          results.push(feature)
+        try {
+          const features = await this.db.feature.searchText(refSeq._id, term)
+          this.logger.debug(
+            `searchFeatures: refSeq=${refSeq._id} (${refSeq.name}), searchResults=${features.length}`,
+          )
+          for (const feature of features) {
+            results.push(feature)
+          }
+        } catch (e) {
+          this.logger.error(
+            `searchFeatures error for refSeq=${refSeq._id}: ${e}`,
+          )
         }
       }
     }
+    this.logger.debug(`searchFeatures: total results=${results.length}`)
     return results
   }
 }

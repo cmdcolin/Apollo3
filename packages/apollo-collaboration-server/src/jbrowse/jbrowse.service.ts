@@ -202,6 +202,21 @@ export class JBrowseService {
     })
   }
 
+  async getAggregateTextSearchAdapters() {
+    const url = this.configService.get('URL', { infer: true })
+    const assemblies = await this.assembliesService.findAll()
+    return assemblies.map((assembly: AssemblyRow) => ({
+      type: 'ApolloTextSearchAdapter',
+      textSearchAdapterId: `apollo_search_${assembly._id}`,
+      trackId: `apollo_track_${assembly._id}`,
+      assemblyNames: [assembly._id],
+      baseURL: {
+        uri: url,
+        locationType: 'UriLocation',
+      },
+    }))
+  }
+
   async getJBrowseConfig() {
     const row = await this.db.jbrowseConfig.findOne()
     return row?.config
@@ -220,6 +235,7 @@ export class JBrowseService {
       configuration: this.getConfiguration(role),
       assemblies: await this.getAssemblies(),
       tracks: await this.getTracks(),
+      aggregateTextSearchAdapters: await this.getAggregateTextSearchAdapters(),
       plugins: this.getPlugins(),
       internetAccounts: this.getInternetAccounts(),
       defaultSession: this.getDefaultSession(),
