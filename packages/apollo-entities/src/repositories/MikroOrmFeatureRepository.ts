@@ -1,5 +1,5 @@
 import type { FeatureRepository, FeatureRow } from '@apollo-annotation/common'
-import type { EntityManager } from '@mikro-orm/core'
+import { type EntityManager, raw } from '@mikro-orm/core'
 
 import { FeatureEntity } from '../entities/FeatureEntity.js'
 
@@ -193,27 +193,15 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
   }
 
   async searchText(refSeqId: string, query: string) {
-    const conn = this.em.getConnection()
-    const rows = await conn.execute(
-      `SELECT * FROM feature WHERE ref_seq__id = ? AND (type LIKE ? OR attributes LIKE ?)`,
-      [refSeqId, `%${query}%`, `%${query}%`],
-    )
-    return (rows as Record<string, unknown>[]).map((row) => ({
-      _id: row._id as string,
-      parentId: row.parent__id as string | undefined,
-      refSeq: row.ref_seq__id as string,
-      type: row.type as string,
-      min: row.min as number,
-      max: row.max as number,
-      strand: row.strand as 1 | -1 | undefined,
-      phase: row.phase as 0 | 1 | 2 | undefined,
-      attributes:
-        typeof row.attributes === 'string'
-          ? JSON.parse(row.attributes)
-          : (row.attributes as Record<string, string[]> | undefined),
-      status: row.status as number | undefined,
-      user: row.user as string | undefined,
-    }))
+    const pattern = `%${query}%`
+    const entities = await this.em.find(FeatureEntity, {
+      refSeq: refSeqId,
+      $or: [
+        { type: { $like: pattern } },
+        { [raw('attributes')]: { $like: pattern } },
+      ],
+    })
+    return entities.map(toRow)
   }
 
   async activateByUser(user: string) {
