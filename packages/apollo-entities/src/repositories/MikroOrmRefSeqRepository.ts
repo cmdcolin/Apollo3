@@ -103,4 +103,12 @@ export class MikroOrmRefSeqRepository implements RefSeqRepository {
     await this.em.flush()
     return toRow(entity)
   }
+
+  async activateByUser(user: string) {
+    return this.em.nativeUpdate(
+      RefSeqEntity,
+      { status: -1, user },
+      { status: 0 },
+    )
+  }
 }

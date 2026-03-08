@@ -1,5 +1,6 @@
 import type {
   AssemblyRepository,
+  ChangeRepository,
   CheckRepository,
   CheckResultRepository,
   CounterRepository,
@@ -13,6 +14,7 @@ import type {
 } from '@apollo-annotation/common'
 import {
   MikroOrmAssemblyRepository,
+  MikroOrmChangeRepository,
   MikroOrmCheckRepository,
   MikroOrmCheckResultRepository,
   MikroOrmCounterRepository,
@@ -82,6 +84,10 @@ export class DatabaseService {
 
   get jbrowseConfig(): JBrowseConfigRepository {
     return new MikroOrmJBrowseConfigRepository(this.fork())
+  }
+
+  get changeLog(): ChangeRepository {
+    return new MikroOrmChangeRepository(this.fork())
   }
 
   createUnitOfWork() {

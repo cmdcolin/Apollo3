@@ -72,4 +72,12 @@ export class MikroOrmRefSeqChunkRepository implements RefSeqChunkRepository {
     await this.em.persistAndFlush(entities)
     return entities.map(toRow)
   }
+
+  async activateByUser(user: string) {
+    return this.em.nativeUpdate(
+      RefSeqChunkEntity,
+      { status: -1, user },
+      { status: 0 },
+    )
+  }
 }

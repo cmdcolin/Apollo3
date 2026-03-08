@@ -22,4 +22,5 @@ export interface AssemblyRepository {
   ): Promise<AssemblyRow | undefined>
   deleteById(id: string): Promise<boolean>
   findAll(): Promise<AssemblyRow[]>
+  activateByUser(user: string): Promise<number>
 }

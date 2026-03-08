@@ -79,4 +79,12 @@ export class MikroOrmAssemblyRepository implements AssemblyRepository {
     await this.em.removeAndFlush(entity)
     return true
   }
+
+  async activateByUser(user: string) {
+    return this.em.nativeUpdate(
+      AssemblyEntity,
+      { status: -1, user },
+      { status: 0 },
+    )
+  }
 }

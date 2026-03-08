@@ -144,18 +144,29 @@ export class ChangesService {
     // deleted
     const refNames: string[] = []
     if (isFeatureChange(change)) {
-      // For broadcasting we need also refName
       const { changedIds } = change
-      for (const changedId of changedIds) {
-        const featureDoc = await this.featureModel
-          .findOne({ allIds: changedId })
-          .exec()
-        if (featureDoc) {
-          const refSeqDoc = await this.refSeqModel
-            .findById(featureDoc.refSeq)
+      if (this.db.useV2Backend) {
+        for (const changedId of changedIds) {
+          const features = await this.db.feature.findByIds([changedId])
+          if (features.length > 0) {
+            const refSeq = await this.db.refSeq.findById(features[0].refSeq)
+            if (refSeq) {
+              refNames.push(refSeq.name)
+            }
+          }
+        }
+      } else {
+        for (const changedId of changedIds) {
+          const featureDoc = await this.featureModel
+            .findOne({ allIds: changedId })
             .exec()
-          if (refSeqDoc) {
-            refNames.push(refSeqDoc.name)
+          if (featureDoc) {
+            const refSeqDoc = await this.refSeqModel
+              .findById(featureDoc.refSeq)
+              .exec()
+            if (refSeqDoc) {
+              refNames.push(refSeqDoc.name)
+            }
           }
         }
       }
@@ -171,13 +182,24 @@ export class ChangesService {
         throw new UnprocessableEntityException(String(error))
       }
 
-      const [savedChangedLogDoc] = await this.changeModel.create([
-        // eslint-disable-next-line @typescript-eslint/no-misused-spread
-        { ...change, user: user.email, sequence },
-      ])
-      const changeDoc = savedChangedLogDoc
-      if (!changeDoc) {
-        throw new UnprocessableEntityException('could not create change')
+      const changeDoc = await this.db.changeLog.create({
+        assembly: isAssemblySpecificChange(change)
+          ? change.assembly
+          : undefined,
+        typeName: change.typeName,
+        changedIds:
+          'changedIds' in change ? (change.changedIds as string[]) : [],
+        changes: 'changes' in change ? change.changes : {},
+        user: user.email,
+        sequence,
+      })
+
+      if (STATUS_ZERO_CHANGE_TYPES.has(change.typeName)) {
+        this.logger.debug('Activating temporary documents for v2 backend')
+        await this.db.assembly.activateByUser(uniqUserId)
+        await this.db.refSeqChunk.activateByUser(uniqUserId)
+        await this.db.feature.activateByUser(uniqUserId)
+        await this.db.refSeq.activateByUser(uniqUserId)
       }
 
       if (isAssemblySpecificChange(change)) {
@@ -190,7 +212,7 @@ export class ChangesService {
               userName: user.username,
               userSessionId,
               channel: `${change.assembly}-${refName}`,
-              changeSequence: changeDoc.sequence,
+              changeSequence: sequence,
             })
           }
         } else {
@@ -199,7 +221,7 @@ export class ChangesService {
             userName: user.username,
             userSessionId,
             channel: 'COMMON',
-            changeSequence: changeDoc.sequence,
+            changeSequence: sequence,
           })
         }
         for (const message of messages) {
@@ -391,6 +413,23 @@ export class ChangesService {
   }
 
   async findAll(changeFilter: FindChangeDto) {
+    this.logger.debug(`Search criteria: "${JSON.stringify(changeFilter)}"`)
+
+    if (this.db.useV2Backend) {
+      return this.db.changeLog.findAll({
+        filter: {
+          assembly: changeFilter.assembly,
+          user: changeFilter.user,
+          typeName: changeFilter.typeName,
+        },
+        sinceSequence: changeFilter.since
+          ? Number(changeFilter.since)
+          : undefined,
+        sort: changeFilter.sort === '1' ? 'asc' : 'desc',
+        limit: changeFilter.limit ? Number(changeFilter.limit) : undefined,
+      })
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-misused-spread
     const queryCond: FilterQuery<ChangeDocument> = { ...changeFilter }
     if (changeFilter.user) {
@@ -400,7 +439,6 @@ export class ChangesService {
       queryCond.sequence = { $gt: Number(changeFilter.since) }
       delete queryCond.since
     }
-    this.logger.debug(`Search criteria: "${JSON.stringify(queryCond)}"`)
 
     let sortOrder: 1 | -1 = -1
     if (changeFilter.sort && changeFilter.sort === '1') {

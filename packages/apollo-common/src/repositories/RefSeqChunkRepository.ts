@@ -17,4 +17,5 @@ export interface RefSeqChunkRepository {
   create(row: RefSeqChunkRow): Promise<RefSeqChunkRow>
   deleteByRefSeqs(refSeqIds: string[]): Promise<number>
   createMany(rows: RefSeqChunkRow[]): Promise<RefSeqChunkRow[]>
+  activateByUser(user: string): Promise<number>
 }

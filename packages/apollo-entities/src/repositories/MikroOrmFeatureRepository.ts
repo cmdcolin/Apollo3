@@ -199,4 +199,12 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
     })
     return entities.map(toRow)
   }
+
+  async activateByUser(user: string) {
+    return this.em.nativeUpdate(
+      FeatureEntity,
+      { status: -1, user },
+      { status: 0 },
+    )
+  }
 }
