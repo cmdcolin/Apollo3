@@ -19,9 +19,9 @@ export class MikroOrmJBrowseConfigRepository
   constructor(private readonly em: EntityManager) {}
 
   async findOne() {
-    const entity = await this.em.findOne(JBrowseConfigEntity, {})
-    if (entity) {
-      return toRow(entity)
+    const entities = await this.em.findAll(JBrowseConfigEntity, { limit: 1 })
+    if (entities.length > 0) {
+      return toRow(entities[0])
     }
     return undefined
   }

@@ -25,4 +25,5 @@ export interface RefSeqRepository {
   findAll(): Promise<RefSeqRow[]>
   deleteByAssembly(assemblyId: string): Promise<number>
   createMany(rows: RefSeqRow[]): Promise<RefSeqRow[]>
+  activateByUser(user: string): Promise<number>
 }

@@ -1,4 +1,5 @@
 export type { AssemblyRepository, AssemblyRow } from './AssemblyRepository'
+export type { ChangeRepository, ChangeRow } from './ChangeRepository'
 export type { CounterRepository } from './CounterRepository'
 export type {
   CheckResultRepository,

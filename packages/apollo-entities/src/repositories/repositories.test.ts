@@ -4,6 +4,7 @@ import type { MikroORM } from '@mikro-orm/core'
 
 import { createTestORM } from '../test-utils'
 import { MikroOrmAssemblyRepository } from './MikroOrmAssemblyRepository'
+import { MikroOrmChangeRepository } from './MikroOrmChangeRepository'
 import { MikroOrmCounterRepository } from './MikroOrmCounterRepository'
 import { MikroOrmFeatureRepository } from './MikroOrmFeatureRepository'
 import { MikroOrmFileRepository } from './MikroOrmFileRepository'
@@ -742,6 +743,188 @@ describe('MikroOrmCounterRepository', () => {
     expect(await repo.getNextSequenceValue('counterA')).toBe(1)
     expect(await repo.getNextSequenceValue('counterB')).toBe(1)
     expect(await repo.getNextSequenceValue('counterA')).toBe(2)
+  })
+})
+
+describe('MikroOrmChangeRepository', () => {
+  it('should create and find changes', async () => {
+    const repo = new MikroOrmChangeRepository(orm.em.fork())
+    const created = await repo.create({
+      assembly: 'asm-1',
+      typeName: 'AddAssemblyAndFeaturesFromFileChange',
+      changedIds: [],
+      changes: { assemblyName: 'volvox' },
+      user: 'testuser@example.com',
+      sequence: 1,
+    })
+    expect(created._id).toBeDefined()
+    expect(created.typeName).toBe('AddAssemblyAndFeaturesFromFileChange')
+    expect(created.sequence).toBe(1)
+
+    const all = await repo.findAll({})
+    expect(all).toHaveLength(1)
+    expect(all[0].user).toBe('testuser@example.com')
+  })
+
+  it('should filter by assembly and typeName', async () => {
+    const repo = new MikroOrmChangeRepository(orm.em.fork())
+    await repo.create({
+      assembly: 'asm-1',
+      typeName: 'AddAssemblyAndFeaturesFromFileChange',
+      changedIds: [],
+      changes: {},
+      user: 'user1@example.com',
+      sequence: 1,
+    })
+    await repo.create({
+      assembly: 'asm-2',
+      typeName: 'AddFeatureChange',
+      changedIds: ['f1'],
+      changes: {},
+      user: 'user2@example.com',
+      sequence: 2,
+    })
+
+    const byAssembly = await repo.findAll({ filter: { assembly: 'asm-1' } })
+    expect(byAssembly).toHaveLength(1)
+
+    const byType = await repo.findAll({
+      filter: { typeName: 'AddFeatureChange' },
+    })
+    expect(byType).toHaveLength(1)
+    expect(byType[0].user).toBe('user2@example.com')
+  })
+
+  it('should filter by sinceSequence and sort', async () => {
+    const repo = new MikroOrmChangeRepository(orm.em.fork())
+    for (let i = 1; i <= 5; i++) {
+      await repo.create({
+        typeName: 'SomeChange',
+        changedIds: [],
+        changes: {},
+        user: 'user@example.com',
+        sequence: i,
+      })
+    }
+
+    const since3 = await repo.findAll({ sinceSequence: 3 })
+    expect(since3).toHaveLength(2)
+
+    const asc = await repo.findAll({ sort: 'asc' })
+    expect(asc[0].sequence).toBe(1)
+
+    const limited = await repo.findAll({ limit: 2 })
+    expect(limited).toHaveLength(2)
+  })
+})
+
+describe('activateByUser', () => {
+  it('should activate temporary assemblies by user', async () => {
+    const repo = new MikroOrmAssemblyRepository(orm.em.fork())
+    await repo.create({
+      _id: 'asm-1',
+      name: 'temp',
+      status: -1,
+      user: 'user-1',
+    })
+    await repo.create({
+      _id: 'asm-2',
+      name: 'other',
+      status: -1,
+      user: 'user-2',
+    })
+
+    const count = await repo.activateByUser('user-1')
+    expect(count).toBe(1)
+
+    const freshRepo = new MikroOrmAssemblyRepository(orm.em.fork())
+    const asm1 = await freshRepo.findById('asm-1')
+    expect(asm1!.status).toBe(0)
+    const asm2 = await freshRepo.findById('asm-2')
+    expect(asm2!.status).toBe(-1)
+  })
+
+  it('should activate temporary features by user', async () => {
+    const em = orm.em.fork()
+    const asmRepo = new MikroOrmAssemblyRepository(em)
+    await asmRepo.create({ _id: 'asm-1', name: 'test', status: 0 })
+    const rsRepo = new MikroOrmRefSeqRepository(em)
+    await rsRepo.create({
+      _id: 'rs-1',
+      assembly: 'asm-1',
+      name: 'ctgA',
+      length: 1000,
+      chunkSize: 500,
+    })
+    const repo = new MikroOrmFeatureRepository(em)
+    await repo.create({
+      _id: 'f1',
+      refSeq: 'rs-1',
+      type: 'gene',
+      min: 0,
+      max: 100,
+      status: -1,
+      user: 'user-1',
+    })
+    await repo.create({
+      _id: 'f2',
+      refSeq: 'rs-1',
+      type: 'gene',
+      min: 200,
+      max: 300,
+      status: -1,
+      user: 'user-2',
+    })
+
+    expect(await repo.activateByUser('user-1')).toBe(1)
+    const freshRepo = new MikroOrmFeatureRepository(orm.em.fork())
+    expect((await freshRepo.findById('f1'))!.status).toBe(0)
+    expect((await freshRepo.findById('f2'))!.status).toBe(-1)
+  })
+
+  it('should activate temporary refSeqs by user', async () => {
+    const em = orm.em.fork()
+    const asmRepo = new MikroOrmAssemblyRepository(em)
+    await asmRepo.create({ _id: 'asm-1', name: 'test', status: 0 })
+    const repo = new MikroOrmRefSeqRepository(em)
+    await repo.create({
+      _id: 'rs-1',
+      assembly: 'asm-1',
+      name: 'ctgA',
+      length: 100,
+      chunkSize: 100,
+      status: -1,
+      user: 'user-1',
+    })
+
+    expect(await repo.activateByUser('user-1')).toBe(1)
+    const freshRepo = new MikroOrmRefSeqRepository(orm.em.fork())
+    expect((await freshRepo.findById('rs-1'))!.status).toBe(0)
+  })
+
+  it('should activate temporary refSeq chunks by user', async () => {
+    const em = orm.em.fork()
+    const asmRepo = new MikroOrmAssemblyRepository(em)
+    await asmRepo.create({ _id: 'asm-1', name: 'test', status: 0 })
+    const rsRepo = new MikroOrmRefSeqRepository(em)
+    await rsRepo.create({
+      _id: 'rs-1',
+      assembly: 'asm-1',
+      name: 'ctgA',
+      length: 1000,
+      chunkSize: 500,
+    })
+    const repo = new MikroOrmRefSeqChunkRepository(em)
+    await repo.create({
+      _id: 'c1',
+      refSeq: 'rs-1',
+      n: 0,
+      sequence: 'ATCG',
+      status: -1,
+      user: 'user-1',
+    })
+
+    expect(await repo.activateByUser('user-1')).toBe(1)
   })
 })
 

@@ -39,4 +39,5 @@ export interface FeatureRepository {
   deleteDescendants(id: string): Promise<number>
   deleteByRefSeqs(refSeqIds: string[]): Promise<number>
   searchText(refSeqId: string, query: string): Promise<FeatureRow[]>
+  activateByUser(user: string): Promise<number>
 }
