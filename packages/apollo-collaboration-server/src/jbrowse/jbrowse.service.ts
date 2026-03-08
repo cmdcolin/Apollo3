@@ -1,12 +1,6 @@
-import {
-  JBrowseConfig,
-  JBrowseConfigDocument,
-} from '@apollo-annotation/schemas'
-import { Injectable, Logger, Optional } from '@nestjs/common'
+import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { InjectModel } from '@nestjs/mongoose'
 import merge from 'deepmerge'
-import { Model } from 'mongoose'
 
 import { AssembliesService } from '../assemblies/assemblies.service'
 import { DatabaseService } from '../mikro-orm/database.service'
@@ -18,9 +12,6 @@ export class JBrowseService {
   constructor(
     private readonly assembliesService: AssembliesService,
     private readonly refSeqsService: RefSeqsService,
-    @Optional()
-    @InjectModel(JBrowseConfig.name)
-    private readonly jbrowseConfigModel: Model<JBrowseConfigDocument>,
     private readonly configService: ConfigService<
       {
         URL: string
@@ -142,12 +133,14 @@ export class JBrowseService {
     const url = this.configService.get('URL', { infer: true })
     const assemblies = await this.assembliesService.findAll()
     return assemblies.map((assembly) => {
-      const assemblyId = assembly._id.toHexString()
+      const assemblyId = String(assembly._id)
       const trackId = `sequenceConfigId-${assembly.name}`
       return {
         name: assemblyId,
         aliases:
-          assembly.aliases.length > 0 ? [...assembly.aliases] : [assembly.name],
+          assembly.aliases && assembly.aliases.length > 0
+            ? [...assembly.aliases]
+            : [assembly.name],
         displayName: assembly.displayName || assembly.name,
         sequence: {
           trackId,
@@ -209,12 +202,8 @@ export class JBrowseService {
   }
 
   async getJBrowseConfig() {
-    if (this.db.useV2Backend) {
-      const row = await this.db.jbrowseConfig.findOne()
-      return row?.config
-    }
-    const document = await this.jbrowseConfigModel.findOne().exec()
-    return document?.toJSON()
+    const row = await this.db.jbrowseConfig.findOne()
+    return row?.config
   }
 
   async getConfig(role?: Role) {

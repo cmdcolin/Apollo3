@@ -48,6 +48,14 @@ export class MikroOrmCheckRepository implements CheckRepository {
     return entities.map(toRow)
   }
 
+  async findByName(name: string) {
+    const entity = await this.em.findOne(CheckEntity, { name })
+    if (entity) {
+      return toRow(entity)
+    }
+    return undefined
+  }
+
   async upsert(row: CheckRow) {
     let entity = await this.em.findOne(CheckEntity, { _id: row._id })
     if (entity) {

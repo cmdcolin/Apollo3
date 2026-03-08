@@ -4,20 +4,16 @@ import path from 'node:path'
 import { Readable } from 'node:stream'
 import { ReadableStream, TransformStream } from 'node:stream/web'
 
-import { File, FileDocument } from '@apollo-annotation/schemas'
 import { type GFF3Feature, GFFTransformer } from '@gmod/gff'
 import {
   Injectable,
   InternalServerErrorException,
   Logger,
   NotFoundException,
-  Optional,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { InjectModel } from '@nestjs/mongoose'
 import { ObjectId } from 'mongodb'
 import { GenericFilehandle, LocalFile } from 'generic-filehandle'
-import { Model } from 'mongoose'
 
 import { DatabaseService } from '../mikro-orm/database.service'
 
@@ -31,9 +27,6 @@ import {
 @Injectable()
 export class FilesService {
   constructor(
-    @Optional()
-    @InjectModel(File.name)
-    private readonly fileModel: Model<FileDocument>,
     private readonly configService: ConfigService<
       { FILE_UPLOAD_FOLDER: string },
       true
@@ -63,26 +56,16 @@ export class FilesService {
     this.logger.debug(
       `Add uploaded file info into DB: ${JSON.stringify(createFileDto)}`,
     )
-    if (this.db.useV2Backend) {
-      return this.db.file.create({
-        _id: new ObjectId().toHexString(),
-        basename: createFileDto.basename,
-        checksum: createFileDto.checksum,
-        type: createFileDto.type,
-      })
-    }
-    return this.fileModel.create(createFileDto)
+    return this.db.file.create({
+      _id: new ObjectId().toHexString(),
+      basename: createFileDto.basename,
+      checksum: createFileDto.checksum,
+      type: createFileDto.type,
+    })
   }
 
   async findOne(id: string) {
-    if (this.db.useV2Backend) {
-      const file = await this.db.file.findById(id)
-      if (!file) {
-        throw new NotFoundException(`File with id "${id}" not found`)
-      }
-      return file
-    }
-    const file = await this.fileModel.findById(id).exec()
+    const file = await this.db.file.findById(id)
     if (!file) {
       throw new NotFoundException(`File with id "${id}" not found`)
     }
@@ -144,51 +127,14 @@ export class FilesService {
     )
   }
 
-  /**
-   * Delete file from Files collection in Mongo. Check and see if that checksum is used elsewhere in the collection; if not, delete the file as well
-   * @param id - fileId to be deleted
-   * @returns
-   */
   async remove(id: string) {
-    if (this.db.useV2Backend) {
-      const file = await this.db.file.findById(id)
-      if (!file) {
-        throw new NotFoundException(`File with id "${id}" not found`)
-      }
-      await this.db.file.deleteById(id)
-
-      const otherFiles = await this.db.file.findByChecksum(file.checksum)
-      if (!otherFiles) {
-        const fileUploadFolder = this.configService.get('FILE_UPLOAD_FOLDER', {
-          infer: true,
-        })
-        const compressedFullFileName = path.join(
-          fileUploadFolder,
-          file.checksum,
-        )
-        this.logger.debug(
-          `Delete the file "${compressedFullFileName}" from server folder`,
-        )
-
-        try {
-          await unlink(compressedFullFileName)
-        } catch {
-          throw new InternalServerErrorException(
-            `File "${compressedFullFileName}" could not be deleted from server`,
-          )
-        }
-      }
-      return
-    }
-    const file = await this.fileModel.findById(id).exec()
+    const file = await this.db.file.findById(id)
     if (!file) {
       throw new NotFoundException(`File with id "${id}" not found`)
     }
-    await this.fileModel.findByIdAndDelete(id).exec()
+    await this.db.file.deleteById(id)
 
-    const otherFiles = await this.fileModel
-      .findOne({ checksum: file.checksum })
-      .exec()
+    const otherFiles = await this.db.file.findByChecksum(file.checksum)
     if (!otherFiles) {
       const fileUploadFolder = this.configService.get('FILE_UPLOAD_FOLDER', {
         infer: true,
@@ -206,13 +152,9 @@ export class FilesService {
         )
       }
     }
-    return
   }
 
   async findAll() {
-    if (this.db.useV2Backend) {
-      return this.db.file.findAll()
-    }
-    return this.fileModel.find().exec()
+    return this.db.file.findAll()
   }
 }

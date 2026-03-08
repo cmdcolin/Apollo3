@@ -1,13 +1,7 @@
-import fs from 'node:fs/promises'
-
-import { type DynamicModule, Module } from '@nestjs/common'
-import { ConfigModule, ConfigService } from '@nestjs/config'
+import { Module } from '@nestjs/common'
+import { ConfigModule } from '@nestjs/config'
 import { APP_GUARD } from '@nestjs/core'
-import { MongooseModule, MongooseModuleFactoryOptions } from '@nestjs/mongoose'
 import Joi from 'joi'
-import { Connection } from 'mongoose'
-
-import { useMongoose } from './utils/constants'
 
 import { AssembliesModule } from './assemblies/assemblies.module'
 import { AuthenticationModule } from './authentication/authentication.module'
@@ -30,19 +24,12 @@ import { UsersModule } from './users/users.module'
 import { JwtAuthGuard } from './utils/jwt-auth.guard'
 import { ValidationGuard } from './utils/validation/validation.guards'
 
-interface MongoDBURIConfig {
-  MONGODB_URI?: string
-  MONGODB_URI_FILE?: string
-}
-
 const nodeEnv = process.env.NODE_ENV ?? 'production'
 
 const validationSchema = Joi.object({
   // Required
   URL: Joi.string().uri().required(),
   NAME: Joi.string().required(),
-  MONGODB_URI: Joi.string(),
-  MONGODB_URI_FILE: Joi.string(),
   FILE_UPLOAD_FOLDER: Joi.string().required(),
   GOOGLE_CLIENT_ID: Joi.string(),
   GOOGLE_CLIENT_ID_FILE: Joi.string(),
@@ -82,7 +69,6 @@ const validationSchema = Joi.object({
       return value
     })
     .default('log,warn,error'),
-  // default for this is set in the refSeq mongoose schema
   CHUNK_SIZE: Joi.number(),
   DEFAULT_NEW_USER_ROLE: Joi.string()
     .valid('admin', 'user', 'readOnly', 'none')
@@ -111,10 +97,9 @@ const validationSchema = Joi.object({
     })
     .default(''),
   PLUGIN_URLS_FILE: Joi.string(),
-  DB_BACKEND: Joi.string().valid('mongodb', 'sqlite', 'postgresql'),
+  DB_BACKEND: Joi.string().valid('sqlite', 'postgresql'),
   DB_CONNECTION_URL: Joi.string(),
 })
-  .oxor('MONGODB_URI', 'MONGODB_URI_FILE')
   .oxor('GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_ID_FILE')
   .oxor('GOOGLE_CLIENT_SECRET', 'GOOGLE_CLIENT_SECRET_FILE')
   .oxor('MICROSOFT_CLIENT_ID', 'MICROSOFT_CLIENT_ID_FILE')
@@ -122,26 +107,6 @@ const validationSchema = Joi.object({
   .xor('JWT_SECRET', 'JWT_SECRET_FILE')
   .xor('SESSION_SECRET', 'SESSION_SECRET_FILE')
   .xor('PLUGIN_URLS', 'PLUGIN_URLS_FILE')
-
-async function mongoDBURIFactory(
-  configService: ConfigService<MongoDBURIConfig, true>,
-): Promise<MongooseModuleFactoryOptions> {
-  let uri = configService.get('MONGODB_URI', { infer: true })
-  if (!uri) {
-    // We can use non-null assertion since joi already checks this for us
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const uriFile = configService.get('MONGODB_URI_FILE', { infer: true })!
-    const uriFileText = await fs.readFile(uriFile, 'utf8')
-    uri = uriFileText.trim()
-  }
-  return {
-    uri,
-    connectionFactory: (connection: Connection) => {
-      connection.set('maxTimeMS', 7_200_000)
-      return connection
-    },
-  }
-}
 
 @Module({
   imports: [
@@ -153,15 +118,6 @@ async function mongoDBURIFactory(
     HealthModule,
     MessagesModule,
     ApolloMikroOrmModule.forRoot(),
-    ...(useMongoose
-      ? [
-          MongooseModule.forRootAsync({
-            imports: [ConfigModule],
-            useFactory: mongoDBURIFactory,
-            inject: [ConfigService],
-          }) as DynamicModule,
-        ]
-      : []),
     PluginsModule.registerAsync(),
     CountersModule,
     RefSeqChunksModule,

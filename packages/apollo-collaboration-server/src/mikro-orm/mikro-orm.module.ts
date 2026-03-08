@@ -1,6 +1,5 @@
 import { createMikroOrmConfig } from '@apollo-annotation/entities'
-import { MikroORM } from '@mikro-orm/core'
-import { EntityManager } from '@mikro-orm/core'
+import { MikroORM, EntityManager } from '@mikro-orm/core'
 import { DynamicModule, Logger, Module } from '@nestjs/common'
 
 import { DatabaseService } from './database.service'
@@ -10,17 +9,9 @@ export class ApolloMikroOrmModule {
   private static readonly logger = new Logger(ApolloMikroOrmModule.name)
 
   static forRoot(): DynamicModule {
-    const dbBackend = process.env.DB_BACKEND
-    if (!dbBackend || dbBackend === 'mongodb') {
-      return {
-        module: ApolloMikroOrmModule,
-        providers: [DatabaseService],
-        exports: [DatabaseService],
-        global: true,
-      }
-    }
-
-    const dbType = dbBackend as 'postgresql' | 'sqlite' | 'mongo'
+    const dbType = (process.env.DB_BACKEND ?? 'sqlite') as
+      | 'postgresql'
+      | 'sqlite'
     const connectionUrl = process.env.DB_CONNECTION_URL ?? 'apollo3.sqlite'
 
     const config = createMikroOrmConfig(dbType, connectionUrl)

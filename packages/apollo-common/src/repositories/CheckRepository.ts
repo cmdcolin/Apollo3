@@ -13,5 +13,6 @@ export interface CheckRepository {
   findDefaults(): Promise<CheckRow[]>
   findById(id: string): Promise<CheckRow | undefined>
   findByIds(ids: string[]): Promise<CheckRow[]>
+  findByName(name: string): Promise<CheckRow | undefined>
   upsert(row: CheckRow): Promise<CheckRow>
 }

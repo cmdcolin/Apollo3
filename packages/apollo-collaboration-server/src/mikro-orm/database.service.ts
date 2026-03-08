@@ -26,23 +26,13 @@ import {
   MikroOrmUserRepository,
 } from '@apollo-annotation/entities'
 import { EntityManager } from '@mikro-orm/core'
-import { Inject, Injectable, Optional } from '@nestjs/common'
+import { Inject, Injectable } from '@nestjs/common'
 
 @Injectable()
 export class DatabaseService {
-  constructor(
-    @Optional() @Inject(EntityManager) private readonly em?: EntityManager,
-  ) {}
-
-  get useV2Backend() {
-    const dbBackend = process.env.DB_BACKEND
-    return dbBackend && dbBackend !== 'mongodb' && this.em !== undefined
-  }
+  constructor(@Inject(EntityManager) private readonly em: EntityManager) {}
 
   private fork() {
-    if (!this.em) {
-      throw new Error('EntityManager not available')
-    }
     return this.em.fork()
   }
 
