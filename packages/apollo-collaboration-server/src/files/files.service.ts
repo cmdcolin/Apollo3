@@ -1,8 +1,11 @@
 import { createReadStream } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 import { unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { Readable } from 'node:stream'
 import { ReadableStream, TransformStream } from 'node:stream/web'
+import { promisify } from 'node:util'
+import { gunzip as gunzipCb } from 'node:zlib'
 
 import { type GFF3Feature, GFFTransformer } from '@gmod/gff'
 import {
@@ -85,11 +88,21 @@ export class FilesService {
     return fileStream.pipeThrough(gunzip) as ReadableStream<Uint8Array>
   }
 
-  getFileHandle(file: { checksum: string }): GenericFilehandle {
+  getFileHandle(file: { checksum: string }) {
     const fileUploadFolder = this.configService.get('FILE_UPLOAD_FOLDER', {
       infer: true,
     })
     return new LocalFile(path.join(fileUploadFolder, file.checksum))
+  }
+
+  async getDecompressedFileContents(file: { checksum: string }) {
+    const fileUploadFolder = this.configService.get('FILE_UPLOAD_FOLDER', {
+      infer: true,
+    })
+    const compressed = await readFile(
+      path.join(fileUploadFolder, file.checksum),
+    )
+    return promisify(gunzipCb)(compressed)
   }
 
   parseGFF3(

@@ -57,6 +57,8 @@ export class ChangesService {
       filesService: {
         getFileStream: (file) => this.filesService.getFileStream(file),
         getFileHandle: (file) => this.filesService.getFileHandle(file),
+        getDecompressedFileContents: (file) =>
+          this.filesService.getDecompressedFileContents(file),
         parseGFF3: (stream) => this.filesService.parseGFF3(stream),
         create: (dto) => {
           void this.filesService.create(dto)

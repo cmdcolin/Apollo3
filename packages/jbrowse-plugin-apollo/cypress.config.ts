@@ -3,6 +3,7 @@
 import fs from 'node:fs'
 
 import { defineConfig } from 'cypress'
+import failFast from 'cypress-fail-fast/plugin'
 import getCompareSnapshotsPlugin from 'cypress-image-diff-js/plugin'
 
 export default defineConfig({
@@ -10,12 +11,12 @@ export default defineConfig({
   // with the coordinates
   viewportHeight: 2000,
   viewportWidth: 1300,
-  bail: 1,
   screenshotOnRunFailure: false,
   video: false,
   e2e: {
     baseUrl: 'http://localhost:8999',
     setupNodeEvents(on, config) {
+      failFast(on, config)
       // @ts-expect-error types are wrong
       getCompareSnapshotsPlugin(on, config)
       on('task', {

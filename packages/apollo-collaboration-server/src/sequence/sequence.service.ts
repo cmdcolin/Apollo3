@@ -1,10 +1,6 @@
 import { BgzipIndexedFasta, IndexedFasta } from '@gmod/indexedfasta'
 import { Injectable, Logger } from '@nestjs/common'
 import { BlobFile, RemoteFile } from 'generic-filehandle2'
-import { promisify } from 'node:util'
-import { gunzip as gunzipCb } from 'node:zlib'
-
-const gunzip = promisify(gunzipCb)
 
 import { FilesService } from '../files/files.service.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
@@ -99,14 +95,8 @@ export class SequenceService {
 
     const fasta = this.filesService.getFileHandle(faRow)
     const [faiDecompressed, gziDecompressed] = await Promise.all([
-      this.filesService
-        .getFileHandle(faiRow)
-        .readFile()
-        .then((buf) => gunzip(buf)),
-      this.filesService
-        .getFileHandle(gziRow)
-        .readFile()
-        .then((buf) => gunzip(buf)),
+      this.filesService.getDecompressedFileContents(faiRow),
+      this.filesService.getDecompressedFileContents(gziRow),
     ])
     const fai = new BlobFile(new Blob([faiDecompressed]))
     const gzi = new BlobFile(new Blob([gziDecompressed]))

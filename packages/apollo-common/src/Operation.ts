@@ -48,6 +48,10 @@ export interface ServerDataStore {
       checksum: string
     }): ReadableStream<Uint8Array>
     getFileHandle(file: { _id: string; checksum: string }): GenericFilehandle
+    getDecompressedFileContents(file: {
+      _id: string
+      checksum: string
+    }): Promise<Buffer>
     parseGFF3(
       stream: ReadableStream<Uint8Array>,
       parseOptions?: { bufferSize?: number },

@@ -537,6 +537,7 @@ __metadata:
     clsx: "npm:^1.1.1"
     concurrently: "npm:^9.2.1"
     cypress: "npm:^15.0.0"
+    cypress-fail-fast: "npm:^7.1.1"
     cypress-image-diff-html-report: "npm:^2.2.0"
     cypress-image-diff-js: "npm:^2.5.0"
     electron-chromedriver: "npm:^40.6.0"
@@ -14637,6 +14638,17 @@ __metadata:
   version: 3.2.3
   resolution: "csstype@npm:3.2.3"
   checksum: 10c0/cd29c51e70fa822f1cecd8641a1445bed7063697469d35633b516e60fe8c1bde04b08f6c5b6022136bb669b64c63d4173af54864510fbb4ee23281801841a3ce
+  languageName: node
+  linkType: hard
+
+"cypress-fail-fast@npm:^7.1.1":
+  version: 7.1.1
+  resolution: "cypress-fail-fast@npm:7.1.1"
+  dependencies:
+    chalk: "npm:4.1.2"
+  peerDependencies:
+    cypress: ">=8.0.0"
+  checksum: 10c0/82087c30e56e8675806e265cf8d33e05ac043bd9227d77912921cc36f9a4d188f7e2429c52f9f98e69d24365ebea8e8737d60711c3186727029adabef6056cce
   languageName: node
   linkType: hard
 
