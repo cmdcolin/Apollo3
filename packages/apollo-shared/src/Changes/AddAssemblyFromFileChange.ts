@@ -14,10 +14,6 @@ import type {
 import { BgzipIndexedFasta, IndexedFasta } from '@gmod/indexedfasta'
 import ObjectID from 'bson-objectid'
 import { BlobFile, RemoteFile } from 'generic-filehandle2'
-import { promisify } from 'node:util'
-import { gunzip as gunzipCb } from 'node:zlib'
-
-const gunzip = promisify(gunzipCb)
 
 import { FromFileBaseChange } from './FromFileBaseChange.js'
 
@@ -196,14 +192,8 @@ export class AddAssemblyFromFileChange extends FromFileBaseChange {
 
     const fasta = backend.filesService.getFileHandle(faDoc)
     const [faiDecompressed, gziDecompressed] = await Promise.all([
-      backend.filesService
-        .getFileHandle(faiDoc)
-        .readFile()
-        .then((buf) => gunzip(buf)),
-      backend.filesService
-        .getFileHandle(gziDoc)
-        .readFile()
-        .then((buf) => gunzip(buf)),
+      backend.filesService.getDecompressedFileContents(faiDoc),
+      backend.filesService.getDecompressedFileContents(gziDoc),
     ])
     const fai = new BlobFile(new Blob([faiDecompressed]))
     const gzi = new BlobFile(new Blob([gziDecompressed]))

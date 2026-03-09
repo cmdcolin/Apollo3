@@ -6,6 +6,7 @@ import JBrowseReExports from '@jbrowse/core/ReExports/list'
 import prettyBytes from 'pretty-bytes'
 
 const isWatch = process.argv.includes('--watch')
+const isDev = process.env.NODE_ENV !== 'production'
 const PORT = process.env.PORT ? +process.env.PORT : 9000
 
 function createGlobalMap(jbrowseGlobals) {
@@ -53,7 +54,7 @@ const config = {
   globalName: 'JBrowsePluginApollo',
   metafile: true,
   plugins: [globalExternals(createGlobalMap(globals)), rebuildLogPlugin],
-  ...(isWatch
+  ...(isWatch || isDev
     ? { outfile: 'dist/jbrowse-plugin-apollo.umd.development.js' }
     : {
         outfile: 'dist/jbrowse-plugin-apollo.umd.production.min.js',

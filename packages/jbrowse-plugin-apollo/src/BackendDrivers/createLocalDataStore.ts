@@ -54,6 +54,9 @@ export function createLocalDataStore(orm: MikroORM): ServerDataStore {
       getFileHandle() {
         throw new Error('File service not available in desktop mode')
       },
+      getDecompressedFileContents() {
+        throw new Error('File service not available in desktop mode')
+      },
       parseGFF3() {
         throw new Error('File service not available in desktop mode')
       },
