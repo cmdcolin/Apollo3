@@ -20,6 +20,26 @@ Cypress.Commands.add('loginAsGuest', () => {
     { cacheAcrossSpecs: true },
   )
   cy.visit('/?config=http://localhost:3999/jbrowse/config.json')
+  cy.contains('button', 'Apollo', { timeout: 15_000 }).should('be.enabled')
+  // Debug: check if token is in sessionStorage after page load
+  cy.window().then((win) => {
+    const keys = Object.keys(win.sessionStorage)
+    cy.task(
+      'log',
+      `[DEBUG loginAsGuest] sessionStorage keys: ${JSON.stringify(keys)}`,
+    )
+    for (const key of keys) {
+      if (
+        key.toLowerCase().includes('token') ||
+        key.toLowerCase().includes('internet')
+      ) {
+        cy.task(
+          'log',
+          `[DEBUG loginAsGuest] ${key} = ${win.sessionStorage.getItem(key)?.slice(0, 80)}...`,
+        )
+      }
+    }
+  })
 })
 
 Cypress.Commands.add('deleteAssemblies', () => {
@@ -167,16 +187,16 @@ Cypress.Commands.add(
       return
     }
     const menuItemPathPrefix = menuItemPath.slice(0, -1)
-    cy.wrap(Cypress.$('body')).within(() => {
-      cy.get('button', { timeout: 10_000 })
-        .contains('Apollo')
-        .should('be.enabled')
-        .click({ force: true })
-      for (const pathPart of menuItemPathPrefix) {
-        cy.contains(pathPart, { timeout: 10_000 }).click()
-      }
-      cy.contains(menuItemName, { timeout: 10_000 }).click()
-    })
+    const firstItem = menuItemPathPrefix[0] ?? menuItemName
+    // Wait for the menu item to be registered before opening.
+    // Admin menus are added asynchronously after login.
+    cy.contains('button', 'Apollo', { timeout: 15_000 }).should('be.enabled')
+    cy.contains('button', 'Apollo').click()
+    cy.contains('[role="menuitem"]', firstItem, { timeout: 15_000 })
+    for (const pathPart of menuItemPathPrefix) {
+      cy.contains('[role="menuitem"]', pathPart).trigger('mouseover')
+    }
+    cy.contains('[role="menuitem"]', menuItemName, { timeout: 10_000 }).click()
   },
 )
 

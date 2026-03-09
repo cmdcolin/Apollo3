@@ -16,6 +16,16 @@ Cypress.on('window:before:load', (win) => {
       )
     }
   }
+  const origLog = win.console.log
+  win.console.log = (...args: unknown[]) => {
+    origLog.apply(win.console, args)
+    const msg = args.map(String).join(' ')
+    if (msg.includes('[DEBUG') && msg.length < 500) {
+      ;(win as Window & { __apolloLogs?: string[] }).__apolloLogs?.push(
+        `LOG: ${msg}`,
+      )
+    }
+  }
   const origWarn = win.console.warn
   win.console.warn = (...args: unknown[]) => {
     origWarn.apply(win.console, args)
