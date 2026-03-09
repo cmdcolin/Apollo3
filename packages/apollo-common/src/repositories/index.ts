@@ -1,4 +1,8 @@
-export type { AssemblyRepository, AssemblyRow } from './AssemblyRepository.js'
+export type {
+  AssemblyRepository,
+  AssemblyRow,
+  SequenceSource,
+} from './AssemblyRepository.js'
 export type { ChangeRepository, ChangeRow } from './ChangeRepository.js'
 export type { CounterRepository } from './CounterRepository.js'
 export type {

@@ -293,7 +293,7 @@ void describe('Test CLI', () => {
       `${apollo} assembly add-from-gff ${P} test_data/tiny.fasta.gff3 -a vv1 --omit-features -f`,
     )
     const out = JSON.parse(p.stdout)
-    assert.ok(Object.keys(out.fileIds).includes('fa'))
+    assert.ok(out.sequenceSource.fa)
 
     // Get id of assembly named vv1 and check there are no features
     p = new Shell(`${apollo} assembly get ${P} -a vv1`)
@@ -440,7 +440,7 @@ void describe('Test CLI', () => {
       `${apollo} assembly add-from-fasta ${P} test_data/tiny.fasta -a vv1 -e -f`,
     )
     const out = JSON.parse(p.stdout)
-    assert.ok(Object.keys(out.fileIds).includes('fa'))
+    assert.ok(out.sequenceSource.fa)
 
     p = new Shell(`${apollo} assembly get ${P} -a vv1`)
     assert.ok(p.stdout.includes('vv1'))
@@ -471,7 +471,7 @@ void describe('Test CLI', () => {
       `${apollo} assembly add-from-fasta ${P} -a vv1 -f http://localhost:3131/volvox.fa.gz`,
     )
     const out = JSON.parse(p.stdout)
-    assert.ok(Object.keys(out.externalLocation).includes('fa'))
+    assert.ok(out.sequenceSource.type === 'external' && out.sequenceSource.fa)
 
     p = new Shell(`${apollo} assembly get ${P} -a vv1`)
     assert.ok(p.stdout.includes('vv1'))
@@ -1667,7 +1667,7 @@ EOF`,
     p = new Shell(`${apollo} assembly add-from-fasta ${P} ${fid} -a up -e -f`)
     const out = JSON.parse(p.stdout)
     assert.deepStrictEqual(out.name, 'up')
-    assert.deepStrictEqual(out.fileIds.fa, fid)
+    assert.deepStrictEqual(out.sequenceSource.fa, fid)
   })
 
   void globalThis.itName('Get files', () => {

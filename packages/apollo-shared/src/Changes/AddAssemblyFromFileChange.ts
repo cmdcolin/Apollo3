@@ -7,13 +7,17 @@ import type {
   ChangeOptions,
   ClientDataStore,
   RefSeqRow,
+  SequenceSource,
   SerializedAssemblySpecificChange,
   ServerDataStore,
 } from '@apollo-annotation/common'
-import { BgzipIndexedFasta } from '@gmod/indexedfasta'
+import { BgzipIndexedFasta, IndexedFasta } from '@gmod/indexedfasta'
 import ObjectID from 'bson-objectid'
-import { BlobFile } from 'generic-filehandle2'
-import { gunzip } from 'node:zlib/promises'
+import { BlobFile, RemoteFile } from 'generic-filehandle2'
+import { promisify } from 'node:util'
+import { gunzip as gunzipCb } from 'node:zlib'
+
+const gunzip = promisify(gunzipCb)
 
 import { FromFileBaseChange } from './FromFileBaseChange.js'
 
@@ -24,7 +28,7 @@ export interface SerializedAddAssemblyFromFileChangeBase
 
 export interface AddAssemblyFromFileChangeDetails {
   assemblyName: string
-  fileIds: { fa: string } | { fa: string; fai: string; gzi: string }
+  sequenceSource: SequenceSource
 }
 
 export interface SerializedAddAssemblyFromFileChangeSingle
@@ -59,8 +63,8 @@ export class AddAssemblyFromFileChange extends FromFileBaseChange {
   toJSON(): SerializedAddAssemblyFromFileChange {
     const { assembly, changes, typeName } = this
     if (changes.length === 1) {
-      const [{ assemblyName, fileIds }] = changes
-      return { typeName, assembly, assemblyName, fileIds }
+      const [{ assemblyName, sequenceSource }] = changes
+      return { typeName, assembly, assemblyName, sequenceSource }
     }
     return { typeName, assembly, changes }
   }
@@ -68,48 +72,45 @@ export class AddAssemblyFromFileChange extends FromFileBaseChange {
   async executeOnServer(backend: ServerDataStore) {
     const { changes, logger } = this
     for (const change of changes) {
-      const { assemblyName, fileIds } = change
-      await ('gzi' in fileIds
-        ? this.executeOnServerIndexed(backend, assemblyName, fileIds)
-        : this.executeOnServerFasta(backend, assemblyName, fileIds.fa))
+      const { assemblyName, sequenceSource } = change
+      switch (sequenceSource.type) {
+        case 'external': {
+          await this.executeOnServerExternal(
+            backend,
+            assemblyName,
+            sequenceSource,
+          )
+          break
+        }
+        case 'indexed': {
+          await this.executeOnServerIndexed(
+            backend,
+            assemblyName,
+            sequenceSource,
+          )
+          break
+        }
+        case 'chunked': {
+          await this.executeOnServerChunked(
+            backend,
+            assemblyName,
+            sequenceSource.fa,
+          )
+          break
+        }
+      }
     }
     logger.debug?.('Assembly added')
   }
 
-  private async executeOnServerIndexed(
+  private async createAssemblyAndRefSeqs(
     backend: ServerDataStore,
     assemblyName: string,
-    fileIds: { fa: string; fai: string; gzi: string },
+    sequenceSource: SequenceSource,
+    allSequenceSizes: Record<string, number>,
   ) {
     const { CHUNK_SIZE } = process.env
     const customChunkSize = CHUNK_SIZE ? Number(CHUNK_SIZE) : undefined
-    const { fa: faId, fai: faiId, gzi: gziId } = fileIds
-
-    const faDoc = await backend.fileRepository.findById(faId)
-    if (!faDoc) {
-      throw new Error(`File "${faId}" not found`)
-    }
-    const faiDoc = await backend.fileRepository.findById(faiId)
-    if (!faiDoc) {
-      throw new Error(`File "${faiId}" not found`)
-    }
-    const gziDoc = await backend.fileRepository.findById(gziId)
-    if (!gziDoc) {
-      throw new Error(`File "${gziId}" not found`)
-    }
-
-    const fasta = backend.filesService.getFileHandle(faDoc)
-    const faiHandle = backend.filesService.getFileHandle(faiDoc)
-    const gziHandle = backend.filesService.getFileHandle(gziDoc)
-    const [faiDecompressed, gziDecompressed] = await Promise.all([
-      faiHandle.readFile().then((buf) => gunzip(buf)),
-      gziHandle.readFile().then((buf) => gunzip(buf)),
-    ])
-    const fai = new BlobFile(new Blob([faiDecompressed]))
-    const gzi = new BlobFile(new Blob([gziDecompressed]))
-    const sequenceAdapter = new BgzipIndexedFasta({ fasta, fai, gzi })
-    const allSequenceSizes = await sequenceAdapter.getSequenceSizes()
-    await fasta.close()
 
     const existingAssembly =
       await backend.assemblyRepository.findByName(assemblyName)
@@ -123,7 +124,7 @@ export class AddAssemblyFromFileChange extends FromFileBaseChange {
       name: assemblyName,
       user: backend.user,
       status: -1,
-      fileIds,
+      sequenceSource,
       checks,
     })
     this.logger.debug?.(
@@ -147,7 +148,78 @@ export class AddAssemblyFromFileChange extends FromFileBaseChange {
     }
   }
 
-  private async executeOnServerFasta(
+  private async executeOnServerExternal(
+    backend: ServerDataStore,
+    assemblyName: string,
+    source: { type: 'external'; fa: string; fai: string; gzi?: string },
+  ) {
+    const { fa, fai, gzi } = source
+    const sequenceAdapter = gzi
+      ? new BgzipIndexedFasta({
+          fasta: new RemoteFile(fa, { fetch }),
+          fai: new RemoteFile(fai, { fetch }),
+          gzi: new RemoteFile(gzi, { fetch }),
+        })
+      : new IndexedFasta({
+          fasta: new RemoteFile(fa, { fetch }),
+          fai: new RemoteFile(fai, { fetch }),
+        })
+    const allSequenceSizes = await sequenceAdapter.getSequenceSizes()
+    if (!allSequenceSizes) {
+      throw new Error('No data read from indexed fasta getSequenceSizes')
+    }
+    await this.createAssemblyAndRefSeqs(
+      backend,
+      assemblyName,
+      source,
+      allSequenceSizes,
+    )
+  }
+
+  private async executeOnServerIndexed(
+    backend: ServerDataStore,
+    assemblyName: string,
+    source: { type: 'indexed'; fa: string; fai: string; gzi: string },
+  ) {
+    const faDoc = await backend.fileRepository.findById(source.fa)
+    if (!faDoc) {
+      throw new Error(`File "${source.fa}" not found`)
+    }
+    const faiDoc = await backend.fileRepository.findById(source.fai)
+    if (!faiDoc) {
+      throw new Error(`File "${source.fai}" not found`)
+    }
+    const gziDoc = await backend.fileRepository.findById(source.gzi)
+    if (!gziDoc) {
+      throw new Error(`File "${source.gzi}" not found`)
+    }
+
+    const fasta = backend.filesService.getFileHandle(faDoc)
+    const [faiDecompressed, gziDecompressed] = await Promise.all([
+      backend.filesService
+        .getFileHandle(faiDoc)
+        .readFile()
+        .then((buf) => gunzip(buf)),
+      backend.filesService
+        .getFileHandle(gziDoc)
+        .readFile()
+        .then((buf) => gunzip(buf)),
+    ])
+    const fai = new BlobFile(new Blob([faiDecompressed]))
+    const gzi = new BlobFile(new Blob([gziDecompressed]))
+    const sequenceAdapter = new BgzipIndexedFasta({ fasta, fai, gzi })
+    const allSequenceSizes = await sequenceAdapter.getSequenceSizes()
+    await fasta.close()
+
+    await this.createAssemblyAndRefSeqs(
+      backend,
+      assemblyName,
+      source,
+      allSequenceSizes,
+    )
+  }
+
+  private async executeOnServerChunked(
     backend: ServerDataStore,
     assemblyName: string,
     fileId: string,
@@ -170,7 +242,7 @@ export class AddAssemblyFromFileChange extends FromFileBaseChange {
       name: assemblyName,
       user: backend.user,
       status: -1,
-      fileIds: { fa: fileId },
+      sequenceSource: { type: 'chunked', fa: fileId },
       checks,
     })
     this.logger.debug?.(

@@ -1,7 +1,10 @@
 import { BgzipIndexedFasta, IndexedFasta } from '@gmod/indexedfasta'
 import { Injectable, Logger } from '@nestjs/common'
 import { BlobFile, RemoteFile } from 'generic-filehandle2'
-import { gunzip } from 'node:zlib/promises'
+import { promisify } from 'node:util'
+import { gunzip as gunzipCb } from 'node:zlib'
+
+const gunzip = promisify(gunzipCb)
 
 import { FilesService } from '../files/files.service.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
@@ -18,74 +21,18 @@ export class SequenceService {
   private readonly logger = new Logger(SequenceService.name)
 
   async getSequence({ end, refSeq: refSeqId, start }: GetSequenceDto) {
-    const {
-      assembly: assemblyRepository,
-      file: fileRepository,
-      refSeqChunk: refSeqChunkRepository,
-      refSeq: refSeqRepository,
-    } = this.db
-
-    const refSeq = await refSeqRepository.findById(refSeqId)
+    const refSeq = await this.db.refSeq.findById(refSeqId)
     if (!refSeq) {
       throw new Error(`RefSeq "${refSeqId}" not found`)
     }
 
     const { assembly, chunkSize, name } = refSeq
-    const assemblyRow = await assemblyRepository.findById(assembly)
+    const assemblyRow = await this.db.assembly.findById(assembly)
+    const source = assemblyRow?.sequenceSource
 
-    if (assemblyRow?.externalLocation) {
-      const { fa, fai, gzi } = assemblyRow.externalLocation
-
-      const sequenceAdapter = gzi
-        ? new BgzipIndexedFasta({
-            fasta: new RemoteFile(fa),
-            fai: new RemoteFile(fai),
-            gzi: new RemoteFile(gzi),
-          })
-        : new IndexedFasta({
-            fasta: new RemoteFile(fa),
-            fai: new RemoteFile(fai),
-          })
-      const sequence = await sequenceAdapter.getSequence(name, start, end)
-      if (sequence === undefined) {
-        throw new Error('Sequence not found')
-      }
-      return sequence
-    }
-
-    if (assemblyRow?.fileIds && 'fai' in assemblyRow.fileIds) {
-      const { fa: faId, fai: faiId, gzi: gziId } = assemblyRow.fileIds
-      const faRow = await fileRepository.findById(faId)
-      if (!faRow) {
-        throw new Error(`No checksum for file document ${faId}`)
-      }
-
-      const faiRow = await fileRepository.findById(faiId)
-      if (!faiRow) {
-        throw new Error(`File document not found for ${faiId}`)
-      }
-
-      const gziRow = await fileRepository.findById(gziId)
-      if (!gziRow) {
-        throw new Error(`File document not found for ${gziId}`)
-      }
-
-      const fasta = this.filesService.getFileHandle(faRow)
-      const faiCompressed = await this.filesService
-        .getFileHandle(faiRow)
-        .readFile()
-      const fai = new BlobFile(new Blob([await gunzip(faiCompressed)]))
-      const gziCompressed = gziId
-        ? await this.filesService.getFileHandle(gziRow).readFile()
-        : undefined
-      const gzi = gziCompressed
-        ? new BlobFile(new Blob([await gunzip(gziCompressed)]))
-        : undefined
-      const sequenceAdapter = gziId
-        ? new BgzipIndexedFasta({ fasta, fai, gzi })
-        : new IndexedFasta({ fasta, fai })
-      const sequence = await sequenceAdapter.getSequence(name, start, end)
-      await fasta.close()
+    if (source?.type === 'external' || source?.type === 'indexed') {
+      const adapter = await this.buildFastaAdapter(source)
+      const sequence = await adapter.getSequence(name, start, end)
       if (sequence === undefined) {
         throw new Error('Sequence not found')
       }
@@ -94,7 +41,7 @@ export class SequenceService {
 
     const startChunk = Math.floor(start / chunkSize)
     const endChunk = Math.floor(end / chunkSize)
-    const chunks = await refSeqChunkRepository.findByRefSeqAndRange(
+    const chunks = await this.db.refSeqChunk.findByRefSeqAndRange(
       refSeqId,
       startChunk,
       endChunk,
@@ -114,5 +61,55 @@ export class SequenceService {
       }
     }
     return seq.join('')
+  }
+
+  private async buildFastaAdapter(
+    source:
+      | { type: 'external'; fa: string; fai: string; gzi?: string }
+      | { type: 'indexed'; fa: string; fai: string; gzi: string },
+  ) {
+    if (source.type === 'external') {
+      if (source.gzi) {
+        return new BgzipIndexedFasta({
+          fasta: new RemoteFile(source.fa),
+          fai: new RemoteFile(source.fai),
+          gzi: new RemoteFile(source.gzi),
+        })
+      }
+      return new IndexedFasta({
+        fasta: new RemoteFile(source.fa),
+        fai: new RemoteFile(source.fai),
+      })
+    }
+
+    const [faRow, faiRow, gziRow] = await Promise.all([
+      this.db.file.findById(source.fa),
+      this.db.file.findById(source.fai),
+      this.db.file.findById(source.gzi),
+    ])
+    if (!faRow) {
+      throw new Error(`File not found: ${source.fa}`)
+    }
+    if (!faiRow) {
+      throw new Error(`File not found: ${source.fai}`)
+    }
+    if (!gziRow) {
+      throw new Error(`File not found: ${source.gzi}`)
+    }
+
+    const fasta = this.filesService.getFileHandle(faRow)
+    const [faiDecompressed, gziDecompressed] = await Promise.all([
+      this.filesService
+        .getFileHandle(faiRow)
+        .readFile()
+        .then((buf) => gunzip(buf)),
+      this.filesService
+        .getFileHandle(gziRow)
+        .readFile()
+        .then((buf) => gunzip(buf)),
+    ])
+    const fai = new BlobFile(new Blob([faiDecompressed]))
+    const gzi = new BlobFile(new Blob([gziDecompressed]))
+    return new BgzipIndexedFasta({ fasta, fai, gzi })
   }
 }

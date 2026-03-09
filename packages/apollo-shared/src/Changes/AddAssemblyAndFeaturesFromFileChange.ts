@@ -20,7 +20,7 @@ export interface SerializedAddAssemblyAndFeaturesFromFileChangeBase
 
 export interface AddAssemblyAndFeaturesFromFileChangeDetails {
   assemblyName: string
-  fileIds: { fa: string }
+  sequenceSource: { type: 'chunked'; fa: string }
   parseOptions?: { bufferSize: number }
 }
 
@@ -56,8 +56,8 @@ export class AddAssemblyAndFeaturesFromFileChange extends FromFileBaseChange {
   toJSON(): SerializedAddAssemblyAndFeaturesFromFileChange {
     const { assembly, changes, typeName } = this
     if (changes.length === 1) {
-      const [{ assemblyName, fileIds }] = changes
-      return { typeName, assembly, assemblyName, fileIds }
+      const [{ assemblyName, sequenceSource }] = changes
+      return { typeName, assembly, assemblyName, sequenceSource }
     }
     return { typeName, assembly, changes }
   }
@@ -65,8 +65,8 @@ export class AddAssemblyAndFeaturesFromFileChange extends FromFileBaseChange {
   async executeOnServer(backend: ServerDataStore) {
     const { assembly, changes, logger } = this
     for (const change of changes) {
-      const { assemblyName, fileIds, parseOptions } = change
-      const fileId = fileIds.fa
+      const { assemblyName, sequenceSource, parseOptions } = change
+      const fileId = sequenceSource.fa
 
       const fileRow = await backend.fileRepository.findById(fileId)
       if (!fileRow) {
@@ -86,7 +86,7 @@ export class AddAssemblyAndFeaturesFromFileChange extends FromFileBaseChange {
         name: assemblyName,
         user: backend.user,
         status: -1,
-        file: fileId,
+        sequenceSource,
         checks,
       })
       logger.debug?.(`Added new assembly "${assemblyName}", id "${assembly}"`)

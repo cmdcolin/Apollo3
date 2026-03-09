@@ -5,7 +5,6 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import {
   AddAssemblyAndFeaturesFromFileChange,
-  AddAssemblyFromExternalChange,
   AddAssemblyFromFileChange,
 } from '@apollo-annotation/shared'
 import { readConfObject } from '@jbrowse/core/configuration'
@@ -243,17 +242,15 @@ export function AddAssembly({
     handleClose()
     event.preventDefault()
 
-    let change:
-      | AddAssemblyFromExternalChange
-      | AddAssemblyAndFeaturesFromFileChange
-      | AddAssemblyFromFileChange
+    let change: AddAssemblyAndFeaturesFromFileChange | AddAssemblyFromFileChange
 
     if (fileType === FileType.EXTERNAL) {
-      change = new AddAssemblyFromExternalChange({
-        typeName: 'AddAssemblyFromExternalChange',
+      change = new AddAssemblyFromFileChange({
+        typeName: 'AddAssemblyFromFileChange',
         assembly: new ObjectID().toHexString(),
         assemblyName,
-        externalLocation: {
+        sequenceSource: {
+          type: 'external',
           fa: fastaUrl,
           fai: fastaIndexUrl,
           gzi: fastaGziIndexUrl,
@@ -269,7 +266,7 @@ export function AddAssembly({
           typeName: 'AddAssemblyAndFeaturesFromFileChange',
           assembly: new ObjectID().toHexString(),
           assemblyName,
-          fileIds: { fa: faId },
+          sequenceSource: { type: 'chunked', fa: faId },
         })
       } else if (fileType === FileType.GFF3) {
         const faId = await uploadFile(fastaFile, FileType.GFF3)
@@ -277,9 +274,7 @@ export function AddAssembly({
           typeName: 'AddAssemblyFromFileChange',
           assembly: new ObjectID().toHexString(),
           assemblyName,
-          fileIds: {
-            fa: faId,
-          },
+          sequenceSource: { type: 'chunked', fa: faId },
         })
       } else if (sequenceIsEditable) {
         const faId = await uploadFile(fastaFile, FileType.FASTA)
@@ -287,9 +282,7 @@ export function AddAssembly({
           typeName: 'AddAssemblyFromFileChange',
           assembly: new ObjectID().toHexString(),
           assemblyName,
-          fileIds: {
-            fa: faId,
-          },
+          sequenceSource: { type: 'chunked', fa: faId },
         })
       } else {
         if (!fastaIndexFile || !fastaGziIndexFile) {
@@ -303,7 +296,8 @@ export function AddAssembly({
           typeName: 'AddAssemblyFromFileChange',
           assembly: new ObjectID().toHexString(),
           assemblyName,
-          fileIds: {
+          sequenceSource: {
+            type: 'indexed',
             fa: faId,
             fai: faiId,
             gzi: gziId,

@@ -235,21 +235,21 @@ async function migrate() {
       row.description = a.description
     }
     if (a.externalLocation) {
-      row.externalLocation = a.externalLocation
-    }
-    if (a.fileIds) {
+      row.sequenceSource = { type: 'external', ...a.externalLocation }
+    } else if (a.fileIds) {
       const ids = a.fileIds as Record<string, unknown>
       const converted: Record<string, string> = {}
       for (const [key, val] of Object.entries(ids)) {
         converted[key] = objectIdToString(val)
       }
-      row.fileIds = converted
+      if ('fai' in converted) {
+        row.sequenceSource = { type: 'indexed', ...converted }
+      } else {
+        row.sequenceSource = { type: 'chunked', ...converted }
+      }
     }
     if (a.checks) {
       row.checks = objectIdArrayToStrings(a.checks)
-    }
-    if (a.file) {
-      row.file = objectIdToString(a.file)
     }
     em.create('AssemblyEntity', row)
   }

@@ -1,6 +1,4 @@
-import { Entity, ManyToOne, PrimaryKey, Property } from '@mikro-orm/core'
-
-import { FileEntity } from './FileEntity.js'
+import { Entity, PrimaryKey, Property } from '@mikro-orm/core'
 
 @Entity({ tableName: 'assembly' })
 export class AssemblyEntity {
@@ -26,14 +24,11 @@ export class AssemblyEntity {
   user?: string
 
   @Property({ type: 'json', nullable: true })
-  externalLocation?: { fa: string; fai: string; gzi?: string }
-
-  @Property({ type: 'json', nullable: true })
-  fileIds?: { fa: string } | { fa: string; fai: string; gzi: string }
+  sequenceSource?:
+    | { type: 'external'; fa: string; fai: string; gzi?: string }
+    | { type: 'indexed'; fa: string; fai: string; gzi: string }
+    | { type: 'chunked'; fa: string }
 
   @Property({ type: 'json', nullable: true })
   checks?: string[]
-
-  @ManyToOne(() => FileEntity, { nullable: true })
-  file?: FileEntity
 }

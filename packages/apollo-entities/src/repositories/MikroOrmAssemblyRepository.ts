@@ -12,10 +12,8 @@ function toRow(entity: AssemblyEntity): AssemblyRow {
     description: entity.description,
     status: entity.status,
     user: entity.user,
-    externalLocation: entity.externalLocation,
-    fileIds: entity.fileIds,
+    sequenceSource: entity.sequenceSource,
     checks: entity.checks,
-    file: entity.file?._id,
   }
 }
 
@@ -47,10 +45,8 @@ export class MikroOrmAssemblyRepository implements AssemblyRepository {
       description: row.description,
       status: row.status,
       user: row.user,
-      externalLocation: row.externalLocation,
-      fileIds: row.fileIds,
+      sequenceSource: row.sequenceSource,
       checks: row.checks,
-      file: row.file ?? undefined,
     })
     await this.em.persistAndFlush(entity)
     return toRow(entity)
