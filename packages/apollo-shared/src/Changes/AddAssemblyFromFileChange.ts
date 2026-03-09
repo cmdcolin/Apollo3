@@ -12,6 +12,8 @@ import type {
 } from '@apollo-annotation/common'
 import { BgzipIndexedFasta } from '@gmod/indexedfasta'
 import ObjectID from 'bson-objectid'
+import { BlobFile } from 'generic-filehandle2'
+import { gunzip } from 'node:zlib/promises'
 
 import { FromFileBaseChange } from './FromFileBaseChange.js'
 
@@ -97,11 +99,17 @@ export class AddAssemblyFromFileChange extends FromFileBaseChange {
     }
 
     const fasta = backend.filesService.getFileHandle(faDoc)
-    const fai = backend.filesService.getFileHandle(faiDoc)
-    const gzi = backend.filesService.getFileHandle(gziDoc)
+    const faiHandle = backend.filesService.getFileHandle(faiDoc)
+    const gziHandle = backend.filesService.getFileHandle(gziDoc)
+    const [faiDecompressed, gziDecompressed] = await Promise.all([
+      faiHandle.readFile().then((buf) => gunzip(buf)),
+      gziHandle.readFile().then((buf) => gunzip(buf)),
+    ])
+    const fai = new BlobFile(new Blob([faiDecompressed]))
+    const gzi = new BlobFile(new Blob([gziDecompressed]))
     const sequenceAdapter = new BgzipIndexedFasta({ fasta, fai, gzi })
     const allSequenceSizes = await sequenceAdapter.getSequenceSizes()
-    await Promise.all([fasta.close(), fai.close(), gzi.close()])
+    await fasta.close()
 
     const existingAssembly =
       await backend.assemblyRepository.findByName(assemblyName)

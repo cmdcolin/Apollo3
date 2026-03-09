@@ -131,3 +131,5 @@ __pycache__/
 
 # SQLite databases
 *.sqlite
+
+packages/jbrowse-plugin-apollo/meta.json

@@ -1,26 +1,13 @@
 import { createHash } from 'node:crypto'
 import { createWriteStream } from 'node:fs'
-import {
-  type FileHandle,
-  mkdir,
-  mkdtemp,
-  open,
-  rename,
-  rmdir,
-} from 'node:fs/promises'
+import { mkdir, mkdtemp, rename, rmdir } from 'node:fs/promises'
 import path from 'node:path'
 import type { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
-import { promisify } from 'node:util'
-import { createGzip, gunzip } from 'node:zlib'
+import { createGzip } from 'node:zlib'
 
 import type { Logger } from '@nestjs/common'
 import type { Request } from 'express'
-import type {
-  FilehandleOptions,
-  GenericFilehandle,
-  Stats,
-} from 'generic-filehandle2'
 
 interface FileUpload {
   originalname: string
@@ -93,74 +80,4 @@ export async function writeFileAndCalculateHash(
   await rmdir(tmpDir)
   logger.log('File upload finished')
   return fileChecksum
-}
-
-async function unzip(input: FileHandle): Promise<Buffer> {
-  const gunzipP = promisify(gunzip)
-  const fileContents = await input.readFile()
-  const unzippedContents = await gunzipP(fileContents)
-  return unzippedContents
-}
-
-export class LocalFileGzip implements GenericFilehandle {
-  private fileHandle: Promise<FileHandle>
-  private contents: Promise<Buffer>
-  private filename: string
-  private opts: FilehandleOptions
-
-  public constructor(source: string, opts: FilehandleOptions = {}) {
-    this.filename = source
-    this.opts = opts
-    const fhPromise = open(source)
-    this.fileHandle = fhPromise
-    this.contents = fhPromise.then((fh) => unzip(fh))
-  }
-
-  public async read(
-    buffer: Buffer,
-    offset = 0,
-    length: number,
-    position = 0,
-  ): Promise<{ bytesRead: number; buffer: Buffer }> {
-    const unzippedContents = await this.contents
-    const bytesRead = unzippedContents.copy(
-      buffer,
-      offset,
-      position,
-      position + length,
-    )
-    return { bytesRead, buffer }
-  }
-
-  public async readFile(
-    options?:
-      | Omit<FilehandleOptions, 'encoding'>
-      | (Omit<FilehandleOptions, 'encoding'> & { encoding: undefined }),
-  ): Promise<Buffer>
-  public async readFile(
-    options:
-      | BufferEncoding
-      | (Omit<FilehandleOptions, 'encoding'> & { encoding: BufferEncoding }),
-  ): Promise<string>
-
-  public async readFile(
-    _options?: FilehandleOptions | BufferEncoding,
-  ): Promise<Buffer | string> {
-    const unzippedContents = await this.contents
-    if (this.opts.encoding) {
-      return unzippedContents.toString(this.opts.encoding)
-    }
-    return unzippedContents
-  }
-
-  // todo memoize
-  public async stat(): Promise<Stats> {
-    const contents = await this.contents
-    return { size: contents.length }
-  }
-
-  public async close(): Promise<void> {
-    const fh = await this.fileHandle
-    return fh.close()
-  }
 }

@@ -13,16 +13,12 @@ import {
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { randomBytes } from 'node:crypto'
-import { type GenericFilehandle, LocalFile } from 'generic-filehandle2'
+import { LocalFile } from 'generic-filehandle2'
 
 import { DatabaseService } from '../mikro-orm/database.service.js'
 
 import { CreateFileDto } from './dto/create-file.dto.js'
-import {
-  type FileRequest,
-  LocalFileGzip,
-  writeFileAndCalculateHash,
-} from './filesUtil.js'
+import { type FileRequest, writeFileAndCalculateHash } from './filesUtil.js'
 
 @Injectable()
 export class FilesService {
@@ -89,25 +85,11 @@ export class FilesService {
     return fileStream.pipeThrough(gunzip) as ReadableStream<Uint8Array>
   }
 
-  getFileHandle(file: { checksum: string; type: string }): GenericFilehandle {
+  getFileHandle(file: { checksum: string }): GenericFilehandle {
     const fileUploadFolder = this.configService.get('FILE_UPLOAD_FOLDER', {
       infer: true,
     })
-    const fileName = path.join(fileUploadFolder, file.checksum)
-    switch (file.type) {
-      case 'text/x-fai':
-      case 'application/x-gzi': {
-        return new LocalFileGzip(fileName)
-      }
-      case 'application/x-bgzip-fasta':
-      case 'text/x-gff3':
-      case 'text/x-fasta': {
-        return new LocalFile(fileName)
-      }
-      default: {
-        throw new Error(`Unsupported file type: ${file.type}`)
-      }
-    }
+    return new LocalFile(path.join(fileUploadFolder, file.checksum))
   }
 
   parseGFF3(
