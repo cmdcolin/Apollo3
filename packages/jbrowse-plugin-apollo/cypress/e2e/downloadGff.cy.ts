@@ -25,18 +25,15 @@ describe('Download GFF', () => {
     cy.get('label[data-testid="include-fasta-checkbox"]').within(() => {
       cy.get('input').click()
     })
-    cy.intercept('GET', '/export*').as('downloadGff3')
+    cy.intercept('GET', '**/export?exportID=*').as('downloadGff3')
     cy.get('button').contains('Download').click()
     cy.wait('@downloadGff3', { timeout: 30_000 })
-    cy.task('readdirSync', Cypress.config('downloadsFolder')).then((out) => {
-      const gff = out as string
-      cy.readFile(`${Cypress.config('downloadsFolder')}/${gff[0]}`).then(
-        (x: string) => {
-          const lines: string[] = x.trim().split('\n')
-          expect(lines.length).eq(960)
-        },
-      )
-    })
+      .its('response.body')
+      .then((body: string) => {
+        const lines = body.trim().split('\n')
+        cy.task('log', `[DEBUG downloadGff] got ${lines.length} lines`)
+        expect(lines.length).eq(960)
+      })
   })
 
   it('Can download gff without fasta', () => {
@@ -49,17 +46,14 @@ describe('Download GFF', () => {
         cy.get('input').parent().first().click()
       })
     cy.get('li').contains('volvox.fasta.gff3').click()
-    cy.intercept('GET', '/export*').as('downloadGff3')
+    cy.intercept('GET', '**/export?exportID=*').as('downloadGff3')
     cy.get('button').contains('Download').click()
     cy.wait('@downloadGff3', { timeout: 30_000 })
-    cy.task('readdirSync', Cypress.config('downloadsFolder')).then((out) => {
-      const gff = out as string
-      cy.readFile(`${Cypress.config('downloadsFolder')}/${gff[0]}`).then(
-        (x: string) => {
-          const lines: string[] = x.trim().split('\n')
-          expect(lines.length).eq(255)
-        },
-      )
-    })
+      .its('response.body')
+      .then((body: string) => {
+        const lines = body.trim().split('\n')
+        cy.task('log', `[DEBUG downloadGff] got ${lines.length} lines`)
+        expect(lines.length).eq(255)
+      })
   })
 })

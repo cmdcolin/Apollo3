@@ -71,13 +71,28 @@ export function DownloadGFF3({ handleClose, session }: DownloadGFF3Props) {
       return
     }
 
-    const { internetAccountConfigId } = getConf(selectedAssembly, [
-      'sequence',
-      'metadata',
-    ]) as { internetAccountConfigId?: string }
+    const metadata = getConf(selectedAssembly, ['sequence', 'metadata']) as {
+      internetAccountConfigId?: string
+    }
+    console.warn(
+      '[apollo-debug] DownloadGFF3 onSubmit: metadata=',
+      JSON.stringify(metadata),
+    )
+    console.warn(
+      '[apollo-debug] DownloadGFF3 onSubmit: selectedAssembly.name=',
+      selectedAssembly.name,
+    )
+    const { internetAccountConfigId } = metadata
     if (internetAccountConfigId) {
+      console.warn(
+        '[apollo-debug] DownloadGFF3: using collaboration server path, internetAccountConfigId=',
+        internetAccountConfigId,
+      )
       await exportFromCollaborationServer(internetAccountConfigId)
     } else {
+      console.warn(
+        '[apollo-debug] DownloadGFF3: using in-memory path (no internetAccountConfigId)',
+      )
       exportFromMemory(session)
     }
     handleClose()
@@ -100,11 +115,16 @@ export function DownloadGFF3({ handleClose, session }: DownloadGFF3Props) {
     })
     url.search = searchParams.toString()
     const uri = url.toString()
+    console.warn('[apollo-debug] exportFromCollaborationServer: fetching', uri)
     const apolloFetch = internetAccount.getFetcher({
       locationType: 'UriLocation',
       uri,
     })
     const response = await apolloFetch(uri, { method: 'GET' })
+    console.warn(
+      '[apollo-debug] exportFromCollaborationServer: response status=',
+      response.status,
+    )
     if (!response.ok) {
       const newErrorMessage = await createFetchErrorMessage(
         response,
@@ -124,7 +144,22 @@ export function DownloadGFF3({ handleClose, session }: DownloadGFF3Props) {
     exportURL.search = exportSearchParams.toString()
     const exportUri = exportURL.toString()
 
-    window.open(exportUri, '_blank')
+    const exportFetch = internetAccount.getFetcher({
+      locationType: 'UriLocation',
+      uri: exportUri,
+    })
+    const exportResponse = await exportFetch(exportUri, { method: 'GET' })
+    if (!exportResponse.ok) {
+      const newErrorMessage = await createFetchErrorMessage(
+        exportResponse,
+        'Error when exporting GFF3',
+      )
+      setErrorMessage(newErrorMessage)
+      return
+    }
+    const blob = await exportResponse.blob()
+    const assemblyName = selectedAssembly.displayName ?? selectedAssembly.name
+    saveAs(blob, `${assemblyName}_apollo.gff3`)
   }
 
   function exportFromMemory(session: ApolloSessionModel) {

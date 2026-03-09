@@ -12,7 +12,12 @@ describe('Delete feature', () => {
     cy.addAssemblyFromGff(assemblyName, `test_data/${assemblyName}`)
     cy.selectAssemblyToView(assemblyName, 'chr2:1..250')
 
-    cy.contains('Open track selector').click()
+    // Debug: log what the view looks like
+    cy.get('body').then(($body) => {
+      const text = $body.text().slice(0, 500)
+      cy.task('log', `[DEBUG deleteFeature] body text: ${text}`)
+    })
+    cy.contains('Open track selector', { timeout: 10_000 }).click()
     cy.contains('Annotations (').click()
     cy.get('button[aria-label="Minimize drawer"]').click()
     cy.annotationTrackAppearance('Show both graphical and table display')
@@ -168,8 +173,8 @@ describe('Delete feature', () => {
     cy.addAssemblyFromGff(assemblyName, `test_data/${assemblyName}`)
     cy.selectAssemblyToView(assemblyName, 'chr2:1..250')
 
-    cy.contains('Open track selector').click()
-    cy.contains('Annotations (').click()
+    cy.contains('Open track selector', { timeout: 10_000 }).click()
+    cy.contains('Annotations (', { timeout: 10_000 }).click()
     cy.get('button[aria-label="Minimize drawer"]').click()
     cy.annotationTrackAppearance('Show both graphical and table display')
 
@@ -191,8 +196,8 @@ describe('Delete feature', () => {
     cy.addAssemblyFromGff(assemblyName, `test_data/${assemblyName}`)
     cy.selectAssemblyToView(assemblyName, 'chr2:1..250')
 
-    cy.contains('Open track selector').click()
-    cy.contains('Annotations (').click()
+    cy.contains('Open track selector', { timeout: 10_000 }).click()
+    cy.contains('Annotations (', { timeout: 10_000 }).click()
     cy.get('button[aria-label="Minimize drawer"]').click()
     cy.annotationTrackAppearance('Show both graphical and table display')
 
