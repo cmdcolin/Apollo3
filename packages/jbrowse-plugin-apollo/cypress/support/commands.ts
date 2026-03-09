@@ -264,15 +264,16 @@ Cypress.Commands.add(
           cy.get('li').contains(assemblyName).click()
         }
       })
-    cy.intercept('POST', '/users/userLocation').as('selectAssemblyToViewDone')
     if (locationOrSearch) {
       cy.get('input[placeholder="Search for location"]', {
         timeout: 10_000,
-      }).type(`{selectall}{backspace}${locationOrSearch}{enter}`)
-    } else {
-      cy.contains('button', /^Open$/, { matchCase: false }).click()
+      }).type(`{selectall}{backspace}${locationOrSearch}{esc}`)
     }
-    cy.wait('@selectAssemblyToViewDone')
+    cy.contains('button', /^Open$/, { matchCase: false }).click()
+    // Wait for the view to actually open (assembly selection dialog disappears)
+    cy.contains('Select assembly to view', { timeout: 10_000 }).should(
+      'not.exist',
+    )
   },
 )
 

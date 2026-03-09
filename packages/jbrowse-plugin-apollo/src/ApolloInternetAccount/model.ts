@@ -73,14 +73,12 @@ const stateModelFactory = (configSchema: ApolloInternetAccountConfigModel) => {
     .actions((self) => ({
       setRole() {
         const token = self.retrieveToken()
-        console.log(`[DEBUG setRole] token=${token ? 'present' : 'missing'}`)
         if (!token) {
           self.role = undefined
           return
         }
         const dec = getDecodedToken(token)
         const { role } = dec
-        console.log(`[DEBUG setRole] decoded role=${role}`)
         if (self.role !== role) {
           self.role = role
         }
