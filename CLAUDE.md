@@ -31,7 +31,7 @@ Cypress is a devDependency of `packages/jbrowse-plugin-apollo`. Always invoke
 via yarn:
 
 ```bash
-# Run e2e tests (builds plugin, starts servers, runs cypress)
+# Run all e2e tests (builds plugin, starts servers, runs cypress)
 yarn --cwd packages/jbrowse-plugin-apollo test:e2e
 
 # Debug mode (screenshots + video enabled)
@@ -42,6 +42,15 @@ yarn --cwd packages/jbrowse-plugin-apollo cypress:open
 
 # Run cypress directly (if servers are already running)
 yarn --cwd packages/jbrowse-plugin-apollo cypress:run
+
+# Run a single spec file (servers must already be running)
+yarn --cwd packages/jbrowse-plugin-apollo cypress run --browser chrome --spec cypress/e2e/deleteFeature.cy.ts
+
+# Run tests matching a grep pattern (servers must already be running)
+yarn --cwd packages/jbrowse-plugin-apollo cypress run --browser chrome --env grep="Delete and resize"
+
+# Start only the e2e servers (without running tests)
+yarn --cwd packages/jbrowse-plugin-apollo start:e2e-servers
 ```
 
 ### Running the collaboration server

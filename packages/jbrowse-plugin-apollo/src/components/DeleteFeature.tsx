@@ -389,9 +389,19 @@ export function DeleteFeature({
       }
     }
 
+    console.log(
+      `[DEBUG DeleteFeature] locationChanges:`,
+      JSON.stringify(locationChanges),
+    )
+
     const lumpedLocChanges = lumpLocationChanges(
       locationChanges,
       sourceAssemblyId,
+    )
+
+    console.log(
+      `[DEBUG DeleteFeature] lumpedLocChanges:`,
+      JSON.stringify(lumpedLocChanges?.toJSON()),
     )
 
     await changeManager.submit(deleteChanges)

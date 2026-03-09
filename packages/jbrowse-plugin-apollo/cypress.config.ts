@@ -3,8 +3,10 @@
 import fs from 'node:fs'
 
 import { defineConfig } from 'cypress'
+import { plugin as grepPlugin } from '@cypress/grep/plugin'
 import failFast from 'cypress-fail-fast/plugin'
 import getCompareSnapshotsPlugin from 'cypress-image-diff-js/plugin'
+import installLogsPrinter from 'cypress-terminal-report/src/installLogsPrinter'
 
 export default defineConfig({
   // Make viewport long and thin to avoid the scrollbar on the right interfere
@@ -19,6 +21,10 @@ export default defineConfig({
       failFast(on, config)
       // @ts-expect-error types are wrong
       getCompareSnapshotsPlugin(on, config)
+      installLogsPrinter(on, {
+        printLogsToConsole: 'always',
+        includeSuccessfulHookLogs: false,
+      })
       on('task', {
         readdirSync(path) {
           return fs.readdirSync(path)
@@ -28,6 +34,7 @@ export default defineConfig({
           return null
         },
       })
+      grepPlugin(config)
       return config
     },
   },
