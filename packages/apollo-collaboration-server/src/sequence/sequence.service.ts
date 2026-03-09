@@ -1,6 +1,7 @@
 import { BgzipIndexedFasta, IndexedFasta } from '@gmod/indexedfasta'
 import { Injectable, Logger } from '@nestjs/common'
-import { RemoteFile } from 'generic-filehandle2'
+import { BlobFile, RemoteFile } from 'generic-filehandle2'
+import { gunzip } from 'node:zlib/promises'
 
 import { FilesService } from '../files/files.service.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
@@ -37,13 +38,13 @@ export class SequenceService {
 
       const sequenceAdapter = gzi
         ? new BgzipIndexedFasta({
-            fasta: new RemoteFile(fa, { fetch }),
-            fai: new RemoteFile(fai, { fetch }),
-            gzi: new RemoteFile(gzi, { fetch }),
+            fasta: new RemoteFile(fa),
+            fai: new RemoteFile(fai),
+            gzi: new RemoteFile(gzi),
           })
         : new IndexedFasta({
-            fasta: new RemoteFile(fa, { fetch }),
-            fai: new RemoteFile(fai, { fetch }),
+            fasta: new RemoteFile(fa),
+            fai: new RemoteFile(fai),
           })
       const sequence = await sequenceAdapter.getSequence(name, start, end)
       if (sequence === undefined) {
@@ -70,13 +71,21 @@ export class SequenceService {
       }
 
       const fasta = this.filesService.getFileHandle(faRow)
-      const fai = this.filesService.getFileHandle(faiRow)
-      const gzi = gziId ? this.filesService.getFileHandle(gziRow) : undefined
+      const faiCompressed = await this.filesService
+        .getFileHandle(faiRow)
+        .readFile()
+      const fai = new BlobFile(new Blob([await gunzip(faiCompressed)]))
+      const gziCompressed = gziId
+        ? await this.filesService.getFileHandle(gziRow).readFile()
+        : undefined
+      const gzi = gziCompressed
+        ? new BlobFile(new Blob([await gunzip(gziCompressed)]))
+        : undefined
       const sequenceAdapter = gziId
         ? new BgzipIndexedFasta({ fasta, fai, gzi })
         : new IndexedFasta({ fasta, fai })
       const sequence = await sequenceAdapter.getSequence(name, start, end)
-      await Promise.all([fasta.close(), fai.close(), gzi?.close()])
+      await fasta.close()
       if (sequence === undefined) {
         throw new Error('Sequence not found')
       }

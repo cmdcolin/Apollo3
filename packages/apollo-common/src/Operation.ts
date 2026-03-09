@@ -47,11 +47,7 @@ export interface ServerDataStore {
       _id: string
       checksum: string
     }): ReadableStream<Uint8Array>
-    getFileHandle(file: {
-      _id: string
-      checksum: string
-      type: string
-    }): GenericFilehandle
+    getFileHandle(file: { _id: string; checksum: string }): GenericFilehandle
     parseGFF3(
       stream: ReadableStream<Uint8Array>,
       parseOptions?: { bufferSize?: number },
