@@ -176,9 +176,7 @@ describe('Warning signs', () => {
     cy.selectAssemblyToView('stopcodon.gff3', 'gene09')
 
     cy.get('button[data-testid="zoom_out"]').click()
-    // eslint-disable-next-line cypress/no-unnecessary-waiting
-    cy.wait(5000)
-    cy.get('[data-testid^="ErrorIcon-"]', { timeout: 5000 }).should(
+    cy.get('[data-testid^="ErrorIcon-"]', { timeout: 15_000 }).should(
       'have.length',
       3,
     )

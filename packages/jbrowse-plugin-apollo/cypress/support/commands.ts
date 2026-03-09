@@ -9,9 +9,17 @@ function getGuestToken() {
 }
 
 Cypress.Commands.add('loginAsGuest', () => {
+  cy.session(
+    'guest',
+    () => {
+      cy.visit('/?config=http://localhost:3999/jbrowse/config.json')
+      cy.contains('Continue as Guest', { timeout: 10_000 }).click()
+      cy.reload()
+      cy.get('button', { timeout: 10_000 }).contains('Apollo')
+    },
+    { cacheAcrossSpecs: true },
+  )
   cy.visit('/?config=http://localhost:3999/jbrowse/config.json')
-  cy.contains('Continue as Guest', { timeout: 10_000 }).click()
-  cy.contains('Launch view', { timeout: 10_000 })
 })
 
 Cypress.Commands.add('deleteAssemblies', () => {
@@ -158,7 +166,8 @@ Cypress.Commands.add(
     cy.wrap(Cypress.$('body')).within(() => {
       cy.get('button', { timeout: 10_000 })
         .contains('Apollo')
-        .click({ force: true, timeout: 10_000 })
+        .should('be.enabled')
+        .click({ force: true })
       for (const pathPart of menuItemPathPrefix) {
         cy.contains(pathPart, { timeout: 10_000 }).click()
       }
@@ -203,6 +212,8 @@ Cypress.Commands.add(
       .parent()
       .should('contain', 'All operations successful')
     cy.get('button[aria-label="Close drawer"]', { timeout: 10_000 }).click()
+    cy.get('button[aria-label="Close drawer"]').should('not.exist')
+    cy.reload()
     if (launch) {
       cy.contains('Launch view').click()
     }

@@ -46,9 +46,9 @@ describe('Different ways of editing features', () => {
           cy.get('input').type('{selectall}{backspace}9567')
         })
       })
+    cy.intercept('POST', '/changes').as('saveEdits')
     cy.get('body').click(0, 0)
-    // eslint-disable-next-line cypress/no-unnecessary-waiting
-    cy.wait(5000)
+    cy.wait('@saveEdits')
 
     // Check edit is done
     cy.reload()
