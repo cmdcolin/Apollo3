@@ -384,7 +384,7 @@ export class DesktopSQLiteDriver extends BackendDriver {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private patchRefSeqIds(change: Change, refNameMap: Map<string, string>) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const c = change as Record<string, unknown>
+    const c = change as unknown as Record<string, unknown>
     if ('changes' in c && Array.isArray(c.changes)) {
       for (const sub of c.changes) {
         if (sub.addedFeature) {

@@ -1,5 +1,6 @@
 describe('Different ways of editing features', () => {
   before(() => {
+    cy.loginAsGuest()
     cy.deleteAssemblies()
     cy.wrap(
       globalThis.indexedDB.databases().then((dbs) => {
