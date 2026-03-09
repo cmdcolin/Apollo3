@@ -21,6 +21,8 @@ describe('Delete feature', () => {
     cy.contains('Id=exon01').rightclick({ force: true })
     cy.contains('Delete feature', { timeout: 10_000 }).click()
     cy.contains('button', 'Yes').click()
+    cy.get('.MuiDialog-root', { timeout: 10_000 }).should('not.exist')
+    cy.refreshTableEditor()
 
     cy.contains('Id=gene02')
       .parent()
@@ -53,6 +55,7 @@ describe('Delete feature', () => {
     cy.contains('Id=exon05').rightclick({ force: true })
     cy.contains('Delete feature', { timeout: 10_000 }).click()
     cy.contains('button', 'Yes').click()
+    cy.get('.MuiDialog-root', { timeout: 10_000 }).should('not.exist')
 
     cy.contains('Id=gene02')
       .parent()
@@ -71,6 +74,7 @@ describe('Delete feature', () => {
     cy.contains('Id=exon09').rightclick({ force: true })
     cy.contains('Delete feature', { timeout: 10_000 }).click()
     cy.contains('button', 'Yes').click()
+    cy.get('.MuiDialog-root', { timeout: 10_000 }).should('not.exist')
 
     cy.contains('Id=gene02')
       .parent()
@@ -82,6 +86,7 @@ describe('Delete feature', () => {
     cy.contains('Id=exon04').rightclick({ force: true })
     cy.contains('Delete feature', { timeout: 10_000 }).click()
     cy.contains('button', 'Yes').click()
+    cy.get('.MuiDialog-root', { timeout: 10_000 }).should('not.exist')
     cy.refreshTableEditor()
 
     cy.contains('Id=mrna02')
@@ -93,6 +98,7 @@ describe('Delete feature', () => {
     cy.contains('Id=exon03').rightclick({ force: true })
     cy.contains('Delete feature', { timeout: 10_000 }).click()
     cy.contains('button', 'Yes').click()
+    cy.get('.MuiDialog-root', { timeout: 10_000 }).should('not.exist')
     cy.refreshTableEditor()
 
     cy.contains('Id=mrna02')
@@ -111,9 +117,11 @@ describe('Delete feature', () => {
     cy.contains('Id=exon_region2').rightclick({ force: true })
     cy.contains('Delete feature', { timeout: 10_000 }).click()
     cy.contains('button', 'Yes').click()
+    cy.get('.MuiDialog-root', { timeout: 10_000 }).should('not.exist')
     cy.contains('Id=exon_region1').rightclick({ force: true })
     cy.contains('Delete feature', { timeout: 10_000 }).click()
     cy.contains('button', 'Yes').click()
+    cy.get('.MuiDialog-root', { timeout: 10_000 }).should('not.exist')
     cy.refreshTableEditor()
 
     cy.contains('Id=exon08')
@@ -126,6 +134,7 @@ describe('Delete feature', () => {
     cy.contains('Id=cds1').rightclick({ force: true })
     cy.contains('Delete feature', { timeout: 10_000 }).click()
     cy.contains('button', 'Yes').click()
+    cy.get('.MuiDialog-root', { timeout: 10_000 }).should('not.exist')
     cy.refreshTableEditor()
 
     cy.contains('Id=mrna02')
@@ -138,10 +147,12 @@ describe('Delete feature', () => {
     cy.contains('Id=exon02').rightclick({ force: true })
     cy.contains('Delete feature', { timeout: 10_000 }).click()
     cy.contains('button', 'Yes').click()
+    cy.get('.MuiDialog-root', { timeout: 10_000 }).should('not.exist')
     // Delete last exon: Do not delete or resize transcript
     cy.contains('Id=exon10').rightclick({ force: true })
     cy.contains('Delete feature', { timeout: 10_000 }).click()
     cy.contains('button', 'Yes').click()
+    cy.get('.MuiDialog-root', { timeout: 10_000 }).should('not.exist')
     cy.refreshTableEditor()
 
     cy.contains('Id=mrna02')
@@ -165,6 +176,7 @@ describe('Delete feature', () => {
     cy.contains('Id=exon03').rightclick({ force: true })
     cy.contains('Delete feature', { timeout: 10_000 }).click()
     cy.contains('button', 'Yes').click()
+    cy.get('.MuiDialog-root', { timeout: 10_000 }).should('not.exist')
     cy.refreshTableEditor()
 
     cy.contains('Id=cds1')
@@ -187,6 +199,7 @@ describe('Delete feature', () => {
     cy.contains('Id=exon01').rightclick({ force: true })
     cy.contains('Delete feature', { timeout: 10_000 }).click()
     cy.contains('button', 'Yes').click()
+    cy.get('.MuiDialog-root', { timeout: 10_000 }).should('not.exist')
     cy.refreshTableEditor()
 
     cy.contains('Id=cds1')
@@ -231,6 +244,7 @@ describe('Delete feature', () => {
     cy.contains('Id=exon06').rightclick({ force: true })
     cy.contains('Delete feature', { timeout: 10_000 }).click()
     cy.contains('button', 'Yes').click()
+    cy.get('.MuiDialog-root', { timeout: 10_000 }).should('not.exist')
     cy.refreshTableEditor()
     cy.contains('Id=cds2').should('not.exist')
     cy.contains('Id=exon06').should('not.exist')

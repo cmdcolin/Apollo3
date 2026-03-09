@@ -11,7 +11,7 @@ export default defineConfig({
   viewportHeight: 2000,
   viewportWidth: 1300,
   retries: {
-    runMode: 2,
+    runMode: 1,
   },
   screenshotOnRunFailure: false,
   video: false,

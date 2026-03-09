@@ -1,16 +1,48 @@
 /* eslint-disable unicorn/prefer-string-replace-all */
-describe('Warning signs', () => {
-  beforeEach(() => {
+// Merged from lockSession.cy.ts, navigateToFeature.cy.ts, transcriptSequence.cy.ts
+// All three tests use the same large SM_V10_3 assembly, so it is loaded once in
+// before() and shared across tests. lockSession modifies data so it runs last.
+describe('Large assembly (SM_V10_3) tests', () => {
+  before(() => {
     cy.loginAsGuest()
-  })
-  afterEach(() => {
     cy.deleteAssemblies()
-  })
-  it('Sequences from feature on reverse strand', () => {
     cy.addAssemblyFromGff(
       'SM_V10_3.fasta.gff3.gz',
       'test_data/SM_V10_3.fasta.gff3.gz',
+      false,
     )
+  })
+
+  beforeEach(() => {
+    cy.loginAsGuest()
+    cy.contains('Launch view', { timeout: 10_000 }).click()
+  })
+
+  after(() => {
+    cy.deleteAssemblies()
+  })
+
+  it('Navigate to feature from table editor', () => {
+    cy.selectAssemblyToView('SM_V10_3.fasta.gff3.gz', 'gene:Smp_313440')
+    cy.annotationTrackAppearance('Show both graphical and table display')
+    cy.contains('td', 'exon:Smp_313440.1.1').dblclick({ force: true })
+    cy.currentLocationEquals('SM_V10_3', 192_138, 192_275, 50)
+
+    cy.contains('td', 'exon:Smp_313440.1.13').dblclick({ force: true })
+    cy.currentLocationEquals('SM_V10_3', 206_893, 207_445, 100)
+
+    // Test refseq boundaries
+    cy.searchFeatures('SM_V10_3:800..2000', 1)
+    cy.contains('td', 'region1').dblclick({ force: true })
+    cy.currentLocationEquals('SM_V10_3', 1, 1300, 100)
+
+    cy.searchFeatures('SM_V10_3:498000..499100', 1)
+    cy.contains('td', 'region2').dblclick({ force: true })
+    cy.currentLocationEquals('SM_V10_3', 498_900, 500_000, 100)
+    cy.contains('500,000')
+  })
+
+  it('Sequences from feature on reverse strand', () => {
     cy.selectAssemblyToView('SM_V10_3.fasta.gff3.gz', 'transcript:Smp_309950.1')
     cy.annotationTrackAppearance('Show both graphical and table display')
     cy.contains('transcript:Smp_309950.1', { timeout: 10_000 }).rightclick()
@@ -132,5 +164,44 @@ CSCKRSGRPCIPSHCHCVLGLCKNRSDSSSENSKILSSVDNSATVMGPPSGFPKRKTRAL
 HLNLNKEQQNEHDAHTMMNETYDLNKQQSPASISESNDNDDLQSPTSNSQLSDGGSLRYL
 WPKNRLSYFPSPLLRSDR*`.replace(/\n/g, ' '),
     )
+  })
+
+  // Runs last — modifies feature coordinates
+  it('Lock session prevents editing', () => {
+    cy.selectAssemblyToView('SM_V10_3.fasta.gff3.gz', 'gene:Smp_313440')
+    cy.annotationTrackAppearance('Show both graphical and table display')
+    cy.get('input[type="text"][value="192150"]')
+      .first()
+      .type('{selectall}{backspace}192140{enter}', {
+        force: true,
+      })
+    // Refresh table editor
+    cy.annotationTrackAppearance('Show graphical display')
+    cy.annotationTrackAppearance('Show both graphical and table display')
+
+    // Lock session
+    cy.selectFromApolloMenu('Lock/Unlock session')
+    cy.get('input[type="text"][value="192140"]')
+      .first()
+      .type('{selectall}{backspace}192130{enter}', {
+        force: true,
+      })
+    cy.annotationTrackAppearance('Show graphical display')
+    cy.annotationTrackAppearance('Show both graphical and table display')
+    cy.contains('Cannot submit changes in locked mode')
+    cy.contains('192140')
+    cy.get('[data-testid="lock-icon"]').should('exist')
+
+    // Unlock session
+    cy.selectFromApolloMenu('Lock/Unlock session')
+    cy.get('input[type="text"][value="192140"]')
+      .first()
+      .type('{selectall}{backspace}192130{enter}', {
+        force: true,
+      })
+    cy.annotationTrackAppearance('Show graphical display')
+    cy.annotationTrackAppearance('Show both graphical and table display')
+    cy.contains('192130')
+    cy.get('[data-testid="lock-icon"]').should('not.exist')
   })
 })

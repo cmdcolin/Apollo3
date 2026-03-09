@@ -67,7 +67,9 @@ export function assembleFeatureTrees(flatFeatures: FeatureRow[]) {
           children[child._id] = nested
         }
       }
-      result.children = children
+      if (Object.keys(children).length > 0) {
+        result.children = children
+      }
     }
     return result
   }
