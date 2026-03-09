@@ -10,9 +10,7 @@ export default defineConfig({
   // with the coordinates
   viewportHeight: 2000,
   viewportWidth: 1300,
-  retries: {
-    runMode: 1,
-  },
+  bail: 1,
   screenshotOnRunFailure: false,
   video: false,
   e2e: {

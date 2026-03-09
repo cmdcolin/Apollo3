@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { randomBytes } from 'node:crypto'
-import { type GenericFilehandle, LocalFile } from 'generic-filehandle'
+import { type GenericFilehandle, LocalFile } from 'generic-filehandle2'
 
 import { DatabaseService } from '../mikro-orm/database.service.js'
 

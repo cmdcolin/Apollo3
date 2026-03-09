@@ -13,7 +13,7 @@ import {
 } from '@apollo-annotation/common'
 import { BgzipIndexedFasta, IndexedFasta } from '@gmod/indexedfasta'
 import ObjectID from 'bson-objectid'
-import { RemoteFile } from 'generic-filehandle'
+import { RemoteFile } from 'generic-filehandle2'
 
 export interface SerializedAddAssemblyFromExternalChangeBase
   extends SerializedAssemblySpecificChange {

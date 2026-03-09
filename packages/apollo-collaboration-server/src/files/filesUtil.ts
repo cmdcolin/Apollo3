@@ -20,7 +20,7 @@ import type {
   FilehandleOptions,
   GenericFilehandle,
   Stats,
-} from 'generic-filehandle'
+} from 'generic-filehandle2'
 
 interface FileUpload {
   originalname: string
