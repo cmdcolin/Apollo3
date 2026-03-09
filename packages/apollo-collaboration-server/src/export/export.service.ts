@@ -113,22 +113,19 @@ export class ExportService {
 
     if (includeFASTA) {
       const assemblyRow = await this.db.assembly.findById(assemblyIdStr)
-      if (assemblyRow?.fileIds && 'fai' in assemblyRow.fileIds) {
+      const source = assemblyRow?.sequenceSource
+      if (source?.type === 'indexed') {
         await fh.close()
-        const fastaStreams = await this.streamFromLocalFasta(
-          assemblyRow.fileIds.fa,
-        )
+        const fastaStreams = await this.streamFromLocalFasta(source.fa)
         const combined = new StreamConcat([
           createReadStream(tmpFile),
           ...fastaStreams.map((s) => Readable.fromWeb(s)),
         ])
         return [combined, assemblyIdStr]
       }
-      if (assemblyRow?.externalLocation) {
+      if (source?.type === 'external') {
         await fh.close()
-        const fastaStreams = await this.streamFromRemoteFasta(
-          assemblyRow.externalLocation.fa,
-        )
+        const fastaStreams = await this.streamFromRemoteFasta(source.fa)
         const combined = new StreamConcat([
           createReadStream(tmpFile),
           ...fastaStreams.map((s) => Readable.fromWeb(s)),

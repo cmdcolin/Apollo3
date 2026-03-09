@@ -1,6 +1,5 @@
 import { AddAssemblyAliasesChange } from './AddAssemblyAliasesChange.js'
 import { AddAssemblyAndFeaturesFromFileChange } from './AddAssemblyAndFeaturesFromFileChange.js'
-import { AddAssemblyFromExternalChange } from './AddAssemblyFromExternalChange.js'
 import { AddAssemblyFromFileChange } from './AddAssemblyFromFileChange.js'
 import { AddFeatureChange } from './AddFeatureChange.js'
 import { AddFeaturesFromFileChange } from './AddFeaturesFromFileChange.js'
@@ -25,7 +24,6 @@ import { UserChange } from './UserChange.js'
 export const changes = {
   AddAssemblyAndFeaturesFromFileChange,
   AddAssemblyFromFileChange,
-  AddAssemblyFromExternalChange,
   AddFeatureChange,
   AddFeaturesFromFileChange,
   DeleteAssemblyChange,
@@ -50,7 +48,6 @@ export const changes = {
 
 export * from './AddAssemblyAndFeaturesFromFileChange.js'
 export * from './AddAssemblyFromFileChange.js'
-export * from './AddAssemblyFromExternalChange.js'
 export * from './AddFeatureChange.js'
 export * from './AddFeaturesFromFileChange.js'
 export * from './DeleteAssemblyChange.js'

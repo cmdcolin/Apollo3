@@ -9,7 +9,6 @@ import type {
 } from '@apollo-annotation/mst'
 import type {
   SerializedAddAssemblyAndFeaturesFromFileChange,
-  SerializedAddAssemblyFromExternalChange,
   SerializedAddAssemblyFromFileChange,
   SerializedDeleteAssemblyChange,
 } from '@apollo-annotation/shared'
@@ -367,7 +366,6 @@ export async function submitAssembly(
   accessToken: string,
   body:
     | SerializedAddAssemblyFromFileChange
-    | SerializedAddAssemblyFromExternalChange
     | SerializedAddAssemblyAndFeaturesFromFileChange,
   force: boolean,
 ): Promise<object> {

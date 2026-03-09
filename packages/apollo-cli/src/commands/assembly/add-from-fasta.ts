@@ -2,10 +2,7 @@
 import * as fs from 'node:fs'
 import path from 'node:path'
 
-import type {
-  SerializedAddAssemblyFromExternalChange,
-  SerializedAddAssemblyFromFileChange,
-} from '@apollo-annotation/shared'
+import type { SerializedAddAssemblyFromFileChange } from '@apollo-annotation/shared'
 import { Args, Flags } from '@oclif/core'
 import { ObjectId } from 'bson'
 import type { Response } from 'undici'
@@ -101,9 +98,7 @@ often has unintended side effects.',
     )
     const isExternal = isValidHttpUrl(args.input)
 
-    let body:
-      | SerializedAddAssemblyFromFileChange
-      | SerializedAddAssemblyFromExternalChange
+    let body: SerializedAddAssemblyFromFileChange
     if (isExternal) {
       if (flags.editable) {
         this.error(
@@ -122,8 +117,8 @@ often has unintended side effects.',
       }
       body = {
         assemblyName,
-        typeName: 'AddAssemblyFromExternalChange',
-        externalLocation: { fa: args.input, fai, gzi },
+        typeName: 'AddAssemblyFromFileChange',
+        sequenceSource: { type: 'external', fa: args.input, fai, gzi },
         assembly: new ObjectId().toHexString(),
       }
     } else if (flags.editable) {
@@ -149,7 +144,7 @@ often has unintended side effects.',
           )
       body = {
         assemblyName,
-        fileIds: { fa: fileId },
+        sequenceSource: { type: 'chunked', fa: fileId },
         typeName: 'AddAssemblyFromFileChange',
         assembly: new ObjectId().toHexString(),
       }
@@ -212,7 +207,7 @@ often has unintended side effects.',
       body = {
         assemblyName,
         typeName: 'AddAssemblyFromFileChange',
-        fileIds: { fa: faId, fai: faiId, gzi: gziId },
+        sequenceSource: { type: 'indexed', fa: faId, fai: faiId, gzi: gziId },
         assembly: new ObjectId().toHexString(),
       }
     }

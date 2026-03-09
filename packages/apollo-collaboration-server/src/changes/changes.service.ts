@@ -26,7 +26,6 @@ import { FindChangeDto } from './dto/find-change.dto.js'
 
 const STATUS_ZERO_CHANGE_TYPES = new Set([
   'AddAssemblyAndFeaturesFromFileChange',
-  'AddAssemblyFromExternalChange',
   'AddAssemblyFromFileChange',
   'AddFeaturesFromFileChange',
 ])

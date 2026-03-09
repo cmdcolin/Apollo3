@@ -112,7 +112,7 @@ CHANGE_RESULT=$(curl -s -X POST "$BASE_URL/changes" \
     \"typeName\": \"AddAssemblyAndFeaturesFromFileChange\",
     \"assembly\": \"test_assembly_1\",
     \"assemblyName\": \"tiny_test\",
-    \"fileIds\": {\"fa\": \"$FILE_ID\"}
+    \"sequenceSource\": {\"type\": \"chunked\", \"fa\": \"$FILE_ID\"}
   }")
 CHANGE_ID=$(echo "$CHANGE_RESULT" | json_field "['_id']")
 CHANGE_TYPE=$(echo "$CHANGE_RESULT" | json_field "['typeName']")

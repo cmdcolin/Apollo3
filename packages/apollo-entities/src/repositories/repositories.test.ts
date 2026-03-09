@@ -85,13 +85,14 @@ describe('MikroOrmAssemblyRepository', () => {
     expect(await repo.deleteById('asm-1')).toBe(false)
   })
 
-  it('should store externalLocation and fileIds', async () => {
+  it('should store sequenceSource', async () => {
     const repo = new MikroOrmAssemblyRepository(orm.em.fork())
     await repo.create({
       _id: 'asm-ext',
       name: 'external',
       status: 0,
-      externalLocation: {
+      sequenceSource: {
+        type: 'external',
         fa: 'https://example.com/genome.fa',
         fai: 'https://example.com/genome.fa.fai',
         gzi: 'https://example.com/genome.fa.gzi',
@@ -100,8 +101,8 @@ describe('MikroOrmAssemblyRepository', () => {
 
     const found = await repo.findById('asm-ext')
     expect(found).toBeDefined()
-    expect(found!.externalLocation).toBeDefined()
-    expect(found!.externalLocation!.fa).toBe('https://example.com/genome.fa')
+    expect(found!.sequenceSource).toBeDefined()
+    expect(found!.sequenceSource!.fa).toBe('https://example.com/genome.fa')
   })
 })
 

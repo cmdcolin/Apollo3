@@ -1,3 +1,8 @@
+export type SequenceSource =
+  | { type: 'external'; fa: string; fai: string; gzi?: string }
+  | { type: 'indexed'; fa: string; fai: string; gzi: string }
+  | { type: 'chunked'; fa: string }
+
 export interface AssemblyRow {
   _id: string
   name: string
@@ -6,10 +11,8 @@ export interface AssemblyRow {
   description?: string
   status?: number
   user?: string
-  externalLocation?: { fa: string; fai: string; gzi?: string }
-  fileIds?: { fa: string } | { fa: string; fai: string; gzi: string }
+  sequenceSource?: SequenceSource
   checks?: string[]
-  file?: string
 }
 
 export interface AssemblyRepository {

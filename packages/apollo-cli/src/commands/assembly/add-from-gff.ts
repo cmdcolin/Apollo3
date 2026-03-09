@@ -3,7 +3,6 @@ import path from 'node:path'
 
 import type {
   SerializedAddAssemblyAndFeaturesFromFileChange,
-  SerializedAddAssemblyFromExternalChange,
   SerializedAddAssemblyFromFileChange,
 } from '@apollo-annotation/shared'
 import { Args, Flags } from '@oclif/core'
@@ -72,17 +71,16 @@ export default class AddGff extends FileCommand {
 
     const body:
       | SerializedAddAssemblyFromFileChange
-      | SerializedAddAssemblyFromExternalChange
       | SerializedAddAssemblyAndFeaturesFromFileChange = flags['omit-features']
       ? {
           assemblyName,
-          fileIds: { fa: fileId },
+          sequenceSource: { type: 'chunked' as const, fa: fileId },
           typeName: 'AddAssemblyFromFileChange',
           assembly: new ObjectId().toHexString(),
         }
       : {
           assemblyName,
-          fileIds: { fa: fileId },
+          sequenceSource: { type: 'chunked' as const, fa: fileId },
           typeName: 'AddAssemblyAndFeaturesFromFileChange',
           assembly: new ObjectId().toHexString(),
         }
