@@ -425,12 +425,11 @@ export class DesktopSQLiteDriver extends BackendDriver {
       const refSeqs = await dataStore.refSeqRepository.findByAssembly(
         assemblyRow._id,
       )
-      for (const rs of refSeqs) {
-        const rows = await dataStore.featureRepository.searchText(rs._id, term)
-        const nestedFeatures = assembleFeatureTrees(rows)
-        for (const f of nestedFeatures) {
-          results.push(nestedToSnapshot(f))
-        }
+      const refSeqIds = refSeqs.map((rs) => rs._id)
+      const rows = await dataStore.featureRepository.searchText(refSeqIds, term)
+      const nestedFeatures = assembleFeatureTrees(rows)
+      for (const f of nestedFeatures) {
+        results.push(nestedToSnapshot(f))
       }
     }
     return results

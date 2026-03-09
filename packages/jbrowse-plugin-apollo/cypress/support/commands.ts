@@ -77,16 +77,20 @@ async function loadOntology(
       nodes.createIndex('full-text-words', 'fullTextWords', {
         multiEntry: true,
       })
+      const nodeAdds: Promise<IDBValidKey>[] = []
       for (const node of ontologyData.nodes) {
-        await nodes.add(node)
+        nodeAdds.push(nodes.add(node))
       }
+      await Promise.all(nodeAdds)
       const edges = database.createObjectStore('edges', { autoIncrement: true })
       edges.createIndex('by-subject', 'sub')
       edges.createIndex('by-object', 'obj')
       edges.createIndex('by-predicate', 'pred')
+      const edgeAdds: Promise<IDBValidKey>[] = []
       for (const edge of ontologyData.edges) {
-        await edges.add(edge)
+        edgeAdds.push(edges.add(edge))
       }
+      await Promise.all(edgeAdds)
     },
   })
 }

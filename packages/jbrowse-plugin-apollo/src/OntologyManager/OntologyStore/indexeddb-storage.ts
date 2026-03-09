@@ -116,7 +116,13 @@ export async function loadOboGraphJson(this: OntologyStore, db: Database) {
   }
 
   try {
-    const tx = db.transaction(['meta', 'nodes', 'edges'], 'readwrite')
+    // 'relaxed' durability skips flushing to disk after each write, which is
+    // safe here because this is a rebuildable cache — if the browser crashes
+    // mid-load, isDatabaseCurrent() will detect the incomplete state and
+    // trigger a full reload on next startup
+    const tx = db.transaction(['meta', 'nodes', 'edges'], 'readwrite', {
+      durability: 'relaxed',
+    })
     await tx.objectStore('meta').clear()
     await tx.objectStore('nodes').clear()
     await tx.objectStore('edges').clear()
@@ -127,44 +133,36 @@ export async function loadOboGraphJson(this: OntologyStore, db: Database) {
       .call(this)
       .map((def) => def.jsonPath)
     if (graph.nodes) {
-      let lastProgress = Math.round(percentProgress)
-      for (const [, node] of graph.nodes.entries()) {
-        percentProgress += 64 * (1 / graph.nodes.length)
-        if (
-          Math.round(percentProgress) != lastProgress &&
-          percentProgress < 100
-        ) {
-          this.options.update?.('Processing nodes', percentProgress)
-          lastProgress = Math.round(percentProgress)
-        }
+      this.options.update?.('Processing nodes', percentProgress)
+      const nodeAdds: Promise<IDBValidKey>[] = []
+      for (const node of graph.nodes) {
         if (isOntologyDBNode(node)) {
-          await nodeStore.add({
-            ...node,
-            fullTextWords: serializeWords(
-              getWords(node, fullTextIndexPaths, this.prefixes),
-            ),
-          })
+          nodeAdds.push(
+            nodeStore.add({
+              ...node,
+              fullTextWords: serializeWords(
+                getWords(node, fullTextIndexPaths, this.prefixes),
+              ),
+            }),
+          )
         }
       }
+      await Promise.all(nodeAdds)
+      percentProgress += 64
     }
 
     // load edges
     const edgeStore = tx.objectStore('edges')
     if (graph.edges) {
-      let lastProgress = Math.round(percentProgress)
-      for (const [, edge] of graph.edges.entries()) {
-        percentProgress += 30 * (1 / graph.edges.length)
-        if (
-          Math.round(percentProgress) != lastProgress &&
-          percentProgress < 100
-        ) {
-          this.options.update?.('Processing edges', percentProgress)
-          lastProgress = Math.round(percentProgress)
-        }
+      this.options.update?.('Processing edges', percentProgress)
+      const edgeAdds: Promise<IDBValidKey>[] = []
+      for (const edge of graph.edges) {
         if (isOntologyDBEdge(edge)) {
-          await edgeStore.add(edge)
+          edgeAdds.push(edgeStore.add(edge))
         }
       }
+      await Promise.all(edgeAdds)
+      percentProgress += 30
     }
     await tx.done
 

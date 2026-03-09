@@ -1,6 +1,6 @@
 import { BgzipIndexedFasta, IndexedFasta } from '@gmod/indexedfasta'
 import { Injectable, Logger } from '@nestjs/common'
-import { RemoteFile } from 'generic-filehandle'
+import { RemoteFile } from 'generic-filehandle2'
 
 import { FilesService } from '../files/files.service.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
