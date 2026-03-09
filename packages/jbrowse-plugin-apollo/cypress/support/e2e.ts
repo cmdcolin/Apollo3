@@ -1,6 +1,10 @@
 import 'cypress-fail-fast'
+import '@cypress/grep'
+import installLogsCollector from 'cypress-terminal-report/src/installLogsCollector'
 import compareSnapshotCommand from 'cypress-image-diff-js'
 import './commands'
+
+installLogsCollector()
 
 compareSnapshotCommand()
 

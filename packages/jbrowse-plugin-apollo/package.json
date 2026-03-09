@@ -78,6 +78,7 @@
     "tslib": "^2.3.1"
   },
   "devDependencies": {
+    "@cypress/grep": "^6.0.0",
     "@fal-works/esbuild-plugin-global-externals": "^2.1.2",
     "@jbrowse/cli": "^4.1.1",
     "@jbrowse/core": "^4.1.1",
@@ -98,6 +99,7 @@
     "cypress-fail-fast": "^7.1.1",
     "cypress-image-diff-html-report": "^2.2.0",
     "cypress-image-diff-js": "^2.5.0",
+    "cypress-terminal-report": "^7.3.3",
     "electron-chromedriver": "^40.6.0",
     "esbuild": "^0.27.3",
     "fake-indexeddb": "^4.0.2",
