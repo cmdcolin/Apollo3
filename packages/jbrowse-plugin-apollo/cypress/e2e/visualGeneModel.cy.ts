@@ -16,7 +16,7 @@ describe('Simple tests for visuals', () => {
       }
     })
 
-    cy.wait(5000)
+    cy.wait(2000)
 
     // NB: The size of the image differs between headless and interactive execution of cypress.
     // Use *headless for pushing to gihub
