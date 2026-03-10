@@ -37,6 +37,9 @@ export class DeleteAssemblyChange extends AssemblySpecificChange {
     }
     const refSeqs = await backend.refSeqRepository.findByAssembly(assembly)
     const refSeqIds = refSeqs.map((r) => r._id)
+    for (const refSeqId of refSeqIds) {
+      await backend.checkResultRepository.deleteByRefSeq(refSeqId)
+    }
     await backend.refSeqChunkRepository.deleteByRefSeqs(refSeqIds)
     await backend.featureRepository.deleteByRefSeqs(refSeqIds)
     await backend.refSeqRepository.deleteByAssembly(assembly)

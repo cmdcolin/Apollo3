@@ -166,84 +166,129 @@ describe('Undo edits', () => {
         cy.contains('td', 1).within(() => {
           cy.get('input').type('{selectall}{backspace}10{enter}')
         })
-        cy.refreshTableEditor()
+      })
+    cy.refreshTableEditor()
 
+    cy.get('tbody', { timeout: 10_000 })
+      .contains('tr', 'CDS1')
+      .within(() => {
         cy.contains('td', 10).within(() => {
           cy.get('input').type('{selectall}{backspace}20{enter}')
         })
-        cy.refreshTableEditor()
+      })
+    cy.refreshTableEditor()
 
+    cy.get('tbody', { timeout: 10_000 })
+      .contains('tr', 'CDS1')
+      .within(() => {
         cy.contains('td', 20).within(() => {
           cy.get('input').type('{selectall}{backspace}30{enter}')
         })
+      })
 
-        cy.selectFromApolloMenu('Undo')
-        cy.refreshTableEditor()
+    cy.selectFromApolloMenu('Undo')
+    cy.refreshTableEditor()
+    cy.get('tbody', { timeout: 10_000 })
+      .contains('tr', 'CDS1')
+      .within(() => {
         cy.contains('td', 20)
+      })
 
-        cy.selectFromApolloMenu('Undo')
-        cy.refreshTableEditor()
+    cy.selectFromApolloMenu('Undo')
+    cy.refreshTableEditor()
+    cy.get('tbody', { timeout: 10_000 })
+      .contains('tr', 'CDS1')
+      .within(() => {
         cy.contains('td', 10)
+      })
 
-        // Make a change and check that there are no changes to redo and undo goes back to a valid state
+    // Make a change and check that there are no changes to redo and undo goes back to a valid state
+    cy.get('tbody', { timeout: 10_000 })
+      .contains('tr', 'CDS1')
+      .within(() => {
         cy.contains('td', 10).within(() => {
           cy.get('input').type('{selectall}{backspace}40{enter}')
         })
-        cy.refreshTableEditor()
+      })
+    cy.refreshTableEditor()
 
-        cy.selectFromApolloMenu('Redo').then(() => {
-          cy.wrap(Cypress.$('body')).within(() => {
-            cy.contains('No changes to redo')
-          })
-        })
+    cy.selectFromApolloMenu('Redo')
+    cy.contains('No changes to redo')
 
-        cy.selectFromApolloMenu('Undo')
-        cy.refreshTableEditor()
+    cy.selectFromApolloMenu('Undo')
+    cy.refreshTableEditor()
+    cy.get('tbody', { timeout: 10_000 })
+      .contains('tr', 'CDS1')
+      .within(() => {
         cy.contains('td', 10)
+      })
 
-        cy.selectFromApolloMenu('Undo')
-        cy.refreshTableEditor()
+    cy.selectFromApolloMenu('Undo')
+    cy.refreshTableEditor()
+    cy.get('tbody', { timeout: 10_000 })
+      .contains('tr', 'CDS1')
+      .within(() => {
         cy.contains('td', 1)
+      })
 
-        cy.selectFromApolloMenu('Redo')
-        cy.refreshTableEditor()
+    cy.selectFromApolloMenu('Redo')
+    cy.refreshTableEditor()
+    cy.get('tbody', { timeout: 10_000 })
+      .contains('tr', 'CDS1')
+      .within(() => {
         cy.contains('td', 10)
+      })
 
-        cy.selectFromApolloMenu('Redo')
-        cy.refreshTableEditor()
+    cy.selectFromApolloMenu('Redo')
+    cy.refreshTableEditor()
+    cy.get('tbody', { timeout: 10_000 })
+      .contains('tr', 'CDS1')
+      .within(() => {
         cy.contains('td', 40)
+      })
 
-        cy.selectFromApolloMenu('Redo').then(() => {
-          cy.wrap(Cypress.$('body')).within(() => {
-            cy.contains('No changes to redo')
-          })
-        })
+    cy.selectFromApolloMenu('Redo')
+    cy.contains('No changes to redo')
 
+    cy.get('tbody', { timeout: 10_000 })
+      .contains('tr', 'CDS1')
+      .within(() => {
         cy.contains('td', 40).within(() => {
           cy.get('input').type('{selectall}{backspace}50{enter}')
         })
+      })
 
-        // Invalid change is ignored in undo/redo
+    // Invalid change is ignored in undo/redo
+    cy.get('tbody', { timeout: 10_000 })
+      .contains('tr', 'CDS1')
+      .within(() => {
         cy.contains('td', 50).within(() => {
           cy.get('input').type('{selectall}{backspace}200{enter}')
         })
-        cy.wrap(Cypress.$('body')).within(() => {
-          cy.contains('Error: Min "200" is greater than max "99"')
-        })
+      })
+    cy.contains('Error: Min "200" is greater than max "99"')
 
-        cy.selectFromApolloMenu('Undo')
-        cy.refreshTableEditor()
+    cy.selectFromApolloMenu('Undo')
+    cy.refreshTableEditor()
+    cy.get('tbody', { timeout: 10_000 })
+      .contains('tr', 'CDS1')
+      .within(() => {
         cy.contains('td', 40)
+      })
 
-        cy.selectFromApolloMenu('Redo')
-        cy.refreshTableEditor()
+    cy.selectFromApolloMenu('Redo')
+    cy.refreshTableEditor()
+    cy.get('tbody', { timeout: 10_000 })
+      .contains('tr', 'CDS1')
+      .within(() => {
         cy.contains('td', 50)
+      })
 
-        cy.selectFromApolloMenu('Redo').then(() => {
-          cy.wrap(Cypress.$('body')).within(() => {
-            cy.contains('No changes to redo')
-          })
-        })
+    cy.selectFromApolloMenu('Redo')
+    cy.contains('No changes to redo')
+    cy.get('tbody', { timeout: 10_000 })
+      .contains('tr', 'CDS1')
+      .within(() => {
         cy.contains('td', 50)
       })
   })

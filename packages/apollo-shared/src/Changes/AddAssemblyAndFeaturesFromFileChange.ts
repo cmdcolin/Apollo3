@@ -81,6 +81,14 @@ export class AddAssemblyAndFeaturesFromFileChange extends FromFileBaseChange {
       }
       const checkRows = await backend.checkRepository.findDefaults()
       const checks = checkRows.map((c) => c._id)
+      // eslint-disable-next-line no-console
+      console.log(
+        `[DEBUG AddAssembly] findDefaults returned ${checkRows.length} checks: ${JSON.stringify(checkRows.map((c) => ({ _id: c._id, name: c.name, isDefault: c.isDefault })))}`,
+      )
+      // eslint-disable-next-line no-console
+      console.log(
+        `[DEBUG AddAssembly] assembly will have checks: ${JSON.stringify(checks)}`,
+      )
       await backend.assemblyRepository.create({
         _id: assembly,
         name: assemblyName,

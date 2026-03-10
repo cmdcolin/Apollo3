@@ -44,19 +44,19 @@ export function assembleFeatureTrees(flatFeatures: FeatureRow[]) {
       min: node.min,
       max: node.max,
     }
-    if (node.strand !== undefined) {
+    if (node.strand != null) {
       result.strand = node.strand
     }
-    if (node.phase !== undefined) {
+    if (node.phase != null) {
       result.phase = node.phase
     }
-    if (node.attributes) {
+    if (node.attributes != null) {
       result.attributes = node.attributes
     }
-    if (node.status !== undefined) {
+    if (node.status != null) {
       result.status = node.status
     }
-    if (node.user) {
+    if (node.user != null) {
       result.user = node.user
     }
     if (node.childList.length > 0) {
