@@ -609,8 +609,8 @@ describe('MikroOrmFeatureRepository', () => {
       status: 0,
     })
 
-    expect(await featureRepo.searchText('rs-1', 'gene')).toHaveLength(1)
-    expect(await featureRepo.searchText('rs-1', 'mRNA')).toHaveLength(1)
+    expect(await featureRepo.searchText(['rs-1'], 'gene')).toHaveLength(1)
+    expect(await featureRepo.searchText(['rs-1'], 'mRNA')).toHaveLength(1)
   })
 
   it('should create many features', async () => {

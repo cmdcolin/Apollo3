@@ -6,19 +6,19 @@ import { FeatureEntity } from '../entities/FeatureEntity.js'
 function toRow(entity: FeatureEntity): FeatureRow {
   return {
     _id: entity._id,
-    parentId: entity.parent?._id,
+    parentId: entity.parent?._id ?? undefined,
     refSeq:
       typeof entity.refSeq === 'string' ? entity.refSeq : entity.refSeq._id,
     type: entity.type,
     min: entity.min,
     max: entity.max,
-    strand: entity.strand,
-    phase: entity.phase,
-    attributes: entity.attributes,
-    status: entity.status,
-    user: entity.user,
-    createdAt: entity.createdAt,
-    updatedAt: entity.updatedAt,
+    strand: entity.strand ?? undefined,
+    phase: entity.phase ?? undefined,
+    attributes: entity.attributes ?? undefined,
+    status: entity.status ?? undefined,
+    user: entity.user ?? undefined,
+    createdAt: entity.createdAt ?? undefined,
+    updatedAt: entity.updatedAt ?? undefined,
   }
 }
 
