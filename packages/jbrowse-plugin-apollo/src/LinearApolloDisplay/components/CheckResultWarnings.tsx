@@ -27,12 +27,25 @@ export const CheckResultWarnings = observer(function CheckResultWarnings({
     if (!assembly) {
       return null
     }
+    // Build a set of refSeq database IDs that match this block's refName.
+    // Check results store refSeq as a database ID (from MikroORM), not a
+    // human-readable name, so we need to map through the apolloDataStore.
+    const apolloAssembly = session.apolloDataStore.assemblies.get(
+      block.assemblyName,
+    )
+    const matchingRefSeqIds = new Set<string>()
+    if (apolloAssembly) {
+      for (const [id, refSeq] of apolloAssembly.refSeqs) {
+        if (refSeq.name === block.refName) {
+          matchingRefSeqIds.add(id)
+        }
+      }
+    }
     const filteredCheckResults = [
       ...session.apolloDataStore.checkResults.values(),
     ].filter(
       (checkResult) =>
-        assembly.isValidRefName(checkResult.refSeq) &&
-        assembly.getCanonicalRefName(checkResult.refSeq) === block.refName &&
+        matchingRefSeqIds.has(checkResult.refSeq) &&
         doesIntersect2(
           block.start,
           block.end,

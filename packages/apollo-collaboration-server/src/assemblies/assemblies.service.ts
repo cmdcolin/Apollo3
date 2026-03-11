@@ -29,6 +29,8 @@ export class AssembliesService {
   private readonly logger = new Logger(AssembliesService.name)
 
   async create(createAssemblyDto: CreateAssemblyDto) {
+    const defaultChecks = await this.db.checkConfig.findDefaults()
+    const defaultCheckIds = defaultChecks.map((c) => c._id)
     return this.db.assembly.create({
       _id: randomBytes(12).toString('hex'),
       name: createAssemblyDto.name,
@@ -36,6 +38,7 @@ export class AssembliesService {
       description: createAssemblyDto.description,
       aliases: createAssemblyDto.aliases,
       status: 0,
+      checks: defaultCheckIds,
     })
   }
 

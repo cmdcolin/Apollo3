@@ -27,7 +27,7 @@ describe('Warning signs', () => {
         cy.get('input[value="27"]').type('{selectall}{backspace}24{enter}')
         cy.get('input[value="24"]').should('not.be.disabled')
       })
-    cy.get('button[data-testid="zoom_out"]').click()
+    cy.get('button[data-testid="zoom_out"]').should('not.be.disabled').click()
 
     cy.get('[data-testid^="ErrorIcon-"]', { timeout: 15_000 }).should(
       'have.length',
@@ -45,7 +45,7 @@ describe('Warning signs', () => {
         cy.get('input[value="24"]').type('{selectall}{backspace}27{enter}')
         cy.get('input[value="27"]').should('not.be.disabled')
       })
-    cy.get('button[data-testid="zoom_out"]').click()
+    cy.get('button[data-testid="zoom_out"]').should('not.be.disabled').click()
     cy.reload()
 
     cy.get('[data-testid^="ErrorIcon-"]', { timeout: 10_000 }).should(
@@ -86,9 +86,12 @@ describe('Warning signs', () => {
             cy.get('input[type="number"]').type('{selectall}{backspace}26')
           })
         cy.get('input[type="text"]').type('CDS{enter}')
+        cy.intercept('POST', '/changes').as('addChildChange')
         cy.get('button[type="submit"]').contains('Submit').click()
       })
-    cy.get('[data-testid="ErrorIcon-26"]', { timeout: 5000 }).should(
+    cy.wait('@addChildChange').its('response.statusCode').should('match', /2../)
+    cy.get('button[data-testid="zoom_out"]').should('not.be.disabled').click()
+    cy.get('[data-testid="ErrorIcon-26"]', { timeout: 10_000 }).should(
       'have.length',
       1,
     )
@@ -129,7 +132,7 @@ describe('Warning signs', () => {
       'test_data/cdsChecks/stopcodon.gff3',
     )
     cy.selectAssemblyToView('stopcodon.gff3', 'gene02')
-    cy.get('button[data-testid="zoom_out"]').click()
+    cy.get('button[data-testid="zoom_out"]').should('not.be.disabled').click()
     cy.get('[data-testid^="ErrorIcon-"]', { timeout: 5000 })
       .its('length')
       .should('satisfy', (n) => n >= 3)
@@ -163,9 +166,12 @@ describe('Warning signs', () => {
           .within(() => {
             cy.get('input[type="checkbox"]').click()
           })
+        cy.intercept('POST', '/assemblies/checks').as('registerChecks')
         cy.get('button[type="submit"]').contains('Submit').click()
       })
-    cy.get('[data-testid="ErrorIcon-6"]', { timeout: 5000 }).should(
+    cy.wait('@registerChecks').its('response.statusCode').should('match', /2../)
+    cy.get('button[data-testid="zoom_out"]').should('not.be.disabled').click()
+    cy.get('[data-testid="ErrorIcon-6"]', { timeout: 10_000 }).should(
       'have.length',
       1,
     )
@@ -178,7 +184,7 @@ describe('Warning signs', () => {
     )
     cy.selectAssemblyToView('stopcodon.gff3', 'gene09')
 
-    cy.get('button[data-testid="zoom_out"]').click()
+    cy.get('button[data-testid="zoom_out"]').should('not.be.disabled').click()
     cy.get('[data-testid^="ErrorIcon-"]', { timeout: 15_000 }).should(
       'have.length',
       3,
