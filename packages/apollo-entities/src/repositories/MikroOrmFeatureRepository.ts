@@ -1,7 +1,79 @@
 import type { FeatureRepository, FeatureRow } from '@apollo-annotation/common'
-import { type EntityManager, raw } from '@mikro-orm/core'
+import type { EntityManager } from '@mikro-orm/core'
 
 import { FeatureEntity } from '../entities/FeatureEntity.js'
+
+// English stop words matching MongoDB's default text search behavior
+const STOP_WORDS = new Set([
+  'a',
+  'an',
+  'and',
+  'are',
+  'as',
+  'at',
+  'be',
+  'but',
+  'by',
+  'for',
+  'if',
+  'in',
+  'into',
+  'is',
+  'it',
+  'no',
+  'not',
+  'of',
+  'on',
+  'or',
+  'such',
+  'that',
+  'the',
+  'their',
+  'then',
+  'there',
+  'these',
+  'they',
+  'this',
+  'to',
+  'was',
+  'will',
+  'with',
+  'both',
+])
+
+function tokenize(text: string) {
+  return text.toLowerCase().match(/[a-z0-9_]+/g) ?? []
+}
+
+function stem(word: string) {
+  if (word.length > 3 && word.endsWith('s') && !word.endsWith('ss')) {
+    return word.slice(0, -1)
+  }
+  return word
+}
+
+function matchesPhrase(textTokens: string[], queryTokens: string[]) {
+  if (queryTokens.length === 0) {
+    return false
+  }
+  const stemmedQuery = queryTokens.map(stem)
+  if (queryTokens.length === 1) {
+    return textTokens.some((t) => stem(t) === stemmedQuery[0])
+  }
+  for (let i = 0; i <= textTokens.length - queryTokens.length; i++) {
+    let match = true
+    for (let j = 0; j < queryTokens.length; j++) {
+      if (stem(textTokens[i + j]!) !== stemmedQuery[j]) {
+        match = false
+        break
+      }
+    }
+    if (match) {
+      return true
+    }
+  }
+  return false
+}
 
 function toRow(entity: FeatureEntity): FeatureRow {
   return {
@@ -196,15 +268,37 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
     if (refSeqIds.length === 0) {
       return []
     }
-    const pattern = `%${query}%`
+    const queryTokens = tokenize(query)
+    if (
+      queryTokens.length === 0 ||
+      queryTokens.every((t) => STOP_WORDS.has(t))
+    ) {
+      return []
+    }
     const entities = await this.em.find(FeatureEntity, {
       refSeq: { $in: refSeqIds },
-      $or: [
-        { type: { $like: pattern } },
-        { [raw('attributes')]: { $like: pattern } },
-      ],
     })
-    return entities.map(toRow)
+    const matchingIds = new Set<string>()
+    for (const entity of entities) {
+      const text = entity.type + ' ' + JSON.stringify(entity.attributes ?? {})
+      const textTokens = tokenize(text)
+      if (matchesPhrase(textTokens, queryTokens)) {
+        matchingIds.add(entity._id)
+      }
+    }
+    if (matchingIds.size === 0) {
+      return []
+    }
+    const rootIds = new Set<string>()
+    for (const id of matchingIds) {
+      const root = await this.findRootParent(id)
+      if (root) {
+        rootIds.add(root._id)
+      }
+    }
+    return entities
+      .filter((entity) => rootIds.has(entity._id) && entity.parent == null)
+      .map(toRow)
   }
 
   async activateByUser(user: string) {

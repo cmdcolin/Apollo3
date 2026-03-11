@@ -174,6 +174,9 @@ export class FeaturesService {
   }
 
   async findByRange(searchDto: FeatureRangeSearchDto) {
+    this.logger.warn(
+      `[DEBUG findByRange] refSeq=${searchDto.refSeq}, start=${searchDto.start}, end=${searchDto.end}`,
+    )
     const featureDocs =
       await this.operationsService.executeOperation<GetFeaturesOperation>({
         typeName: 'GetFeaturesOperation',
@@ -181,12 +184,19 @@ export class FeaturesService {
         start: searchDto.start,
         end: searchDto.end,
       })
+    this.logger.warn(`[DEBUG findByRange] got ${featureDocs.length} features`)
     for (const featureDoc of featureDocs) {
       if (featureDoc._id) {
+        this.logger.warn(
+          `[DEBUG findByRange] checking feature ${String(featureDoc._id)}`,
+        )
         await this.checksService.checkFeature(String(featureDoc._id), true)
       }
     }
     const checkResults = await this.checksService.findByRange(searchDto)
+    this.logger.warn(
+      `[DEBUG findByRange] returning ${featureDocs.length} features and ${checkResults.length} checkResults`,
+    )
     return [featureDocs, checkResults]
   }
 

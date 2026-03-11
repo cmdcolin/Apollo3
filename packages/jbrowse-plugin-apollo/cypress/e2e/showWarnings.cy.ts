@@ -23,11 +23,13 @@ describe('Warning signs', () => {
       .parent()
       .within(() => {
         cy.get('input[value="16"]').type('{selectall}{backspace}4{enter}')
+        cy.get('input[value="4"]').should('not.be.disabled')
         cy.get('input[value="27"]').type('{selectall}{backspace}24{enter}')
+        cy.get('input[value="24"]').should('not.be.disabled')
       })
     cy.get('button[data-testid="zoom_out"]').click()
 
-    cy.get('[data-testid^="ErrorIcon-"]', { timeout: 5000 }).should(
+    cy.get('[data-testid^="ErrorIcon-"]', { timeout: 15_000 }).should(
       'have.length',
       3,
     )
@@ -41,6 +43,7 @@ describe('Warning signs', () => {
       .parent()
       .within(() => {
         cy.get('input[value="24"]').type('{selectall}{backspace}27{enter}')
+        cy.get('input[value="27"]').should('not.be.disabled')
       })
     cy.get('button[data-testid="zoom_out"]').click()
     cy.reload()

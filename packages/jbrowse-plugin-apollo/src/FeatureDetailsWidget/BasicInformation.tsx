@@ -66,7 +66,7 @@ export const BasicInformation = observer(function BasicInformation({
     return changeManager.submit(change)
   }
 
-  function handleStartChange(newStart: number): boolean {
+  async function handleStartChange(newStart: number) {
     newStart--
     const change = new LocationStartChange({
       typeName: 'LocationStartChange',
@@ -76,11 +76,11 @@ export const BasicInformation = observer(function BasicInformation({
       newStart,
       assembly,
     })
-    void changeManager.submit(change)
+    await changeManager.submit(change)
     return true
   }
 
-  function handleEndChange(newEnd: number): boolean {
+  async function handleEndChange(newEnd: number) {
     const change = new LocationEndChange({
       typeName: 'LocationEndChange',
       changedIds: [_id],
@@ -89,7 +89,7 @@ export const BasicInformation = observer(function BasicInformation({
       newEnd,
       assembly,
     })
-    void changeManager.submit(change)
+    await changeManager.submit(change)
     return true
   }
 

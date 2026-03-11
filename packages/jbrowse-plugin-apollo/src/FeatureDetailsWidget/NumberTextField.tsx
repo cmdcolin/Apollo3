@@ -15,7 +15,7 @@ interface NumberTextFieldProps
     | 'error'
     | 'helperText'
   > {
-  onChangeCommitted(newValue: number): boolean
+  onChangeCommitted(newValue: number): Promise<boolean>
   value: unknown
 }
 
@@ -26,6 +26,7 @@ export const NumberTextField = observer(function NumberTextField({
 }: NumberTextFieldProps) {
   const [value, setValue] = useState(String(initialValue))
   const [blur, setBlur] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [inputNode, setInputNode] = useState<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -51,6 +52,7 @@ export const NumberTextField = observer(function NumberTextField({
       type="text"
       onChange={onChange}
       value={value}
+      disabled={submitting}
       onKeyDown={(event) => {
         if (event.key === 'Enter') {
           inputNode?.blur()
@@ -65,10 +67,19 @@ export const NumberTextField = observer(function NumberTextField({
           if (Number.isNaN(valueAsNumber)) {
             setValue(String(initialValue))
           } else {
-            const success = onChangeCommitted(valueAsNumber)
-            if (!success) {
-              setValue(String(initialValue))
-            }
+            setSubmitting(true)
+            onChangeCommitted(valueAsNumber)
+              .then((success) => {
+                if (!success) {
+                  setValue(String(initialValue))
+                }
+              })
+              .catch(() => {
+                setValue(String(initialValue))
+              })
+              .finally(() => {
+                setSubmitting(false)
+              })
           }
         }
       }}

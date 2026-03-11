@@ -374,8 +374,7 @@ export const AnnotationFeatureModel = types
           self.children.put(child)
         }
       } else {
-        self.children = cast({})
-        self.children?.put(childFeature)
+        self.children = cast({ [childFeature._id]: childFeature })
       }
     },
     deleteChild(childFeatureId: string) {

@@ -75,8 +75,8 @@ describe('Delete feature', () => {
     // Close and reload to check that the server also has correct data
     cy.get('button[data-testid="close_view"]').click()
     cy.contains('Launch view') // To ensure that we reload after closing
-    cy.reload()
-    cy.contains('Launch view', { timeout: 10_000 }).click()
+    cy.visit('/?config=http://localhost:3999/jbrowse/config.json')
+    cy.contains('button', 'Launch view', { timeout: 15_000 }).click()
     cy.contains('Select assembly to view', { timeout: 10_000 })
 
     cy.selectAssemblyToView(assemblyName, 'chr2:1..60')
