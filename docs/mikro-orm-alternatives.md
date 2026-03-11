@@ -6,62 +6,58 @@ database options exist. For the core migration rationale, see
 
 ---
 
-## What Staying on MongoDB Would Require
+## Considerations for Staying on MongoDB
 
-If the decision were made to keep MongoDB, the challenges described in the core
-document would still need to be addressed.
+If the team prefers to keep MongoDB, the challenges described in the core
+document would still be worth addressing. Below are some observations about what
+that path might involve.
 
-### The data model would still need to be restructured
+### The data model would likely need restructuring
 
-The nested document design is the source of the concurrent editing risk, the
-`allIds` bookkeeping, and the document size limits. None of these can be fixed
-without changing how features are stored. Fixing them in MongoDB would require
-moving to a flat document model — one document per feature, with a parent
-reference field — which is structurally the same change as the relational
-migration, but done in MongoDB's query language instead of SQL.
+The nested document design is the source of the concurrent editing contention,
+the `allIds` bookkeeping, and the document size limits. Addressing these within
+MongoDB would likely mean moving to a flat document model — one document per
+feature, with a parent reference field — which is structurally similar to the
+relational migration, but done in MongoDB's query language instead of SQL.
 
-This is a significant effort. It involves migrating existing data and rewriting
-the same application logic. The work required is comparable to the relational
-migration — but without the benefits described below.
+This would be a significant effort, involving data migration and rewriting
+application logic. The scope is comparable to the relational migration, but
+without the additional benefits (desktop deployment, simplified operations)
+described below.
 
-### Electron deployment would still be impossible, requiring a second database system
+### Desktop deployment would remain an open question
 
-MongoDB has no embedded or in-process mode. There is no production-grade
-document database that can run inside an Electron application the way SQLite
-can. The only viable option would be to use a completely different database for
-the desktop case — meaning two separate data access implementations would need
-to be maintained: one for the server (MongoDB) and one for desktop (SQLite or
-similar). This adds significant maintenance cost compared to migrating
-everything to a single relational model.
+MongoDB has no embedded or in-process mode. To support desktop / Electron
+deployment, a separate embedded database (likely SQLite) would be needed for
+that use case — meaning two data access implementations to maintain, one for the
+server (MongoDB) and one for desktop. This adds maintenance cost compared to a
+single relational model that serves both scenarios.
 
-### The replica set requirement may have been unnecessary
+### The replica set configuration could potentially be simplified
 
 As described in the core document, Apollo 3's real-time collaboration is handled
 by WebSocket broadcasting, not MongoDB change streams. If change streams were
-removed from the MongoDB configuration, the replica set requirement would go
+removed from the MongoDB configuration, the replica set requirement could go
 away — and real-time collaboration would continue to work via WebSockets as it
 already does.
 
-However, even if the replica set requirement were dropped, the other challenges
-(nested documents, `allIds`, document size limits, no Electron support) would
-remain. Removing the replica set requirement alone does not address the core
-issues.
+That said, this would address deployment complexity but not the other challenges
+(nested documents, `allIds`, document size limits, desktop support).
 
 ### Summary
 
-Staying on MongoDB requires approximately the same migration work as the
-relational approach, still leaves the Electron case unsolved (or requires
-maintaining two separate database systems), and does not reduce the operational
-complexity of server deployments. The relational migration addresses all of
-these concerns with a single, coherent change.
+Staying on MongoDB would involve comparable migration work to the relational
+approach, would leave the desktop case unresolved (or require maintaining two
+database backends), and would not simplify server deployment. The relational
+migration addresses all of these with a single, coherent change.
 
 ---
 
-## If the MikroORM Migration Cannot Proceed: Alternatives
+## Other Approaches Worth Considering
 
-If the relational migration is not approved, the challenges with the document
-model still need to be addressed. This section evaluates three alternative
-paths, including their strengths and limitations.
+If the relational migration is not the preferred direction, there are other ways
+to address the challenges with the document model. This section evaluates three
+alternative paths, including their strengths and limitations.
 
 ### Alternative 1: Targeted fixes to the existing MongoDB codebase
 
@@ -279,21 +275,21 @@ the transition period of the MikroORM migration (when both MongoDB and
 relational code paths existed simultaneously) and the experience confirmed that
 dual backends are expensive to maintain.
 
-This approach is only justified if there is a hard requirement to support two
-fundamentally different deployment targets (e.g., Firestore for one customer and
-PostgreSQL for another). For Apollo 3's use case, the relational model already
-covers the full range from desktop to server.
+This approach would mainly make sense if there were a strong need to support two
+fundamentally different deployment targets (e.g., Firestore for one user base
+and PostgreSQL for another). For Apollo 3's use case, the relational model
+already covers the full range from desktop to server.
 
-### Recommendation
+### Our suggestion
 
-The MikroORM / relational migration is the strongest single path because it
-solves the desktop case, the deployment complexity, the data model challenges,
-and the operational cost — all at once. If it cannot proceed, the most pragmatic
-alternative is:
+We believe the MikroORM / relational migration is the strongest single path
+because it addresses the desktop case, deployment complexity, data model
+challenges, and operational cost together. If that direction is not preferred, a
+pragmatic alternative could be:
 
 1. **Targeted MongoDB fixes** (Phases 1–2 above) to stabilize the existing
    system in the near term
 2. **Firebase Auth as a standalone service** to simplify the authentication
    layer independently of the database choice
-3. **Revisit the full relational migration** when the desktop / Electron
-   requirement becomes active, since no other path addresses it
+3. **Consider the full relational migration** later if desktop / Electron
+   deployment becomes a priority, since no other path addresses it

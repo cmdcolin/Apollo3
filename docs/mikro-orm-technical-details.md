@@ -150,7 +150,7 @@ pushing the filter into the database query. This is a correctness issue that
 needs fixing independently of any database technology choice.
 
 These exist because the migration prioritized correctness first. All have clear
-solutions and should be addressed as follow-on work.
+solutions and are good candidates for follow-on work.
 
 ### Text search: not a MongoDB advantage
 
@@ -306,8 +306,8 @@ migrations, or Django migrations:
 
 The current implementation uses MikroORM's `SchemaGenerator.updateSchema()` to
 automatically create or update tables on server startup. This is appropriate for
-development and initial deployment, but for production use, the project should
-transition to explicit migration files:
+development and initial deployment, but for production use, transitioning to
+explicit migration files would be beneficial:
 
 1. **Generate an initial migration** from the current entity definitions — this
    captures the baseline schema
