@@ -73,11 +73,11 @@ export function extendSession(
       apolloSelectedFeature: types.safeReference(AnnotationFeatureExtended),
       jobsManager: types.optional(ApolloJobModel, {}),
       isLocked: types.optional(types.boolean, false),
-      changeInProgress: types.optional(types.boolean, false),
     })
     .volatile(() => ({
       apolloHoveredFeature: undefined as HoveredFeature | undefined,
       abortController: new AbortController(),
+      changeInProgress: false,
     }))
     .extend(() => {
       const collabs = observable.array<Collaborator>([])

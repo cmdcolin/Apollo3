@@ -158,13 +158,22 @@ export const LinearApolloSixFrameDisplay = observer(
                 const widthBp = lgv.bpPerPx * apolloRowHeight
                 const assembly = assemblyManager.get(region.assemblyName)
                 if (showCheckResults) {
+                  const apolloAssembly = session.apolloDataStore.assemblies.get(
+                    region.assemblyName,
+                  )
+                  const matchingRefSeqIds = new Set<string>()
+                  if (apolloAssembly) {
+                    for (const [id, refSeq] of apolloAssembly.refSeqs) {
+                      if (refSeq.name === region.refName) {
+                        matchingRefSeqIds.add(id)
+                      }
+                    }
+                  }
                   const filteredCheckResults = [
                     ...session.apolloDataStore.checkResults.values(),
                   ].filter(
                     (checkResult) =>
-                      assembly?.isValidRefName(checkResult.refSeq) &&
-                      assembly.getCanonicalRefName(checkResult.refSeq) ===
-                        region.refName &&
+                      matchingRefSeqIds.has(checkResult.refSeq) &&
                       doesIntersect2(
                         region.start,
                         region.end,
