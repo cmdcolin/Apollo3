@@ -336,7 +336,7 @@ With MongoDB, getting a working development environment required:
 
 1. Installing MongoDB
 2. Configuring it as a replica set (required even for a single-machine setup
-   because Apollo used change streams)
+   because Apollo 3 used change streams)
 3. Starting the MongoDB service
 4. Setting the `MONGODB_URI` environment variable to point to the running
    instance
@@ -344,7 +344,7 @@ With MongoDB, getting a working development environment required:
 
 With the relational model, the entire process is:
 
-1. Starting the Apollo server
+1. Starting the Apollo 3 server
 
 The SQLite database file is created automatically on first run. There is no
 external service to install, no configuration to set, and no environment
@@ -382,22 +382,21 @@ The relational model opens several significantly cheaper options:
   of MongoDB Atlas pricing.
 - **Serverless PostgreSQL**: Services like AWS Aurora Serverless or Neon can
   scale database capacity to zero when idle and charge only for actual usage.
-  This is ideal for Apollo instances that see intermittent use — a common
+  This is ideal for Apollo 3 instances that see intermittent use — a common
   pattern for annotation projects that are active during certain phases and idle
   between them.
 
 ### Serverless and containerized deployment scenarios
 
-MongoDB is fundamentally incompatible with serverless architectures because it
-requires persistent connections and a running server process. The relational
-model opens up several concrete deployment options that were previously
-impossible.
+MongoDB is not well suited to serverless architectures because it requires
+persistent connections and a running server process. The relational model opens
+up several concrete deployment options that were previously impossible.
 
 **Scenario 1: Scale-to-zero container (AWS Fargate / Google Cloud Run)**
 
-This is the most practical near-term serverless option. The Apollo NestJS server
-runs as a container that cloud infrastructure starts on demand and shuts down
-after a period of inactivity.
+This is the most practical near-term serverless option. The Apollo 3 NestJS
+server runs as a container that cloud infrastructure starts on demand and shuts
+down after a period of inactivity.
 
 - A single Docker image contains the Apollo server and nothing else
 - PostgreSQL is provided by a managed serverless database (AWS Aurora Serverless
@@ -438,7 +437,7 @@ application process. No network, no cloud, no cost.
 NestJS can run inside Lambda using `@vendia/serverless-express`. The main
 limitations are cold start time (2–5 seconds for NestJS initialization), the
 need for a connection pooler for PostgreSQL, and the lack of native WebSocket
-support (Apollo uses WebSockets for real-time collaboration).
+support (Apollo 3 uses WebSockets for real-time collaboration).
 
 Lambda is most realistic for read-only, non-collaborative use cases — for
 example, serving annotation data to a public-facing JBrowse instance. For
@@ -447,8 +446,8 @@ practical because it supports WebSockets natively.
 
 ### Desktop / Electron deployment
 
-This is the single most important strategic reason for the migration. MongoDB
-cannot run inside a desktop application — it is a separate server process.
+This is one of the most important strategic reasons for the migration. MongoDB
+requires a separate server process and cannot run inside a desktop application.
 SQLite can: it stores the database in a single file, requires no installation,
 and starts when the application starts.
 
