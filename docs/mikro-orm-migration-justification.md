@@ -2,36 +2,64 @@
 
 ## Summary
 
-Apollo 3's data layer has been migrated from MongoDB to
-[MikroORM](https://mikro-orm.io/), a TypeScript ORM that supports both SQLite
-and PostgreSQL through the same codebase. **The migration is complete.** All
-existing change operations, undo/redo, and real-time collaboration work as
-before. MongoDB has been fully removed from the active codebase.
+Apollo 3 currently uses MongoDB as its database. MongoDB stores data as
+"documents" — flexible JSON-like records that can nest arbitrarily deep. Apollo
+3 uses this to store an entire gene and all of its children (transcripts, exons,
+CDS features) as a single nested document.
+
+This document model works, but it creates challenges in several areas that
+matter for shipping Apollo 3: concurrent editing by multiple annotators, large
+file imports, desktop deployment, and operational complexity. These challenges
+are detailed in the sections below.
+
+To address them, we have migrated Apollo 3's data layer to
+[MikroORM](https://mikro-orm.io/), a TypeScript ORM that supports multiple
+database backends — including MongoDB, SQLite, and PostgreSQL — through the same
+codebase. (MikroORM's MongoDB support means this migration is not a one-way
+door; however, the relational backends offer significant advantages for Apollo
+3's use cases.) With MikroORM, each feature is stored as its own row in a
+relational database, and the same application code can run against SQLite (for
+desktop use) or PostgreSQL (for collaborative server deployments) with only a
+configuration change.
+
+**The migration is complete.** All existing change operations, undo/redo, and
+real-time collaboration work as before. MongoDB has been fully removed from the
+active codebase.
 
 **What this unblocks for shipping:**
 
-- **Desktop deployment is now possible.** Apollo 3 runs fully self-contained
-  with an embedded SQLite database — no external services, no installation steps
-  for end users. This was impossible with MongoDB.
-- **Server deployment is simpler.** No MongoDB replica set to configure. For
-  collaborative use, a standard PostgreSQL instance is all that is needed.
+- **Self-hosted server deployment is dramatically simpler.** Apollo 3 is
+  primarily deployed on-prem by research groups running their own servers. The
+  current MongoDB deployment
+  ([`compose.yml`](../.github/workflows/deploy/compose.yml)) requires two
+  MongoDB containers running as a replica set, a health check script with
+  embedded JavaScript that initializes the replica set on startup, four separate
+  MongoDB data volumes, and a connection string that references both nodes by
+  name and port. This is all needed because Apollo 3 was configured to use
+  MongoDB change streams, which only work in replica set mode — even though
+  real-time collaboration actually runs through WebSockets (Socket.IO), not
+  change streams. With the relational model, one PostgreSQL container replaces
+  the entire MongoDB setup. For groups that want the simplest possible
+  deployment, SQLite runs in-process with no database containers at all.
 - **Developer and CI setup is zero-configuration.** No database service to
   install. Run the server and the SQLite database is created automatically. CI
-  pipelines no longer need MongoDB containers.
-- **Hosting costs drop significantly.** MongoDB Atlas requires ~$50–60+/month
-  minimum. SQLite is free (in-process). PostgreSQL is available through low-cost
-  managed services or serverless options that scale to near-zero.
-- **One codebase, all deployment targets.** The same code runs on a researcher's
-  laptop (SQLite) and a shared server (PostgreSQL). Only a configuration value
-  changes.
+  pipelines no longer need MongoDB containers or replica set initialization.
+- **Hosting costs drop for institutions running their own infrastructure.**
+  Self-hosting MongoDB requires running the replica set infrastructure described
+  above. Managed MongoDB hosting (MongoDB Atlas, MongoDB's cloud service) starts
+  at ~$50–60+/month for even a small deployment. With the relational model,
+  PostgreSQL is widely available and familiar to most IT departments.
+- **Desktop deployment becomes possible as an additional option.** Apollo 3 can
+  now run fully self-contained with an embedded SQLite database — no external
+  services, no installation steps for end users. This was not possible with
+  MongoDB, which requires a separate running server.
+- **One codebase, all deployment targets.** The same code runs on a shared
+  server (PostgreSQL) and a researcher's laptop (SQLite). Only a configuration
+  value changes.
 - **Existing data is easy to migrate.** A
   [migration script](../packages/apollo-collaboration-server/scripts/migrate-mongo-to-mikroorm.ts)
   converts MongoDB data to the new schema. Early beta testers with existing
   Apollo 3 deployments can transition without data loss.
-
-The sections below detail the challenges the document model creates for
-concurrent editing, large imports, and desktop deployment, and how the
-relational model addresses them.
 
 **Related documents:**
 
@@ -39,8 +67,8 @@ relational model addresses them.
   tradeoff analysis, schema recommendations, deployment scenarios
 - [Per-Gene History and Apollo 2 Migration](./apollo2-migration-and-history-tracking.md)
   — per-gene edit history tracking, Apollo 2 data migration plan
-- [Alternatives](./mikro-orm-alternatives.md) — what staying on MongoDB would
-  require, Firestore/Firebase evaluation, parallel backend approach
+- [Alternatives](./mikro-orm-alternatives.md) — considerations for staying on
+  MongoDB, Firestore/Firebase evaluation, parallel backend approach
 
 ---
 
@@ -50,11 +78,13 @@ relational model addresses them.
 first-class support for NestJS (Apollo 3's server framework). It was chosen over
 alternatives for several reasons:
 
-- **Multi-database support from a single codebase.** MikroORM supports SQLite
-  and PostgreSQL (among others) through swappable drivers. The same entity
-  definitions and query code work against both databases — only a configuration
-  value changes. This is what makes the "SQLite for desktop, PostgreSQL for
-  server" strategy possible without maintaining two implementations.
+- **Multi-database support from a single codebase.** MikroORM supports SQLite,
+  PostgreSQL, MySQL, MS SQL Server, and MongoDB through swappable drivers. The
+  same entity definitions and query code work against any supported backend —
+  only a configuration value changes. This is what makes the "SQLite for
+  desktop, PostgreSQL for server" strategy possible without maintaining two
+  implementations. It also means MongoDB remains available as a backend if
+  needed in the future.
 - **TypeScript-first design.** Entities are defined as decorated TypeScript
   classes with full type safety. This fits naturally into Apollo 3's existing
   TypeScript codebase and catches schema errors at compile time.
@@ -74,42 +104,36 @@ alternatives for several reasons:
 
 ### Data model and editing
 
-| Area                                    | MongoDB (before)                                                                                           | Relational (after)                                                                                                         |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Editing one exon's coordinates          | Load the entire gene into memory, save it all back                                                         | Update exactly one row                                                                                                     |
-| Adding a child feature (e.g., new exon) | Load gene document, navigate to parent, insert into children map, update `allIds`, save entire document    | Insert one row with parent ID set                                                                                          |
-| Two annotators editing the same gene    | Both load the entire gene document; second save may overwrite the first user's changes to a different exon | Edits to different features are separate rows with no contention; same-feature conflicts detectable via optimistic locking |
-| Finding a feature by its ID             | Scan a secondary list, then walk a nested structure                                                        | Direct lookup by primary key                                                                                               |
-| Importing a large annotation file       | Subject to a 16 MB document limit; required a staging workaround                                           | No size limit; standard database transaction                                                                               |
-| Redundant bookkeeping                   | A manually-maintained list of all descendant IDs in every gene record                                      | Not needed — IDs are native database keys                                                                                  |
-| Data integrity enforcement              | Application code responsible for all constraints                                                           | Foreign keys, unique constraints, and indexes enforced by the database itself                                              |
-| Transaction safety                      | Partial failures in multi-step operations were hard to recover from                                        | Each change runs in a transactional unit of work with automatic rollback on failure                                        |
+| Area                                 | MongoDB (before)                                                                                                                                                                                                                                                                                                                                                                                     | Relational (after)                                                                                                                                             |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Editing a single feature             | The entire gene (all transcripts, all exons) is loaded into memory, one piece is modified, and the whole thing is written back                                                                                                                                                                                                                                                                       | Only the one feature being edited is read and written                                                                                                          |
+| Two annotators editing the same gene | Both load the full gene document; the second save overwrites the entire document, including the first user's unrelated changes. Apollo 3 has a `changeInProgress` guard, but it only serializes changes within a single browser tab — it does not protect against two different users saving the same gene document at the same time. This is a real concurrency bug inherent to the document model. | Each feature is its own row — edits to different features (e.g., different exons) cannot interfere with each other, because they are separate database records |
+| Data integrity                       | Application code is responsible for ensuring relationships are valid                                                                                                                                                                                                                                                                                                                                 | The database enforces relationships, constraints, and cleanup rules automatically                                                                              |
+| Transaction safety                   | If an operation fails partway through, partial changes may be left behind                                                                                                                                                                                                                                                                                                                            | Each operation runs as a transaction — if anything fails, all changes are rolled back automatically                                                            |
 
 ### Deployment and operations
 
-| Area                          | MongoDB (before)                                                                                            | Relational (after)                                                                                                                                            |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Desktop / Electron deployment | Impossible — MongoDB requires a separate running service                                                    | Fully self-contained with SQLite; no install needed                                                                                                           |
-| Shared server deployment      | MongoDB requires a special "replica set" configuration even for one machine                                 | Standard PostgreSQL; no special setup                                                                                                                         |
-| Scaling from laptop to server | Two entirely different database systems would be needed                                                     | Same code, same schema; only a config value changes (SQLite vs. PostgreSQL)                                                                                   |
-| Developer setup               | Install MongoDB, configure replica set, set `MONGODB_URI`                                                   | Run the server — SQLite database file is created automatically; zero configuration                                                                            |
-| CI / automated testing        | CI pipelines need a MongoDB service container with replica set initialization                               | No database service needed — tests run against a temporary SQLite file that is deleted after                                                                  |
-| Docker Compose                | Requires two MongoDB containers in a replica set plus health checks and initialization scripts              | No database containers needed at all for SQLite; optional single PostgreSQL container for server mode                                                         |
-| Cloud hosting costs           | Requires a dedicated MongoDB instance (or MongoDB Atlas); minimum ~$50–60/month for a small managed cluster | SQLite runs in-process (no database cost). PostgreSQL available via low-cost managed services or AWS Aurora Serverless (scales to zero; pay only when active) |
-| Serverless deployment         | Not feasible — MongoDB requires persistent connections and a running server                                 | SQLite can be bundled with the application. PostgreSQL works with serverless-friendly options like Aurora Serverless or Neon                                  |
-| Backups                       | Requires `mongodump` or MongoDB-specific backup tools                                                       | SQLite: copy a single file. PostgreSQL: standard `pg_dump`                                                                                                    |
-| Inspecting data directly      | Requires MongoDB-specific tooling                                                                           | Any SQL client, command-line tool, or spreadsheet export                                                                                                      |
+| Area                   | MongoDB (before)                                                                                                                                                                                       | Relational (after)                                                                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Desktop deployment     | Not possible — MongoDB is a separate server that must be installed and running                                                                                                                         | Fully self-contained with SQLite — the database is a single file created automatically, no installation needed                             |
+| Server deployment      | Requires two MongoDB containers in a replica set with health check scripts, four data volumes, and a multi-node connection string ([see current compose.yml](../.github/workflows/deploy/compose.yml)) | No database containers needed for SQLite; one PostgreSQL container for collaborative use                                                   |
+| Developer setup        | Install MongoDB, configure replica set, set environment variables                                                                                                                                      | Run the server — the database is created automatically on first start                                                                      |
+| CI / automated testing | CI pipelines need a MongoDB service container with replica set initialization                                                                                                                          | No database service needed — tests use a temporary SQLite file                                                                             |
+| Hosting costs          | Self-hosting requires the replica set infrastructure above; managed hosting (MongoDB Atlas) starts at ~$50–60/month                                                                                    | SQLite is free (runs inside the application). PostgreSQL available through low-cost managed services that can scale to near-zero when idle |
+| Laptop to server       | Would need two different database systems                                                                                                                                                              | Same code, same schema — only a config value changes (SQLite vs. PostgreSQL)                                                               |
+| Backups                | Requires MongoDB-specific tools                                                                                                                                                                        | SQLite: copy a single file. PostgreSQL: standard `pg_dump`                                                                                 |
+| Inspecting data        | Requires MongoDB-specific tooling                                                                                                                                                                      | Any SQL client or command-line tool                                                                                                        |
 
 ### Code and maintenance
 
-| Area                     | MongoDB (before)                                                                                             | Relational (after)                                                                  |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
-| Schema clarity           | Mongoose schemas + a separate `apollo-schemas` package                                                       | 13 entity definitions in ~330 lines; map directly to database tables                |
-| Server code complexity   | Each operation navigated nested document trees; many were 30+ lines                                          | Most operations are 5–10 lines of targeted row updates                              |
-| Dependency footprint     | `mongoose`, `@nestjs/mongoose`, `connect-mongodb-session`, `mongoose-id-validator`, `apollo-schemas` package | One ORM library (MikroORM); `apollo-schemas` package deleted entirely               |
-| Real-time collaboration  | Configured with MongoDB change streams (required replica set); WebSockets handled the actual broadcasting    | Same WebSocket system, unchanged — collaboration was not database-dependent         |
-| Undo / redo              | Undo logic lives in TypeScript, independent of the database                                                  | Unchanged — transactions are now cleaner with automatic rollback                    |
-| Continuity with Apollo 2 | Apollo 2 used PostgreSQL; Apollo 3 moved to a document model                                                 | Returns to a relational model (like Apollo 2) while keeping Apollo 3's architecture |
+| Area                     | MongoDB (before)                                                                                     | Relational (after)                                                                        |
+| ------------------------ | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Server code complexity   | Each operation navigated nested document trees; many were 30+ lines                                  | Most operations are 5–10 lines targeting specific rows                                    |
+| Schema definitions       | Mongoose schemas + a separate `apollo-schemas` package                                               | 13 compact entity definitions in `apollo-entities`; `apollo-schemas` was removed entirely |
+| Dependencies             | `mongoose`, `@nestjs/mongoose`, `connect-mongodb-session`, `mongoose-id-validator`, `apollo-schemas` | One ORM (`@mikro-orm/*`)                                                                  |
+| Real-time collaboration  | Unchanged — collaboration runs through WebSockets, which are independent of the database             |                                                                                           |
+| Undo / redo              | Unchanged — undo logic lives in TypeScript and does not depend on the database                       |                                                                                           |
+| Continuity with Apollo 2 | Apollo 2 used PostgreSQL; Apollo 3 moved to MongoDB                                                  | Returns to a relational model (like Apollo 2) while keeping Apollo 3's architecture       |
 
 ### Future capabilities enabled by the relational model
 
@@ -126,9 +150,10 @@ relational foundation, but were difficult or impossible with the document model:
   migrating between systems. See
   [migration plan](./apollo2-migration-and-history-tracking.md#migrating-apollo-2-data-and-history-to-apollo-3).
 - **Annotation quality check improvements** — Check results are currently stored
-  with feature IDs in a JSON array, making per-feature lookup inefficient.
-  Proposed: normalize into indexed columns for fast viewport queries and run
-  checks only on feature change rather than on every pan/zoom.
+  with feature IDs in a JSON array, making per-feature lookup inefficient (e.g.,
+  finding all checks for a given feature requires scanning every check result
+  row). Proposed: normalize feature IDs into an indexed junction table for fast
+  per-feature and viewport-range queries.
 
 ---
 
@@ -137,16 +162,13 @@ relational foundation, but were difficult or impossible with the document model:
 These are areas where the relational model is currently harder than MongoDB's
 nested documents. Each has a clear, bounded fix.
 
-| Area                                     | What is currently harder                                                                      | Mitigation                                                                                              |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Loading a full gene tree for display     | Requires multiple queries to walk the parent-child hierarchy                                  | Add a `root_id` column: one query fetches all descendants of any gene                                   |
-| Fetching all features in a genomic range | Root genes are found efficiently, but loading their complete trees requires extra round trips | Same `root_id` fix: two queries total (find roots in range, then fetch all rows sharing those root IDs) |
-| Deleting a gene and all descendants      | Uses a recursive loop with one database call per child                                        | Add `ON DELETE CASCADE` to the parent foreign key — deletion becomes a single database operation        |
-| Deleting an assembly                     | Must delete related records (check results, features, ref seqs) in a specific order           | Add cascade delete rules to the schema — the database handles ordering automatically                    |
-| Reassembling trees from flat rows        | An extra in-memory step (not needed with nested documents)                                    | Already efficient (single linear pass); cost is negligible for any realistic gene size                  |
-| Full-text search                         | Currently uses basic pattern matching, weaker than MongoDB's text index                       | Replace with SQLite FTS5 or PostgreSQL tsvector — both are mature, built-in full-text search systems    |
-| Some bulk operations (export, search)    | Loop-based queries that issue one database call per item                                      | Replace loops with batched queries — straightforward code fix                                           |
-| Check result lookup by feature ID        | Loads entire table into memory and filters in application code                                | Normalize into a join table for indexed per-feature lookup                                              |
+| Area                                 | What is currently harder                                                                                                               | Mitigation                                                                                     |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Loading a full gene tree             | With nested documents, one query returns the entire gene. With flat rows, loading all descendants currently requires multiple queries. | Add a `root_id` column to every feature — one query then fetches the entire tree               |
+| Deleting a gene and all its children | Currently walks the tree and deletes one feature at a time                                                                             | Add `ON DELETE CASCADE` to the parent foreign key — the database handles it in one operation   |
+| Deleting an assembly                 | Related records (features, sequences, check results) must be deleted in a specific order                                               | Add cascade delete rules — the database handles ordering automatically                         |
+| Full-text search                     | Currently uses basic pattern matching (`LIKE`), weaker than MongoDB's text index                                                       | Replace with SQLite FTS5 or PostgreSQL `tsvector` — both are mature, built-in full-text search |
+| Some bulk operations                 | Export and search currently issue one database query per item in a loop                                                                | Replace loops with batched queries — straightforward code fix                                  |
 
 See [Technical Details](./mikro-orm-technical-details.md) for full analysis of
 each tradeoff with worked examples.
@@ -326,8 +348,10 @@ _Performance and schema optimization:_
   query patterns in search, export, and feature count operations
 - **Replace `LIKE`-based text search with native full-text search** — SQLite
   FTS5 or PostgreSQL tsvector
-- **Improve annotation quality checks** — push check result filtering into the
-  database and run checks on feature change instead of on every viewport request
+- **Improve annotation quality check lookups** — normalize the
+  check-result-to-feature relationship into an indexed junction table so
+  per-feature lookups are fast database queries instead of full-table scans with
+  in-memory filtering
 
 _Per-gene history and Apollo 2 migration:_
 
