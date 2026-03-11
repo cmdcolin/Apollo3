@@ -47,17 +47,24 @@ export class ChangeManager {
       getSession(this.dataStore) as unknown as ApolloSessionModel
 
     if (isLocked) {
+      console.warn(
+        `[ChangeManager] blocked: locked mode, change=${change.typeName}`,
+      )
       session.notify('Cannot submit changes in locked mode')
       setChangeInProgress(false)
       return
     }
 
     if (changeInProgress) {
+      console.warn(
+        `[ChangeManager] blocked: changeInProgress=true, change=${change.typeName}`,
+      )
       session.notify(
         'Could not submit change, there is another change still in progress',
       )
       return
     }
+    console.warn(`[ChangeManager] submitting change=${change.typeName}`)
 
     setChangeInProgress(true)
 

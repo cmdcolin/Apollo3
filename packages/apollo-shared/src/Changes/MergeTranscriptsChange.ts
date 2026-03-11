@@ -195,12 +195,16 @@ export class MergeTranscriptsChange extends FeatureChange {
 
     if (merged && mrgChild && secondChild.children) {
       for (const child of Object.values(secondChild.children)) {
+        await featureRepository.deleteDescendants(child._id)
+        await featureRepository.deleteById(child._id)
         const rows = flattenFeatureSnapshot(child, refSeq, mrgChild._id)
         await featureRepository.createMany(rows)
       }
     }
 
     if (!merged) {
+      await featureRepository.deleteDescendants(secondChild._id)
+      await featureRepository.deleteById(secondChild._id)
       const rows = flattenFeatureSnapshot(
         secondChild,
         refSeq,

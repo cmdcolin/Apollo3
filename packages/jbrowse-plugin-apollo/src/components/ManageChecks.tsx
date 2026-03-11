@@ -151,6 +151,7 @@ export function ManageChecks({ handleClose, session }: ManageChecksProps) {
       headers: { 'Content-Type': 'application/json' },
     })
     if (response.ok) {
+      session.apolloDataStore.clearCheckResults()
       notify('Assembly checks updated successfully', 'success')
       handleClose()
     } else {

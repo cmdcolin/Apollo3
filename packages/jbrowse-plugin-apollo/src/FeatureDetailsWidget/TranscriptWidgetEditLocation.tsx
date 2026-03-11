@@ -147,13 +147,13 @@ export const TranscriptWidgetEditLocation = observer(
       cdsMax = sortedCDSLocations[sortedCDSLocations.length - 1].max
     }
 
-    const updateCDSLocation = (
+    const updateCDSLocation = async (
       oldLocation: number,
       newLocation: number,
       feature: AnnotationFeature,
       isMin: boolean,
       onComplete?: () => void,
-    ): boolean => {
+    ) => {
       if (!feature.children) {
         throw new Error('Transcript should have child features')
       }
@@ -219,25 +219,23 @@ export const TranscriptWidgetEditLocation = observer(
             assembly,
           })
 
-      void changeManager
-        .submit(change)
-        .then(() => {
-          if (onComplete) {
-            onComplete()
-          }
-        })
-        .catch(() => {
-          notify('Error updating feature CDS position', 'error')
-        })
+      try {
+        await changeManager.submit(change)
+        if (onComplete) {
+          onComplete()
+        }
+      } catch {
+        notify('Error updating feature CDS position', 'error')
+      }
       return true
     }
 
-    function handleExonLocationChange(
+    async function handleExonLocationChange(
       oldLocation: number,
       newLocation: number,
       feature: AnnotationFeature,
       isMin: boolean,
-    ): boolean {
+    ) {
       if (!feature.children) {
         throw new Error('Transcript should have child features')
       }
@@ -344,9 +342,11 @@ export const TranscriptWidgetEditLocation = observer(
           appendStartLocationChange(cdsFeature, startChange, newLocation)
         }
 
-        void changeManager.submit(startChange).catch(() => {
+        try {
+          await changeManager.submit(startChange)
+        } catch {
           notify('Error updating feature exon start position', 'error')
-        })
+        }
       }
 
       // END LOCATION CHANGE
@@ -406,9 +406,11 @@ export const TranscriptWidgetEditLocation = observer(
           appendEndLocationChange(cdsFeature, endChange, newLocation)
         }
 
-        void changeManager.submit(endChange).catch(() => {
+        try {
+          await changeManager.submit(endChange)
+        } catch {
           notify('Error updating feature exon end position', 'error')
-        })
+        }
       }
       return true
     }
@@ -820,7 +822,7 @@ export const TranscriptWidgetEditLocation = observer(
       return cdsMax
     }
 
-    const trimTranslationSequence = () => {
+    const trimTranslationSequence = async () => {
       const sequenceElements = getTranslationSequence()
       const translationSequence = sequenceElements
         .map((el) => el.props.children)
@@ -874,30 +876,13 @@ export const TranscriptWidgetEditLocation = observer(
           )
           return
         }
-        let promise
         stopCodonGenomicLoc += 3 // move to end of stop codon
         if (startCodonGenomicLoc !== cdsMin) {
-          promise = new Promise((resolve) => {
-            updateCDSLocation(
-              cdsMin,
-              startCodonGenomicLoc,
-              feature,
-              true,
-              () => {
-                resolve(true)
-              },
-            )
-          })
+          await updateCDSLocation(cdsMin, startCodonGenomicLoc, feature, true)
         }
 
         if (stopCodonGenomicLoc !== cdsMax) {
-          if (promise) {
-            void promise.then(() => {
-              updateCDSLocation(cdsMax, stopCodonGenomicLoc, feature, false)
-            })
-          } else {
-            updateCDSLocation(cdsMax, stopCodonGenomicLoc, feature, false)
-          }
+          await updateCDSLocation(cdsMax, stopCodonGenomicLoc, feature, false)
         }
       }
 
@@ -910,30 +895,13 @@ export const TranscriptWidgetEditLocation = observer(
           )
           return
         }
-        let promise
         stopCodonGenomicLoc -= 3 // move to end of stop codon
         if (startCodonGenomicLoc !== cdsMax) {
-          promise = new Promise((resolve) => {
-            updateCDSLocation(
-              cdsMax,
-              startCodonGenomicLoc,
-              feature,
-              false,
-              () => {
-                resolve(true)
-              },
-            )
-          })
+          await updateCDSLocation(cdsMax, startCodonGenomicLoc, feature, false)
         }
 
         if (stopCodonGenomicLoc !== cdsMin) {
-          if (promise) {
-            void promise.then(() => {
-              updateCDSLocation(cdsMin, stopCodonGenomicLoc, feature, true)
-            })
-          } else {
-            updateCDSLocation(cdsMin, stopCodonGenomicLoc, feature, true)
-          }
+          await updateCDSLocation(cdsMin, stopCodonGenomicLoc, feature, true)
         }
       }
       notify('Translation sequence trimmed to start and stop codons', 'success')
