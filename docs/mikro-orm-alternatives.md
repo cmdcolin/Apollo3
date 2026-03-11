@@ -8,19 +8,19 @@ database options exist. For the core migration rationale, see
 
 ## What Staying on MongoDB Would Require
 
-If the decision were made to keep MongoDB, the problems described in the core
+If the decision were made to keep MongoDB, the challenges described in the core
 document would still need to be addressed.
 
 ### The data model would still need to be restructured
 
-The nested document design is the underlying cause of the data-loss risk, the
-`allIds` workaround, and the document size limits. None of these can be fixed
+The nested document design is the source of the concurrent editing risk, the
+`allIds` bookkeeping, and the document size limits. None of these can be fixed
 without changing how features are stored. Fixing them in MongoDB would require
 moving to a flat document model — one document per feature, with a parent
 reference field — which is structurally the same change as the relational
 migration, but done in MongoDB's query language instead of SQL.
 
-This is not a small effort. It involves migrating existing data and rewriting
+This is a significant effort. It involves migrating existing data and rewriting
 the same application logic. The work required is comparable to the relational
 migration — but without the benefits described below.
 
@@ -31,21 +31,21 @@ document database that can run inside an Electron application the way SQLite
 can. The only viable option would be to use a completely different database for
 the desktop case — meaning two separate data access implementations would need
 to be maintained: one for the server (MongoDB) and one for desktop (SQLite or
-similar). This is strictly worse than migrating everything to the relational
-model.
+similar). This adds significant maintenance cost compared to migrating
+everything to a single relational model.
 
 ### The replica set requirement may have been unnecessary
 
-As described in the core document, Apollo's real-time collaboration is handled
+As described in the core document, Apollo 3's real-time collaboration is handled
 by WebSocket broadcasting, not MongoDB change streams. If change streams were
 removed from the MongoDB configuration, the replica set requirement would go
 away — and real-time collaboration would continue to work via WebSockets as it
 already does.
 
-However, even if the replica set requirement were dropped, the other MongoDB
-problems (nested documents, `allIds`, document size limits, no Electron support)
-would remain. Removing the replica set requirement alone does not justify
-staying on MongoDB.
+However, even if the replica set requirement were dropped, the other challenges
+(nested documents, `allIds`, document size limits, no Electron support) would
+remain. Removing the replica set requirement alone does not address the core
+issues.
 
 ### Summary
 
@@ -59,14 +59,14 @@ these concerns with a single, coherent change.
 
 ## If the MikroORM Migration Cannot Proceed: Alternatives
 
-If the relational migration is not approved, the underlying problems with the
-MongoDB design still need to be addressed. This section evaluates three
-alternative paths honestly, including their strengths and limitations.
+If the relational migration is not approved, the challenges with the document
+model still need to be addressed. This section evaluates three alternative
+paths, including their strengths and limitations.
 
 ### Alternative 1: Targeted fixes to the existing MongoDB codebase
 
-Rather than replacing the database layer entirely, the worst problems could be
-addressed incrementally within the existing MongoDB code:
+Rather than replacing the database layer entirely, the most impactful challenges
+could be addressed incrementally within the existing MongoDB code:
 
 **Phase 1 — Eliminate the `allIds` bottleneck (1–2 weeks):** Every feature
 operation currently scans a large array field (`allIds`) to find which gene
@@ -76,11 +76,11 @@ the single highest-impact performance fix available without restructuring the
 data model.
 
 **Phase 2 — Add concurrency protection (2–3 weeks):** The risk of one
-annotator's changes silently overwriting another's could be mitigated by adding
+annotator's changes overwriting another's could be mitigated by adding
 optimistic locking (a version field that rejects stale writes) or pessimistic
 locking (a lock flag checked before modifying a gene document). This does not
-eliminate the fundamental problem — entire gene documents are still loaded and
-saved for every edit — but it prevents silent data loss.
+eliminate the underlying issue — entire gene documents are still loaded and
+saved for every edit — but it prevents unintended overwrites.
 
 **Phase 3 — Partial document flattening (4–6 weeks):** The nested document model
 could be partially flattened by splitting the nesting at the transcript level.
@@ -173,20 +173,20 @@ This reduces the blast radius: editing exon_1 now only loads mRNA_1, and two
 annotators editing exons in different transcripts of the same gene are working
 on separate documents with no contention.
 
-However, it is a half-measure. Two annotators editing different exons within the
-_same transcript_ still contend for the same document. Exons still don't have
-their own primary keys — finding exon_1 still requires knowing which transcript
-document contains it. The `allIds` workaround is still needed (just at the
-transcript level instead of the gene level). And none of the other problems are
-addressed: no Electron support, MongoDB replica set still required, no standard
-SQL querying.
+However, this is a partial solution. Two annotators editing different exons
+within the _same transcript_ still contend for the same document. Exons still
+don't have their own primary keys — finding exon_1 still requires knowing which
+transcript document contains it. The `allIds` workaround is still needed (just
+at the transcript level instead of the gene level). And none of the other
+problems are addressed: no Electron support, MongoDB replica set still required,
+no standard SQL querying.
 
-**Assessment:** These changes would address roughly 60% of the stability
-problems. However, they do not solve the Electron deployment case, do not remove
-the MongoDB replica set requirement, and do not simplify the overall codebase.
-The phased approach also carries its own risk: each phase modifies the same
-fragile code paths (the 24 Change classes that depend on the nested document
-structure), meaning each change must be carefully coordinated.
+**Assessment:** These changes would address a meaningful portion of the
+challenges. However, they do not solve the Electron deployment case, do not
+remove the MongoDB replica set requirement, and do not simplify the overall
+codebase. The phased approach also carries its own complexity: each phase
+modifies the same code paths (the 24 Change classes that depend on the nested
+document structure), meaning each change must be carefully coordinated.
 
 ### Alternative 2: Firestore / Firebase
 
@@ -197,7 +197,7 @@ synchronization, and zero infrastructure management.
 
 **Why this is tempting:**
 
-Apollo's current authentication setup is complex — roughly 15 files managing
+Apollo 3's current authentication setup is complex — roughly 15 files managing
 Passport strategies, JWT tokens, session secrets, and OAuth provider
 configuration. Getting Google login working requires creating credentials in the
 Google Cloud Console, setting multiple environment variables, and handling
@@ -209,7 +209,7 @@ The NestJS server can run on Firebase Cloud Functions, making the entire backend
 serverless. The pattern is documented and used in production: NestJS is wrapped
 in an Express adapter and exported as a Cloud Function.
 
-**Why this is problematic for Apollo specifically:**
+**Why this is problematic for Apollo 3 specifically:**
 
 - **MikroORM does not support Firestore.** MikroORM supports MongoDB,
   PostgreSQL, MySQL, MS SQL Server, and SQLite. There is no Firestore driver,
@@ -232,8 +232,8 @@ in an Express adapter and exported as a Cloud Function.
 
 - **Cold start and WebSocket limitations.** Firebase Cloud Functions have
   nontrivial cold starts (NestJS adds to this with its module initialization
-  overhead), and they do not support persistent WebSocket connections. Apollo's
-  real-time collaboration feature relies on WebSockets. Replacing this with
+  overhead), and they do not support persistent WebSocket connections. Apollo
+  3's real-time collaboration feature relies on WebSockets. Replacing this with
   Firestore's real-time listeners is possible but would require rearchitecting
   the collaboration layer.
 
@@ -244,7 +244,7 @@ in an Express adapter and exported as a Cloud Function.
 
 **A hybrid option — Firebase Auth without Firestore:**
 
-The most compelling part of the Firebase ecosystem for Apollo is the
+The most compelling part of the Firebase ecosystem for Apollo 3 is the
 authentication, not the database. It is possible to use Firebase Authentication
 as a standalone service while keeping the relational database (SQLite /
 PostgreSQL via MikroORM) for data storage. This would:
@@ -265,7 +265,7 @@ independent improvement.
 
 ### Alternative 3: A parallel backend implementation
 
-The Apollo codebase already uses a repository interface pattern: data access
+The Apollo 3 codebase already uses a repository interface pattern: data access
 goes through interfaces like `FeatureRepository`, `AssemblyRepository`, etc.,
 with concrete implementations behind them. In principle, a Firestore
 implementation (or any other backend) could be added alongside the existing
@@ -281,14 +281,14 @@ dual backends are expensive to maintain.
 
 This approach is only justified if there is a hard requirement to support two
 fundamentally different deployment targets (e.g., Firestore for one customer and
-PostgreSQL for another). For Apollo's use case, the relational model already
+PostgreSQL for another). For Apollo 3's use case, the relational model already
 covers the full range from desktop to server.
 
 ### Recommendation
 
 The MikroORM / relational migration is the strongest single path because it
-solves the desktop case, the deployment complexity, the data model problems, and
-the operational cost — all at once. If it cannot proceed, the most pragmatic
+solves the desktop case, the deployment complexity, the data model challenges,
+and the operational cost — all at once. If it cannot proceed, the most pragmatic
 alternative is:
 
 1. **Targeted MongoDB fixes** (Phases 1–2 above) to stabilize the existing
