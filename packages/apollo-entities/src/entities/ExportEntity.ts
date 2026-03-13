@@ -7,7 +7,7 @@ export class ExportEntity {
   @PrimaryKey()
   _id!: string
 
-  @ManyToOne(() => AssemblyEntity)
+  @ManyToOne(() => AssemblyEntity, { deleteRule: 'cascade' })
   assembly!: AssemblyEntity
 
   @Property({ nullable: true })

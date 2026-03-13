@@ -38,6 +38,13 @@ export class MikroOrmRefSeqRepository implements RefSeqRepository {
     return entities.map(toRow)
   }
 
+  async findByAssemblies(assemblyIds: string[]) {
+    const entities = await this.em.find(RefSeqEntity, {
+      assembly: { $in: assemblyIds },
+    })
+    return entities.map(toRow)
+  }
+
   async create(row: RefSeqRow) {
     const entity = this.em.create(RefSeqEntity, {
       _id: row._id,

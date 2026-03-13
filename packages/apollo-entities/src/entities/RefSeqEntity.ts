@@ -1,13 +1,14 @@
-import { Entity, ManyToOne, PrimaryKey, Property } from '@mikro-orm/core'
+import { Entity, Index, ManyToOne, PrimaryKey, Property } from '@mikro-orm/core'
 
 import { AssemblyEntity } from './AssemblyEntity.js'
 
 @Entity({ tableName: 'ref_seq' })
+@Index({ properties: ['assembly'] })
 export class RefSeqEntity {
   @PrimaryKey()
   _id!: string
 
-  @ManyToOne(() => AssemblyEntity)
+  @ManyToOne(() => AssemblyEntity, { deleteRule: 'cascade' })
   assembly!: AssemblyEntity
 
   @Property()

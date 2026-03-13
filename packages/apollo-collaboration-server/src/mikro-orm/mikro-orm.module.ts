@@ -27,6 +27,10 @@ export class ApolloMikroOrmModule {
               ...config,
               allowGlobalContext: true,
             })
+            if (dbType === 'sqlite') {
+              await orm.em.execute('PRAGMA foreign_keys = ON')
+              this.logger.log('SQLite foreign keys enabled')
+            }
             this.logger.log('MikroORM initialized, updating schema...')
             const generator = orm.getSchemaGenerator()
             await generator.updateSchema()

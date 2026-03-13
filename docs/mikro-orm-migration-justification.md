@@ -165,10 +165,10 @@ nested documents. Each has a clear, bounded fix.
 | Area                                 | What is currently harder                                                                                                               | Mitigation                                                                                     |
 | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | Loading a full gene tree             | With nested documents, one query returns the entire gene. With flat rows, loading all descendants currently requires multiple queries. | Add a `root_id` column to every feature — one query then fetches the entire tree               |
-| Deleting a gene and all its children | Currently walks the tree and deletes one feature at a time                                                                             | Add `ON DELETE CASCADE` to the parent foreign key — the database handles it in one operation   |
-| Deleting an assembly                 | Related records (features, sequences, check results) must be deleted in a specific order                                               | Add cascade delete rules — the database handles ordering automatically                         |
+| Deleting a gene and all its children | ~~Currently walks the tree and deletes one feature at a time~~ **Fixed**                                                               | `ON DELETE CASCADE` on the parent foreign key — the database handles it in one operation       |
+| Deleting an assembly                 | ~~Related records must be deleted in a specific order~~ **Fixed**                                                                      | Cascade delete rules implemented — the database handles ordering automatically                 |
 | Full-text search                     | Currently uses basic pattern matching (`LIKE`), weaker than MongoDB's text index                                                       | Replace with SQLite FTS5 or PostgreSQL `tsvector` — both are mature, built-in full-text search |
-| Some bulk operations                 | Export and search currently issue one database query per item in a loop                                                                | Replace loops with batched queries — straightforward code fix                                  |
+| Some bulk operations                 | ~~Export and search issue one database query per item in a loop~~ **Fixed**                                                            | Batched queries with `IN` filters now used throughout                                          |
 
 See [Technical Details](./mikro-orm-technical-details.md) for full analysis of
 each tradeoff with worked examples.
@@ -329,29 +329,36 @@ script is available for converting existing production data into the new schema.
 - **Data portability**: Annotation data can be inspected, exported, or backed up
   with standard SQL tools — no specialized tooling required.
 - **Test coverage**: The existing end-to-end test suite (Cypress) runs against
-  the new data layer. The majority of tests pass; a small number have
-  intermittent timing-related failures that are being stabilized.
+  the new data layer. 35 of 45 tests pass; the remaining failures are timing
+  issues related to asynchronous change submission, not data layer bugs.
 
 **Concrete follow-on improvements:**
 
 These are bounded, well-understood changes that do not require architectural
 rework. They fall into three categories:
 
-_Performance and schema optimization:_
+_Performance and schema optimization (implemented):_
+
+- **`ON DELETE CASCADE` on all foreign keys** — the database handles child
+  cleanup automatically on deletion. Assembly deletion is now a single
+  operation.
+- **Indexes on `FeatureEntity.parent` and `RefSeqEntity.assembly`** — tree
+  traversal and assembly lookups use indexed queries
+- **Batched `IN` filters replace loop-based queries** — N+1 query patterns
+  eliminated in search, export, feature count, and descendant traversal
+- **Check result filtering uses SQL `LIKE` on JSON columns** — eliminates
+  full-table scans for per-feature check result lookups
+- **`COUNT` queries replace load-all-to-count** — feature counting no longer
+  loads all rows into memory
+
+_Performance and schema optimization (remaining):_
 
 - **Add `root_id` column to the feature table** — enables single-query gene tree
   loading, range queries, and deletion
-- **Add `ON DELETE CASCADE` to all foreign keys** — the database handles child
-  cleanup automatically on deletion
-- **Add missing indexes** on `FeatureEntity.parent` and `RefSeqEntity.assembly`
-- **Replace loop-based queries with batched `IN` filters** — eliminates N+1
-  query patterns in search, export, and feature count operations
 - **Replace `LIKE`-based text search with native full-text search** — SQLite
   FTS5 or PostgreSQL tsvector
-- **Improve annotation quality check lookups** — normalize the
-  check-result-to-feature relationship into an indexed junction table so
-  per-feature lookups are fast database queries instead of full-table scans with
-  in-memory filtering
+- **Normalize check result IDs** — junction table for indexed per-feature
+  lookups
 
 _Per-gene history and Apollo 2 migration:_
 

@@ -36,13 +36,11 @@ name: apollo-local-testing
 services:
   apollo-collaboration-server:
     image: 'ghcr.io/gmod/apollo-collaboration-server'
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
       NAME: My Local Testing Server
       URL: 'http://localhost/apollo/'
-      MONGODB_URI: 'mongodb://db:27017/apolloDb?replicaSet=rs0'
+      DB_BACKEND: sqlite
+      DB_CONNECTION_URL: /data/apollo.sqlite
       FILE_UPLOAD_FOLDER: /data/uploads
       ALLOW_GUEST_USER: true
       GUEST_USER_ROLE: admin
@@ -54,6 +52,7 @@ services:
       - '3999:3999'
     volumes:
       - 'uploads:/data/uploads'
+      - 'db_data:/data'
 
   client:
     build:
@@ -92,37 +91,7 @@ services:
     volumes:
       - './jbrowse_data:/usr/local/apache2/htdocs/data'
 
-  db:
-    image: 'mongo:7'
-    command:
-      - '--replSet'
-      - rs0
-      - '--bind_ip_all'
-      - '--port'
-      - '27017'
-    healthcheck:
-      interval: 30s
-      retries: 3
-      start_period: 2m
-      test: |
-        mongosh --port 27017 --quiet --eval "
-        try {
-          rs.status()
-          console.log('replica set ok')
-        } catch {
-          rs.initiate()
-          console.log('replica set initiated')
-        }
-        "
-      timeout: 10s
-    ports:
-      - '27017:27017'
-    volumes:
-      - 'db_data:/data/db'
-      - 'db_config:/data/configdb'
-
 volumes:
-  db_config: null
   db_data: null
   uploads: null
 ```

@@ -2,7 +2,7 @@ import type {
   CheckResultRepository,
   CheckResultRow,
 } from '@apollo-annotation/common'
-import type { EntityManager } from '@mikro-orm/core'
+import { type EntityManager, raw } from '@mikro-orm/core'
 
 import { CheckResultEntity } from '../entities/CheckResultEntity.js'
 
@@ -70,8 +70,10 @@ export class MikroOrmCheckResultRepository implements CheckResultRepository {
   }
 
   async findByFeatureId(featureId: string) {
-    const all = await this.em.find(CheckResultEntity, {})
-    return all.filter((e) => e.ids.includes(featureId)).map(toRow)
+    const candidates = await this.em.find(CheckResultEntity, {
+      [raw('ids')]: { $like: `%"${featureId}"%` },
+    })
+    return candidates.filter((e) => e.ids.includes(featureId)).map(toRow)
   }
 
   async findByRefSeqIds(refSeqIds: string[]) {
@@ -89,9 +91,16 @@ export class MikroOrmCheckResultRepository implements CheckResultRepository {
   }
 
   async deleteByFeatureIdsAndName(featureIds: string[], checkName: string) {
-    const all = await this.em.find(CheckResultEntity, { name: checkName })
-    const toDelete = all.filter((e) =>
-      e.ids.some((id) => featureIds.includes(id)),
+    const orConditions = featureIds.map((fid) => ({
+      [raw('ids')]: { $like: `%"${fid}"%` },
+    }))
+    const candidates = await this.em.find(CheckResultEntity, {
+      name: checkName,
+      $or: orConditions,
+    })
+    const featureIdSet = new Set(featureIds)
+    const toDelete = candidates.filter((e) =>
+      e.ids.some((id) => featureIdSet.has(id)),
     )
     if (toDelete.length === 0) {
       return 0

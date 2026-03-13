@@ -13,6 +13,7 @@ export interface RefSeqRow {
 export interface RefSeqRepository {
   findById(id: string): Promise<RefSeqRow | undefined>
   findByAssembly(assemblyId: string): Promise<RefSeqRow[]>
+  findByAssemblies(assemblyIds: string[]): Promise<RefSeqRow[]>
   create(row: RefSeqRow): Promise<RefSeqRow>
   updateById(
     id: string,

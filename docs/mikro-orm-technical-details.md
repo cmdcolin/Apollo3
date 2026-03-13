@@ -127,30 +127,20 @@ happen on viewport navigation; single-feature edits happen continuously. The
 read path is the right place to invest optimization, and `root_id` gives a clear
 path to parity.
 
-### Current implementation gaps (not fundamental limitations)
+### Previously identified implementation gaps (now fixed)
 
-Several areas are not yet as efficient as they should be. These are
-implementation bugs, not inherent limitations of the relational approach:
+The following issues existed in the initial migration and have been resolved:
 
-**N+1 query patterns:** Some service methods loop over a list (e.g., reference
-sequences) and issue a separate database query for each item. This should
-instead be a single query that fetches all relevant items at once using an `IN`
-filter. This is a straightforward fix and would significantly reduce database
-round trips in bulk operations like export and search.
-
-**Assembly deletion ordering:** Deleting an assembly currently requires
-explicitly deleting related records in the correct order to avoid constraint
-violations. This manual ordering requirement goes away if cascade deletion is
-configured at the schema level — the database handles the ordering
-automatically.
-
-**Check result filtering:** One query in the current codebase fetches the entire
-check results table into memory and filters it in application code, rather than
-pushing the filter into the database query. This is a correctness issue that
-needs fixing independently of any database technology choice.
-
-These exist because the migration prioritized correctness first. All have clear
-solutions and are good candidates for follow-on work.
+- **N+1 query patterns** — Service methods that looped over reference sequences
+  now use batched `IN` queries. `findDescendants`, `deleteDescendants`, and
+  `searchText` all use level-batched or in-memory approaches.
+- **Assembly deletion ordering** — `ON DELETE CASCADE` on all foreign keys means
+  `deleteById(assembly)` is now a single call. The database handles ordering.
+- **Check result full-table scan** — `findByFeatureId` and
+  `deleteByFeatureIdsAndName` now use SQL `LIKE` on the JSON `ids` column to
+  filter at the database level, with a JS verification pass for exact matching.
+- **Feature counting** — `getFeatureCount` now uses `em.count()` instead of
+  loading all features into memory.
 
 ### Text search: not a MongoDB advantage
 
@@ -172,21 +162,20 @@ any architectural changes.
 
 ### Summary of tradeoffs
 
-| Operation                           | Relational is harder?            | Fundamental or fixable? | Fix                                                                     |
-| ----------------------------------- | -------------------------------- | ----------------------- | ----------------------------------------------------------------------- |
-| Loading a full gene tree            | Yes — multiple queries currently | Fixable                 | Recursive SQL query, or `root_id` column (single round trip either way) |
-| Deleting a gene and all descendants | Yes — requires traversal loop    | Fixable                 | `ON DELETE CASCADE` in schema, or `root_id` column                      |
-| Assembly deletion ordering          | Yes — manual step ordering       | Fixable                 | Cascade delete in schema                                                |
-| Bulk queries (search, export)       | Currently slow — N+1 patterns    | Fixable                 | Batch with `IN` filters                                                 |
-| Full-text annotation search         | Currently weaker                 | Fixable                 | SQLite FTS5 / PostgreSQL tsvector                                       |
-| Editing a single feature            | No — this is faster now          | —                       | —                                                                       |
-| Finding a feature by ID             | No — this is faster now          | —                       | —                                                                       |
-| Large imports                       | No — this is better now          | —                       | —                                                                       |
-| Concurrent edits                    | No — this is safe now            | —                       | —                                                                       |
+| Operation                           | Relational is harder?            | Status    | Fix                                  |
+| ----------------------------------- | -------------------------------- | --------- | ------------------------------------ |
+| Loading a full gene tree            | Yes — multiple queries currently | Fixable   | `root_id` column (single round trip) |
+| Deleting a gene and all descendants | No — cascade handles it          | **Fixed** | `ON DELETE CASCADE` on parent FK     |
+| Assembly deletion ordering          | No — cascade handles it          | **Fixed** | Cascade delete on all FKs            |
+| Bulk queries (search, export)       | No — batched queries now         | **Fixed** | Batched `IN` filters throughout      |
+| Full-text annotation search         | Currently weaker                 | Fixable   | SQLite FTS5 / PostgreSQL tsvector    |
+| Editing a single feature            | No — this is faster now          | —         | —                                    |
+| Finding a feature by ID             | No — this is faster now          | —         | —                                    |
+| Large imports                       | No — this is better now          | —         | —                                    |
+| Concurrent edits                    | No — this is safe now            | —         | —                                    |
 
-Every item marked "Fixable" has a clear, bounded solution. The rough edges are a
-normal part of landing a significant architectural change, not a reason to
-reconsider it.
+Most items previously marked "Fixable" have been implemented. The remaining
+items (gene tree loading, full-text search) have clear, bounded solutions.
 
 ---
 
@@ -207,46 +196,53 @@ several improvements would make the data model more robust for production use.
   Entities define structure; repositories handle queries; change classes contain
   business logic. Each layer has a clear responsibility.
 
-### Recommended schema changes
+### Implemented schema improvements
+
+**1. `ON DELETE CASCADE` on all foreign keys**
+
+All foreign keys now have cascade delete rules. Deleting an assembly
+automatically removes all ref seqs, features, chunks, check results, and
+exports. The application code for assembly deletion is now a single `deleteById`
+call. No manual ordering, no orphaned rows.
+
+**2. Index on `FeatureEntity.parent`**
+
+Tree traversal operations (finding children, descendants) now use an indexed
+query on the `parent` column instead of full table scans.
+
+**3. Index on `RefSeqEntity.assembly`**
+
+Loading ref seqs for an assembly (used in range queries, exports, and deletions)
+is now an indexed lookup.
+
+**4. Index on `CheckResultEntity.name`**
+
+Filtering check results by name (used in `deleteByFeatureIdsAndName`) is now
+indexed.
+
+**5. Batched descendant queries**
+
+`findDescendants` and `deleteDescendants` now use level-batched BFS with `IN`
+filters, reducing from N queries (one per node) to D queries (one per tree depth
+level, typically 3-4).
+
+**6. In-memory parent map for text search**
+
+`searchText` builds a parent map from already-loaded entities and walks to root
+features in memory, eliminating all per-match database queries.
+
+### Remaining schema improvements
 
 **1. Add `root_id` column to `FeatureEntity`**
 
-As discussed throughout this document, this single addition would eliminate
-recursive traversal for tree loading, range queries, and deletion. It is the
-highest-impact schema change available.
+This would eliminate multi-query tree loading entirely. One query fetches the
+entire gene tree. Highest-impact remaining change.
 
-**2. Add `ON DELETE CASCADE` to all foreign keys**
+**2. Normalize the `CheckResultEntity.ids` field**
 
-Currently, no foreign key in the schema has cascade delete rules. This means
-every deletion must be orchestrated in application code with careful ordering
-(check results before features, features before ref seqs, ref seqs before
-assemblies). One wrong order produces a constraint violation; a partial failure
-leaves orphaned rows.
-
-Adding cascade rules to the schema makes the database responsible for cleanup
-ordering. The application code becomes simpler and the database enforces
-integrity even if the application has a bug.
-
-**3. Add an index on `FeatureEntity.parent`**
-
-The most common tree traversal operation — finding all children of a given
-feature — queries by `parent`. This column currently has no index, meaning every
-child lookup requires a full table scan. Adding an index here directly improves
-every tree loading and deletion operation.
-
-**4. Add an index on `RefSeqEntity.assembly`**
-
-Loading all reference sequences for an assembly is a common operation (it
-happens on every range query, every export, and every assembly deletion). An
-index on this column would make it efficient.
-
-**5. Normalize the `CheckResultEntity.ids` field**
-
-Check results currently store the IDs of related features as a JSON array. This
-means searching for check results by feature ID requires either loading the
-entire table and filtering in memory (which the current code does) or relying on
-database-specific JSON query syntax. A join table (`check_result_features`)
-would make this a standard indexed query.
+Check results store feature IDs as a JSON array. A join table
+(`check_result_features`) would replace the current `LIKE`-based filtering with
+standard indexed queries.
 
 ### Schema relationship summary
 

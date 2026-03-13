@@ -17,6 +17,9 @@ export interface FeatureRow {
 export interface FeatureRepository {
   findById(id: string): Promise<FeatureRow | undefined>
   findByIds(ids: string[]): Promise<FeatureRow[]>
+  findAll(): Promise<FeatureRow[]>
+  countAll(): Promise<number>
+  countByRange(refSeqId: string, start: number, end: number): Promise<number>
   findByRange(
     refSeqId: string,
     start: number,

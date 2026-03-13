@@ -113,65 +113,41 @@ rm config.json
 
 ## Set up the database
 
-Apollo uses MongoDB to store its data. In this example we'll set up MongoDB
-running on the same server as everything else, but it could just as easily be an
-externally managed database.
+Apollo supports PostgreSQL (recommended for production), SQLite (for development
+and demos), and MongoDB (for backward compatibility). In this example we'll set
+up PostgreSQL running on the same server as everything else, but it could just
+as easily be an externally managed database.
 
-These installation instructions for MongoDB are based on
-[the installation instructions](https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-ubuntu/)
-in the MongoDB documentation.
-
-MongoDB is not available for `apt` to install by default, so we'll need to do
-some configuration to enable that. First we'll need to install `gnupg` and use
-it to import the MongoDB public key.
+Install PostgreSQL:
 
 ```sh
-curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | sudo gpg -o /usr/share/keyrings/mongodb-server-8.0.gpg --dearmor
+sudo apt install -y postgresql
 ```
 
-Now we can configure `apt` to be able to find MongoDB
+Now create a database and user for Apollo:
 
 ```sh
-echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/8.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-8.0.list
-sudo apt update
+sudo -u postgres createuser apollo
+sudo -u postgres createdb -O apollo apollo
+sudo -u postgres psql -c "ALTER USER apollo WITH PASSWORD 'your-secure-password';"
 ```
 
-And now install MongoDB
+PostgreSQL should already be running after installation. You can verify with:
 
 ```sh
-sudo apt install -y mongodb-org
+sudo systemctl status postgresql
 ```
 
-Apollo requires MongoDB to be configured in a replica set configuration. You can
-have multiple replicas of your database, but in this example we'll use a single
-one. To configure this, we'll edit the file `/etc/mongod.conf`.
+:::note Alternative: MongoDB
 
-```sh
-sudo nano /etc/mongod.conf
-```
+If you prefer to use MongoDB (for example, to maintain compatibility with an
+existing deployment), install MongoDB and set `DB_BACKEND=mongo` and
+`MONGODB_URI` in the Apollo configuration. See the
+[MongoDB installation instructions](https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-ubuntu/)
+for details. MongoDB must be configured in a replica set configuration for
+Apollo to work properly.
 
-In the file where it says `# replication`, change it to
-
-```conf
-replication:
-  replSetName: rs0
-```
-
-Now we can start MongoDB by running
-
-```sh
-sudo systemctl start mongod
-```
-
-The last step is to initialize the replica set. To do this, run the command
-`mongosh` and in the shell that appears, run the command
-
-```js
-rs.initiate()
-```
-
-Then press <kbd>Ctrl</kbd> + <kbd>D</kbd> or run the `exit` command to exit the
-mongosh shell.
+:::
 
 ## Set up Apollo Collaboration Server
 
@@ -269,7 +245,8 @@ for your server, followed by `/apollo/`.
 ```env
 URL=<forwarded address>/apollo/
 NAME=My Apollo Instance
-MONGODB_URI=mongodb://localhost:27017/apolloDb?directConnection=true&replicaSet=rs0
+DB_BACKEND=postgresql
+DB_CONNECTION_URL=postgresql://apollo:your-secure-password@localhost:5432/apollo
 FILE_UPLOAD_FOLDER=/home/ubuntu/data/uploads
 JWT_SECRET=some-secret-value
 SESSION_SECRET=some-other-secret-value
