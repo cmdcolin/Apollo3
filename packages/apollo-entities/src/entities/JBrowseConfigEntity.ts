@@ -1,10 +1,10 @@
-import { Entity, PrimaryKey, Property } from '@mikro-orm/core'
+import { defineEntity, p } from '@mikro-orm/core'
 
-@Entity({ tableName: 'jbrowse_config' })
-export class JBrowseConfigEntity {
-  @PrimaryKey()
-  _id!: string
-
-  @Property({ type: 'json' })
-  config!: Record<string, unknown>
-}
+export const JBrowseConfigEntity = defineEntity({
+  name: 'JBrowseConfigEntity',
+  tableName: 'jbrowse_config',
+  properties: {
+    _id: p.string().primary(),
+    config: p.json<Record<string, unknown>>(),
+  },
+})

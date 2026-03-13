@@ -1,34 +1,22 @@
-import { Entity, PrimaryKey, Property } from '@mikro-orm/core'
+import { defineEntity, p } from '@mikro-orm/core'
 
-@Entity({ tableName: 'assembly' })
-export class AssemblyEntity {
-  @PrimaryKey()
-  _id!: string
+type SequenceSource =
+  | { type: 'external'; fa: string; fai: string; gzi?: string }
+  | { type: 'indexed'; fa: string; fai: string; gzi: string }
+  | { type: 'chunked'; fa: string }
 
-  @Property()
-  name!: string
-
-  @Property({ nullable: true })
-  displayName?: string
-
-  @Property({ type: 'json', nullable: true })
-  aliases?: string[]
-
-  @Property({ nullable: true })
-  description?: string
-
-  @Property({ nullable: true })
-  status?: number
-
-  @Property({ nullable: true })
-  user?: string
-
-  @Property({ type: 'json', nullable: true })
-  sequenceSource?:
-    | { type: 'external'; fa: string; fai: string; gzi?: string }
-    | { type: 'indexed'; fa: string; fai: string; gzi: string }
-    | { type: 'chunked'; fa: string }
-
-  @Property({ type: 'json', nullable: true })
-  checks?: string[]
-}
+export const AssemblyEntity = defineEntity({
+  name: 'AssemblyEntity',
+  tableName: 'assembly',
+  properties: {
+    _id: p.string().primary(),
+    name: p.string(),
+    displayName: p.string().nullable(),
+    aliases: p.json<string[]>().nullable(),
+    description: p.string().nullable(),
+    status: p.integer().nullable(),
+    user: p.string().nullable(),
+    sequenceSource: p.json<SequenceSource>().nullable(),
+    checks: p.json<string[]>().nullable(),
+  },
+})

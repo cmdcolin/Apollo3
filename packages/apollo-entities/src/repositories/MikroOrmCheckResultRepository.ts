@@ -2,22 +2,22 @@ import type {
   CheckResultRepository,
   CheckResultRow,
 } from '@apollo-annotation/common'
-import { type EntityManager, raw } from '@mikro-orm/core'
+import { type EntityManager, type InferEntity, raw } from '@mikro-orm/core'
 
 import { CheckResultEntity } from '../entities/CheckResultEntity.js'
 
-function toRow(entity: CheckResultEntity): CheckResultRow {
+function toRow(entity: InferEntity<typeof CheckResultEntity>): CheckResultRow {
   return {
     _id: entity._id,
     name: entity.name,
-    cause: entity.cause,
+    cause: entity.cause ?? undefined,
     ids: entity.ids,
     refSeq:
       typeof entity.refSeq === 'string' ? entity.refSeq : entity.refSeq._id,
     start: entity.start,
     end: entity.end,
     ignored: entity.ignored,
-    message: entity.message,
+    message: entity.message ?? undefined,
   }
 }
 
@@ -45,12 +45,13 @@ export class MikroOrmCheckResultRepository implements CheckResultRepository {
       ignored: row.ignored,
       message: row.message,
     })
-    await this.em.persistAndFlush(entity)
+    this.em.persist(entity)
+    await this.em.flush()
     return toRow(entity)
   }
 
   async createMany(rows: CheckResultRow[]) {
-    const entities: CheckResultEntity[] = []
+    const entities: InferEntity<typeof CheckResultEntity>[] = []
     for (const row of rows) {
       const entity = this.em.create(CheckResultEntity, {
         _id: row._id,
@@ -65,7 +66,10 @@ export class MikroOrmCheckResultRepository implements CheckResultRepository {
       })
       entities.push(entity)
     }
-    await this.em.persistAndFlush(entities)
+    for (const entity of entities) {
+      this.em.persist(entity)
+    }
+    await this.em.flush()
     return entities.map(toRow)
   }
 

@@ -1,15 +1,13 @@
-import { Entity, ManyToOne, PrimaryKey, Property } from '@mikro-orm/core'
+import { defineEntity, p } from '@mikro-orm/core'
 
 import { AssemblyEntity } from './AssemblyEntity.js'
 
-@Entity({ tableName: 'export' })
-export class ExportEntity {
-  @PrimaryKey()
-  _id!: string
-
-  @ManyToOne(() => AssemblyEntity, { deleteRule: 'cascade' })
-  assembly!: AssemblyEntity
-
-  @Property({ nullable: true })
-  createdAt?: Date
-}
+export const ExportEntity = defineEntity({
+  name: 'ExportEntity',
+  tableName: 'export',
+  properties: {
+    _id: p.string().primary(),
+    assembly: () => p.manyToOne(AssemblyEntity).deleteRule('cascade'),
+    createdAt: p.datetime().nullable(),
+  },
+})

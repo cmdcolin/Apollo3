@@ -1,4 +1,4 @@
-import { Entity, Enum, PrimaryKey, Property, Unique } from '@mikro-orm/core'
+import { defineEntity, p } from '@mikro-orm/core'
 
 export enum UserRole {
   ADMIN = 'admin',
@@ -7,24 +7,15 @@ export enum UserRole {
   NONE = 'none',
 }
 
-@Entity({ tableName: 'user' })
-export class UserEntity {
-  @PrimaryKey()
-  _id!: string
-
-  @Property()
-  username!: string
-
-  @Property()
-  @Unique()
-  email!: string
-
-  @Enum(() => UserRole)
-  role!: UserRole
-
-  @Property({ nullable: true })
-  createdAt?: Date
-
-  @Property({ nullable: true, onUpdate: () => new Date() })
-  updatedAt?: Date
-}
+export const UserEntity = defineEntity({
+  name: 'UserEntity',
+  tableName: 'user',
+  properties: {
+    _id: p.string().primary(),
+    username: p.string(),
+    email: p.string().unique(),
+    role: p.enum(() => UserRole),
+    createdAt: p.datetime().nullable(),
+    updatedAt: p.datetime().nullable().onUpdate(() => new Date()),
+  },
+})

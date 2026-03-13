@@ -1,9 +1,9 @@
 import type { FileRepository, FileRow } from '@apollo-annotation/common'
-import type { EntityManager } from '@mikro-orm/core'
+import type { EntityManager, InferEntity } from '@mikro-orm/core'
 
 import { FileEntity, FileType } from '../entities/FileEntity.js'
 
-function toRow(entity: FileEntity): FileRow {
+function toRow(entity: InferEntity<typeof FileEntity>): FileRow {
   return {
     _id: entity._id,
     basename: entity.basename,
@@ -43,7 +43,8 @@ export class MikroOrmFileRepository implements FileRepository {
       checksum: row.checksum,
       type: row.type as FileType,
     })
-    await this.em.persistAndFlush(entity)
+    this.em.persist(entity)
+    await this.em.flush()
     return toRow(entity)
   }
 
@@ -52,7 +53,8 @@ export class MikroOrmFileRepository implements FileRepository {
     if (!entity) {
       return false
     }
-    await this.em.removeAndFlush(entity)
+    this.em.remove(entity)
+    await this.em.flush()
     return true
   }
 }

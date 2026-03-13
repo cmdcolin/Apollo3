@@ -1,16 +1,16 @@
 import type { UserRepository, UserRow } from '@apollo-annotation/common'
-import type { EntityManager } from '@mikro-orm/core'
+import type { EntityManager, InferEntity } from '@mikro-orm/core'
 
 import { UserEntity, UserRole } from '../entities/UserEntity.js'
 
-function toRow(entity: UserEntity): UserRow {
+function toRow(entity: InferEntity<typeof UserEntity>): UserRow {
   return {
     _id: entity._id,
     username: entity.username,
     email: entity.email,
     role: entity.role as UserRow['role'],
-    createdAt: entity.createdAt,
-    updatedAt: entity.updatedAt,
+    createdAt: entity.createdAt ?? undefined,
+    updatedAt: entity.updatedAt ?? undefined,
   }
 }
 
@@ -63,7 +63,8 @@ export class MikroOrmUserRepository implements UserRepository {
       createdAt: row.createdAt ?? new Date(),
       updatedAt: row.updatedAt ?? new Date(),
     })
-    await this.em.persistAndFlush(entity)
+    this.em.persist(entity)
+    await this.em.flush()
     return toRow(entity)
   }
 
@@ -82,7 +83,8 @@ export class MikroOrmUserRepository implements UserRepository {
     if (!entity) {
       return false
     }
-    await this.em.removeAndFlush(entity)
+    this.em.remove(entity)
+    await this.em.flush()
     return true
   }
 
@@ -91,7 +93,8 @@ export class MikroOrmUserRepository implements UserRepository {
     if (!entity) {
       return false
     }
-    await this.em.removeAndFlush(entity)
+    this.em.remove(entity)
+    await this.em.flush()
     return true
   }
 }

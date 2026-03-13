@@ -1,5 +1,5 @@
 import type { FeatureRepository, FeatureRow } from '@apollo-annotation/common'
-import type { EntityManager } from '@mikro-orm/core'
+import type { EntityManager, InferEntity } from '@mikro-orm/core'
 
 import { FeatureEntity } from '../entities/FeatureEntity.js'
 
@@ -75,7 +75,7 @@ function matchesPhrase(textTokens: string[], queryTokens: string[]) {
   return false
 }
 
-function toRow(entity: FeatureEntity): FeatureRow {
+function toRow(entity: InferEntity<typeof FeatureEntity>): FeatureRow {
   return {
     _id: entity._id,
     parentId: entity.parent?._id ?? undefined,
@@ -84,8 +84,8 @@ function toRow(entity: FeatureEntity): FeatureRow {
     type: entity.type,
     min: entity.min,
     max: entity.max,
-    strand: entity.strand ?? undefined,
-    phase: entity.phase ?? undefined,
+    strand: (entity.strand ?? undefined) as 1 | -1 | undefined,
+    phase: (entity.phase ?? undefined) as 0 | 1 | 2 | undefined,
     attributes: entity.attributes ?? undefined,
     status: entity.status ?? undefined,
     user: entity.user ?? undefined,
@@ -183,12 +183,13 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
       createdAt: row.createdAt ?? new Date(),
       updatedAt: row.updatedAt ?? new Date(),
     })
-    await this.em.persistAndFlush(entity)
+    this.em.persist(entity)
+    await this.em.flush()
     return toRow(entity)
   }
 
   async createMany(rows: FeatureRow[]) {
-    const entities: FeatureEntity[] = []
+    const entities: InferEntity<typeof FeatureEntity>[] = []
     for (const row of rows) {
       const entity = this.em.create(FeatureEntity, {
         _id: row._id,
@@ -207,7 +208,10 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
       })
       entities.push(entity)
     }
-    await this.em.persistAndFlush(entities)
+    for (const entity of entities) {
+      this.em.persist(entity)
+    }
+    await this.em.flush()
     return entities.map(toRow)
   }
 
@@ -254,7 +258,8 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
     if (!entity) {
       return false
     }
-    await this.em.removeAndFlush(entity)
+    this.em.remove(entity)
+    await this.em.flush()
     return true
   }
 
@@ -359,7 +364,7 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
   }
 
   private async treeContainsIndexedId(
-    entity: FeatureEntity,
+    entity: InferEntity<typeof FeatureEntity>,
     id: string,
   ): Promise<boolean> {
     if (entity.attributes) {
@@ -385,7 +390,7 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
     if (!initial) {
       return undefined
     }
-    let entity: FeatureEntity = initial
+    let entity: InferEntity<typeof FeatureEntity> = initial
     while (entity.parent) {
       const parentId =
         typeof entity.parent === 'string' ? entity.parent : entity.parent._id

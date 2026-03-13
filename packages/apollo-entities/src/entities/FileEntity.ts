@@ -1,4 +1,4 @@
-import { Entity, Enum, PrimaryKey, Property } from '@mikro-orm/core'
+import { defineEntity, p } from '@mikro-orm/core'
 
 export enum FileType {
   GFF3 = 'text/x-gff3',
@@ -8,17 +8,13 @@ export enum FileType {
   GZI = 'application/x-gzi',
 }
 
-@Entity({ tableName: 'file' })
-export class FileEntity {
-  @PrimaryKey()
-  _id!: string
-
-  @Property()
-  basename!: string
-
-  @Property()
-  checksum!: string
-
-  @Enum(() => FileType)
-  type!: FileType
-}
+export const FileEntity = defineEntity({
+  name: 'FileEntity',
+  tableName: 'file',
+  properties: {
+    _id: p.string().primary(),
+    basename: p.string(),
+    checksum: p.string(),
+    type: p.enum(() => FileType),
+  },
+})

@@ -1,5 +1,3 @@
-import 'reflect-metadata'
-
 import type { MikroORM } from '@mikro-orm/core'
 
 import { createTestORM } from '../test-utils.js'
@@ -22,7 +20,7 @@ afterAll(async () => {
 })
 
 beforeEach(async () => {
-  await orm.getSchemaGenerator().refreshDatabase()
+  await orm.schema.refresh()
 })
 
 describe('MikroOrmAssemblyRepository', () => {

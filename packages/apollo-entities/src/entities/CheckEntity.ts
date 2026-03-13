@@ -1,25 +1,15 @@
-import { Entity, PrimaryKey, Property } from '@mikro-orm/core'
+import { defineEntity, p } from '@mikro-orm/core'
 
-@Entity({ tableName: 'check' })
-export class CheckEntity {
-  @PrimaryKey()
-  _id!: string
-
-  @Property()
-  name!: string
-
-  @Property({ type: 'json', nullable: true })
-  causes?: string[]
-
-  @Property({ nullable: true })
-  isDefault?: boolean
-
-  @Property({ nullable: true })
-  version?: number
-
-  @Property({ nullable: true })
-  createdAt?: Date
-
-  @Property({ nullable: true, onUpdate: () => new Date() })
-  updatedAt?: Date
-}
+export const CheckEntity = defineEntity({
+  name: 'CheckEntity',
+  tableName: 'check',
+  properties: {
+    _id: p.string().primary(),
+    name: p.string(),
+    causes: p.json<string[]>().nullable(),
+    isDefault: p.boolean().nullable(),
+    version: p.integer().nullable(),
+    createdAt: p.datetime().nullable(),
+    updatedAt: p.datetime().nullable().onUpdate(() => new Date()),
+  },
+})

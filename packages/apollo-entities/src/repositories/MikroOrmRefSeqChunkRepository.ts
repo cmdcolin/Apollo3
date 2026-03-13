@@ -2,19 +2,19 @@ import type {
   RefSeqChunkRepository,
   RefSeqChunkRow,
 } from '@apollo-annotation/common'
-import type { EntityManager } from '@mikro-orm/core'
+import type { EntityManager, InferEntity } from '@mikro-orm/core'
 
 import { RefSeqChunkEntity } from '../entities/RefSeqChunkEntity.js'
 
-function toRow(entity: RefSeqChunkEntity): RefSeqChunkRow {
+function toRow(entity: InferEntity<typeof RefSeqChunkEntity>): RefSeqChunkRow {
   return {
     _id: entity._id,
     refSeq:
       typeof entity.refSeq === 'string' ? entity.refSeq : entity.refSeq._id,
     n: entity.n,
     sequence: entity.sequence,
-    status: entity.status,
-    user: entity.user,
+    status: entity.status ?? undefined,
+    user: entity.user ?? undefined,
   }
 }
 
@@ -46,7 +46,8 @@ export class MikroOrmRefSeqChunkRepository implements RefSeqChunkRepository {
       status: row.status,
       user: row.user,
     })
-    await this.em.persistAndFlush(entity)
+    this.em.persist(entity)
+    await this.em.flush()
     return toRow(entity)
   }
 
@@ -57,7 +58,7 @@ export class MikroOrmRefSeqChunkRepository implements RefSeqChunkRepository {
   }
 
   async createMany(rows: RefSeqChunkRow[]) {
-    const entities: RefSeqChunkEntity[] = []
+    const entities: InferEntity<typeof RefSeqChunkEntity>[] = []
     for (const row of rows) {
       const entity = this.em.create(RefSeqChunkEntity, {
         _id: row._id,
@@ -69,7 +70,10 @@ export class MikroOrmRefSeqChunkRepository implements RefSeqChunkRepository {
       })
       entities.push(entity)
     }
-    await this.em.persistAndFlush(entities)
+    for (const entity of entities) {
+      this.em.persist(entity)
+    }
+    await this.em.flush()
     return entities.map(toRow)
   }
 
