@@ -2,11 +2,11 @@ import type {
   JBrowseConfigRepository,
   JBrowseConfigRow,
 } from '@apollo-annotation/common'
-import type { EntityManager } from '@mikro-orm/core'
+import type { EntityManager, InferEntity } from '@mikro-orm/core'
 
 import { JBrowseConfigEntity } from '../entities/JBrowseConfigEntity.js'
 
-function toRow(entity: JBrowseConfigEntity): JBrowseConfigRow {
+function toRow(entity: InferEntity<typeof JBrowseConfigEntity>): JBrowseConfigRow {
   return {
     _id: entity._id,
     config: entity.config,

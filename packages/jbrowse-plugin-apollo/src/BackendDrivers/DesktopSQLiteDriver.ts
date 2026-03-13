@@ -67,10 +67,8 @@ export class DesktopSQLiteDriver extends BackendDriver {
     const config = createMikroOrmConfig('sqlite', dbPath)
     const orm = await MikroORMClass.init({
       ...config,
-      driver: electronRequire('@mikro-orm/libsql').LibSqlDriver,
     })
-    const generator = orm.getSchemaGenerator()
-    await generator.updateSchema()
+    await orm.schema.update()
     this.ormMap.set(dbPath, orm)
     return orm
   }

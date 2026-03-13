@@ -1,25 +1,17 @@
-import { Entity, Index, ManyToOne, PrimaryKey, Property } from '@mikro-orm/core'
+import { defineEntity, p } from '@mikro-orm/core'
 
 import { RefSeqEntity } from './RefSeqEntity.js'
 
-@Entity({ tableName: 'ref_seq_chunk' })
-@Index({ properties: ['refSeq'] })
-export class RefSeqChunkEntity {
-  @PrimaryKey()
-  _id!: string
-
-  @ManyToOne(() => RefSeqEntity, { deleteRule: 'cascade' })
-  refSeq!: RefSeqEntity
-
-  @Property()
-  n!: number
-
-  @Property({ type: 'text' })
-  sequence!: string
-
-  @Property({ nullable: true })
-  status?: number
-
-  @Property({ nullable: true })
-  user?: string
-}
+export const RefSeqChunkEntity = defineEntity({
+  name: 'RefSeqChunkEntity',
+  tableName: 'ref_seq_chunk',
+  properties: {
+    _id: p.string().primary(),
+    refSeq: () => p.manyToOne(RefSeqEntity).deleteRule('cascade'),
+    n: p.integer(),
+    sequence: p.text(),
+    status: p.integer().nullable(),
+    user: p.string().nullable(),
+  },
+  indexes: [{ properties: ['refSeq'] }],
+})

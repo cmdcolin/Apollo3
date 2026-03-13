@@ -1,19 +1,19 @@
 import type { AssemblyRepository, AssemblyRow } from '@apollo-annotation/common'
-import type { EntityManager } from '@mikro-orm/core'
+import type { EntityManager, InferEntity } from '@mikro-orm/core'
 
 import { AssemblyEntity } from '../entities/AssemblyEntity.js'
 
-function toRow(entity: AssemblyEntity): AssemblyRow {
+function toRow(entity: InferEntity<typeof AssemblyEntity>): AssemblyRow {
   return {
     _id: entity._id,
     name: entity.name,
-    displayName: entity.displayName,
-    aliases: entity.aliases,
-    description: entity.description,
-    status: entity.status,
-    user: entity.user,
-    sequenceSource: entity.sequenceSource,
-    checks: entity.checks,
+    displayName: entity.displayName ?? undefined,
+    aliases: entity.aliases ?? undefined,
+    description: entity.description ?? undefined,
+    status: entity.status ?? undefined,
+    user: entity.user ?? undefined,
+    sequenceSource: entity.sequenceSource ?? undefined,
+    checks: entity.checks ?? undefined,
   }
 }
 
@@ -48,7 +48,8 @@ export class MikroOrmAssemblyRepository implements AssemblyRepository {
       sequenceSource: row.sequenceSource,
       checks: row.checks,
     })
-    await this.em.persistAndFlush(entity)
+    this.em.persist(entity)
+    await this.em.flush()
     return toRow(entity)
   }
 
@@ -72,7 +73,8 @@ export class MikroOrmAssemblyRepository implements AssemblyRepository {
     if (!entity) {
       return false
     }
-    await this.em.removeAndFlush(entity)
+    this.em.remove(entity)
+    await this.em.flush()
     return true
   }
 

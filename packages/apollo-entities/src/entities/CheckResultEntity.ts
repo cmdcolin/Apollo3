@@ -1,36 +1,24 @@
-import { Entity, Index, ManyToOne, PrimaryKey, Property } from '@mikro-orm/core'
+import { defineEntity, p } from '@mikro-orm/core'
 
 import { RefSeqEntity } from './RefSeqEntity.js'
 
-@Entity({ tableName: 'check_result' })
-@Index({ properties: ['refSeq', 'start'] })
-@Index({ properties: ['refSeq', 'end'] })
-@Index({ properties: ['name'] })
-export class CheckResultEntity {
-  @PrimaryKey()
-  _id!: string
-
-  @Property()
-  name!: string
-
-  @Property({ nullable: true })
-  cause?: string
-
-  @Property({ type: 'json' })
-  ids!: string[]
-
-  @ManyToOne(() => RefSeqEntity, { deleteRule: 'cascade' })
-  refSeq!: RefSeqEntity
-
-  @Property()
-  start!: number
-
-  @Property()
-  end!: number
-
-  @Property({ default: false })
-  ignored!: boolean
-
-  @Property({ nullable: true })
-  message?: string
-}
+export const CheckResultEntity = defineEntity({
+  name: 'CheckResultEntity',
+  tableName: 'check_result',
+  properties: {
+    _id: p.string().primary(),
+    name: p.string(),
+    cause: p.string().nullable(),
+    ids: p.json<string[]>(),
+    refSeq: () => p.manyToOne(RefSeqEntity).deleteRule('cascade'),
+    start: p.integer(),
+    end: p.integer(),
+    ignored: p.boolean().default(false),
+    message: p.string().nullable(),
+  },
+  indexes: [
+    { properties: ['refSeq', 'start'] },
+    { properties: ['refSeq', 'end'] },
+    { properties: ['name'] },
+  ],
+})

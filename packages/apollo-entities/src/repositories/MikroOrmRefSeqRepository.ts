@@ -1,9 +1,9 @@
 import type { RefSeqRepository, RefSeqRow } from '@apollo-annotation/common'
-import type { EntityManager } from '@mikro-orm/core'
+import type { EntityManager, InferEntity } from '@mikro-orm/core'
 
 import { RefSeqEntity } from '../entities/RefSeqEntity.js'
 
-function toRow(entity: RefSeqEntity): RefSeqRow {
+function toRow(entity: InferEntity<typeof RefSeqEntity>): RefSeqRow {
   return {
     _id: entity._id,
     assembly:
@@ -11,12 +11,12 @@ function toRow(entity: RefSeqEntity): RefSeqRow {
         ? entity.assembly
         : entity.assembly._id,
     name: entity.name,
-    description: entity.description,
-    aliases: entity.aliases,
+    description: entity.description ?? undefined,
+    aliases: entity.aliases ?? undefined,
     length: entity.length,
     chunkSize: entity.chunkSize,
-    status: entity.status,
-    user: entity.user,
+    status: entity.status ?? undefined,
+    user: entity.user ?? undefined,
   }
 }
 
@@ -57,7 +57,8 @@ export class MikroOrmRefSeqRepository implements RefSeqRepository {
       status: row.status,
       user: row.user,
     })
-    await this.em.persistAndFlush(entity)
+    this.em.persist(entity)
+    await this.em.flush()
     return toRow(entity)
   }
 
@@ -77,7 +78,7 @@ export class MikroOrmRefSeqRepository implements RefSeqRepository {
   }
 
   async createMany(rows: RefSeqRow[]) {
-    const entities: RefSeqEntity[] = []
+    const entities: InferEntity<typeof RefSeqEntity>[] = []
     for (const row of rows) {
       const entity = this.em.create(RefSeqEntity, {
         _id: row._id,
@@ -92,7 +93,10 @@ export class MikroOrmRefSeqRepository implements RefSeqRepository {
       })
       entities.push(entity)
     }
-    await this.em.persistAndFlush(entities)
+    for (const entity of entities) {
+      this.em.persist(entity)
+    }
+    await this.em.flush()
     return entities.map(toRow)
   }
 

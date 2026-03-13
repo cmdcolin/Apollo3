@@ -1,47 +1,27 @@
-import { Entity, Index, ManyToOne, PrimaryKey, Property } from '@mikro-orm/core'
+import { defineEntity, p } from '@mikro-orm/core'
 
 import { RefSeqEntity } from './RefSeqEntity.js'
 
-@Entity({ tableName: 'feature' })
-@Index({ properties: ['refSeq', 'min', 'max'] })
-@Index({ properties: ['parent'] })
-export class FeatureEntity {
-  @PrimaryKey()
-  _id!: string
-
-  @ManyToOne(() => FeatureEntity, { nullable: true, deleteRule: 'cascade' })
-  parent?: FeatureEntity
-
-  @ManyToOne(() => RefSeqEntity, { deleteRule: 'cascade' })
-  refSeq!: RefSeqEntity
-
-  @Property()
-  type!: string
-
-  @Property()
-  min!: number
-
-  @Property()
-  max!: number
-
-  @Property({ nullable: true })
-  strand?: 1 | -1
-
-  @Property({ nullable: true })
-  phase?: 0 | 1 | 2
-
-  @Property({ type: 'json', nullable: true })
-  attributes?: Record<string, string[]>
-
-  @Property({ nullable: true })
-  status?: number
-
-  @Property({ nullable: true })
-  user?: string
-
-  @Property({ nullable: true })
-  createdAt?: Date
-
-  @Property({ nullable: true, onUpdate: () => new Date() })
-  updatedAt?: Date
-}
+export const FeatureEntity = defineEntity({
+  name: 'FeatureEntity',
+  tableName: 'feature',
+  properties: {
+    _id: p.string().primary(),
+    parent: () => p.manyToOne(FeatureEntity).nullable().deleteRule('cascade'),
+    refSeq: () => p.manyToOne(RefSeqEntity).deleteRule('cascade'),
+    type: p.string(),
+    min: p.integer(),
+    max: p.integer(),
+    strand: p.integer().nullable(),
+    phase: p.integer().nullable(),
+    attributes: p.json<Record<string, string[]>>().nullable(),
+    status: p.integer().nullable(),
+    user: p.string().nullable(),
+    createdAt: p.datetime().nullable(),
+    updatedAt: p.datetime().nullable().onUpdate(() => new Date()),
+  },
+  indexes: [
+    { properties: ['refSeq', 'min', 'max'] },
+    { properties: ['parent'] },
+  ],
+})

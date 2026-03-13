@@ -1,17 +1,17 @@
 import type { CheckRepository, CheckRow } from '@apollo-annotation/common'
-import type { EntityManager } from '@mikro-orm/core'
+import type { EntityManager, InferEntity } from '@mikro-orm/core'
 
 import { CheckEntity } from '../entities/CheckEntity.js'
 
-function toRow(entity: CheckEntity): CheckRow {
+function toRow(entity: InferEntity<typeof CheckEntity>): CheckRow {
   return {
     _id: entity._id,
     name: entity.name,
-    causes: entity.causes,
-    isDefault: entity.isDefault,
-    version: entity.version,
-    createdAt: entity.createdAt,
-    updatedAt: entity.updatedAt,
+    causes: entity.causes ?? undefined,
+    isDefault: entity.isDefault ?? undefined,
+    version: entity.version ?? undefined,
+    createdAt: entity.createdAt ?? undefined,
+    updatedAt: entity.updatedAt ?? undefined,
   }
 }
 

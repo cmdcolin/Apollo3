@@ -1,34 +1,20 @@
-import { Entity, Index, ManyToOne, PrimaryKey, Property } from '@mikro-orm/core'
+import { defineEntity, p } from '@mikro-orm/core'
 
 import { AssemblyEntity } from './AssemblyEntity.js'
 
-@Entity({ tableName: 'ref_seq' })
-@Index({ properties: ['assembly'] })
-export class RefSeqEntity {
-  @PrimaryKey()
-  _id!: string
-
-  @ManyToOne(() => AssemblyEntity, { deleteRule: 'cascade' })
-  assembly!: AssemblyEntity
-
-  @Property()
-  name!: string
-
-  @Property({ nullable: true })
-  description?: string
-
-  @Property({ type: 'json', nullable: true })
-  aliases?: string[]
-
-  @Property()
-  length!: number
-
-  @Property({ default: 256 * 1024 })
-  chunkSize!: number
-
-  @Property({ nullable: true })
-  status?: number
-
-  @Property({ nullable: true })
-  user?: string
-}
+export const RefSeqEntity = defineEntity({
+  name: 'RefSeqEntity',
+  tableName: 'ref_seq',
+  properties: {
+    _id: p.string().primary(),
+    assembly: () => p.manyToOne(AssemblyEntity).deleteRule('cascade'),
+    name: p.string(),
+    description: p.string().nullable(),
+    aliases: p.json<string[]>().nullable(),
+    length: p.integer(),
+    chunkSize: p.integer().default(256 * 1024),
+    status: p.integer().nullable(),
+    user: p.string().nullable(),
+  },
+  indexes: [{ properties: ['assembly'] }],
+})

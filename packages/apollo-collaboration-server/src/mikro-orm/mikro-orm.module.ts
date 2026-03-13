@@ -32,8 +32,7 @@ export class ApolloMikroOrmModule {
               this.logger.log('SQLite foreign keys enabled')
             }
             this.logger.log('MikroORM initialized, updating schema...')
-            const generator = orm.getSchemaGenerator()
-            await generator.updateSchema()
+            await orm.schema.update()
             this.logger.log('Schema updated')
             return orm
           },

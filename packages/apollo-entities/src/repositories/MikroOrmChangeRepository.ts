@@ -1,6 +1,6 @@
 import type { ChangeRepository, ChangeRow } from '@apollo-annotation/common'
 import { QueryOrder } from '@mikro-orm/core'
-import type { EntityManager } from '@mikro-orm/core'
+import type { EntityManager, InferEntity } from '@mikro-orm/core'
 import { randomBytes } from 'node:crypto'
 
 import { ChangeEntity } from '../entities/ChangeEntity.js'
@@ -9,17 +9,17 @@ function generateId() {
   return randomBytes(12).toString('hex')
 }
 
-function toRow(entity: ChangeEntity): ChangeRow {
+function toRow(entity: InferEntity<typeof ChangeEntity>): ChangeRow {
   return {
     _id: entity._id,
-    assembly: entity.assembly,
+    assembly: entity.assembly ?? undefined,
     typeName: entity.typeName,
     changedIds: entity.changedIds,
     changes: entity.changes,
     user: entity.user,
-    sequence: entity.sequence,
-    createdAt: entity.createdAt,
-    updatedAt: entity.updatedAt,
+    sequence: entity.sequence ?? undefined,
+    createdAt: entity.createdAt ?? undefined,
+    updatedAt: entity.updatedAt ?? undefined,
   }
 }
 

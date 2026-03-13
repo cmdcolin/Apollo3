@@ -1,10 +1,10 @@
-import { Entity, PrimaryKey, Property } from '@mikro-orm/core'
+import { defineEntity, p } from '@mikro-orm/core'
 
-@Entity({ tableName: 'counter' })
-export class CounterEntity {
-  @PrimaryKey()
-  _id!: string
-
-  @Property({ default: 0 })
-  sequenceValue!: number
-}
+export const CounterEntity = defineEntity({
+  name: 'CounterEntity',
+  tableName: 'counter',
+  properties: {
+    _id: p.string().primary(),
+    sequenceValue: p.integer().default(0),
+  },
+})

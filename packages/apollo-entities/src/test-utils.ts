@@ -1,5 +1,6 @@
-import { MikroORM as LibSqlORM } from '@mikro-orm/libsql'
+import { MikroORM } from '@mikro-orm/core'
 import { MikroORM as PostgreSqlORM } from '@mikro-orm/postgresql'
+import { NodeSqliteDialect, SqliteDriver } from '@mikro-orm/sqlite'
 
 import { AssemblyEntity } from './entities/AssemblyEntity.js'
 import { ChangeEntity } from './entities/ChangeEntity.js'
@@ -38,16 +39,16 @@ export async function createTestORM() {
       entities: allEntities,
       clientUrl: connectionUrl,
     })
-    const generator = orm.getSchemaGenerator()
-    await generator.refreshDatabase()
+    await orm.schema.refresh()
     return orm
   }
 
-  const orm = await LibSqlORM.init({
-    entities: allEntities,
+  const orm = await MikroORM.init({
+    driver: SqliteDriver,
     dbName: ':memory:',
+    driverOptions: new NodeSqliteDialect(':memory:'),
+    entities: allEntities,
   })
-  const generator = orm.getSchemaGenerator()
-  await generator.createSchema()
+  await orm.schema.create()
   return orm
 }

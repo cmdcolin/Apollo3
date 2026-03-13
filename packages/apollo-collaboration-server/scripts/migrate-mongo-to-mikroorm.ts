@@ -161,8 +161,7 @@ async function migrate() {
     ...createMikroOrmConfig(dbBackend, dbConnectionUrl),
     allowGlobalContext: true,
   })
-  const generator = orm.getSchemaGenerator()
-  await generator.updateSchema()
+  await orm.schema.update()
   const em = orm.em
 
   // --- Files ---

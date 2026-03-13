@@ -1,5 +1,4 @@
-import type { Options } from '@mikro-orm/core'
-import { defineConfig as defineLibSqlConfig } from '@mikro-orm/libsql'
+import { NodeSqliteDialect, SqliteDriver } from '@mikro-orm/sqlite'
 
 import { AssemblyEntity } from './entities/AssemblyEntity.js'
 import { ChangeEntity } from './entities/ChangeEntity.js'
@@ -32,17 +31,19 @@ const allEntities = [
 export function createMikroOrmConfig(
   dbType: 'postgresql' | 'sqlite' | 'mongo',
   connectionUrl: string,
-): Options {
+) {
   const base = {
     entities: allEntities,
     debug: process.env.MIKRO_ORM_DEBUG === 'true',
   }
 
   if (dbType === 'sqlite') {
-    return defineLibSqlConfig({
+    return {
       ...base,
+      driver: SqliteDriver,
       dbName: connectionUrl,
-    })
+      driverOptions: new NodeSqliteDialect(connectionUrl),
+    }
   }
   return {
     ...base,
