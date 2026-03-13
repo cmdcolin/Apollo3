@@ -5,6 +5,7 @@ import { RefSeqEntity } from './RefSeqEntity.js'
 @Entity({ tableName: 'check_result' })
 @Index({ properties: ['refSeq', 'start'] })
 @Index({ properties: ['refSeq', 'end'] })
+@Index({ properties: ['name'] })
 export class CheckResultEntity {
   @PrimaryKey()
   _id!: string
@@ -18,7 +19,7 @@ export class CheckResultEntity {
   @Property({ type: 'json' })
   ids!: string[]
 
-  @ManyToOne(() => RefSeqEntity)
+  @ManyToOne(() => RefSeqEntity, { deleteRule: 'cascade' })
   refSeq!: RefSeqEntity
 
   @Property()

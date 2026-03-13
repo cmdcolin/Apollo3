@@ -10,6 +10,8 @@ services:
       - uploads:/data/uploads
     environment:
       FILE_UPLOAD_FOLDER: /data/uploads
+      DB_BACKEND: postgresql
+      DB_CONNECTION_URL: postgresql://apollo:apollo@db:5432/apollo
 
     # Overrides default command so things don't shut down after the process ends.
     command: sleep infinity
@@ -21,20 +23,18 @@ services:
     # (Adding the "ports" property to this file will not forward from a Codespace.)
 
   db:
-    image: mongo:8
+    image: postgres:16
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: apollo
+      POSTGRES_PASSWORD: apollo
+      POSTGRES_DB: apollo
     volumes:
-      - mongodb-data:/data/db
-    command: --replSet rs0 --setParameter "transactionLifetimeLimitSeconds=300"
-    # Uncomment to change startup options
-    # environment:
-    #  MONGO_INITDB_ROOT_USERNAME: root
-    #  MONGO_INITDB_ROOT_PASSWORD: example
-    #  MONGO_INITDB_DATABASE: your-database-here
+      - postgres-data:/var/lib/postgresql/data
 
-    # Add "forwardPorts": ["27017"] to **devcontainer.json** to forward MongoDB locally.
+    # Add "forwardPorts": ["5432"] to **devcontainer.json** to forward PostgreSQL locally.
     # (Adding the "ports" property to this file will not forward from a Codespace.)
 
 volumes:
-  mongodb-data: null
+  postgres-data: null
   uploads: null

@@ -11,8 +11,18 @@ URL=http://localhost:3999
 # Name of your server (shown during the login process)
 NAME=My Apollo Server
 
-# MongoDB connection
-MONGODB_URI=mongodb://127.0.0.1:27017/apolloDb
+# Database backend: sqlite, postgresql, or mongo (defaults to sqlite)
+DB_BACKEND=postgresql
+# Database connection URL
+# For SQLite: a file path (e.g. apollo.sqlite)
+# For PostgreSQL: postgresql://user:password@host:5432/dbname
+# For MongoDB: mongodb://host:27017/dbname
+DB_CONNECTION_URL=postgresql://apollo:password@localhost:5432/apolloDb
+# Alternatively, can be a path to a file with the connection URL
+# DB_CONNECTION_URL_FILE=/run/secrets/db-connection-url
+
+# Legacy MongoDB connection (used when DB_BACKEND=mongo)
+# MONGODB_URI=mongodb://127.0.0.1:27017/apolloDb
 # Alternatively, can be a path to a file with the URI
 # MONGODB_URI_FILE=/run/secrets/mongodb-uri
 

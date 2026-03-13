@@ -23,19 +23,7 @@ export class FeaturesService {
   private readonly logger = new Logger(FeaturesService.name)
 
   async findAll() {
-    const refSeqs = await this.db.refSeq.findAll()
-    const features = []
-    for (const refSeq of refSeqs) {
-      const refFeatures = await this.db.feature.findByRange(
-        refSeq._id,
-        0,
-        Number.MAX_SAFE_INTEGER,
-      )
-      for (const f of refFeatures) {
-        features.push(f)
-      }
-    }
-    return features
+    return this.db.feature.findAll()
   }
 
   async getFeatureCount(featureCountRequest: FeatureCountRequest) {
@@ -43,32 +31,22 @@ export class FeaturesService {
 
     let count = 0
     if (refSeqId) {
-      const features = await this.db.feature.findByRange(
+      count = await this.db.feature.countByRange(
         refSeqId,
         start ?? 0,
         end ?? Number.MAX_SAFE_INTEGER,
       )
-      count = features.length
     } else if (assemblyId) {
       const refSeqs = await this.db.refSeq.findByAssembly(assemblyId)
       for (const refSeq of refSeqs) {
-        const features = await this.db.feature.findByRange(
+        count += await this.db.feature.countByRange(
           refSeq._id,
           start ?? 0,
           end ?? Number.MAX_SAFE_INTEGER,
         )
-        count += features.length
       }
     } else {
-      const refSeqs = await this.db.refSeq.findAll()
-      for (const refSeq of refSeqs) {
-        const features = await this.db.feature.findByRange(
-          refSeq._id,
-          0,
-          Number.MAX_SAFE_INTEGER,
-        )
-        count += features.length
-      }
+      count = await this.db.feature.countAll()
     }
 
     this.logger.debug(`Number of features is ${count}`)
@@ -80,13 +58,7 @@ export class FeaturesService {
     let refSeqIds: string[] | undefined
     if (assemblies) {
       const assemblyIds = assemblies.split(',')
-      const refSeqs = []
-      for (const assemblyId of assemblyIds) {
-        const rs = await this.db.refSeq.findByAssembly(assemblyId)
-        for (const r of rs) {
-          refSeqs.push(r)
-        }
-      }
+      const refSeqs = await this.db.refSeq.findByAssemblies(assemblyIds)
       refSeqIds = refSeqs.map((rs) => rs._id)
     }
     const topLevelFeatures = await this.db.feature.findByIndexedId(
@@ -207,13 +179,8 @@ export class FeaturesService {
   async searchFeatures(searchDto: { term: string; assemblies: string }) {
     const { assemblies, term } = searchDto
     const assemblyIds = assemblies.split(',')
-    const refSeqIds: string[] = []
-    for (const assemblyId of assemblyIds) {
-      const refSeqs = await this.db.refSeq.findByAssembly(assemblyId)
-      for (const refSeq of refSeqs) {
-        refSeqIds.push(refSeq._id)
-      }
-    }
+    const refSeqs = await this.db.refSeq.findByAssemblies(assemblyIds)
+    const refSeqIds = refSeqs.map((rs) => rs._id)
     return this.db.feature.searchText(refSeqIds, term)
   }
 }

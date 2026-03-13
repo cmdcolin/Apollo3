@@ -46,7 +46,8 @@ files into `apollo.env`, `compose.yml`, and `Dockerfile`.
 ```sh title="apollo.env"
 URL=http://example.com/apollo/
 NAME=My Apollo Instance
-MONGODB_URI=mongodb://mongo-node-1:27017,mongo-node-2:27018/apolloDb?replicaSet=rs0
+DB_BACKEND=postgresql
+DB_CONNECTION_URL=postgresql://apollo:apollo@postgres:5432/apollo
 FILE_UPLOAD_FOLDER=/data/uploads
 JWT_SECRET=some-secret-value
 SESSION_SECRET=some-other-secret-value
@@ -62,7 +63,7 @@ services:
   apollo-collaboration-server:
     image: ghcr.io/gmod/apollo-collaboration-server
     depends_on:
-      mongo-node-1:
+      postgres:
         condition: service_healthy
     env_file: apollo.env
     ports:
@@ -86,63 +87,26 @@ services:
       - /home/ec2-user/deployment/demoData/:/usr/local/apache2/htdocs/demoData/
     restart: unless-stopped
 
-  mongo-node-1:
-    image: mongo:7
-    command:
-      - '--replSet'
-      - rs0
-      - '--bind_ip_all'
-      - '--port'
-      - '27017'
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: apollo
+      POSTGRES_PASSWORD: apollo
+      POSTGRES_DB: apollo
     healthcheck:
-      interval: 30s
-      retries: 3
-      start_interval: 5s
-      start_period: 2m
-      test: |
-        mongosh --port 27017 --quiet --eval "
-        try {
-          rs.status()
-          console.log('replica set ok')
-        } catch {
-          rs.initiate({
-            _id: 'rs0',
-            members: [
-              { _id: 0, host: 'mongo-node-1:27017', priority: 1 },
-              { _id: 1, host: 'mongo-node-2:27018', priority: 0.5 },
-            ],
-          })
-          console.log('replica set initiated')
-        }
-        "
-      timeout: 10s
+      test: ['CMD-SHELL', 'pg_isready -U apollo']
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 5s
     ports:
-      - '27017:27017'
+      - '5432:5432'
     volumes:
-      - mongo-node-1_data:/data/db
-      - mongo-node-1_config:/data/configdb
-    restart: unless-stopped
-
-  mongo-node-2:
-    image: mongo:7
-    command:
-      - '--replSet'
-      - rs0
-      - '--bind_ip_all'
-      - '--port'
-      - '27018'
-    ports:
-      - '27018:27018'
-    volumes:
-      - mongo-node-2_data:/data/db
-      - mongo-node-2_config:/data/configdb
+      - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
 volumes:
-  mongo-node-1_config: null
-  mongo-node-1_data: null
-  mongo-node-2_config: null
-  mongo-node-2_data: null
+  postgres_data: null
   uploaded-files-volume: null
 ```
 
@@ -202,16 +166,16 @@ Docker command outputs.
 Next we're going to skip to the bottom section called `volumes`. In this compose
 file, we're using volumes to keep certain kinds of data around even if one of
 the containers needs to be rebuilt. For example, let's say you're using a
-MongoDB container that uses v7.0.6 of MongoDB, but you want to upgrade to
-v7.0.7. With Docker, instead of upgrading the running container, you usually
+PostgreSQL container that uses v17.0 of PostgreSQL, but you want to upgrade to
+v17.1. With Docker, instead of upgrading the running container, you usually
 build a brand new container based on a Docker image that has the new version you
 want. Volumes give Docker a place to store files outside the container, so a new
 container can connect to the old volume and then all your data is still in your
 database with your upgraded container.
 
-In the example `compose.yml`, we use simple entries like
-`mongo-node-1_config: null` means that we are defining a volume with the name
-"mongo-node-1_config" that we can refer to elsewhere in the compose file.
+In the example `compose.yml`, we use simple entries like `postgres_data: null`
+means that we are defining a volume with the name "postgres_data" that we can
+refer to elsewhere in the compose file.
 
 ### Services
 
@@ -275,7 +239,7 @@ compose file:
 apollo-collaboration-server:
   image: ghcr.io/gmod/apollo-collaboration-server
   depends_on:
-    mongo-node-1:
+    postgres:
       condition: service_healthy
   env_file: apollo.env
   ports:
@@ -302,12 +266,22 @@ the `.env` file:
 
 A name for your Apollo instance. It is shown in the UI during the login process.
 
-##### `MONGODB_URI`
+##### `DB_BACKEND` and `DB_CONNECTION_URL`
 
-In this example, it is
-`mongodb://mongo-node-1:27017,mongo-node-2:27018/apolloDb?replicaSet=rs0`. If
-you change the names of either of the MongoDB services, their ports, or add or
-remove a MongoDB service, be sure to update this value.
+`DB_BACKEND` specifies which database to use. Supported values are `postgresql`
+(recommended for production), `sqlite` (good for development and demos), and
+`mongo` (for backward compatibility with existing MongoDB deployments).
+
+In this example, `DB_CONNECTION_URL` is set to
+`postgresql://apollo:apollo@postgres:5432/apollo`. If you change the name of the
+PostgreSQL service, its credentials, or its port, be sure to update this value.
+
+:::note
+
+MongoDB is still supported as a database backend. If you have an existing
+MongoDB deployment, set `DB_BACKEND=mongo` and use `MONGODB_URI` as before.
+
+:::
 
 ##### `FILE_UPLOAD_FOLDER`
 
@@ -325,67 +299,50 @@ string, but should be the same each time you run the server so that user
 sessions are not invalidated (unless you want to intentionally invalidate user
 sessions). You can use a password generator to create them.
 
-#### MongoDB
+#### PostgreSQL
 
-MongoDB needs to be in a replica set configuration for the Apollo Collaboration
-Server to work properly. MongoDB replica sets are intended to ensure
-uninterrupted connection to the database even if one database node goes down. In
-our case we're running all our nodes on the same server, so some of that
-protection is lost, but we still run two different node containers so if one
-container goes down, the database can still be accessed. We're using two nodes,
-although you can use only a single node if you like. If you need high
-availability in a production environment, you might need more nodes hosted on
-different servers. In that case you could delete the MongoDB sections from the
-compose file and update the `MONGODB_URI` variable in the collaboration server
-appropriately.
+The Apollo Collaboration Server uses PostgreSQL as its recommended production
+database. The configuration is straightforward compared to the previous MongoDB
+setup, as PostgreSQL does not require replica set configuration.
 
-Here is one of the MongoDB service entries:
+Here is the PostgreSQL service entry:
 
 ```yml
-mongo-node-1:
-  image: mongo:7
-  command:
-    - '--replSet'
-    - rs0
-    - '--bind_ip_all'
-    - '--port'
-    - '27017'
+postgres:
+  image: postgres:17
+  environment:
+    POSTGRES_USER: apollo
+    POSTGRES_PASSWORD: apollo
+    POSTGRES_DB: apollo
   healthcheck:
-    interval: 30s
-    retries: 3
-    start_interval: 5s
-    start_period: 2m
-    test: |
-      mongosh --port 27017 --quiet --eval "
-      try {
-        rs.status()
-        console.log('replica set ok')
-      } catch {
-        rs.initiate({
-          _id: 'rs0',
-          members: [
-            { _id: 0, host: 'mongo-node-1:27017', priority: 1 },
-            { _id: 1, host: 'mongo-node-2:27018', priority: 0.5 },
-          ],
-        })
-        console.log('replica set initiated')
-      }
-      "
-    timeout: 10s
+    test: ['CMD-SHELL', 'pg_isready -U apollo']
+    interval: 10s
+    retries: 5
+    start_period: 30s
+    timeout: 5s
   ports:
-    - '27017:27017'
+    - '5432:5432'
   volumes:
-    - mongo-node-1_data:/data/db
-    - mongo-node-1_config:/data/configdb
+    - postgres_data:/var/lib/postgresql/data
+  restart: unless-stopped
 ```
 
-This uses the official MongoDB image, runs on port 27017, and uses two volumes
-to store data and configuration in. The second node is almost identical, with a
-different port and without the `healthcheck` section.
+This uses the official PostgreSQL image, runs on port 5432, and uses a volume to
+persist the database data. The `healthcheck` section provides a way for the
+collaboration server to know the database is healthy and ready for requests.
 
-The `healthcheck` section is there to initialize the replica set the first time
-the container runs, and then to provide a way for the collaboration server to
-know the database is healthy and ready for requests from the app.
+For production deployments, you should change the `POSTGRES_PASSWORD` to a
+secure value and consider using Docker secrets or an externally managed
+PostgreSQL instance.
+
+:::tip Alternative database backends
+
+Apollo also supports **SQLite** (set `DB_BACKEND=sqlite` and
+`DB_CONNECTION_URL=apollo.sqlite`) for simple development setups, and
+**MongoDB** (set `DB_BACKEND=mongo` and configure `MONGODB_URI`) for backward
+compatibility with existing deployments.
+
+:::
 
 ## Starting Apollo
 

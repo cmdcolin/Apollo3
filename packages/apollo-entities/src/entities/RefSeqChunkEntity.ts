@@ -8,7 +8,7 @@ export class RefSeqChunkEntity {
   @PrimaryKey()
   _id!: string
 
-  @ManyToOne(() => RefSeqEntity)
+  @ManyToOne(() => RefSeqEntity, { deleteRule: 'cascade' })
   refSeq!: RefSeqEntity
 
   @Property()

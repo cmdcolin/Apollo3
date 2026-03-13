@@ -31,7 +31,7 @@ You'll need `docker` to be installed.
 
 ## Directly on the development computer
 
-You'll need a MongoDB server running. For convenience, a `justfile` leveraging
+For convenience, a `justfile` leveraging
 [the `just` command runner](https://just.systems/man/en/) is provided. `just`
 commands can be executed from anywhere within your local clone of `Apollo3`. You
 can run `just` to get a list of available recipes.
@@ -40,15 +40,15 @@ can run `just` to get a list of available recipes.
 - Run `just run` (this automatically starts `jbrowse` and the Apollo
   components).
 
+By default, Apollo uses SQLite for local development. For PostgreSQL, set the
+`DB_BACKEND=postgresql` and `DB_CONNECTION_URL=postgresql://...` environment
+variables.
+
 You can also define your own recipes in a `user.just` file, they will be added
 to the list of available recipes. For instance, on a Linux system, you might
 find the following recipes useful to have in your `user.just` file:
 
 ```just
-# start mongodb server
-start-mongodb:
-    sudo systemctl start mongodb.service
-
 # open in browser
 open:
     xdg-open http://localhost:3000/?config=http://localhost:3999/jbrowse/config.json

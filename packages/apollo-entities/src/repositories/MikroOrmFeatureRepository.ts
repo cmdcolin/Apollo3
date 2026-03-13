@@ -97,6 +97,23 @@ function toRow(entity: FeatureEntity): FeatureRow {
 export class MikroOrmFeatureRepository implements FeatureRepository {
   constructor(private readonly em: EntityManager) {}
 
+  async findAll() {
+    const entities = await this.em.find(FeatureEntity, {})
+    return entities.map(toRow)
+  }
+
+  async countAll() {
+    return this.em.count(FeatureEntity)
+  }
+
+  async countByRange(refSeqId: string, start: number, end: number) {
+    return this.em.count(FeatureEntity, {
+      refSeq: refSeqId,
+      min: { $lte: end },
+      max: { $gte: start },
+    })
+  }
+
   async findById(id: string) {
     const entity = await this.em.findOne(FeatureEntity, { _id: id })
     if (entity) {
@@ -136,15 +153,15 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
 
   async findDescendants(rootId: string) {
     const results: FeatureRow[] = []
-    const queue = [rootId]
-    while (queue.length > 0) {
-      const parentId = queue.shift()!
+    let parentIds = [rootId]
+    while (parentIds.length > 0) {
       const children = await this.em.find(FeatureEntity, {
-        parent: parentId,
+        parent: { $in: parentIds },
       })
+      parentIds = []
       for (const child of children) {
         results.push(toRow(child))
-        queue.push(child._id)
+        parentIds.push(child._id)
       }
     }
     return results
@@ -242,20 +259,22 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
   }
 
   async deleteDescendants(id: string) {
-    let count = 0
-    const queue = [id]
-    while (queue.length > 0) {
-      const parentId = queue.shift()!
+    const allIds: string[] = []
+    let parentIds = [id]
+    while (parentIds.length > 0) {
       const children = await this.em.find(FeatureEntity, {
-        parent: parentId,
+        parent: { $in: parentIds },
       })
+      parentIds = []
       for (const child of children) {
-        queue.push(child._id)
-        await this.em.removeAndFlush(child)
-        count++
+        allIds.push(child._id)
+        parentIds.push(child._id)
       }
     }
-    return count
+    if (allIds.length === 0) {
+      return 0
+    }
+    return this.em.nativeDelete(FeatureEntity, { _id: { $in: allIds } })
   }
 
   async deleteByRefSeqs(refSeqIds: string[]) {
@@ -289,12 +308,25 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
     if (matchingIds.size === 0) {
       return []
     }
+    const parentMap = new Map<string, string | undefined>()
+    for (const entity of entities) {
+      const parentId =
+        entity.parent == null
+          ? undefined
+          : typeof entity.parent === 'string'
+            ? entity.parent
+            : entity.parent._id
+      parentMap.set(entity._id, parentId)
+    }
     const rootIds = new Set<string>()
     for (const id of matchingIds) {
-      const root = await this.findRootParent(id)
-      if (root) {
-        rootIds.add(root._id)
+      let current = id
+      let parentId = parentMap.get(current)
+      while (parentId !== undefined) {
+        current = parentId
+        parentId = parentMap.get(current)
       }
+      rootIds.add(current)
     }
     return entities
       .filter((entity) => rootIds.has(entity._id) && entity.parent == null)

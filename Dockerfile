@@ -24,8 +24,8 @@ COPY --from=setup /app .
 COPY --from=build /app/packages/apollo-collaboration-server/dist /app/packages/apollo-collaboration-server/dist
 COPY --from=build /app/packages/apollo-common/dist /app/packages/apollo-common/dist
 COPY --from=build /app/packages/apollo-mst/dist /app/packages/apollo-mst/dist
-COPY --from=build /app/packages/apollo-schemas/dist /app/packages/apollo-schemas/dist
 COPY --from=build /app/packages/apollo-shared/dist /app/packages/apollo-shared/dist
+COPY --from=build /app/packages/apollo-entities/dist /app/packages/apollo-entities/dist
 RUN yarn workspaces focus --production @apollo-annotation/collaboration-server
 EXPOSE 3999
 CMD ["yarn", "start:prod"]

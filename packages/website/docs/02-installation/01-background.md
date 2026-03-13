@@ -4,7 +4,7 @@ A full deployment of a collaborative Apollo instance is made up of several
 different components. When setting up Apollo, you'll have to decide how you want
 to handle each of these components. We provide some examples of how to deploy
 Apollo, but the deployment can be customized to fit your needs. For example, you
-may want to utilize an existing MongoDB installation (perhaps managed by your
+may want to utilize an existing PostgreSQL installation (perhaps managed by your
 institution) and deploy the rest of Apollo using Docker.
 
 Here we'll review the different parts of Apollo that each deployment strategy
@@ -44,12 +44,20 @@ larger assemblies or several concurrent users. The server also needs access to a
 location on its file system to save uploaded files. The size of hard drive it
 needs is dependent on how many files will need to be uploaded.
 
-### MongoDB Database
+### Database
 
-The Apollo Collaboration Server stores its data in a MongoDB database. Since the
-server uses some specialized MongoDB functionality, the database needs to be in
-a replica set configuration. The database can be on the same machine as the
-collaboration server, or it can be external.
+The Apollo Collaboration Server stores its data in a database. Apollo supports
+three database backends:
+
+- **PostgreSQL** (recommended for production) - a robust, full-featured
+  relational database
+- **SQLite** (recommended for development and demos) - a lightweight file-based
+  database that requires no separate server process
+- **MongoDB** (supported for backward compatibility) - requires a replica set
+  configuration
+
+The database can be on the same machine as the collaboration server, or it can
+be external (for PostgreSQL and MongoDB).
 
 ## Deployment examples
 
