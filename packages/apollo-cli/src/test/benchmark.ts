@@ -39,7 +39,7 @@ const CLI_DIR = path.resolve(MIKRO_ORM_DIR, 'packages/apollo-cli')
 const DATA_DIR = path.resolve(CLI_DIR, 'test_data/benchmark')
 const MIKRO_ORM_PORT = 3999
 const MAIN_PORT = 4999
-const ITERATIONS = 5
+const ITERATIONS = 3
 
 const GENCODE_GFF3_URL = 'https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.chr_patch_hapl_scaff.annotation.gff3.gz'
 const GENCODE_FASTA_URL = 'https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/GRCh38.p14.genome.fa.gz'
@@ -197,10 +197,19 @@ function startServer(repoDir: string, port: number, useMongo: boolean): ChildPro
     LOG_LEVELS: 'error,warn',
     NODE_ENV: 'development',
     FILE_UPLOAD_FOLDER: path.join(serverDir, 'uploads'),
+    CORS: 'true',
+    JWT_SECRET: 'benchmarksecret',
+    SESSION_SECRET: 'benchmarksessionsecret',
+    URL: `http://localhost:${port}`,
   }
 
   if (useMongo) {
     env.MONGODB_URI = 'mongodb://localhost:27017/apolloBenchmarkDb?directConnection=true'
+    try {
+      shell("docker exec apollo-mongo-bench mongosh --quiet --eval \"use apolloBenchmarkDb\" --eval \"db.dropDatabase()\"")
+    } catch {
+      // docker container might not be named this
+    }
   } else {
     env.DB_BACKEND = 'sqlite'
     env.DB_CONNECTION_URL = dbFile
@@ -235,25 +244,13 @@ function killServer(child: ChildProcess) {
 
 // --- Profile setup ---
 
-function configureProfile(profileName: string, port: number) {
+function configureProfile(profileName: string, port: number, cliDir?: string) {
   const apollo = 'yarn dev'
-  shell(`${apollo} config --profile ${profileName} address http://localhost:${port}`)
-  shell(`${apollo} config --profile ${profileName} accessType root`)
-  shell(`${apollo} config --profile ${profileName} rootPassword pass`)
-  shell(`${apollo} login --profile ${profileName} -f`)
-}
-
-function cleanupAssemblies(profile: string) {
-  const apollo = 'yarn dev'
-  try {
-    const result = shell(`${apollo} assembly get --profile ${profile}`)
-    const assemblies = JSON.parse(result) as { _id: string }[]
-    for (const asm of assemblies) {
-      shell(`${apollo} assembly delete --profile ${profile} -a ${asm._id}`)
-    }
-  } catch {
-    // no assemblies or server issue
-  }
+  const dir = cliDir ?? CLI_DIR
+  shell(`${apollo} config --profile ${profileName} address http://localhost:${port}`, dir)
+  shell(`${apollo} config --profile ${profileName} accessType root`, dir)
+  shell(`${apollo} config --profile ${profileName} rootPassword pass`, dir)
+  shell(`${apollo} login --profile ${profileName} -f`, dir)
 }
 
 // --- Benchmark scenarios ---
@@ -265,33 +262,55 @@ interface BenchmarkResult {
   iterations: number
 }
 
-function runBenchmarks(profile: string, gffFile: string, label: string): BenchmarkResult[] {
+function runBenchmarks(profile: string, gffFile: string, label: string, cliDir?: string): BenchmarkResult[] {
   const results: BenchmarkResult[] = []
+  const effectiveCliDir = cliDir ?? CLI_DIR
   const apollo = 'yarn dev'
   const P = `--profile ${profile}`
 
+  function cliShell(cmd: string) {
+    return shell(cmd, effectiveCliDir)
+  }
+  function cliShellTimed(cmd: string) {
+    const start = performance.now()
+    cliShell(cmd)
+    return performance.now() - start
+  }
+
   console.log(`\n  [${label}] Starting benchmarks with ${ITERATIONS} iterations each...`)
+
+  function cleanup() {
+    try {
+      const result = cliShell(`${apollo} assembly get ${P}`)
+      const assemblies = JSON.parse(result) as { _id: string }[]
+      for (const asm of assemblies) {
+        cliShell(`${apollo} assembly delete ${P} -a ${asm._id}`)
+      }
+    } catch {
+      // no assemblies
+    }
+  }
 
   // 1: Assembly import
   console.log(`  [${label}] Assembly import...`)
   const importTimes: number[] = []
   for (let i = 0; i < ITERATIONS; i++) {
-    cleanupAssemblies(profile)
-    const ms = shellTimed(`${apollo} assembly add-from-gff ${gffFile} -a bench_asm -f ${P}`)
+    cleanup()
+    const ms = cliShellTimed(`${apollo} assembly add-from-gff ${gffFile} -a bench_asm -f ${P}`)
     importTimes.push(ms)
     process.stdout.write(`    iteration ${i + 1}: ${formatMs(ms)}\n`)
   }
   results.push({ scenario: 'Assembly import', medianMs: median(importTimes), p95Ms: p95(importTimes), iterations: ITERATIONS })
 
   // Ensure assembly exists for remaining tests
-  cleanupAssemblies(profile)
-  shell(`${apollo} assembly add-from-gff ${gffFile} -a bench_asm -f ${P}`)
+  cleanup()
+  cliShell(`${apollo} assembly add-from-gff ${gffFile} -a bench_asm -f ${P}`)
 
   // 2: Feature get (all features)
   console.log(`  [${label}] Feature get...`)
   const getTimes: number[] = []
   for (let i = 0; i < ITERATIONS; i++) {
-    const ms = shellTimed(`${apollo} feature get -a bench_asm ${P} > /dev/null`)
+    const ms = cliShellTimed(`${apollo} feature get -a bench_asm ${P} > /dev/null`)
     getTimes.push(ms)
     process.stdout.write(`    iteration ${i + 1}: ${formatMs(ms)}\n`)
   }
@@ -301,7 +320,7 @@ function runBenchmarks(profile: string, gffFile: string, label: string): Benchma
   console.log(`  [${label}] Feature search...`)
   const searchTimes: number[] = []
   for (let i = 0; i < ITERATIONS; i++) {
-    const ms = shellTimed(`${apollo} feature search -a bench_asm -t mRNA ${P} > /dev/null`)
+    const ms = cliShellTimed(`${apollo} feature search -a bench_asm -t mRNA ${P} > /dev/null`)
     searchTimes.push(ms)
     process.stdout.write(`    iteration ${i + 1}: ${formatMs(ms)}\n`)
   }
@@ -311,7 +330,7 @@ function runBenchmarks(profile: string, gffFile: string, label: string): Benchma
   console.log(`  [${label}] GFF3 export...`)
   const exportTimes: number[] = []
   for (let i = 0; i < ITERATIONS; i++) {
-    const ms = shellTimed(`${apollo} export gff3 bench_asm ${P} > /dev/null`)
+    const ms = cliShellTimed(`${apollo} export gff3 bench_asm ${P} > /dev/null`)
     exportTimes.push(ms)
     process.stdout.write(`    iteration ${i + 1}: ${formatMs(ms)}\n`)
   }
@@ -321,14 +340,14 @@ function runBenchmarks(profile: string, gffFile: string, label: string): Benchma
   console.log(`  [${label}] Assembly delete...`)
   const deleteTimes: number[] = []
   for (let i = 0; i < ITERATIONS; i++) {
-    shell(`${apollo} assembly add-from-gff ${gffFile} -a bench_del -f ${P}`)
-    const ms = shellTimed(`${apollo} assembly delete -a bench_del ${P}`)
+    cliShell(`${apollo} assembly add-from-gff ${gffFile} -a bench_del -f ${P}`)
+    const ms = cliShellTimed(`${apollo} assembly delete -a bench_del ${P}`)
     deleteTimes.push(ms)
     process.stdout.write(`    iteration ${i + 1}: ${formatMs(ms)}\n`)
   }
   results.push({ scenario: 'Assembly delete', medianMs: median(deleteTimes), p95Ms: p95(deleteTimes), iterations: ITERATIONS })
 
-  cleanupAssemblies(profile)
+  cleanup()
   return results
 }
 
@@ -418,8 +437,8 @@ async function main() {
   }
   console.log('MikroORM server ready.')
 
-  configureProfile('benchMikro', MIKRO_ORM_PORT)
-  const mikroResults = runBenchmarks('benchMikro', gffFile, 'MikroORM/SQLite')
+  configureProfile('benchMikro', MIKRO_ORM_PORT, CLI_DIR)
+  const mikroResults = runBenchmarks('benchMikro', gffFile, 'MikroORM/SQLite', CLI_DIR)
   killServer(mikroServer)
 
   // Optionally run main branch comparison
@@ -448,8 +467,9 @@ async function main() {
         waitForServer(MAIN_PORT)
         console.log('Main branch server ready.')
 
-        configureProfile('benchMain', MAIN_PORT)
-        mainResults = runBenchmarks('benchMain', gffFile, 'MongoDB')
+        const mainCliDir = path.join(MAIN_DIR, 'packages/apollo-cli')
+        configureProfile('benchMain', MAIN_PORT, mainCliDir)
+        mainResults = runBenchmarks('benchMain', gffFile, 'MongoDB', mainCliDir)
       } catch (e) {
         console.warn(`Main branch server failed: ${e}`)
       } finally {
