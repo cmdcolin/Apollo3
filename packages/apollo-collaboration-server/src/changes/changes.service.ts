@@ -42,8 +42,8 @@ export class ChangesService {
     private readonly checksService: ChecksService,
   ) {}
 
-  private buildServerDataStore(user: string): ServerDataStore {
-    const uow = this.db.createUnitOfWork()
+  private async buildServerDataStore(user: string): Promise<ServerDataStore> {
+    const uow = await this.db.createUnitOfWork()
     return {
       typeName: 'Server',
       featureRepository: uow.feature,
@@ -109,7 +109,7 @@ export class ChangesService {
       }
     }
 
-    const backend = this.buildServerDataStore(uniqUserId)
+    const backend = await this.buildServerDataStore(uniqUserId)
     try {
       await change.execute(backend)
       await backend.unitOfWork.commit()

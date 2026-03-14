@@ -75,6 +75,7 @@ function matchesPhrase(textTokens: string[], queryTokens: string[]) {
   return false
 }
 
+// Shape returned by raw SQL — snake_case DB column names
 interface RawFeatureRow {
   _id: string
   parent__id: string | null
@@ -111,7 +112,7 @@ function rawToRow(raw: RawFeatureRow): FeatureRow {
   }
 }
 
-function toRow(entity: InferEntity<typeof FeatureEntity>): FeatureRow {
+function entityToRow(entity: InferEntity<typeof FeatureEntity>): FeatureRow {
   return {
     _id: entity._id,
     parentId: entity.parent?._id ?? undefined,
@@ -243,7 +244,7 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
     })
     this.em.persist(entity)
     await this.em.flush()
-    return toRow(entity)
+    return entityToRow(entity)
   }
 
   async createMany(rows: FeatureRow[]) {
@@ -305,7 +306,7 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
       entity.user = data.user
     }
     await this.em.flush()
-    return toRow(entity)
+    return entityToRow(entity)
   }
 
   async deleteById(id: string) {
@@ -345,42 +346,49 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
     if (refSeqIds.length === 0) {
       return []
     }
-    const queryTokens = tokenize(query)
-    if (queryTokens.every((t) => STOP_WORDS.has(t))) {
+    const queryTokens = tokenize(query).filter((t) => !STOP_WORDS.has(t))
+    if (queryTokens.length === 0) {
       return []
     }
-    const rows = (await this.sql(
-      `SELECT * FROM feature WHERE ref_seq__id IN (${placeholders(refSeqIds.length)})`,
-      refSeqIds,
+
+    // Use SQL LIKE to pre-filter candidates, then precise phrase matching in JS
+    const refSeqPh = placeholders(refSeqIds.length)
+    const likeConditions = queryTokens.map(
+      () => `(LOWER(type) || ' ' || COALESCE(LOWER(attributes), '')) LIKE ?`,
+    )
+    const likeParams = queryTokens.map((t) => `%${t}%`)
+
+    const candidateRows = (await this.sql(
+      `SELECT * FROM feature
+       WHERE ref_seq__id IN (${refSeqPh})
+       AND ${likeConditions.join(' AND ')}`,
+      [...refSeqIds, ...likeParams],
     )) as RawFeatureRow[]
-    const matchingIds = new Set<string>()
-    for (const row of rows) {
+
+    // Precise phrase matching on the small candidate set
+    const matchingIds: string[] = []
+    for (const row of candidateRows) {
       const text = `${row.type} ${row.attributes ?? '{}'}`
       const textTokens = tokenize(text)
       if (matchesPhrase(textTokens, queryTokens)) {
-        matchingIds.add(row._id)
+        matchingIds.push(row._id)
       }
     }
-    if (matchingIds.size === 0) {
+    if (matchingIds.length === 0) {
       return []
     }
-    const parentMap = new Map<string, string | undefined>()
-    for (const row of rows) {
-      parentMap.set(row._id, row.parent__id ?? undefined)
-    }
-    const rootIds = new Set<string>()
-    for (const id of matchingIds) {
-      let current = id
-      let parentId = parentMap.get(current)
-      while (parentId !== undefined) {
-        current = parentId
-        parentId = parentMap.get(current)
-      }
-      rootIds.add(current)
-    }
-    return rows
-      .filter((row) => rootIds.has(row._id) && row.parent__id == null)
-      .map((r) => rawToRow(r))
+
+    // Walk up to root parents using recursive CTE
+    const rows = (await this.sql(
+      `WITH RECURSIVE ancestors AS (
+        SELECT f.* FROM feature f WHERE f._id IN (${placeholders(matchingIds.length)})
+        UNION ALL
+        SELECT f.* FROM feature f JOIN ancestors a ON f._id = a.parent__id
+      )
+      SELECT DISTINCT * FROM ancestors WHERE parent__id IS NULL`,
+      matchingIds,
+    )) as RawFeatureRow[]
+    return rows.map((r) => rawToRow(r))
   }
 
   async activateByUser(user: string) {
@@ -392,73 +400,60 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
   }
 
   async findByIndexedId(id: string, refSeqIds?: string[]) {
-    let rootSql = 'SELECT * FROM feature WHERE parent__id IS NULL'
-    let allSql = 'SELECT _id, parent__id, attributes FROM feature'
-    const rootParams: unknown[] = []
-    const allParams: unknown[] = []
+    // Use SQL LIKE to find features whose attributes JSON contains the id,
+    // then walk up to root parents using recursive CTE
+    const escapedId = id.replace(/%/g, '\\%').replace(/_/g, '\\_')
+    const likePattern = `%"${escapedId}"%`
+
+    let matchSql = `SELECT _id FROM feature WHERE attributes LIKE ?`
+    const params: unknown[] = [likePattern]
     if (refSeqIds && refSeqIds.length > 0) {
-      const ph = placeholders(refSeqIds.length)
-      rootSql += ` AND ref_seq__id IN (${ph})`
-      allSql += ` WHERE ref_seq__id IN (${ph})`
+      matchSql += ` AND ref_seq__id IN (${placeholders(refSeqIds.length)})`
       for (const rsId of refSeqIds) {
-        rootParams.push(rsId)
-        allParams.push(rsId)
+        params.push(rsId)
       }
     }
-    const roots = (await this.sql(rootSql, rootParams)) as RawFeatureRow[]
-    const allFeatures = (await this.sql(allSql, allParams)) as {
-      _id: string
-      parent__id: string | null
-      attributes: string | null
-    }[]
 
-    const childrenMap = new Map<string, string[]>()
-    const attrMap = new Map<string, string | null>()
-    for (const f of allFeatures) {
-      attrMap.set(f._id, f.attributes)
-      if (f.parent__id) {
-        const children = childrenMap.get(f.parent__id)
-        if (children) {
-          children.push(f._id)
-        } else {
-          childrenMap.set(f.parent__id, [f._id])
+    const matchRows = (await this.sql(matchSql, params)) as { _id: string }[]
+
+    // Verify matches precisely (LIKE may produce false positives for substring matches)
+    const verifiedIds: string[] = []
+    if (matchRows.length > 0) {
+      const fullRows = (await this.sql(
+        `SELECT _id, attributes FROM feature WHERE _id IN (${placeholders(matchRows.length)})`,
+        matchRows.map((r) => r._id),
+      )) as { _id: string; attributes: string | null }[]
+      for (const row of fullRows) {
+        if (row.attributes) {
+          const attributes = JSON.parse(row.attributes) as Record<
+            string,
+            string[]
+          >
+          for (const values of Object.values(attributes)) {
+            if (values.includes(id)) {
+              verifiedIds.push(row._id)
+              break
+            }
+          }
         }
       }
     }
 
-    const results: FeatureRow[] = []
-    for (const root of roots) {
-      if (this.treeContainsIndexedIdInMemory(root._id, id, childrenMap, attrMap)) {
-        results.push(rawToRow(root))
-      }
+    if (verifiedIds.length === 0) {
+      return []
     }
-    return results
-  }
 
-  private treeContainsIndexedIdInMemory(
-    nodeId: string,
-    id: string,
-    childrenMap: Map<string, string[]>,
-    attrMap: Map<string, string | null>,
-  ): boolean {
-    const attrStr = attrMap.get(nodeId)
-    if (attrStr) {
-      const attributes = JSON.parse(attrStr) as Record<string, string[]>
-      for (const values of Object.values(attributes)) {
-        if (values.includes(id)) {
-          return true
-        }
-      }
-    }
-    const children = childrenMap.get(nodeId)
-    if (children) {
-      for (const childId of children) {
-        if (this.treeContainsIndexedIdInMemory(childId, id, childrenMap, attrMap)) {
-          return true
-        }
-      }
-    }
-    return false
+    // Walk up to root parents
+    const rows = (await this.sql(
+      `WITH RECURSIVE ancestors AS (
+        SELECT f.* FROM feature f WHERE f._id IN (${placeholders(verifiedIds.length)})
+        UNION ALL
+        SELECT f.* FROM feature f JOIN ancestors a ON f._id = a.parent__id
+      )
+      SELECT DISTINCT * FROM ancestors WHERE parent__id IS NULL`,
+      verifiedIds,
+    )) as RawFeatureRow[]
+    return rows.map((r) => rawToRow(r))
   }
 
   async findRootParent(id: string) {

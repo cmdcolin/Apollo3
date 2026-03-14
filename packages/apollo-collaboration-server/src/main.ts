@@ -91,40 +91,22 @@ async function bootstrap() {
   // Seed checks into database
   const db = app.get(DatabaseService)
   const checksMap = checkRegistry.getChecks()
-  // eslint-disable-next-line no-console
-  console.log(
-    `[DEBUG seed] checkRegistry has ${checksMap.size} checks: ${[...checksMap.keys()].join(', ')}`,
-  )
   for (const [key, check] of checksMap.entries()) {
     const existing = await db.checkConfig.findByName(key)
-    // eslint-disable-next-line no-console
-    console.log(`[DEBUG seed] check "${key}" existing=${!!existing}`)
     if (existing) {
       if (existing.version !== check.version) {
         await db.checkConfig.upsert({ ...existing, version: check.version })
       }
     } else {
       const newId = randomBytes(12).toString('hex')
-      // eslint-disable-next-line no-console
-      console.log(
-        `[DEBUG seed] creating check "${check.name}" with id=${newId}`,
-      )
       await db.checkConfig.upsert({
         _id: newId,
         name: check.name,
         version: check.version,
         isDefault: true,
       })
-      // eslint-disable-next-line no-console
-      console.log(`[DEBUG seed] upsert done for "${check.name}"`)
     }
   }
-  // Verify seeding
-  const allChecks = await db.checkConfig.findAll()
-  // eslint-disable-next-line no-console
-  console.log(
-    `[DEBUG seed] after seeding, DB has ${allChecks.length} checks: ${allChecks.map((c) => c.name).join(', ')}`,
-  )
 
   // eslint-disable-next-line no-console
   console.log(

@@ -80,8 +80,9 @@ export class DatabaseService {
     return new MikroOrmChangeRepository(this.fork())
   }
 
-  createUnitOfWork() {
+  async createUnitOfWork() {
     const em = this.fork()
+    await em.begin()
     return {
       assembly: new MikroOrmAssemblyRepository(em) as AssemblyRepository,
       feature: new MikroOrmFeatureRepository(em) as FeatureRepository,
@@ -98,11 +99,10 @@ export class DatabaseService {
       ) as JBrowseConfigRepository,
       unitOfWork: {
         async commit() {
-          await em.flush()
+          await em.commit()
         },
-        rollback() {
-          em.clear()
-          return Promise.resolve()
+        async rollback() {
+          await em.rollback()
         },
       } satisfies UnitOfWork,
     }

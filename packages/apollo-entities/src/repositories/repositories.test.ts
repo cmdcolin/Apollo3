@@ -637,6 +637,102 @@ describe('MikroOrmFeatureRepository', () => {
     expect(created).toHaveLength(2)
   })
 
+  it('should search text in child features and return root', async () => {
+    const em = orm.em.fork()
+    await setupRefSeq(em)
+    const featureRepo = new MikroOrmFeatureRepository(em)
+
+    await featureRepo.create({
+      _id: 'gene-1',
+      refSeq: 'rs-1',
+      type: 'gene',
+      min: 100,
+      max: 500,
+      status: 0,
+      attributes: { Name: ['BRCA1'] },
+    })
+    await featureRepo.create({
+      _id: 'mrna-1',
+      refSeq: 'rs-1',
+      type: 'mRNA',
+      min: 100,
+      max: 500,
+      parentId: 'gene-1',
+      status: 0,
+      attributes: { Name: ['BRCA1-mRNA'] },
+    })
+    await featureRepo.create({
+      _id: 'cds-1',
+      refSeq: 'rs-1',
+      type: 'CDS',
+      min: 100,
+      max: 300,
+      parentId: 'mrna-1',
+      status: 0,
+      attributes: { Name: ['special-cds'] },
+    })
+
+    // Searching for child attribute should return root
+    const results = await featureRepo.searchText(['rs-1'], 'special')
+    expect(results).toHaveLength(1)
+    expect(results[0]._id).toBe('gene-1')
+
+    // Searching for type should work
+    const cdsResults = await featureRepo.searchText(['rs-1'], 'CDS')
+    expect(cdsResults).toHaveLength(1)
+    expect(cdsResults[0]._id).toBe('gene-1')
+  })
+
+  it('should find by indexed id in child attributes and return root', async () => {
+    const em = orm.em.fork()
+    await setupRefSeq(em)
+    const featureRepo = new MikroOrmFeatureRepository(em)
+
+    await featureRepo.create({
+      _id: 'gene-1',
+      refSeq: 'rs-1',
+      type: 'gene',
+      min: 100,
+      max: 500,
+      status: 0,
+      attributes: { ID: ['gene-1-id'] },
+    })
+    await featureRepo.create({
+      _id: 'mrna-1',
+      refSeq: 'rs-1',
+      type: 'mRNA',
+      min: 100,
+      max: 500,
+      parentId: 'gene-1',
+      status: 0,
+      attributes: { ID: ['mrna-1-id'], Parent: ['gene-1-id'] },
+    })
+    await featureRepo.create({
+      _id: 'cds-1',
+      refSeq: 'rs-1',
+      type: 'CDS',
+      min: 100,
+      max: 300,
+      parentId: 'mrna-1',
+      status: 0,
+      attributes: { ID: ['cds-1-id'], Parent: ['mrna-1-id'] },
+    })
+
+    // Searching for child's ID attribute should return root
+    const results = await featureRepo.findByIndexedId('cds-1-id', ['rs-1'])
+    expect(results).toHaveLength(1)
+    expect(results[0]._id).toBe('gene-1')
+
+    // Searching for root's ID should also return root
+    const rootResults = await featureRepo.findByIndexedId('gene-1-id', ['rs-1'])
+    expect(rootResults).toHaveLength(1)
+    expect(rootResults[0]._id).toBe('gene-1')
+
+    // Non-existent ID returns empty
+    const noResults = await featureRepo.findByIndexedId('nonexistent', ['rs-1'])
+    expect(noResults).toHaveLength(0)
+  })
+
   it('should delete features by refSeq ids', async () => {
     const em = orm.em.fork()
     await setupRefSeq(em)

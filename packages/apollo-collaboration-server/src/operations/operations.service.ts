@@ -19,8 +19,8 @@ export class OperationsService {
     private readonly db: DatabaseService,
   ) {}
 
-  private buildServerDataStore(): ServerDataStore {
-    const uow = this.db.createUnitOfWork()
+  private async buildServerDataStore(): Promise<ServerDataStore> {
+    const uow = await this.db.createUnitOfWork()
     return {
       typeName: 'Server',
       featureRepository: uow.feature,
@@ -63,7 +63,7 @@ export class OperationsService {
     )
     const operation = new OperationType(serializedOperation, { logger })
 
-    const backend = this.buildServerDataStore()
+    const backend = await this.buildServerDataStore()
     return (await operation.execute(backend)) as ReturnType<
       T['executeOnServer']
     >
