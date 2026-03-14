@@ -16,6 +16,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common'
 
+import { ChecksService } from '../checks/checks.service.js'
 import { CountersService } from '../counters/counters.service.js'
 import { FilesService } from '../files/files.service.js'
 import { MessagesGateway } from '../messages/messages.gateway.js'
@@ -38,6 +39,7 @@ export class ChangesService {
     private readonly pluginsService: PluginsService,
     private readonly messagesGateway: MessagesGateway,
     private readonly db: DatabaseService,
+    private readonly checksService: ChecksService,
   ) {}
 
   private buildServerDataStore(user: string): ServerDataStore {
@@ -131,6 +133,16 @@ export class ChangesService {
       await this.db.refSeqChunk.activateByUser(uniqUserId)
       await this.db.feature.activateByUser(uniqUserId)
       await this.db.refSeq.activateByUser(uniqUserId)
+    }
+
+    if (isFeatureChange(change)) {
+      const { changedIds } = change
+      for (const changedId of changedIds) {
+        const rootFeature = await this.db.feature.findRootParent(changedId)
+        if (rootFeature) {
+          await this.checksService.checkFeature(rootFeature._id)
+        }
+      }
     }
 
     if (isAssemblySpecificChange(change)) {
