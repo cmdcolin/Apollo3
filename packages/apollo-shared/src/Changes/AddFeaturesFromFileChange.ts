@@ -88,6 +88,7 @@ export class AddFeaturesFromFileChange extends FromFileBaseChange {
           logger.debug?.(`Processed ${featureCount} features`)
         }
       }
+      await this.flushFeatureBuffer(backend)
     }
     logger.debug?.('New features added into database')
   }

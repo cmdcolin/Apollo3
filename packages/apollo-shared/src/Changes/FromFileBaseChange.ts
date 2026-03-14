@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   AssemblySpecificChange,
+  type FeatureRow,
   type FileRow,
   type RefSeqChunkRow,
   type RefSeqRow,
@@ -15,6 +16,24 @@ import { gff3ToAnnotationFeature } from '../GFF3/index.js'
 import { flattenFeatureSnapshot } from './AddFeatureChange.js'
 
 export abstract class FromFileBaseChange extends AssemblySpecificChange {
+  private chunkBuffer: RefSeqChunkRow[] = []
+  private readonly CHUNK_BATCH_SIZE = 50
+
+  private async bufferChunk(chunk: RefSeqChunkRow, backend: ServerDataStore) {
+    this.chunkBuffer.push(chunk)
+    if (this.chunkBuffer.length >= this.CHUNK_BATCH_SIZE) {
+      await backend.refSeqChunkRepository.createMany(this.chunkBuffer)
+      this.chunkBuffer = []
+    }
+  }
+
+  private async flushChunkBuffer(backend: ServerDataStore) {
+    if (this.chunkBuffer.length > 0) {
+      await backend.refSeqChunkRepository.createMany(this.chunkBuffer)
+      this.chunkBuffer = []
+    }
+  }
+
   async addRefSeqIntoDb(
     fileRow: FileRow,
     assembly: string,
@@ -78,7 +97,8 @@ export abstract class FromFileBaseChange extends AssemblySpecificChange {
               user,
               status: -1,
             }
-            await refSeqChunkRepository.create(chunkRow)
+            await this.bufferChunk(chunkRow, backend)
+            await this.flushChunkBuffer(backend)
             sequenceBuffer = ''
           }
           if (currentRefSeqId) {
@@ -123,7 +143,7 @@ export abstract class FromFileBaseChange extends AssemblySpecificChange {
               user,
               status: -1,
             }
-            await refSeqChunkRepository.create(chunkRow)
+            await this.bufferChunk(chunkRow, backend)
             chunkIndex++
             sequenceBuffer = sequenceBuffer.slice(currentChunkSize)
           }
@@ -153,7 +173,8 @@ export abstract class FromFileBaseChange extends AssemblySpecificChange {
         user,
         status: -1,
       }
-      await refSeqChunkRepository.create(chunkRow)
+      await this.bufferChunk(chunkRow, backend)
+      await this.flushChunkBuffer(backend)
       await refSeqRepository.updateById(currentRefSeqId, { length: refSeqLen })
     }
   }
@@ -167,6 +188,8 @@ export abstract class FromFileBaseChange extends AssemblySpecificChange {
   }
 
   private refSeqCache = new Map<string, RefSeqRow>()
+  private featureBuffer: FeatureRow[] = []
+  private readonly FEATURE_BATCH_SIZE = 500
 
   async addFeatureIntoDb(gff3Feature: GFF3Feature, backend: ServerDataStore) {
     const { assembly, refSeqCache } = this
@@ -198,7 +221,17 @@ export abstract class FromFileBaseChange extends AssemblySpecificChange {
     for (const row of rows) {
       row.user = backend.user
       row.status = -1
+      this.featureBuffer.push(row)
     }
-    await backend.featureRepository.createMany(rows)
+    if (this.featureBuffer.length >= this.FEATURE_BATCH_SIZE) {
+      await this.flushFeatureBuffer(backend)
+    }
+  }
+
+  async flushFeatureBuffer(backend: ServerDataStore) {
+    if (this.featureBuffer.length > 0) {
+      await backend.featureRepository.createMany(this.featureBuffer)
+      this.featureBuffer = []
+    }
   }
 }

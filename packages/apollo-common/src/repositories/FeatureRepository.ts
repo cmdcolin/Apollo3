@@ -32,6 +32,7 @@ export interface FeatureRepository {
   ): Promise<FeatureRow[]>
   findChildren(parentId: string): Promise<FeatureRow[]>
   findDescendants(rootId: string): Promise<FeatureRow[]>
+  findDescendantsOfMany(rootIds: string[]): Promise<FeatureRow[]>
   create(row: FeatureRow): Promise<FeatureRow>
   createMany(rows: FeatureRow[]): Promise<FeatureRow[]>
   updateById(

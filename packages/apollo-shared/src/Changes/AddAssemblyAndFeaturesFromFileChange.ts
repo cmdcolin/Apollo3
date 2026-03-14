@@ -110,6 +110,7 @@ export class AddAssemblyAndFeaturesFromFileChange extends FromFileBaseChange {
         logger.verbose?.(`ENTRY=${JSON.stringify(gff3Feature)}`)
         await this.addFeatureIntoDb(gff3Feature, backend)
       }
+      await this.flushFeatureBuffer(backend)
     }
   }
   // eslint-disable-next-line @typescript-eslint/no-empty-function

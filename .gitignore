@@ -130,6 +130,7 @@ packages/apollo-collaboration-server/test/uploaded
 __pycache__/
 
 # SQLite databases
-*.sqlite
+*.sqlite*
 
 packages/jbrowse-plugin-apollo/meta.json
+

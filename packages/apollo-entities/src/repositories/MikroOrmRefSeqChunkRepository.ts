@@ -58,23 +58,19 @@ export class MikroOrmRefSeqChunkRepository implements RefSeqChunkRepository {
   }
 
   async createMany(rows: RefSeqChunkRow[]) {
-    const entities: InferEntity<typeof RefSeqChunkEntity>[] = []
-    for (const row of rows) {
-      const entity = this.em.create(RefSeqChunkEntity, {
-        _id: row._id,
-        refSeq: row.refSeq,
-        n: row.n,
-        sequence: row.sequence,
-        status: row.status,
-        user: row.user,
-      })
-      entities.push(entity)
+    if (rows.length === 0) {
+      return []
     }
-    for (const entity of entities) {
-      this.em.persist(entity)
-    }
-    await this.em.flush()
-    return entities.map(toRow)
+    const data = rows.map((row) => ({
+      _id: row._id,
+      refSeq: row.refSeq,
+      n: row.n,
+      sequence: row.sequence,
+      status: row.status ?? null,
+      user: row.user ?? null,
+    }))
+    await this.em.insertMany(RefSeqChunkEntity, data)
+    return rows
   }
 
   async activateByUser(user: string) {
