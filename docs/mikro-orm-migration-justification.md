@@ -63,6 +63,9 @@ active codebase.
 
 **Related documents:**
 
+- [Benchmark Results](./benchmark-results.md) — head-to-head performance
+  comparison (MikroORM/SQLite vs MongoDB) across import, query, search, export,
+  and delete operations
 - [Technical Details](./mikro-orm-technical-details.md) — worked examples,
   tradeoff analysis, schema recommendations, deployment scenarios
 - [Per-Gene History and Apollo 2 Migration](./apollo2-migration-and-history-tracking.md)

@@ -75,6 +75,42 @@ function matchesPhrase(textTokens: string[], queryTokens: string[]) {
   return false
 }
 
+interface RawFeatureRow {
+  _id: string
+  parent__id: string | null
+  ref_seq__id: string
+  type: string
+  min: number
+  max: number
+  strand: number | null
+  phase: number | null
+  attributes: string | null
+  status: number | null
+  user: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+function rawToRow(raw: RawFeatureRow): FeatureRow {
+  return {
+    _id: raw._id,
+    parentId: raw.parent__id ?? undefined,
+    refSeq: raw.ref_seq__id,
+    type: raw.type,
+    min: raw.min,
+    max: raw.max,
+    strand: (raw.strand ?? undefined) as 1 | -1 | undefined,
+    phase: (raw.phase ?? undefined) as 0 | 1 | 2 | undefined,
+    attributes: raw.attributes
+      ? (JSON.parse(raw.attributes) as Record<string, string[]>)
+      : undefined,
+    status: raw.status ?? undefined,
+    user: raw.user ?? undefined,
+    createdAt: raw.created_at ? new Date(raw.created_at) : undefined,
+    updatedAt: raw.updated_at ? new Date(raw.updated_at) : undefined,
+  }
+}
+
 function toRow(entity: InferEntity<typeof FeatureEntity>): FeatureRow {
   return {
     _id: entity._id,
@@ -94,12 +130,18 @@ function toRow(entity: InferEntity<typeof FeatureEntity>): FeatureRow {
   }
 }
 
+function placeholders(count: number) {
+  return Array.from({ length: count }, () => '?').join(', ')
+}
+
 export class MikroOrmFeatureRepository implements FeatureRepository {
   constructor(private readonly em: EntityManager) {}
 
   async findAll() {
-    const entities = await this.em.find(FeatureEntity, {})
-    return entities.map(toRow)
+    const rows = (await this.em.getConnection().execute(
+      'SELECT * FROM feature',
+    )) as RawFeatureRow[]
+    return rows.map(rawToRow)
   }
 
   async countAll() {
@@ -115,56 +157,69 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
   }
 
   async findById(id: string) {
-    const entity = await this.em.findOne(FeatureEntity, { _id: id })
-    if (entity) {
-      return toRow(entity)
+    const rows = (await this.em.getConnection().execute(
+      'SELECT * FROM feature WHERE _id = ?',
+      [id],
+    )) as RawFeatureRow[]
+    if (rows.length > 0) {
+      return rawToRow(rows[0]!)
     }
     return undefined
   }
 
   async findByIds(ids: string[]) {
-    const entities = await this.em.find(FeatureEntity, { _id: { $in: ids } })
-    return entities.map(toRow)
+    if (ids.length === 0) {
+      return []
+    }
+    const rows = (await this.em.getConnection().execute(
+      `SELECT * FROM feature WHERE _id IN (${placeholders(ids.length)})`,
+      ids,
+    )) as RawFeatureRow[]
+    return rows.map(rawToRow)
   }
 
   async findByRange(refSeqId: string, start: number, end: number) {
-    const entities = await this.em.find(FeatureEntity, {
-      refSeq: refSeqId,
-      min: { $lte: end },
-      max: { $gte: start },
-    })
-    return entities.map(toRow)
+    const rows = (await this.em.getConnection().execute(
+      'SELECT * FROM feature WHERE ref_seq__id = ? AND min <= ? AND max >= ?',
+      [refSeqId, end, start],
+    )) as RawFeatureRow[]
+    return rows.map(rawToRow)
   }
 
   async findRootsByRange(refSeqId: string, start: number, end: number) {
-    const entities = await this.em.find(FeatureEntity, {
-      refSeq: refSeqId,
-      parent: null,
-      min: { $lte: end },
-      max: { $gte: start },
-    })
-    return entities.map(toRow)
+    const rows = (await this.em.getConnection().execute(
+      'SELECT * FROM feature WHERE ref_seq__id = ? AND parent__id IS NULL AND min <= ? AND max >= ?',
+      [refSeqId, end, start],
+    )) as RawFeatureRow[]
+    return rows.map(rawToRow)
   }
 
   async findChildren(parentId: string) {
-    const entities = await this.em.find(FeatureEntity, { parent: parentId })
-    return entities.map(toRow)
+    const rows = (await this.em.getConnection().execute(
+      'SELECT * FROM feature WHERE parent__id = ?',
+      [parentId],
+    )) as RawFeatureRow[]
+    return rows.map(rawToRow)
   }
 
   async findDescendants(rootId: string) {
-    const results: FeatureRow[] = []
-    let parentIds = [rootId]
-    while (parentIds.length > 0) {
-      const children = await this.em.find(FeatureEntity, {
-        parent: { $in: parentIds },
-      })
-      parentIds = []
-      for (const child of children) {
-        results.push(toRow(child))
-        parentIds.push(child._id)
-      }
+    return this.findDescendantsOfMany([rootId])
+  }
+
+  async findDescendantsOfMany(rootIds: string[]) {
+    if (rootIds.length === 0) {
+      return []
     }
-    return results
+    const rows = (await this.em.getConnection().execute(
+      `WITH RECURSIVE tree AS (
+        SELECT f.* FROM feature f WHERE f.parent__id IN (${placeholders(rootIds.length)})
+        UNION ALL
+        SELECT f.* FROM feature f JOIN tree t ON f.parent__id = t._id
+      )
+      SELECT * FROM tree`,
+      rootIds,
+    )) as RawFeatureRow[]
+    return rows.map(rawToRow)
   }
 
   async create(row: FeatureRow) {
@@ -189,30 +244,27 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
   }
 
   async createMany(rows: FeatureRow[]) {
-    const entities: InferEntity<typeof FeatureEntity>[] = []
-    for (const row of rows) {
-      const entity = this.em.create(FeatureEntity, {
-        _id: row._id,
-        parent: row.parentId ?? undefined,
-        refSeq: row.refSeq,
-        type: row.type,
-        min: row.min,
-        max: row.max,
-        strand: row.strand,
-        phase: row.phase,
-        attributes: row.attributes,
-        status: row.status,
-        user: row.user,
-        createdAt: row.createdAt ?? new Date(),
-        updatedAt: row.updatedAt ?? new Date(),
-      })
-      entities.push(entity)
+    if (rows.length === 0) {
+      return []
     }
-    for (const entity of entities) {
-      this.em.persist(entity)
-    }
-    await this.em.flush()
-    return entities.map(toRow)
+    const now = new Date()
+    const data = rows.map((row) => ({
+      _id: row._id,
+      parent: row.parentId ?? null,
+      refSeq: row.refSeq,
+      type: row.type,
+      min: row.min,
+      max: row.max,
+      strand: row.strand ?? null,
+      phase: row.phase ?? null,
+      attributes: row.attributes ?? null,
+      status: row.status ?? null,
+      user: row.user ?? null,
+      createdAt: row.createdAt ?? now,
+      updatedAt: row.updatedAt ?? now,
+    }))
+    await this.em.insertMany(FeatureEntity, data)
+    return rows
   }
 
   async updateById(id: string, data: Partial<Omit<FeatureRow, '_id'>>) {
@@ -264,21 +316,19 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
   }
 
   async deleteDescendants(id: string) {
-    const allIds: string[] = []
-    let parentIds = [id]
-    while (parentIds.length > 0) {
-      const children = await this.em.find(FeatureEntity, {
-        parent: { $in: parentIds },
-      })
-      parentIds = []
-      for (const child of children) {
-        allIds.push(child._id)
-        parentIds.push(child._id)
-      }
-    }
-    if (allIds.length === 0) {
+    const rows = (await this.em.getConnection().execute(
+      `WITH RECURSIVE tree AS (
+        SELECT f._id FROM feature f WHERE f.parent__id = ?
+        UNION ALL
+        SELECT f._id FROM feature f JOIN tree t ON f.parent__id = t._id
+      )
+      SELECT _id FROM tree`,
+      [id],
+    )) as Array<{ _id: string }>
+    if (rows.length === 0) {
       return 0
     }
+    const allIds = rows.map((r) => r._id)
     return this.em.nativeDelete(FeatureEntity, { _id: { $in: allIds } })
   }
 
@@ -299,29 +349,24 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
     ) {
       return []
     }
-    const entities = await this.em.find(FeatureEntity, {
-      refSeq: { $in: refSeqIds },
-    })
+    const rows = (await this.em.getConnection().execute(
+      `SELECT * FROM feature WHERE ref_seq__id IN (${placeholders(refSeqIds.length)})`,
+      refSeqIds,
+    )) as RawFeatureRow[]
     const matchingIds = new Set<string>()
-    for (const entity of entities) {
-      const text = entity.type + ' ' + JSON.stringify(entity.attributes ?? {})
+    for (const row of rows) {
+      const text = row.type + ' ' + (row.attributes ?? '{}')
       const textTokens = tokenize(text)
       if (matchesPhrase(textTokens, queryTokens)) {
-        matchingIds.add(entity._id)
+        matchingIds.add(row._id)
       }
     }
     if (matchingIds.size === 0) {
       return []
     }
     const parentMap = new Map<string, string | undefined>()
-    for (const entity of entities) {
-      const parentId =
-        entity.parent == null
-          ? undefined
-          : typeof entity.parent === 'string'
-            ? entity.parent
-            : entity.parent._id
-      parentMap.set(entity._id, parentId)
+    for (const row of rows) {
+      parentMap.set(row._id, row.parent__id ?? undefined)
     }
     const rootIds = new Set<string>()
     for (const id of matchingIds) {
@@ -333,9 +378,9 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
       }
       rootIds.add(current)
     }
-    return entities
-      .filter((entity) => rootIds.has(entity._id) && entity.parent == null)
-      .map(toRow)
+    return rows
+      .filter((row) => rootIds.has(row._id) && row.parent__id == null)
+      .map(rawToRow)
   }
 
   async activateByUser(user: string) {
@@ -347,59 +392,87 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
   }
 
   async findByIndexedId(id: string, refSeqIds?: string[]) {
-    const filter: Record<string, unknown> = {
-      parent: null,
-    }
+    let sql = 'SELECT * FROM feature WHERE parent__id IS NULL'
+    const params: unknown[] = []
     if (refSeqIds && refSeqIds.length > 0) {
-      filter.refSeq = { $in: refSeqIds }
+      sql += ` AND ref_seq__id IN (${placeholders(refSeqIds.length)})`
+      for (const rsId of refSeqIds) {
+        params.push(rsId)
+      }
     }
-    const roots = await this.em.find(FeatureEntity, filter)
+    const roots = (await this.em.getConnection().execute(sql, params)) as RawFeatureRow[]
+    const allFeatures = (await this.em.getConnection().execute(
+      'SELECT _id, parent__id, attributes FROM feature',
+    )) as Array<{
+      _id: string
+      parent__id: string | null
+      attributes: string | null
+    }>
+
+    const childrenMap = new Map<string, string[]>()
+    for (const f of allFeatures) {
+      if (f.parent__id) {
+        const children = childrenMap.get(f.parent__id)
+        if (children) {
+          children.push(f._id)
+        } else {
+          childrenMap.set(f.parent__id, [f._id])
+        }
+      }
+    }
+    const attrMap = new Map<string, string | null>()
+    for (const f of allFeatures) {
+      attrMap.set(f._id, f.attributes)
+    }
+
     const results: FeatureRow[] = []
     for (const root of roots) {
-      if (await this.treeContainsIndexedId(root, id)) {
-        results.push(toRow(root))
+      if (this.treeContainsIndexedIdInMemory(root._id, id, childrenMap, attrMap)) {
+        results.push(rawToRow(root))
       }
     }
     return results
   }
 
-  private async treeContainsIndexedId(
-    entity: InferEntity<typeof FeatureEntity>,
+  private treeContainsIndexedIdInMemory(
+    nodeId: string,
     id: string,
-  ): Promise<boolean> {
-    if (entity.attributes) {
-      for (const values of Object.values(entity.attributes)) {
+    childrenMap: Map<string, string[]>,
+    attrMap: Map<string, string | null>,
+  ): boolean {
+    const attrStr = attrMap.get(nodeId)
+    if (attrStr) {
+      const attributes = JSON.parse(attrStr) as Record<string, string[]>
+      for (const values of Object.values(attributes)) {
         if (values.includes(id)) {
           return true
         }
       }
     }
-    const children = await this.em.find(FeatureEntity, {
-      parent: entity._id,
-    })
-    for (const child of children) {
-      if (await this.treeContainsIndexedId(child, id)) {
-        return true
+    const children = childrenMap.get(nodeId)
+    if (children) {
+      for (const childId of children) {
+        if (this.treeContainsIndexedIdInMemory(childId, id, childrenMap, attrMap)) {
+          return true
+        }
       }
     }
     return false
   }
 
   async findRootParent(id: string) {
-    const initial = await this.em.findOne(FeatureEntity, { _id: id })
-    if (!initial) {
-      return undefined
+    const rows = (await this.em.getConnection().execute(
+      `WITH RECURSIVE ancestors AS (
+        SELECT * FROM feature WHERE _id = ?
+        UNION ALL
+        SELECT f.* FROM feature f JOIN ancestors a ON f._id = a.parent__id
+      )
+      SELECT * FROM ancestors WHERE parent__id IS NULL`,
+      [id],
+    )) as RawFeatureRow[]
+    if (rows.length > 0) {
+      return rawToRow(rows[0]!)
     }
-    let entity: InferEntity<typeof FeatureEntity> = initial
-    while (entity.parent) {
-      const parentId =
-        typeof entity.parent === 'string' ? entity.parent : entity.parent._id
-      const parent = await this.em.findOne(FeatureEntity, { _id: parentId })
-      if (!parent) {
-        break
-      }
-      entity = parent
-    }
-    return toRow(entity)
+    return undefined
   }
 }

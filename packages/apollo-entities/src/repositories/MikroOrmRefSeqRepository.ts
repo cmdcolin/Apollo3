@@ -78,26 +78,22 @@ export class MikroOrmRefSeqRepository implements RefSeqRepository {
   }
 
   async createMany(rows: RefSeqRow[]) {
-    const entities: InferEntity<typeof RefSeqEntity>[] = []
-    for (const row of rows) {
-      const entity = this.em.create(RefSeqEntity, {
-        _id: row._id,
-        assembly: row.assembly,
-        name: row.name,
-        description: row.description,
-        aliases: row.aliases,
-        length: row.length,
-        chunkSize: row.chunkSize,
-        status: row.status,
-        user: row.user,
-      })
-      entities.push(entity)
+    if (rows.length === 0) {
+      return []
     }
-    for (const entity of entities) {
-      this.em.persist(entity)
-    }
-    await this.em.flush()
-    return entities.map(toRow)
+    const data = rows.map((row) => ({
+      _id: row._id,
+      assembly: row.assembly,
+      name: row.name,
+      description: row.description ?? null,
+      aliases: row.aliases ?? null,
+      length: row.length,
+      chunkSize: row.chunkSize,
+      status: row.status ?? null,
+      user: row.user ?? null,
+    }))
+    await this.em.insertMany(RefSeqEntity, data)
+    return rows
   }
 
   async findAll() {

@@ -51,26 +51,22 @@ export class MikroOrmCheckResultRepository implements CheckResultRepository {
   }
 
   async createMany(rows: CheckResultRow[]) {
-    const entities: InferEntity<typeof CheckResultEntity>[] = []
-    for (const row of rows) {
-      const entity = this.em.create(CheckResultEntity, {
-        _id: row._id,
-        name: row.name,
-        cause: row.cause,
-        ids: row.ids,
-        refSeq: row.refSeq,
-        start: row.start,
-        end: row.end,
-        ignored: row.ignored,
-        message: row.message,
-      })
-      entities.push(entity)
+    if (rows.length === 0) {
+      return []
     }
-    for (const entity of entities) {
-      this.em.persist(entity)
-    }
-    await this.em.flush()
-    return entities.map(toRow)
+    const data = rows.map((row) => ({
+      _id: row._id,
+      name: row.name,
+      cause: row.cause ?? null,
+      ids: row.ids,
+      refSeq: row.refSeq,
+      start: row.start,
+      end: row.end,
+      ignored: row.ignored,
+      message: row.message ?? null,
+    }))
+    await this.em.insertMany(CheckResultEntity, data)
+    return rows
   }
 
   async findByFeatureId(featureId: string) {
