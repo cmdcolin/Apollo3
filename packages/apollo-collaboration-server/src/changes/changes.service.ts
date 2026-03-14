@@ -136,10 +136,11 @@ export class ChangesService {
     }
 
     if (isFeatureChange(change)) {
-      const { changedIds } = change
-      for (const changedId of changedIds) {
+      const checkedRootIds = new Set<string>()
+      for (const changedId of change.changedIds) {
         const rootFeature = await this.db.feature.findRootParent(changedId)
-        if (rootFeature) {
+        if (rootFeature && !checkedRootIds.has(rootFeature._id)) {
+          checkedRootIds.add(rootFeature._id)
           await this.checksService.checkFeature(rootFeature._id)
         }
       }
