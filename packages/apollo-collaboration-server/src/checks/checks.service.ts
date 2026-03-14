@@ -63,31 +63,21 @@ export class ChecksService {
   }
 
   async checkFeature(featureId: string, checkTimestamps = true) {
-    this.logger.warn(
-      `[DEBUG checkFeature] called for ${featureId}, checkTimestamps=${checkTimestamps}`,
-    )
     const featureRow = await this.db.feature.findById(featureId)
     if (!featureRow) {
       this.logger.warn(`Feature ${featureId} not found for check`)
       return
     }
     if (featureRow.parentId) {
-      this.logger.warn(
-        `[DEBUG checkFeature] ${featureId} has parentId, skipping`,
-      )
       return
     }
     if (featureRow.status != null && featureRow.status !== 0) {
-      this.logger.warn(
-        `[DEBUG checkFeature] ${featureId} status=${featureRow.status}, skipping`,
-      )
       return
     }
     const descendants = await this.db.feature.findDescendants(featureId)
     const allRows = [featureRow, ...descendants]
     const trees = assembleFeatureTrees(allRows)
     if (trees.length === 0) {
-      this.logger.warn(`[DEBUG checkFeature] no trees for ${featureId}`)
       return
     }
     const tree = trees[0]
@@ -98,19 +88,6 @@ export class ChecksService {
     const snapshot = tree as AnnotationFeatureSnapshot
 
     const checks = await this.getChecksForAssembly(featureRow.refSeq)
-    this.logger.warn(
-      `[DEBUG checkFeature] ${featureId}: got ${checks.length} checks for refSeq ${featureRow.refSeq}`,
-    )
-    this.logger.warn(
-      `[DEBUG checkFeature] tree type=${tree.type}, children=${tree.children ? Object.keys(tree.children).length : 0}`,
-    )
-    if (tree.children) {
-      for (const [id, child] of Object.entries(tree.children)) {
-        this.logger.warn(
-          `[DEBUG checkFeature]   child ${id}: type=${child.type}, min=${child.min}, max=${child.max}, children=${child.children ? Object.keys(child.children).length : 0}`,
-        )
-      }
-    }
     for (const check of checks) {
       await this.db.check.deleteByFeatureIdsAndName(allIds, check.name)
       const c = checkRegistry.getCheck(check.name)
@@ -126,9 +103,6 @@ export class ChecksService {
             refSeq: featureRow.refSeq,
           })
         },
-      )
-      this.logger.warn(
-        `[DEBUG checkFeature] ${check.name} returned ${result.length} results for feature ${featureId}`,
       )
       if (result.length > 0) {
         const rows = result.map((r) => ({
