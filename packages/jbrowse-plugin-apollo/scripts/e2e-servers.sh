@@ -2,9 +2,9 @@
 # E2E test lifecycle management — build, start servers, run tests, stop servers
 #
 # Usage:
-#   ./scripts/e2e-servers.sh test     - Build everything, start servers, run Playwright tests, stop servers
-#   ./scripts/e2e-servers.sh start    - Build everything, start servers (for manual test runs)
-#   ./scripts/e2e-servers.sh stop     - Stop running servers
+#   ./scripts/e2e-servers.sh test     - Build everything, start server, run Playwright tests, stop server
+#   ./scripts/e2e-servers.sh start    - Build everything, start server (for manual test runs)
+#   ./scripts/e2e-servers.sh stop     - Stop running server
 #   ./scripts/e2e-servers.sh status   - Check server status
 #   ./scripts/e2e-servers.sh logs     - Tail the server log
 #
@@ -19,7 +19,6 @@ PID_FILE="$SCRIPT_DIR/.e2e-pids"
 LOG_FILE="$SCRIPT_DIR/.e2e-server.log"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-JBROWSE_PORT=8999
 COLLAB_PORT=3999
 
 kill_by_pidfile() {
@@ -40,21 +39,16 @@ kill_by_pidfile() {
 }
 
 kill_by_port() {
-  for port in $JBROWSE_PORT $COLLAB_PORT; do
-    local pids
-    pids=$(lsof -ti:"$port" 2>/dev/null) || true
-    if [ -n "$pids" ]; then
-      echo "$pids" | xargs kill 2>/dev/null || true
-    fi
-  done
-  sleep 1
-  for port in $JBROWSE_PORT $COLLAB_PORT; do
-    local pids
-    pids=$(lsof -ti:"$port" 2>/dev/null) || true
+  local pids
+  pids=$(lsof -ti:"$COLLAB_PORT" 2>/dev/null) || true
+  if [ -n "$pids" ]; then
+    echo "$pids" | xargs kill 2>/dev/null || true
+    sleep 1
+    pids=$(lsof -ti:"$COLLAB_PORT" 2>/dev/null) || true
     if [ -n "$pids" ]; then
       echo "$pids" | xargs kill -9 2>/dev/null || true
     fi
-  done
+  fi
 }
 
 stop_servers() {
@@ -65,41 +59,28 @@ stop_servers() {
 }
 
 check_status() {
-  for port_name in "jbrowse:$JBROWSE_PORT" "collab:$COLLAB_PORT"; do
-    local name="${port_name%%:*}"
-    local port="${port_name##*:}"
-    if lsof -ti:"$port" >/dev/null 2>&1; then
-      echo "$name (port $port): running (pid $(lsof -ti:$port 2>/dev/null | head -1))"
-    else
-      echo "$name (port $port): stopped"
-    fi
-  done
+  if lsof -ti:"$COLLAB_PORT" >/dev/null 2>&1; then
+    echo "collab (port $COLLAB_PORT): running (pid $(lsof -ti:$COLLAB_PORT 2>/dev/null | head -1))"
+  else
+    echo "collab (port $COLLAB_PORT): stopped"
+  fi
 }
 
 wait_for_servers() {
   local max_wait=60
   local waited=0
   while [ $waited -lt $max_wait ]; do
-    local all_up=true
-    for port in $JBROWSE_PORT $COLLAB_PORT; do
-      if ! lsof -ti:"$port" >/dev/null 2>&1; then
-        all_up=false
-        break
-      fi
-    done
-    if $all_up; then
-      if curl -sf "http://localhost:$COLLAB_PORT/health" >/dev/null 2>&1; then
-        echo "All servers ready (${waited}s)"
-        return 0
-      fi
+    if curl -sf "http://localhost:$COLLAB_PORT/health" >/dev/null 2>&1; then
+      echo "Server ready (${waited}s)"
+      return 0
     fi
     sleep 2
     waited=$((waited + 2))
     if [ $((waited % 10)) -eq 0 ]; then
-      echo "Waiting for servers... (${waited}s)"
+      echo "Waiting for server... (${waited}s)"
     fi
   done
-  echo "ERROR: Servers did not start within ${max_wait}s"
+  echo "ERROR: Server did not start within ${max_wait}s"
   echo "--- Server log ---"
   tail -20 "$LOG_FILE" 2>/dev/null
   echo "--- End server log ---"
@@ -134,7 +115,6 @@ reset_database() {
   if [ "$db_backend" = "postgresql" ]; then
     local url="${DB_CONNECTION_URL:?DB_CONNECTION_URL required for postgresql}"
     echo "Resetting PostgreSQL database..."
-    # Drop and recreate all tables. MikroORM's schema.update() will recreate them on server start.
     psql "$url" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" 2>/dev/null || true
   else
     rm -f "$REPO_ROOT/packages/apollo-collaboration-server/apollo-dev.sqlite"
@@ -144,32 +124,26 @@ reset_database() {
 start_servers() {
   stop_servers
 
-  # Fresh database for each test run
   rm -f "$LOG_FILE"
   reset_database
 
-  echo "Starting e2e servers..."
+  echo "Starting e2e server..."
   echo "Server log: $LOG_FILE"
 
   cd "$SCRIPT_DIR" || exit 1
 
-  # Copy built plugin into .jbrowse/ so it's served from the same origin
-  # as JBrowse — avoids the cross-origin plugin trust warning dialog
+  # Copy built plugin and ontology into .jbrowse/ so they're served from
+  # the same origin as JBrowse
   cp dist/jbrowse-plugin-apollo.umd.development.js .jbrowse/apollo-plugin.js
-  # Also copy test data into .jbrowse/ for same-origin access
-  cp -r test_data .jbrowse/test_data 2>/dev/null || true
+  cp test_data/so-v3.1.json .jbrowse/so-v3.1.json
 
-  # JBrowse browse (port 8999) — serves the JBrowse app + plugin from same origin
-  yarn node "$(yarn bin serve)" --no-request-logging --listen $JBROWSE_PORT --no-port-switching --symlinks .jbrowse \
-    >> "$LOG_FILE" 2>&1 &
-  echo $! >> "$PID_FILE"
-
-  # Collaboration server (port 3999) — NestJS backend with guest admin access
-  # PLUGIN_LOCATION points to same-origin path (served by JBrowse on port 8999)
+  # Single server: NestJS serves both the API and JBrowse static files.
+  # JBROWSE_STATIC_DIR tells the server where to find the JBrowse web app.
   cd "$REPO_ROOT/packages/apollo-collaboration-server" || exit 1
   DB_BACKEND="${DB_BACKEND:-sqlite}" DB_CONNECTION_URL="${DB_CONNECTION_URL:-apollo-dev.sqlite}" \
-    PLUGIN_LOCATION="http://localhost:$JBROWSE_PORT/apollo-plugin.js" \
-    FEATURE_TYPE_ONTOLOGY_LOCATION="http://localhost:$JBROWSE_PORT/test_data/so-v3.1.json" \
+    JBROWSE_STATIC_DIR="$SCRIPT_DIR/.jbrowse" \
+    PLUGIN_LOCATION="/apollo-plugin.js" \
+    FEATURE_TYPE_ONTOLOGY_LOCATION="/so-v3.1.json" \
     GUEST_USER_ROLE=admin LOG_LEVELS=error,warn,log NODE_ENV=development yarn node dist/main.js \
     >> "$LOG_FILE" 2>&1 &
   echo $! >> "$PID_FILE"
@@ -177,7 +151,7 @@ start_servers() {
   cd "$SCRIPT_DIR" || exit 1
 
   if wait_for_servers; then
-    echo "E2E servers started."
+    echo "E2E server started."
     check_status
   else
     echo "Server startup failed. Cleaning up..."

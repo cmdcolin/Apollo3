@@ -122,6 +122,11 @@ migration; others may prefer PostgreSQL for production deployments. This means:
 - Raw SQL (recursive CTEs) is acceptable where necessary for performance, but
   must be commented, benchmarked, and ideally have a fallback path for
   non-SQL drivers
+- `MongoFeatureRepository` provides the MongoDB fallback for tree traversal
+  (iterative BFS instead of recursive CTEs); `DatabaseService` selects the
+  right implementation based on `DB_BACKEND`
+- Local PostgreSQL testing: `docker compose up -d` then set
+  `DB_BACKEND=postgresql DB_CONNECTION_URL=postgresql://apollo:apollo@localhost:5432/apollo`
 
 ## Monorepo Structure
 

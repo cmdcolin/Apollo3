@@ -12,6 +12,7 @@ export class ApolloMikroOrmModule {
     const dbType = (process.env.DB_BACKEND ?? 'sqlite') as
       | 'postgresql'
       | 'sqlite'
+      | 'mongo'
     const connectionUrl = process.env.DB_CONNECTION_URL ?? 'apollo3.sqlite'
 
     const config = createMikroOrmConfig(dbType, connectionUrl)

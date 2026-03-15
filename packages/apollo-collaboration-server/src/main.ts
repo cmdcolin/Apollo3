@@ -1,6 +1,8 @@
 import fs from 'node:fs'
+import path from 'node:path'
 import { randomBytes } from 'node:crypto'
 
+import type { Request, Response } from 'express'
 import {
   changeRegistry,
   checkRegistry,
@@ -17,7 +19,8 @@ import {
 import { MikroORM, RequestContext } from '@mikro-orm/core'
 import type { LogLevel } from '@nestjs/common'
 import { HttpAdapterHost, NestFactory } from '@nestjs/core'
-import { json, urlencoded } from 'express'
+import cookieParser from 'cookie-parser'
+import express, { json, urlencoded } from 'express'
 import session from 'express-session'
 
 import { AppModule } from './app.module.js'
@@ -26,8 +29,14 @@ import { DatabaseService } from './mikro-orm/database.service.js'
 import { AuthorizationValidation } from './utils/validation/AuthorizationValidation.js'
 
 async function bootstrap() {
-  const { CORS, LOG_LEVELS, PORT, SESSION_SECRET, SESSION_SECRET_FILE } =
-    process.env
+  const {
+    CORS,
+    JBROWSE_STATIC_DIR,
+    LOG_LEVELS,
+    PORT,
+    SESSION_SECRET,
+    SESSION_SECRET_FILE,
+  } = process.env
   if (!CORS) {
     throw new Error('No CORS found in .env file')
   }
@@ -74,6 +83,8 @@ async function bootstrap() {
   const { httpAdapter } = app.get(HttpAdapterHost)
   app.useGlobalFilters(new GlobalExceptionsFilter(httpAdapter))
 
+  app.use(cookieParser())
+
   // RequestContext middleware gives each HTTP request its own EntityManager
   // fork (via AsyncLocalStorage). This means all database operations within a
   // request share one identity map and don't interfere with other requests.
@@ -92,6 +103,24 @@ async function bootstrap() {
       saveUninitialized: false,
     }),
   )
+
+  // Serve JBrowse static files from JBROWSE_STATIC_DIR (if configured).
+  // config.json is excluded — it's served dynamically by JBrowseController.
+  if (JBROWSE_STATIC_DIR) {
+    const staticDir = path.resolve(JBROWSE_STATIC_DIR)
+    // eslint-disable-next-line no-console
+    console.log(`Serving JBrowse static files from: ${staticDir}`)
+    const staticMiddleware = express.static(staticDir)
+    app.use(
+      (req: Request, res: Response, next: () => void) => {
+        if (req.path === '/config.json') {
+          next()
+          return
+        }
+        staticMiddleware(req, res, next)
+      },
+    )
+  }
 
   const server = await app.listen(PORT, '0.0.0.0')
   server.headersTimeout = 24 * 60 * 60 * 1000

@@ -9,18 +9,28 @@ import {
   Query,
   Redirect,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common'
+import type { Response } from 'express'
 
 import { GoogleAuthGuard } from '../utils/google.guard.js'
 import { MicrosoftAuthGuard } from '../utils/microsoft.guard.js'
 import { Role } from '../utils/role/role.enum.js'
+import { AUTH_COOKIE_NAME } from '../utils/strategies/jwt.strategy.js'
 import { Validations } from '../utils/validation/validatation.decorator.js'
 
 import {
   AuthenticationService,
   type RequestWithUserToken,
 } from './authentication.service.js'
+
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: 'lax' as const,
+  path: '/',
+  maxAge: 24 * 60 * 60 * 1000,
+}
 
 @Validations(Role.None)
 @Controller('auth')
@@ -56,24 +66,45 @@ export class AuthenticationController {
   @Get('google')
   @Redirect()
   @UseGuards(GoogleAuthGuard)
-  async handleRedirect(@Req() req: RequestWithUserToken) {
+  async handleRedirect(
+    @Req() req: RequestWithUserToken,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.cookie(AUTH_COOKIE_NAME, req.user.token, COOKIE_OPTIONS)
     return this.authService.handleRedirect(req)
   }
 
   @Get('microsoft')
   @Redirect()
   @UseGuards(MicrosoftAuthGuard)
-  async microsoftHandleRedirect(@Req() req: RequestWithUserToken) {
+  async microsoftHandleRedirect(
+    @Req() req: RequestWithUserToken,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.cookie(AUTH_COOKIE_NAME, req.user.token, COOKIE_OPTIONS)
     return this.authService.handleRedirect(req)
   }
 
   @Get('guest')
-  guestLogin() {
-    return this.authService.guestLogin()
+  async guestLogin(@Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.guestLogin()
+    res.cookie(AUTH_COOKIE_NAME, result.token, COOKIE_OPTIONS)
+    return result
   }
 
   @Post('root')
-  rootLogin(@Body() { password }: { password: string }) {
-    return this.authService.rootLogin(password)
+  async rootLogin(
+    @Body() { password }: { password: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.rootLogin(password)
+    res.cookie(AUTH_COOKIE_NAME, result.token, COOKIE_OPTIONS)
+    return result
+  }
+
+  @Get('logout')
+  @Redirect('/')
+  logout(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie(AUTH_COOKIE_NAME, { path: '/' })
   }
 }

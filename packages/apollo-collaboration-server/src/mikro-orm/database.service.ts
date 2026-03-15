@@ -23,6 +23,7 @@ import {
   MikroOrmRefSeqChunkRepository,
   MikroOrmRefSeqRepository,
   MikroOrmUserRepository,
+  MongoFeatureRepository,
 } from '@apollo-annotation/entities'
 import { EntityManager } from '@mikro-orm/core'
 import { Inject, Injectable } from '@nestjs/common'
@@ -40,20 +41,31 @@ export interface TransactionScope {
   counter: CounterRepository
 }
 
+function createFeatureRepository(em: EntityManager, dbType: string) {
+  if (dbType === 'mongo') {
+    return new MongoFeatureRepository(em)
+  }
+  return new MikroOrmFeatureRepository(em)
+}
+
 // Thin wrapper that constructs repository implementations from the injected
 // EntityManager. With RequestContext middleware registered in main.ts, the EM
 // is automatically request-scoped — each HTTP request gets its own identity
 // map via AsyncLocalStorage, so no manual em.fork() is needed.
 @Injectable()
 export class DatabaseService {
-  constructor(@Inject(EntityManager) private readonly em: EntityManager) {}
+  private readonly dbType: string
+
+  constructor(@Inject(EntityManager) private readonly em: EntityManager) {
+    this.dbType = process.env.DB_BACKEND ?? 'sqlite'
+  }
 
   get assembly(): AssemblyRepository {
     return new MikroOrmAssemblyRepository(this.em)
   }
 
   get feature(): FeatureRepository {
-    return new MikroOrmFeatureRepository(this.em)
+    return createFeatureRepository(this.em, this.dbType)
   }
 
   get refSeq(): RefSeqRepository {
@@ -99,7 +111,7 @@ export class DatabaseService {
     return this.em.transactional(async (txEm) => {
       return callback({
         assembly: new MikroOrmAssemblyRepository(txEm),
-        feature: new MikroOrmFeatureRepository(txEm),
+        feature: createFeatureRepository(txEm, this.dbType),
         refSeq: new MikroOrmRefSeqRepository(txEm),
         refSeqChunk: new MikroOrmRefSeqChunkRepository(txEm),
         checkConfig: new MikroOrmCheckRepository(txEm),

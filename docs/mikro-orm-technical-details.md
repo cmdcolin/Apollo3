@@ -451,3 +451,43 @@ MikroORM supports both SQLite and PostgreSQL through the same code. A researcher
 on their laptop uses SQLite; a team on a shared server uses PostgreSQL. The
 application code is identical — only a config value differs. One codebase serves
 individual researchers and large collaborative groups alike.
+
+---
+
+## Multi-Database Repository Factory
+
+The repository pattern includes a factory mechanism that selects the correct
+implementation based on the `DB_BACKEND` environment variable:
+
+| `DB_BACKEND` | Feature Repository | Tree Traversal Strategy |
+|-------------|-------------------|------------------------|
+| `sqlite` (default) | `MikroOrmFeatureRepository` | Recursive CTEs (raw SQL) |
+| `postgresql` | `MikroOrmFeatureRepository` | Recursive CTEs (raw SQL) |
+| `mongo` | `MongoFeatureRepository` | Iterative BFS via generic EntityManager |
+
+All other repositories (Assembly, RefSeq, User, Check, etc.) use the same
+`MikroOrm*Repository` implementations regardless of backend — they rely only
+on MikroORM's generic `EntityManager` API, which works with all supported
+drivers.
+
+The factory is implemented in `DatabaseService.feature` and
+`DatabaseService.transactional()`, which call `createFeatureRepository(em, dbType)`
+to select the appropriate implementation.
+
+### Local PostgreSQL development
+
+A `docker-compose.yml` in the repository root provides a PostgreSQL service
+for local development and testing:
+
+```bash
+# Start PostgreSQL
+docker compose up -d
+
+# Run the server against PostgreSQL
+DB_BACKEND=postgresql DB_CONNECTION_URL=postgresql://apollo:apollo@localhost:5432/apollo \
+  yarn --cwd packages/apollo-collaboration-server start
+
+# Run E2E tests against PostgreSQL
+DB_BACKEND=postgresql DB_CONNECTION_URL=postgresql://apollo:apollo@localhost:5432/apollo \
+  yarn --cwd packages/jbrowse-plugin-apollo test:pw
+```

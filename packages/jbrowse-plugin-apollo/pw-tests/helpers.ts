@@ -3,14 +3,14 @@ import { readFileSync } from 'node:fs'
 import { type Page, expect } from '@playwright/test'
 
 const API_BASE = 'http://127.0.0.1:3999'
-const CONFIG_URL = `${API_BASE}/jbrowse/config.json`
-const APP_URL = `/?config=${CONFIG_URL}`
 
-const defaultHeaders = { Connection: 'close' }
+// ── API helpers (run in Node.js, not the browser) ───────────────────
 
 export async function getGuestToken() {
-  const res = await fetch(`${API_BASE}/auth/guest`, { headers: defaultHeaders })
+  console.log('[api] Fetching guest token...')
+  const res = await fetch(`${API_BASE}/auth/guest`)
   const data = (await res.json()) as { token: string }
+  console.log('[api] Got guest token')
   return data.token
 }
 
@@ -24,11 +24,14 @@ export async function uploadFileViaApi(filePath: string, fileType: string) {
   formData.append('file', new Blob([fileContent]), fileName)
   formData.append('type', fileType)
 
-  const res = await fetch(`${API_BASE}/files?type=${encodeURIComponent(fileType)}`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, Connection: 'close' },
-    body: formData,
-  })
+  const res = await fetch(
+    `${API_BASE}/files?type=${encodeURIComponent(fileType)}`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    },
+  )
   if (!res.ok) {
     const body = await res.text()
     throw new Error(`Upload failed: ${res.status} ${body}`)
@@ -38,20 +41,24 @@ export async function uploadFileViaApi(filePath: string, fileType: string) {
   return data
 }
 
-export async function addAssemblyViaApi(assemblyName: string, fileId: string) {
+export async function addAssemblyViaApi(
+  assemblyName: string,
+  fileId: string,
+) {
   const token = await getGuestToken()
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  }
   const assemblyId = [...Array(24)]
     .map(() => Math.floor(Math.random() * 16).toString(16))
     .join('')
 
-  console.log(`[api] Creating assembly "${assemblyName}" (id=${assemblyId}, fileId=${fileId})...`)
+  console.log(
+    `[api] Creating assembly "${assemblyName}" (id=${assemblyId})...`,
+  )
   const res = await fetch(`${API_BASE}/changes`, {
     method: 'POST',
-    headers: { ...headers, Connection: 'close' },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify({
       typeName: 'AddAssemblyAndFeaturesFromFileChange',
       assembly: assemblyId,
@@ -67,150 +74,113 @@ export async function addAssemblyViaApi(assemblyName: string, fileId: string) {
   return assemblyId
 }
 
+export async function deleteAssemblies() {
+  console.log('[cleanup] Deleting all assemblies...')
+  const token = await getGuestToken()
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  }
+  const res = await fetch(`${API_BASE}/assemblies`, { headers })
+  const assemblies = (await res.json()) as { _id: string }[]
+  for (const assembly of assemblies) {
+    await fetch(`${API_BASE}/changes`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        typeName: 'DeleteAssemblyChange',
+        assembly: assembly._id,
+      }),
+    })
+  }
+  console.log(`[cleanup] Deleted ${assemblies.length} assemblies`)
+}
+
+// ── Browser helpers ─────────────────────────────────────────────────
+
 export function setupBrowserLogging(page: Page) {
   page.on('console', (msg) => {
-    const type = msg.type()
-    const text = msg.text()
-    if (type === 'error') {
-      console.log(`[browser error] ${text}`)
-    } else if (type === 'warning') {
-      console.log(`[browser warn] ${text}`)
-    } else {
-      console.log(`[browser ${type}] ${text}`)
+    if (msg.type() === 'error') {
+      console.log(`[browser error] ${msg.text()}`)
     }
   })
   page.on('pageerror', (err) => {
     console.log(`[browser exception] ${err.message}`)
   })
   page.on('requestfailed', (req) => {
-    console.log(`[network FAILED] ${req.method()} ${req.url()} ${req.failure()?.errorText}`)
+    if (!req.url().includes('google-analytics')) {
+      console.log(
+        `[network FAILED] ${req.method()} ${req.url()} ${req.failure()?.errorText}`,
+      )
+    }
   })
-}
-
-async function waitForAppReady(page: Page) {
-  const apolloButton = page.getByRole('button', { name: 'Apollo' })
-  const guestLoginText = page.getByText('Continue as Guest')
-  const trustButton = page.getByRole('button', { name: 'Yes, I trust it' })
-
-  // JBrowse may show a plugin trust warning dialog, a login dialog, or go
-  // straight to the main UI. Race all three possibilities.
-  await Promise.race([
-    apolloButton.waitFor({ timeout: 20_000 }),
-    guestLoginText.waitFor({ timeout: 20_000 }),
-    trustButton.waitFor({ timeout: 20_000 }),
-  ])
-
-  // Dismiss plugin trust dialog if present
-  if (await trustButton.isVisible().catch(() => false)) {
-    console.log('[login] Dismissing plugin trust dialog')
-    await trustButton.click()
-    await Promise.race([
-      apolloButton.waitFor({ timeout: 15_000 }),
-      guestLoginText.waitFor({ timeout: 15_000 }),
-    ])
-  }
 }
 
 export async function loginAsGuest(page: Page) {
   setupBrowserLogging(page)
 
-  await page.goto(APP_URL)
-  await waitForAppReady(page)
+  // Get a guest token via API and set it as a cookie on the browser context.
+  // This authenticates the browser before JBrowse loads — no login dialog.
+  const token = await getGuestToken()
+  await page.context().addCookies([
+    {
+      name: 'apollo-token',
+      value: token,
+      domain: 'localhost',
+      path: '/',
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+  ])
 
-  // If login dialog is showing, click "Continue as Guest" and reload
-  const guestButton = page.getByText('Continue as Guest')
-  if (await guestButton.isVisible().catch(() => false)) {
-    console.log('[login] Clicking "Continue as Guest"')
-    await guestButton.click()
-    await expect(page.locator('.MuiDialog-root')).not.toBeVisible({
-      timeout: 10_000,
-    })
-    // Reload and handle trust dialog again (JBrowse may re-prompt after reload)
-    await page.reload()
-    await waitForAppReady(page)
+  // Also set the InternetAccount sessionStorage token so the plugin connects
+  // its websocket. The key format is "${internetAccountId}-token".
+  // The internetAccountId comes from the server config: "${NAME}-apolloInternetAccount"
+  const internetAccountId = 'Demo Server-apolloInternetAccount'
+  await page.goto('/')
+  await page.evaluate(
+    ([id, t]) => {
+      sessionStorage.setItem(`${id}-token`, t)
+    },
+    [internetAccountId, token],
+  )
+
+  // Reload so JBrowse initializes with both the cookie and the sessionStorage token
+  console.log('[login] Navigating with auth cookie + sessionStorage token...')
+  await page.goto('/')
+
+  await expect(
+    page.getByRole('button', { name: 'Apollo' }),
+  ).toBeEnabled({ timeout: 20_000 })
+  console.log('[login] Apollo button ready')
+}
+
+export async function dismissDialogs(page: Page) {
+  const dialog = page.locator('.MuiDialog-root')
+  if (await dialog.isVisible().catch(() => false)) {
+    await page.keyboard.press('Escape')
+    await expect(dialog).not.toBeVisible({ timeout: 5_000 })
   }
+}
 
-  // Wait for Apollo menu to be ready
+// ── Navigation helpers ──────────────────────────────────────────────
+
+export async function selectFromApolloMenu(page: Page, path: string[]) {
   await expect(
     page.getByRole('button', { name: 'Apollo' }),
   ).toBeEnabled({ timeout: 15_000 })
-
-  // Verify admin role
-  const tokenInfo = await page.evaluate(() => {
-    const keys = Object.keys(window.sessionStorage)
-    const tokenKey = keys.find(
-      (k) => k.includes('token') || k.includes('Internet'),
-    )
-    if (tokenKey) {
-      const token = window.sessionStorage.getItem(tokenKey)
-      if (token) {
-        const payload = JSON.parse(atob(token.split('.')[1]))
-        return { role: payload.role, email: payload.email }
-      }
-    }
-    return null
-  })
-  console.log(`[login] role=${tokenInfo?.role} email=${tokenInfo?.email}`)
-
-  // Dismiss any dialogs
-  const dialog = page.locator('.MuiDialog-root')
-  if (await dialog.isVisible().catch(() => false)) {
-    await page.keyboard.press('Escape')
-    await expect(dialog).not.toBeVisible()
-  }
-}
-
-export async function deleteAssemblies() {
-  console.log('[cleanup] Starting deleteAssemblies...')
-  const token = await getGuestToken()
-  console.log('[cleanup] Got token')
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  }
-  const res = await fetch(`${API_BASE}/assemblies`, {
-    headers: { ...headers, Connection: 'close' },
-  })
-  const assemblies = (await res.json()) as { _id: string }[]
-  console.log(`[cleanup] Found ${assemblies.length} assemblies to delete`)
-  for (const assembly of assemblies) {
-    console.log(`[cleanup] Deleting assembly ${assembly._id}...`)
-    const deleteRes = await fetch(`${API_BASE}/changes`, {
-      method: 'POST',
-      headers: { ...headers, Connection: 'close' },
-      body: JSON.stringify({
-        typeName: 'DeleteAssemblyChange',
-        assembly: assembly._id,
-      }),
-    })
-    console.log(`[cleanup] Delete response: ${deleteRes.status}`)
-  }
-  console.log('[cleanup] deleteAssemblies complete')
-}
-
-export async function selectFromApolloMenu(page: Page, path: string[]) {
-  const menuButton = page.getByRole('button', { name: 'Apollo' })
-  await expect(menuButton).toBeEnabled({ timeout: 15_000 })
-
-  // Dismiss any dialogs that may cover the menu
-  const dialog = page.locator('.MuiDialog-root')
-  if (await dialog.isVisible().catch(() => false)) {
-    await page.keyboard.press('Escape')
-    await expect(dialog).not.toBeVisible()
-  }
+  await dismissDialogs(page)
 
   const lastItem = path.at(-1)!
   const prefixItems = path.slice(0, -1)
   const firstItem = prefixItems[0] ?? lastItem
 
-  await menuButton.click()
+  await page.getByRole('button', { name: 'Apollo' }).click()
 
-  // Admin menu items load asynchronously after websocket connects
   await expect(
     page.locator('[role="menuitem"]').filter({ hasText: firstItem }),
   ).toBeVisible({ timeout: 15_000 })
 
-  // Hover over submenu items
   for (const item of prefixItems) {
     await page
       .locator('[role="menuitem"]')
@@ -218,7 +188,6 @@ export async function selectFromApolloMenu(page: Page, path: string[]) {
       .hover()
   }
 
-  // Click the target
   await page
     .locator('[role="menuitem"]')
     .getByText(lastItem, { exact: true })
@@ -231,20 +200,31 @@ export async function addAssemblyFromGff(
   gffPath: string,
   launch = true,
 ) {
-  // Upload file and create assembly via API (bypasses JBrowse fetcher hang)
+  console.log(`[addAssembly] Starting for "${assemblyName}"...`)
   const file = await uploadFileViaApi(gffPath, 'text/x-gff3')
   await addAssemblyViaApi(assemblyName, file._id)
 
-  // Reload so JBrowse picks up the new assembly from config
-  await page.reload()
-  await waitForAppReady(page)
+  // Reload to pick up the new assembly in config.json
+  console.log('[addAssembly] Reloading to pick up new assembly...')
+  await page.goto('/')
 
   await expect(
     page.getByRole('button', { name: 'Apollo' }),
   ).toBeEnabled({ timeout: 15_000 })
+  console.log('[addAssembly] App ready')
 
   if (launch) {
-    await page.getByText('Launch view').click()
+    // The authenticated config includes a defaultSession with a LinearGenomeView,
+    // so a view may already be open. Click "Launch view" only if present.
+    const launchButton = page.getByRole('button', { name: 'Launch view' })
+    if (await launchButton.isVisible({ timeout: 3_000 }).catch(() => false)) {
+      console.log('[addAssembly] Clicking Launch view...')
+      await launchButton.click()
+    }
+    await expect(
+      page.getByText('Select assembly to view'),
+    ).toBeVisible({ timeout: 15_000 })
+    console.log('[addAssembly] View ready')
   }
 }
 
@@ -253,33 +233,47 @@ export async function selectAssemblyToView(
   assemblyName: string,
   location: string,
 ) {
+  console.log(`[nav] Selecting assembly "${assemblyName}" at ${location}`)
   await expect(page.getByText('Select assembly to view')).toBeVisible({
     timeout: 10_000,
   })
 
-  // Select assembly if not already selected
-  const assemblySelector = page.locator(
-    'input[data-testid="assembly-selector"]',
-  )
-  const selectorParent = assemblySelector.locator('..')
-  const selectorText = await selectorParent.textContent()
-  if (!selectorText?.includes(assemblyName)) {
-    await selectorParent.click()
+  const assemblyContainer = page
+    .getByText('Select assembly to view')
+    .locator('..')
+  const assemblyText = await assemblyContainer.textContent()
+  if (!assemblyText?.includes(assemblyName)) {
+    console.log(`[nav] Switching assembly to "${assemblyName}"`)
+    await assemblyContainer.locator('[role="combobox"]').click()
     await page.locator('li').filter({ hasText: assemblyName }).click()
   }
 
-  // Navigate to location
-  await page.locator('input[data-testid="autocomplete-input"]').fill(location)
-  await page.locator('input[data-testid="autocomplete-input"]').press('Enter')
+  const locationInput = page
+    .getByText('Enter sequence name, feature name, or location')
+    .locator('..')
+    .locator('input')
+  await locationInput.fill(location)
+  await locationInput.press('Enter')
+  console.log(`[nav] Navigated to ${location}`)
   await page.waitForTimeout(1000)
 }
 
-export async function annotationTrackAppearance(page: Page, option: string) {
+export async function annotationTrackAppearance(
+  page: Page,
+  option: string,
+) {
+  console.log(`[track] Setting display: "${option}"`)
   await page.getByText('Open track selector', { exact: false }).click()
   await page.getByText('Annotations (', { exact: false }).click()
   await page.getByRole('button', { name: 'Minimize drawer' }).click()
 
   const trackMenu = page.locator('[data-testid="track_menu_icon"]').first()
   await trackMenu.click()
+
+  await page
+    .locator('[role="menuitem"]')
+    .filter({ hasText: 'Display types' })
+    .hover()
   await page.getByText(option).click()
+  console.log(`[track] Display set to "${option}"`)
 }

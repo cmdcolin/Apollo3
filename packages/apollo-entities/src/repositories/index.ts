@@ -1,3 +1,4 @@
+export { BaseFeatureRepository } from './BaseFeatureRepository.js'
 export { MikroOrmAssemblyRepository } from './MikroOrmAssemblyRepository.js'
 export { MikroOrmChangeRepository } from './MikroOrmChangeRepository.js'
 export { MikroOrmCheckRepository } from './MikroOrmCheckRepository.js'
@@ -9,3 +10,4 @@ export { MikroOrmJBrowseConfigRepository } from './MikroOrmJBrowseConfigReposito
 export { MikroOrmRefSeqChunkRepository } from './MikroOrmRefSeqChunkRepository.js'
 export { MikroOrmRefSeqRepository } from './MikroOrmRefSeqRepository.js'
 export { MikroOrmUserRepository } from './MikroOrmUserRepository.js'
+export { MongoFeatureRepository } from './MongoFeatureRepository.js'
