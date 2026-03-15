@@ -71,10 +71,13 @@ The repository pattern abstracts the database layer behind interfaces in
 7. ~~**GFF3 export code deduplication**~~ **DONE** — The export service had its
    own copy of the gene hierarchy assembly logic (`buildChildrenMap` +
    `featureRowToSnapshot`). Replaced with the shared `assembleFeatureTrees()`
-   function, removing ~40 lines of duplicate code. A fully flat database-row to
-   GFF3 conversion was evaluated but rejected: CDS phase computation requires
-   parent-child context (exon/CDS intersection), and the in-memory hierarchy
-   assembly is O(n) — the bottleneck is database I/O, not in-memory processing.
+   function, removing ~40 lines of duplicate code.
+   - **Future: per-exon CDS storage** — Currently CDS is stored as one row
+     spanning the full coding region. GFF3 export must split it per-exon and
+     compute phases. If CDS were stored as multiple rows (one per exon, with
+     pre-computed phases), export would be trivial raw-row output. This would
+     require changing all CDS mutation operations (create, resize, split, merge)
+     to maintain per-exon rows.
 
 ### P2 — Collaboration & Workflow
 

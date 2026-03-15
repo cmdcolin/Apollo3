@@ -62,10 +62,7 @@ export class RefSeqsService {
     return this.db.refSeq.updateById(id, data)
   }
 
-  async remove(id: string) {
-    const refSeq = await this.db.refSeq.findById(id)
-    if (refSeq) {
-      await this.db.refSeq.deleteByAssembly(refSeq.assembly)
-    }
+  async remove(assemblyId: string) {
+    await this.db.refSeq.deleteByAssembly(assemblyId)
   }
 }
