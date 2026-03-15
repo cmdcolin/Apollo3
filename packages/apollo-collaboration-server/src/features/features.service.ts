@@ -135,20 +135,22 @@ export class FeaturesService {
     return feature
   }
 
-  async findByRange(searchDto: FeatureRangeSearchDto) {
+  async findFeaturesByRange(searchDto: FeatureRangeSearchDto) {
     const roots = await this.db.feature.findRootsByRange(
       searchDto.refSeq,
       Number(searchDto.start),
       Number(searchDto.end),
     )
-    let features: FeatureRow[] = []
-    if (roots.length > 0) {
-      const rootIds = roots.map((r) => r._id)
-      const descendants = await this.db.feature.findDescendantsOfMany(rootIds)
-      features = assembleFeatureTrees([...roots, ...descendants])
+    if (roots.length === 0) {
+      return []
     }
-    const checkResults = await this.checksService.findByRange(searchDto)
-    return [features, checkResults]
+    const rootIds = roots.map((r) => r._id)
+    const descendants = await this.db.feature.findDescendantsOfMany(rootIds)
+    return assembleFeatureTrees([...roots, ...descendants])
+  }
+
+  async findCheckResultsByRange(searchDto: FeatureRangeSearchDto) {
+    return this.checksService.findByRange(searchDto)
   }
 
   async checkFeature(featureId: string, checkTimestamps = true) {

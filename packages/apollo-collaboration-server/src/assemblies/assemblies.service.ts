@@ -52,7 +52,7 @@ export class AssembliesService {
 
     const refSeqs = await this.refSeqsService.findAll({ assembly: _id })
     for (const refSeq of refSeqs) {
-      const [features] = await this.featuresService.findByRange({
+      const features = await this.featuresService.findFeaturesByRange({
         refSeq: refSeq._id,
         start: 0,
         end: refSeq.length,

@@ -53,7 +53,11 @@ export class FeaturesController {
       `getFeatures endpoint: refSeq: ${request.refSeq}, start: ${request.start}, end: ${request.end}`,
     )
 
-    return this.featuresService.findByRange(request)
+    const [features, checkResults] = await Promise.all([
+      this.featuresService.findFeaturesByRange(request),
+      this.featuresService.findCheckResultsByRange(request),
+    ])
+    return [features, checkResults]
   }
 
   @Post('getByIds')
