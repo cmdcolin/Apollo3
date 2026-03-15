@@ -33,7 +33,7 @@ export class ExportService {
   async getAssemblyName(assemblyId: string) {
     const assembly = await this.db.assembly.findById(assemblyId)
     if (!assembly) {
-      throw new NotFoundException()
+      throw new NotFoundException(`Assembly "${assemblyId}" not found`)
     }
     return assembly.name
   }
@@ -49,10 +49,9 @@ export class ExportService {
     if (!exportID.startsWith('v2export:')) {
       throw new NotFoundException(`Export ${exportID} not found`)
     }
-    const assemblyIdStr = exportID.slice('v2export:'.length)
-
+    const assemblyId = exportID.slice('v2export:'.length)
     const { fastaWidth = 80, includeFASTA } = opts
-    const refSeqs = await this.db.refSeq.findByAssembly(assemblyIdStr)
+    const refSeqs = await this.db.refSeq.findByAssembly(assemblyId)
     const refSeqNames = Object.fromEntries(
       refSeqs.map((rs) => [rs._id, rs.name]),
     )
@@ -60,11 +59,45 @@ export class ExportService {
     const tmpFile = path.join(tmpdir(), `apollo-export-${Date.now()}.gff3`)
     const fh = await open(tmpFile, 'w')
 
+    await this.writeGFF3Header(fh, refSeqs)
+    await this.writeGFF3Features(fh, refSeqs, refSeqNames)
+
+    if (includeFASTA) {
+      const fastaStream = await this.buildFastaStream(assemblyId)
+      if (fastaStream) {
+        await fh.close()
+        const combined = new StreamConcat([
+          createReadStream(tmpFile),
+          ...fastaStream.map((s) => Readable.fromWeb(s)),
+        ])
+        return [combined, assemblyId]
+      }
+      await this.writeChunkedFasta(fh, refSeqs, fastaWidth)
+    }
+
+    await fh.close()
+    const resultStream = createReadStream(tmpFile)
+    resultStream.on('close', () => {
+      unlink(tmpFile).catch(() => {})
+    })
+    return [resultStream, assemblyId]
+  }
+
+  private async writeGFF3Header(
+    fh: import('node:fs/promises').FileHandle,
+    refSeqs: { name: string; length: number }[],
+  ) {
     await fh.write('##gff-version 3\n')
     for (const refSeq of refSeqs) {
       await fh.write(`##sequence-region ${refSeq.name} 1 ${refSeq.length}\n`)
     }
+  }
 
+  private async writeGFF3Features(
+    fh: import('node:fs/promises').FileHandle,
+    refSeqs: { _id: string; length: number }[],
+    refSeqNames: Record<string, string>,
+  ) {
     for (const refSeq of refSeqs) {
       const rootFeatures = await this.db.feature.findRootsByRange(
         refSeq._id,
@@ -83,118 +116,103 @@ export class ExportService {
           undefined,
           refSeqNames,
         )
-        const formatted = gffUtil.formatFeature(gff3Feature)
-        await fh.write(formatted)
+        await fh.write(gffUtil.formatFeature(gff3Feature))
       }
     }
-
-    if (includeFASTA) {
-      const assemblyRow = await this.db.assembly.findById(assemblyIdStr)
-      const source = assemblyRow?.sequenceSource
-      if (source?.type === 'indexed') {
-        await fh.close()
-        const fastaStreams = await this.streamFromLocalFasta(source.fa)
-        const combined = new StreamConcat([
-          createReadStream(tmpFile),
-          ...fastaStreams.map((s) => Readable.fromWeb(s)),
-        ])
-        return [combined, assemblyIdStr]
-      }
-      if (source?.type === 'external') {
-        await fh.close()
-        const fastaStreams = await this.streamFromRemoteFasta(source.fa)
-        const combined = new StreamConcat([
-          createReadStream(tmpFile),
-          ...fastaStreams.map((s) => Readable.fromWeb(s)),
-        ])
-        return [combined, assemblyIdStr]
-      }
-      await fh.write('##FASTA\n')
-      for (const refSeq of refSeqs) {
-        const description = refSeq.description ? ` ${refSeq.description}` : ''
-        await fh.write(`>${refSeq.name}${description}\n`)
-        const chunks = await this.db.refSeqChunk.findByRefSeqAndRange(
-          refSeq._id,
-          0,
-          Math.ceil(refSeq.length / refSeq.chunkSize),
-        )
-        let lineBuffer = ''
-        for (const chunk of chunks) {
-          let { sequence } = chunk
-          if (lineBuffer) {
-            const needed = fastaWidth - lineBuffer.length
-            lineBuffer += sequence.slice(0, needed)
-            sequence = sequence.slice(needed)
-            if (lineBuffer.length === fastaWidth) {
-              await fh.write(`${lineBuffer}\n`)
-              lineBuffer = ''
-            } else {
-              continue
-            }
-          }
-          const seqLines = splitStringIntoChunks(sequence, fastaWidth)
-          const lastLine = seqLines.at(-1) ?? ''
-          if (lastLine.length > 0 && lastLine.length !== fastaWidth) {
-            lineBuffer = seqLines.pop() ?? ''
-          }
-          if (seqLines.length > 0) {
-            await fh.write(`${seqLines.join('\n')}\n`)
-          }
-        }
-        if (lineBuffer) {
-          await fh.write(`${lineBuffer}\n`)
-        }
-      }
-    }
-
-    await fh.close()
-    const resultStream = createReadStream(tmpFile)
-    resultStream.on('close', () => {
-      unlink(tmpFile).catch(() => {})
-    })
-    return [resultStream, assemblyIdStr]
   }
 
-  async streamFromLocalFasta(
-    fastaFileId: string,
-  ): Promise<ReadableStream<string>[]> {
-    const faRow = await this.db.file.findById(fastaFileId)
-    if (!faRow) {
-      throw new Error('Undefined document')
+  private async buildFastaStream(
+    assemblyId: string,
+  ): Promise<ReadableStream<string>[] | undefined> {
+    const assemblyRow = await this.db.assembly.findById(assemblyId)
+    const source = assemblyRow?.sequenceSource
+    if (source?.type === 'indexed') {
+      return this.streamFasta(await this.getLocalFastaStream(source.fa))
     }
-    const fastaLineStream = new ReadableStream({
+    if (source?.type === 'external') {
+      return this.streamFasta(await this.getRemoteFastaStream(source.fa))
+    }
+    return undefined
+  }
+
+  private streamFasta(fastaBody: ReadableStream): ReadableStream<string>[] {
+    const header = new ReadableStream({
       start(controller) {
         controller.enqueue('##FASTA\n')
         controller.close()
       },
     })
+    const gunzip = new DecompressionStream('gzip')
+    return [header, fastaBody.pipeThrough(gunzip)]
+  }
 
+  private async getLocalFastaStream(fastaFileId: string) {
+    const faRow = await this.db.file.findById(fastaFileId)
+    if (!faRow) {
+      throw new NotFoundException(`FASTA file "${fastaFileId}" not found`)
+    }
     const fileUploadFolder = this.configService.get('FILE_UPLOAD_FOLDER', {
       infer: true,
     })
-    const fileStream = Readable.toWeb(
+    return Readable.toWeb(
       createReadStream(path.join(fileUploadFolder, faRow.checksum)),
     )
-    const gunzip = new DecompressionStream('gzip')
-    return [fastaLineStream, fileStream.pipeThrough(gunzip)]
   }
 
-  async streamFromRemoteFasta(
-    fastaUrl: string,
-  ): Promise<ReadableStream<string>[]> {
-    const fastaLineStream = new ReadableStream({
-      start(controller) {
-        controller.enqueue('##FASTA\n')
-        controller.close()
-      },
-    })
-
+  private async getRemoteFastaStream(fastaUrl: string) {
     const response = await fetch(fastaUrl)
     if (response.body === null) {
       throw new Error(`No body in response from ${fastaUrl}`)
     }
+    return response.body
+  }
 
-    const gunzip = new DecompressionStream('gzip')
-    return [fastaLineStream, response.body.pipeThrough(gunzip)]
+  private async writeChunkedFasta(
+    fh: import('node:fs/promises').FileHandle,
+    refSeqs: {
+      _id: string
+      name: string
+      description?: string
+      length: number
+      chunkSize: number
+    }[],
+    fastaWidth: number,
+  ) {
+    await fh.write('##FASTA\n')
+    for (const refSeq of refSeqs) {
+      const description = refSeq.description ? ` ${refSeq.description}` : ''
+      await fh.write(`>${refSeq.name}${description}\n`)
+      const chunks = await this.db.refSeqChunk.findByRefSeqAndRange(
+        refSeq._id,
+        0,
+        Math.ceil(refSeq.length / refSeq.chunkSize),
+      )
+      let lineBuffer = ''
+      for (const chunk of chunks) {
+        let { sequence } = chunk
+        if (lineBuffer) {
+          const needed = fastaWidth - lineBuffer.length
+          lineBuffer += sequence.slice(0, needed)
+          sequence = sequence.slice(needed)
+          if (lineBuffer.length === fastaWidth) {
+            await fh.write(`${lineBuffer}\n`)
+            lineBuffer = ''
+          } else {
+            continue
+          }
+        }
+        const seqLines = splitStringIntoChunks(sequence, fastaWidth)
+        const lastLine = seqLines.at(-1) ?? ''
+        if (lastLine.length > 0 && lastLine.length !== fastaWidth) {
+          lineBuffer = seqLines.pop() ?? ''
+        }
+        if (seqLines.length > 0) {
+          await fh.write(`${seqLines.join('\n')}\n`)
+        }
+      }
+      if (lineBuffer) {
+        await fh.write(`${lineBuffer}\n`)
+      }
+    }
   }
 }
