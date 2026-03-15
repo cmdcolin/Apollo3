@@ -5,6 +5,7 @@ import {
   isFeatureChange,
 } from '@apollo-annotation/common'
 import {
+  COMMON_CHANNEL,
   type ChangeMessage,
   type DecodedJWT,
   makeUserSessionId,
@@ -100,29 +101,18 @@ export class ChangesService {
     }
 
     if (isAssemblySpecificChange(change)) {
-      const messages: ChangeMessage[] = []
       const userSessionId = makeUserSessionId(user)
-      if (isFeatureChange(change)) {
-        for (const refName of refNames) {
-          messages.push({
-            changeInfo: change.toJSON(),
-            userName: user.username,
-            userSessionId,
-            channel: `${change.assembly}-${refName}`,
-            changeSequence: sequence,
-          })
-        }
-      } else {
-        messages.push({
+      const channels = isFeatureChange(change)
+        ? refNames.map((name) => `${change.assembly}-${name}`)
+        : [COMMON_CHANNEL]
+      for (const channel of channels) {
+        await this.messagesGateway.create(channel, {
           changeInfo: change.toJSON(),
           userName: user.username,
           userSessionId,
-          channel: 'COMMON',
+          channel,
           changeSequence: sequence,
         })
-      }
-      for (const message of messages) {
-        await this.messagesGateway.create(message.channel, message)
       }
     }
     return changeDoc

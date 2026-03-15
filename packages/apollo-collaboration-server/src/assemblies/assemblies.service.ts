@@ -52,13 +52,13 @@ export class AssembliesService {
 
     const refSeqs = await this.refSeqsService.findAll({ assembly: _id })
     for (const refSeq of refSeqs) {
-      const features = await this.featuresService.findFeaturesByRange({
-        refSeq: refSeq._id,
-        start: 0,
-        end: refSeq.length,
-      })
-      for (const feature of features) {
-        await this.featuresService.checkFeature(feature._id.toString(), false)
+      const roots = await this.db.feature.findRootsByRange(
+        refSeq._id,
+        0,
+        refSeq.length,
+      )
+      for (const root of roots) {
+        await this.featuresService.checkFeature(root._id, false)
       }
     }
   }

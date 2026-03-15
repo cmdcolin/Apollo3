@@ -7,6 +7,9 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import { Change } from '@apollo-annotation/common'
 import {
+  COMMON_CHANNEL,
+  REQUEST_INFO_CHANNEL,
+  USER_LOCATION_CHANNEL,
   type ChangeMessage,
   type CheckResultUpdate,
   type RequestUserInformationMessage,
@@ -330,29 +333,35 @@ const stateModelFactory = (configSchema: ApolloInternetAccountConfigModel) => {
           console.error(error)
           notify('Could not connect to the Apollo server.', 'error')
         })
-        socket.on('COMMON', (message: ChangeMessage | CheckResultUpdate) => {
-          if ('checkResult' in message) {
-            if (message.deleted) {
-              deleteCheckResult(message.checkResult._id)
-            } else {
-              addCheckResult(message.checkResult)
+        socket.on(
+          COMMON_CHANNEL,
+          (message: ChangeMessage | CheckResultUpdate) => {
+            if ('checkResult' in message) {
+              if (message.deleted) {
+                deleteCheckResult(message.checkResult._id)
+              } else {
+                addCheckResult(message.checkResult)
+              }
+              return
             }
-            return
-          }
-          // Save server last change sequence into session storage
-          sessionStorage.setItem(
-            'LastChangeSequence',
-            String(message.changeSequence),
-          )
-          if (message.userSessionId === localSessionId) {
-            return // we did this change, no need to apply it again
-          }
-          const change = Change.fromJSON(message.changeInfo)
-          void changeManager.submit(change, { submitToBackend: false })
-        })
-        socket.on('USER_LOCATION', (message: UserLocationMessage) => {
+            // Save server last change sequence into session storage
+            sessionStorage.setItem(
+              'LastChangeSequence',
+              String(message.changeSequence),
+            )
+            if (message.userSessionId === localSessionId) {
+              return // we did this change, no need to apply it again
+            }
+            const change = Change.fromJSON(message.changeInfo)
+            void changeManager.submit(change, { submitToBackend: false })
+          },
+        )
+        socket.on(USER_LOCATION_CHANNEL, (message: UserLocationMessage) => {
           const { channel, locations, userName, userSessionId } = message
-          if (channel === 'USER_LOCATION' && userSessionId !== localSessionId) {
+          if (
+            channel === USER_LOCATION_CHANNEL &&
+            userSessionId !== localSessionId
+          ) {
             const collaborator: Collaborator = {
               name: userName,
               id: userSessionId,
@@ -362,10 +371,10 @@ const stateModelFactory = (configSchema: ApolloInternetAccountConfigModel) => {
           }
         })
         socket.on(
-          'REQUEST_INFORMATION',
+          REQUEST_INFO_CHANNEL,
           (message: RequestUserInformationMessage) => {
             const { channel, userSessionId } = message
-            if (channel === 'REQUEST_INFORMATION' && userSessionId !== token) {
+            if (channel === REQUEST_INFO_CHANNEL && userSessionId !== token) {
               session.broadcastLocations()
             }
           },

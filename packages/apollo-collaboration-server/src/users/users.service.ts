@@ -2,7 +2,9 @@ import { randomBytes } from 'node:crypto'
 
 import {
   type DecodedJWT,
+  REQUEST_INFO_CHANNEL,
   type RequestUserInformationMessage,
+  USER_LOCATION_CHANNEL,
   type UserLocationMessage,
   makeUserSessionId,
 } from '@apollo-annotation/shared'
@@ -115,7 +117,7 @@ export class UsersService {
     if (!broadcast) {
       return
     }
-    const channel = 'USER_LOCATION'
+    const channel = USER_LOCATION_CHANNEL
     const { username: userName } = user
     const userSessionId = makeUserSessionId(user)
     const locations = location
@@ -138,7 +140,7 @@ export class UsersService {
   }
 
   requestUsersLocations(user: DecodedJWT) {
-    const channel = 'REQUEST_INFORMATION'
+    const channel = REQUEST_INFO_CHANNEL
     const userSessionId = makeUserSessionId(user)
     const { username: userName } = user
     const msg: RequestUserInformationMessage = {
