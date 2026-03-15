@@ -97,20 +97,29 @@ export class AddAssemblyAndFeaturesFromFileChange extends FromFileBaseChange {
         sequenceSource,
         checks,
       })
-      logger.debug?.(`Added new assembly "${assemblyName}", id "${assembly}"`)
+      // eslint-disable-next-line no-console
+      console.log(`[AddAssembly] Created assembly "${assemblyName}" id="${assembly}"`)
 
       await this.addRefSeqIntoDb(fileRow, assembly, backend)
+      // eslint-disable-next-line no-console
+      console.log(`[AddAssembly] RefSeqs added for "${assemblyName}"`)
 
       const { bufferSize = 10_000 } = parseOptions ?? {}
       const featureStream = backend.filesService.parseGFF3(
         backend.filesService.getFileStream(fileRow),
         { bufferSize },
       )
+      let featureCount = 0
       for await (const gff3Feature of featureStream) {
         logger.verbose?.(`ENTRY=${JSON.stringify(gff3Feature)}`)
         await this.addFeatureIntoDb(gff3Feature, backend)
+        featureCount++
       }
+      // eslint-disable-next-line no-console
+      console.log(`[AddAssembly] ${featureCount} features parsed for "${assemblyName}"`)
       await this.flushFeatureBuffer(backend)
+      // eslint-disable-next-line no-console
+      console.log(`[AddAssembly] Features flushed for "${assemblyName}"`)
     }
   }
   // eslint-disable-next-line @typescript-eslint/no-empty-function

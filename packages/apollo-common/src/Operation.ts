@@ -66,9 +66,6 @@ export interface ServerDataStore {
       props?: Record<string, unknown>,
     ): void
   }
-  counterService: {
-    getNextSequenceValue(sequenceName: string): Promise<number>
-  }
   user: string
 }
 

@@ -53,8 +53,8 @@ export class FilesController {
     @UploadedFile() file: UploadedApolloFile,
     @Query('type') type: 'text/x-gff3' | 'text/x-fasta',
   ) {
-    this.logger.debug(
-      `Upload file "${file.originalname}", checksum "${file.checksum}"`,
+    this.logger.log(
+      `Upload complete: "${file.originalname}", checksum="${file.checksum}", type="${type}"`,
     )
     return this.filesService.create({
       basename: file.originalname,

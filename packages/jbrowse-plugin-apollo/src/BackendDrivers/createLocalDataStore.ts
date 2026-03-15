@@ -33,8 +33,6 @@ export function createLocalDataStore(orm: MikroORM): ServerDataStore {
     },
   }
 
-  let counterValue = 0
-
   return {
     typeName: 'Server',
     featureRepository: new MikroOrmFeatureRepository(em),
@@ -70,13 +68,6 @@ export function createLocalDataStore(orm: MikroORM): ServerDataStore {
     pluginsService: {
       evaluateExtensionPoint(_extensionPointName, extendee) {
         return extendee
-      },
-    },
-    counterService: {
-      // eslint-disable-next-line @typescript-eslint/require-await
-      async getNextSequenceValue(_sequenceName: string) {
-        counterValue++
-        return counterValue
       },
     },
     user: 'desktop-user',
