@@ -58,6 +58,40 @@ export interface HoveredFeature {
   bp: number
 }
 
+function getFirstVisibleLocation(session: unknown): UserLocation | null {
+  const views = (session as AbstractSessionModel).views
+  for (const view of views) {
+    if (view.type !== 'LinearGenomeView') {
+      continue
+    }
+    const lgv = view as unknown as LinearGenomeViewModel
+    if (lgv.initialized) {
+      for (const block of lgv.dynamicBlocks.contentBlocks) {
+        const { assemblyName, end, refName, start } = block
+        const assembly = (
+          session as {
+            apolloDataStore: {
+              assemblies: Map<string, { backendDriverType: string }>
+            }
+          }
+        ).apolloDataStore.assemblies.get(assemblyName)
+        if (
+          assembly &&
+          assembly.backendDriverType === 'CollaborationServerDriver'
+        ) {
+          return {
+            assemblyId: assemblyName,
+            refSeq: refName,
+            start,
+            end,
+          }
+        }
+      }
+    }
+  }
+  return null
+}
+
 export function extendSession(
   pluginManager: PluginManager,
   sessionModel: ReturnType<typeof types.model>,
@@ -155,44 +189,10 @@ export function extendSession(
       },
       broadcastLocations() {
         const { internetAccounts } = getRoot<ApolloRootModel>(self)
-        const locations: {
-          assemblyName: string
-          refName: string
-          start: number
-          end: number
-        }[] = []
-        for (const view of (self as unknown as AbstractSessionModel).views) {
-          if (view.type !== 'LinearGenomeView') {
-            return
-          }
-          const lgv = view as unknown as LinearGenomeViewModel
-          if (lgv.initialized) {
-            const { dynamicBlocks } = lgv
-            for (const block of dynamicBlocks.contentBlocks) {
-              const { assemblyName, end, refName, start } = block
-              const assembly = self.apolloDataStore.assemblies.get(assemblyName)
-              if (
-                assembly &&
-                assembly.backendDriverType === 'CollaborationServerDriver'
-              ) {
-                locations.push({ assemblyName, refName, start, end })
-              }
-            }
-          }
-        }
-        const firstLocation = locations[0]
+        const location = getFirstVisibleLocation(self)
         for (const internetAccount of internetAccounts) {
           if ('baseURL' in internetAccount) {
-            if (firstLocation) {
-              internetAccount.postUserLocation({
-                assemblyId: firstLocation.assemblyName,
-                refSeq: firstLocation.refName,
-                start: firstLocation.start,
-                end: firstLocation.end,
-              })
-            } else {
-              internetAccount.postUserLocation(null)
-            }
+            internetAccount.postUserLocation(location)
           }
         }
       },
@@ -210,47 +210,10 @@ export function extendSession(
           self,
           autorun(
             () => {
-              // broadcastLocations() // **** This is not working and therefore we need to duplicate broadcastLocations() -method code here because autorun() does not observe changes otherwise
-              const locations: {
-                assemblyName: string
-                refName: string
-                start: number
-                end: number
-              }[] = []
-              for (const view of (self as unknown as AbstractSessionModel)
-                .views) {
-                if (view.type !== 'LinearGenomeView') {
-                  return
-                }
-                const lgv = view as unknown as LinearGenomeViewModel
-                if (lgv.initialized) {
-                  const { dynamicBlocks } = lgv
-                  for (const block of dynamicBlocks.contentBlocks) {
-                    const { assemblyName, end, refName, start } = block
-                    const assembly =
-                      self.apolloDataStore.assemblies.get(assemblyName)
-                    if (
-                      assembly &&
-                      assembly.backendDriverType === 'CollaborationServerDriver'
-                    ) {
-                      locations.push({ assemblyName, refName, start, end })
-                    }
-                  }
-                }
-              }
-              const firstLocation = locations[0]
+              const location = getFirstVisibleLocation(self)
               for (const internetAccount of internetAccounts) {
                 if ('baseURL' in internetAccount) {
-                  if (firstLocation) {
-                    internetAccount.postUserLocation({
-                      assemblyId: firstLocation.assemblyName,
-                      refSeq: firstLocation.refName,
-                      start: firstLocation.start,
-                      end: firstLocation.end,
-                    })
-                  } else {
-                    internetAccount.postUserLocation(null)
-                  }
+                  internetAccount.postUserLocation(location)
                 }
               }
             },
