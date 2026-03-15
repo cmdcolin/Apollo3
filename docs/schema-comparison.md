@@ -185,6 +185,52 @@ Switching between backends is a single environment variable (`DB_BACKEND`).
 
 ---
 
+## Performance Fix: Quality Checks on Every Pan/Zoom (20x Speedup)
+
+During the migration, we discovered and fixed a severe performance issue in the
+original codebase that was unrelated to MongoDB vs relational — it was a code
+architecture problem that had gone unnoticed.
+
+**What was happening:** Every time a user scrolled or zoomed the genome browser,
+the frontend asks the server for the genes visible in that region
+(`GET /features/getFeatures`). The server's handler for that request was
+re-running all quality validation checks on every gene in the response, from
+scratch, on every request.
+
+For a region with 1,000 visible genes, each pan or zoom triggered this sequence:
+
+1. Query the database for genes overlapping the visible region
+2. **For each of the 1,000 genes**, individually:
+   a. Load the gene by ID (1 database query)
+   b. Load all of the gene's descendants — transcripts, exons, CDS (1 database
+      query)
+   c. Reassemble the gene tree in memory
+   d. Look up the assembly and check configuration
+   e. Delete all previous check results for this gene
+   f. Re-run every configured quality check (potentially fetching DNA sequence
+      data)
+   g. Save the new check results to the database
+3. After all checks complete, return the features and check results
+
+**Total per request:** thousands of database queries and expensive computations,
+even if nothing had been edited since the last time the user looked at this
+region. The check results were already stored in the database from the previous
+request — the recomputation was entirely redundant.
+
+**The fix:** Quality checks now run only after someone edits a feature (in the
+mutation pipeline, after the database write commits). The GET endpoint simply
+returns the pre-computed check results already stored in the database.
+
+**Result:** Feature fetching went from ~74 seconds to ~3.65 seconds for a
+dataset with 1,000 genes — a **20x speedup**. This was the single largest
+performance improvement discovered during the migration work.
+
+This fix was possible independent of the MongoDB-to-relational migration, but
+was discovered during the migration process as part of the systematic
+performance review.
+
+---
+
 ## Justification Summary
 
 The migration was necessary for six reasons:

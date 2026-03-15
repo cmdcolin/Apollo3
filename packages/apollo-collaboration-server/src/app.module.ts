@@ -14,7 +14,6 @@ import { HealthModule } from './health/health.module.js'
 import { JBrowseModule } from './jbrowse/jbrowse.module.js'
 import { MessagesModule } from './messages/messages.module.js'
 import { ApolloMikroOrmModule } from './mikro-orm/mikro-orm.module.js'
-import { OperationsModule } from './operations/operations.module.js'
 import { PluginsModule } from './plugins/plugins.module.js'
 import { RefSeqsModule } from './refSeqs/refSeqs.module.js'
 import { SequenceModule } from './sequence/sequence.module.js'
@@ -125,7 +124,6 @@ const validationSchema = Joi.object({
     FilesModule,
     ChecksModule,
     SequenceModule,
-    OperationsModule,
     FeaturesModule,
     AssembliesModule,
     JBrowseModule,

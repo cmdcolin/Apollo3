@@ -1,11 +1,12 @@
-import type { FeatureRow } from '@apollo-annotation/common'
-import { GetFeaturesOperation } from '@apollo-annotation/shared'
+import {
+  type FeatureRow,
+  assembleFeatureTrees,
+} from '@apollo-annotation/common'
 import { Injectable, Logger, NotFoundException } from '@nestjs/common'
 
 import { ChecksService } from '../checks/checks.service.js'
 import type { FeatureRangeSearchDto } from '../entity/gff3Object.dto.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
-import { OperationsService } from '../operations/operations.service.js'
 
 import type {
   FeatureCountRequest,
@@ -15,7 +16,6 @@ import type {
 @Injectable()
 export class FeaturesService {
   constructor(
-    private readonly operationsService: OperationsService,
     private readonly checksService: ChecksService,
     private readonly db: DatabaseService,
   ) {}
@@ -111,7 +111,6 @@ export class FeaturesService {
 
     for (const featureId of featureIds) {
       if (fetchedFeatureIds.has(featureId)) {
-        this.logger.debug(`FeatureId ${featureId} already fetched, skipping...`)
         continue
       }
 
@@ -132,9 +131,7 @@ export class FeaturesService {
   async findById(featureId: string, topLevel?: boolean) {
     const feature = await this.db.feature.findById(featureId)
     if (!feature) {
-      const errMsg = `ERROR: The following featureId was not found in database ='${featureId}'`
-      this.logger.error(errMsg)
-      throw new NotFoundException(errMsg)
+      throw new NotFoundException(`Feature not found: ${featureId}`)
     }
     if (topLevel && feature.parentId) {
       const rootFeature = await this.db.feature.findRootParent(featureId)
@@ -145,16 +142,23 @@ export class FeaturesService {
     return feature
   }
 
+  // status=0 means active (published), status=-1 means pending import
   async findByRange(searchDto: FeatureRangeSearchDto) {
-    const featureDocs =
-      await this.operationsService.executeOperation<GetFeaturesOperation>({
-        typeName: 'GetFeaturesOperation',
-        refSeq: searchDto.refSeq,
-        start: searchDto.start,
-        end: searchDto.end,
-      })
+    const roots = await this.db.feature.findRootsByRange(
+      searchDto.refSeq,
+      Number(searchDto.start),
+      Number(searchDto.end),
+    )
+    const activeRoots = roots.filter((r) => r.status === 0)
+    let features: FeatureRow[] = []
+    if (activeRoots.length > 0) {
+      const rootIds = activeRoots.map((r) => r._id)
+      const descendants =
+        await this.db.feature.findDescendantsOfMany(rootIds)
+      features = assembleFeatureTrees([...activeRoots, ...descendants])
+    }
     const checkResults = await this.checksService.findByRange(searchDto)
-    return [featureDocs, checkResults]
+    return [features, checkResults]
   }
 
   async checkFeature(featureId: string, checkTimestamps = true) {

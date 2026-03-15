@@ -1,6 +1,5 @@
 import { randomBytes } from 'node:crypto'
 
-import { GetAssembliesOperation } from '@apollo-annotation/shared'
 import {
   Injectable,
   Logger,
@@ -11,7 +10,6 @@ import {
 import { ChecksService } from '../checks/checks.service.js'
 import { FeaturesService } from '../features/features.service.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
-import { OperationsService } from '../operations/operations.service.js'
 import { RefSeqsService } from '../refSeqs/refSeqs.service.js'
 
 import { CreateAssemblyDto } from './dto/create-assembly.dto.js'
@@ -20,7 +18,6 @@ import { UpdateAssemblyDto } from './dto/update-assembly.dto.js'
 @Injectable()
 export class AssembliesService {
   constructor(
-    private readonly operationsService: OperationsService,
     private readonly checksService: ChecksService,
     private readonly featuresService: FeaturesService,
     private readonly refSeqsService: RefSeqsService,
@@ -67,10 +64,10 @@ export class AssembliesService {
     }
   }
 
-  findAll() {
-    return this.operationsService.executeOperation<GetAssembliesOperation>({
-      typeName: 'GetAssembliesOperation',
-    })
+  // status=0 means active (published), status=-1 means pending import
+  async findAll() {
+    const rows = await this.db.assembly.findAll()
+    return rows.filter((r) => r.status === 0)
   }
 
   async findOne(id: string) {

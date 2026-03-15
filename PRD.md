@@ -96,9 +96,22 @@ The repository pattern abstracts the database layer behind interfaces in
    - Report non-canonical sites as warnings (not errors — some are valid)
    - **Files**: `packages/apollo-shared/src/Checks/`, server check seeding
 
+### P1 — Security
+
+6. **Authentication security audit** — Review the Passport + JWT cookie
+   auth implementation for:
+   - JWT secret strength and rotation
+   - Cookie security settings (HttpOnly, Secure, SameSite)
+   - CSRF protection for cookie-based auth
+   - OAuth state parameter validation
+   - Token expiration and refresh
+   - Guest user role escalation prevention
+   - **Files**: `packages/apollo-collaboration-server/src/authentication/`,
+     `packages/apollo-collaboration-server/src/utils/strategies/`
+
 ### P1 — Testing
 
-6. **Unit tests for untested repositories** — Four repositories have zero
+7. **Unit tests for untested repositories** — Four repositories have zero
    unit test coverage:
    - `CheckRepository` (6 interface methods)
    - `CheckResultRepository` (9 interface methods)
