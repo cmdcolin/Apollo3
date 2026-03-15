@@ -109,6 +109,20 @@ migration; others may prefer PostgreSQL for production deployments. This means:
 - Local PostgreSQL testing: `docker compose up -d` then set
   `DB_BACKEND=postgresql DB_CONNECTION_URL=postgresql://apollo:apollo@localhost:5432/apollo`
 
+## Authentication & Authorization
+
+Auth was simplified from a 5-file indirection chain down to a single file
+(`src/utils/roles.guard.ts`). Every controller must have a class-level
+decorator — just pick one of three:
+
+- `@Public()` — no login needed (auth endpoints, health, config.json)
+- `@Authenticated()` — logged in, any role (even pending users)
+- `@Roles(Role.ReadOnly | Role.User | Role.Admin)` — logged in with a specific
+  role or higher (admin > user > readOnly)
+
+Missing auth returns 401; insufficient role returns 403. The frontend redirects
+to the login page on 401.
+
 ## Monorepo Structure
 
 - `packages/apollo-collaboration-server` - NestJS backend

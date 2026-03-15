@@ -40,10 +40,7 @@ export class ToolsController {
     body: { assembly: string; refSeqId: string; start: number; end: number },
     @Req() request: Request,
   ) {
-    const { user } = request as unknown as { user: DecodedJWT }
-    if (!user) {
-      throw new Error('No user attached to request')
-    }
+    const user = request.user as DecodedJWT
     this.logger.log(
       `Tiberius run requested: ${body.assembly} ${body.refSeqId}:${body.start}-${body.end}`,
     )

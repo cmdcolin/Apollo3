@@ -37,6 +37,10 @@ The repository pattern abstracts the database layer behind interfaces in
 - [x] Dead code cleanup: duplicate `UploadedFile`, `MessagesService`, stub
       `file.entity.ts`, unused `user` field in `CreateFileDto`
 - [x] Stale MongoDB comment cleanup
+- [x] Per-feature changelog — `GET /changes?changedIds=...` now accepts multiple
+      feature IDs; `FeatureChangeLog` dialog opens from any feature's right-click
+      context menu in both linear display and tabular editor; collects all IDs in
+      the gene's subtree so child-feature changes appear when viewing the parent gene
 - [x] MongoDB feature repository (`MongoFeatureRepository`) with iterative BFS
       tree traversal — works with any MikroORM driver
 - [x] Repository factory pattern — `DatabaseService` selects

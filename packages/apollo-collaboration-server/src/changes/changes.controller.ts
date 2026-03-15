@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import { Change } from '@apollo-annotation/common'
 import type { DecodedJWT } from '@apollo-annotation/shared'
 import {
@@ -31,10 +30,7 @@ export class ChangesController {
   @Post()
   @Roles(Role.User)
   async create(@Body(ParseChangePipe) change: Change, @Req() request: Request) {
-    const { user } = request as unknown as { user: DecodedJWT }
-    if (!user) {
-      throw new Error('No user attached to request')
-    }
+    const user = request.user as DecodedJWT
     this.logger.debug(
       `Change type is '${change.typeName}', change object: ${JSON.stringify(
         change,

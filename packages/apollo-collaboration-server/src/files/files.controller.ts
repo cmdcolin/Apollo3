@@ -19,11 +19,15 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express'
 import type { Request, Response } from 'express'
 
+import { Role } from '../utils/role/role.enum.js'
+import { Roles } from '../utils/roles.guard.js'
+
 import { FileStorageEngine } from './FileStorageEngine.js'
 import { FilesInterceptor as StreamingFileInterceptor } from './files.interceptor.js'
 import { FilesService } from './files.service.js'
 import type { UploadedFile as UploadedApolloFile } from './filesUtil.js'
 
+@Roles(Role.Admin)
 @Controller('files')
 export class FilesController {
   constructor(

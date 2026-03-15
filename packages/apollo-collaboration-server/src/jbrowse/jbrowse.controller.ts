@@ -10,6 +10,7 @@ export interface RequestWithUser extends Request {
   user?: { role: Role; id?: string }
 }
 
+@Public()
 @Controller()
 export class JBrowseController {
   constructor(
@@ -17,13 +18,11 @@ export class JBrowseController {
   ) {}
   private readonly logger = new Logger(JBrowseController.name)
 
-  @Public()
   @Get('jbrowse/config.json')
   jbrowseConfig(@Req() request: RequestWithUser) {
     return this.configResponse(request)
   }
 
-  @Public()
   @Get('config.json')
   rootConfig(@Req() request: RequestWithUser) {
     return this.configResponse(request)

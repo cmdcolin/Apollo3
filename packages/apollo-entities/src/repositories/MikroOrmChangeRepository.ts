@@ -5,6 +5,7 @@ import {
   type EntityManager,
   type InferEntity,
   QueryOrder,
+  raw,
 } from '@mikro-orm/core'
 
 import { ChangeEntity } from '../entities/ChangeEntity.js'
@@ -44,6 +45,7 @@ export class MikroOrmChangeRepository implements ChangeRepository {
 
   async findAll(opts?: {
     filter?: Partial<Pick<ChangeRow, 'assembly' | 'user' | 'typeName'>>
+    changedIds?: string[]
     sinceSequence?: number
     sort?: 'asc' | 'desc'
     limit?: number
@@ -64,6 +66,17 @@ export class MikroOrmChangeRepository implements ChangeRepository {
     if (opts?.sinceSequence !== undefined) {
       where.sequence = { $gt: opts.sinceSequence }
     }
+    if (opts?.changedIds && opts.changedIds.length > 0) {
+      // LIKE on the JSON column to find candidates, then in-memory exact check
+      const orConditions = opts.changedIds.map((id) => ({
+        [raw('changedIds')]: { $like: `%"${id}"%` },
+      }))
+      if (orConditions.length === 1) {
+        Object.assign(where, orConditions[0])
+      } else {
+        where.$or = orConditions
+      }
+    }
 
     const orderBy = {
       sequence: opts?.sort === 'asc' ? QueryOrder.ASC : QueryOrder.DESC,
@@ -71,9 +84,19 @@ export class MikroOrmChangeRepository implements ChangeRepository {
 
     const entities = await this.em.find(ChangeEntity, where, {
       orderBy,
-      limit: opts?.limit,
-      offset: opts?.offset,
+      limit: opts?.changedIds ? undefined : opts?.limit,
+      offset: opts?.changedIds ? undefined : opts?.offset,
     })
+
+    if (opts?.changedIds && opts.changedIds.length > 0) {
+      const idSet = new Set(opts.changedIds)
+      const matched = entities.filter((e) =>
+        e.changedIds.some((id) => idSet.has(id)),
+      )
+      const start = opts.offset ?? 0
+      const end = opts.limit ? start + opts.limit : undefined
+      return matched.slice(start, end).map(toRow)
+    }
     return entities.map(toRow)
   }
 }

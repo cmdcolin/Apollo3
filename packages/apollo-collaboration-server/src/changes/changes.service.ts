@@ -144,12 +144,23 @@ export class ChangesService {
 
   async findAll(changeFilter: FindChangeDto) {
     this.logger.debug(`Search criteria: "${JSON.stringify(changeFilter)}"`)
+    let changedIds: string[] | undefined
+    if (changeFilter.featureId) {
+      const descendants = await this.db.feature.findDescendants(
+        changeFilter.featureId,
+      )
+      changedIds = [changeFilter.featureId]
+      for (const d of descendants) {
+        changedIds.push(d._id)
+      }
+    }
     return this.db.changeLog.findAll({
       filter: {
         assembly: changeFilter.assembly,
         user: changeFilter.user,
         typeName: changeFilter.typeName,
       },
+      changedIds,
       sinceSequence: changeFilter.since
         ? Number(changeFilter.since)
         : undefined,

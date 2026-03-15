@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-condition */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import type { DecodedJWT } from '@apollo-annotation/shared'
 import {
   Body,
@@ -19,6 +17,7 @@ import { Authenticated, Roles } from '../utils/roles.guard.js'
 import { UserLocationDto } from './dto/create-user.dto.js'
 import { UsersService } from './users.service.js'
 
+@Roles(Role.Admin)
 @Controller('users')
 export class UsersController {
   constructor(
@@ -29,10 +28,7 @@ export class UsersController {
   @Authenticated()
   @Get('me')
   getMe(@Req() req: Request) {
-    const { user } = req as unknown as { user: DecodedJWT }
-    if (!user) {
-      throw new Error('No user attached to request')
-    }
+    const user = req.user as DecodedJWT
     return { username: user.username, email: user.email, role: user.role }
   }
 
@@ -41,29 +37,16 @@ export class UsersController {
     return this.usersService.findAll()
   }
 
-  /**
-   * Get the oldest (in terms of creation date) admin email address. This is needed when user has logged in and he needs to email to admin to get role
-   * User who is calling this endpoint does not have any role yet and therefore there can not be 'Role' -validation
-   * @returns The oldest (in terms of creation date) admin email address.
-   */
   @Authenticated()
   @Get('admin')
   findAdmin() {
     return this.usersService.findByRole(Role.Admin)
   }
 
-  /**
-   * Receives user location by broadcasting 'user location' -request using web sockets
-   * @param userLocation - user's location information
-   * @returns
-   */
   @Roles(Role.ReadOnly)
   @Get('locations')
   usersLocations(@Req() req: Request) {
-    const { user } = req as unknown as { user: DecodedJWT }
-    if (!user) {
-      throw new Error('No user attached to request')
-    }
+    const user = req.user as DecodedJWT
     this.logger.debug('Requesting other users locations')
     return this.usersService.requestUsersLocations(user)
   }
@@ -73,13 +56,8 @@ export class UsersController {
     return this.usersService.findById(id)
   }
 
-  // NOTE: It's important that all GET endpoints are before POST endpoint, otherwise GET endpoint that is after POST may not be called properly!!
+  // NOTE: All GET endpoints must be before POST endpoints
 
-  /**
-   * Receives user location and broadcast information using web sockets
-   * @param userLocDto - user's location information
-   * @returns
-   */
   @Roles(Role.ReadOnly)
   @Post('userLocation')
   userLoc(@Body() userLocDto: UserLocationDto[], @Req() req: Request) {
@@ -90,11 +68,7 @@ export class UsersController {
     this.logger.debug(
       `One user's location info: ${JSON.stringify(userLocationArray)}`,
     )
-
-    const { user } = req as unknown as { user: DecodedJWT }
-    if (!user) {
-      throw new Error('No user attached to request')
-    }
+    const user = req.user as DecodedJWT
     return this.usersService.broadcastLocation(userLocationArray, user)
   }
 }
