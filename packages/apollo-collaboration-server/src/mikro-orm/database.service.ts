@@ -40,68 +40,61 @@ export interface TransactionScope {
   counter: CounterRepository
 }
 
-// Provides repository access to the database. Each getter creates an isolated
-// EntityManager (via em.fork()) so that reads don't share identity-map state
-// between callers. For writes that need atomicity, use transactional().
+// Thin wrapper that constructs repository implementations from the injected
+// EntityManager. With RequestContext middleware registered in main.ts, the EM
+// is automatically request-scoped — each HTTP request gets its own identity
+// map via AsyncLocalStorage, so no manual em.fork() is needed.
 @Injectable()
 export class DatabaseService {
   constructor(@Inject(EntityManager) private readonly em: EntityManager) {}
 
-  // em.fork() creates a lightweight copy of the EntityManager with its own
-  // identity map but sharing the same connection pool. This prevents one
-  // caller's loaded entities from leaking into another caller's queries.
-  private fork() {
-    return this.em.fork()
-  }
-
   get assembly(): AssemblyRepository {
-    return new MikroOrmAssemblyRepository(this.fork())
+    return new MikroOrmAssemblyRepository(this.em)
   }
 
   get feature(): FeatureRepository {
-    return new MikroOrmFeatureRepository(this.fork())
+    return new MikroOrmFeatureRepository(this.em)
   }
 
   get refSeq(): RefSeqRepository {
-    return new MikroOrmRefSeqRepository(this.fork())
+    return new MikroOrmRefSeqRepository(this.em)
   }
 
   get refSeqChunk(): RefSeqChunkRepository {
-    return new MikroOrmRefSeqChunkRepository(this.fork())
+    return new MikroOrmRefSeqChunkRepository(this.em)
   }
 
   get user(): UserRepository {
-    return new MikroOrmUserRepository(this.fork())
+    return new MikroOrmUserRepository(this.em)
   }
 
   get file(): FileRepository {
-    return new MikroOrmFileRepository(this.fork())
+    return new MikroOrmFileRepository(this.em)
   }
 
   get check(): CheckResultRepository {
-    return new MikroOrmCheckResultRepository(this.fork())
+    return new MikroOrmCheckResultRepository(this.em)
   }
 
   get counter(): CounterRepository {
-    return new MikroOrmCounterRepository(this.fork())
+    return new MikroOrmCounterRepository(this.em)
   }
 
   get checkConfig(): CheckRepository {
-    return new MikroOrmCheckRepository(this.fork())
+    return new MikroOrmCheckRepository(this.em)
   }
 
   get jbrowseConfig(): JBrowseConfigRepository {
-    return new MikroOrmJBrowseConfigRepository(this.fork())
+    return new MikroOrmJBrowseConfigRepository(this.em)
   }
 
   get changeLog(): ChangeRepository {
-    return new MikroOrmChangeRepository(this.fork())
+    return new MikroOrmChangeRepository(this.em)
   }
 
-  // Runs a callback inside a database transaction. MikroORM's transactional()
-  // creates a forked EntityManager, wraps all operations in BEGIN/COMMIT, and
-  // automatically rolls back on error. All repositories in the callback share
-  // the same transactional EM so their writes are atomic.
+  // Runs a callback inside a database transaction. All repositories in the
+  // callback share the same transactional EM so their writes are atomic.
+  // Auto-commits on success, auto-rolls-back if the callback throws.
   async transactional<T>(callback: (scope: TransactionScope) => Promise<T>) {
     return this.em.transactional(async (txEm) => {
       return callback({
