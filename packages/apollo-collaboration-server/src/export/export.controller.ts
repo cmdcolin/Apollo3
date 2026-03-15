@@ -1,4 +1,3 @@
- 
 import {
   Controller,
   DefaultValuePipe,
@@ -12,6 +11,7 @@ import {
 } from '@nestjs/common'
 import type { Response as ExpressResponse } from 'express'
 
+import { Public } from '../utils/jwt-auth.guard.js'
 import { Role } from '../utils/role/role.enum.js'
 import { Validations } from '../utils/validation/validatation.decorator.js'
 
@@ -42,7 +42,7 @@ export class ExportController {
    * @param res -
    * @returns A StreamableFile of the GFF3
    */
-  @Validations(Role.None)
+  @Public()
   @Get()
   async exportGFF3(
     // @Query()

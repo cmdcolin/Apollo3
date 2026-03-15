@@ -132,8 +132,9 @@ __pycache__/
 
 packages/jbrowse-plugin-apollo/meta.json
 
-# Demo data (downloaded at runtime)
-demo-data/
+# Demo data cache (downloaded at runtime), but keep the pre-built DB
+demo-data/*
+!demo-data/demo.sqlite
 
 # Demo server state
 .demo-server.log

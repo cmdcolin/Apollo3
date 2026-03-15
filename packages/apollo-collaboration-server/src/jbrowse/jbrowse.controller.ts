@@ -1,8 +1,8 @@
 import { Controller, Get, Logger, Req } from '@nestjs/common'
 import type { Request } from 'express'
 
+import { Public } from '../utils/jwt-auth.guard.js'
 import { Role } from '../utils/role/role.enum.js'
-import { Validations } from '../utils/validation/validatation.decorator.js'
 
 import { JBrowseService } from './jbrowse.service.js'
 
@@ -15,13 +15,13 @@ export class JBrowseController {
   constructor(private readonly jbrowseService: JBrowseService) {}
   private readonly logger = new Logger(JBrowseController.name)
 
-  @Validations(Role.None)
+  @Public()
   @Get('jbrowse/config.json')
   jbrowseConfig(@Req() request: RequestWithUser) {
     return this.configResponse(request)
   }
 
-  @Validations(Role.None)
+  @Public()
   @Get('config.json')
   rootConfig(@Req() request: RequestWithUser) {
     return this.configResponse(request)

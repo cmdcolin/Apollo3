@@ -60,54 +60,17 @@ The repository pattern abstracts the database layer behind interfaces in
 
 ### P1 — Developer Experience
 
-2. **Demo dev instance with sample data** — There is no one-command way to
-   start a dev server pre-loaded with realistic annotation data. Developers
-   and evaluators have to manually upload assemblies through the UI or API
-   every time they reset the database.
+2. ~~**Demo dev instance with sample data**~~ — **Done.** Pre-built SQLite
+   database (`demo-data/demo.sqlite`, 256KB) with two assemblies configured
+   using external FASTA references (no sequence/features stored in DB):
 
-   **Goal**: `yarn start-with-demo-data` (or similar) starts the collaboration
-   server and pre-loads sample assemblies so you immediately have data to work
-   with.
+   - **volvox** — bgzip FASTA served locally from `test_data/`
+   - **hg38** — remote bgzip FASTA from `jbrowse.org`
 
-   **Datasets to include**:
-   - **Volvox** — existing synthetic test organism
-     (`packages/jbrowse-plugin-apollo/test_data/volvox.fasta.gff3`). Small,
-     fast to load, good for basic feature testing.
-   - **Human (GRCh38) region** — a small region of human annotation (e.g.,
-     NCBI RefSeq GFF3 for chr1:11,869–14,409 covering a few GENCODE genes).
-     Provides realistic gene models with UTRs, multiple transcripts,
-     alternative splicing, and CDS features. Should be committed as a small
-     extract (~50–100 genes), not the full genome GFF3.
+   Usage: `yarn start-with-demo-data` (or `--no-build` to skip rebuilding).
+   Copies the pre-built DB, starts server, assemblies are immediately available.
 
-   **Implementation approach**:
-   - New script: `scripts/start-with-demo-data.sh` (or
-     `packages/apollo-collaboration-server/scripts/`)
-   - Script flow:
-     1. Build all packages (reuse `build_all` from `e2e-servers.sh`)
-     2. Reset the database (fresh SQLite file)
-     3. Start the collaboration server (same as `yarn start`)
-     4. Wait for `/health` endpoint
-     5. Upload demo GFF3 files via `POST /files` + `POST /changes` with
-        `AddAssemblyAndFeaturesFromFileChange` (reuse the pattern from
-        `pw-tests/helpers.ts:addAssemblyFromGff`)
-     6. Print URL to open in browser
-   - Add `"start-with-demo-data"` script to root `package.json`
-   - Demo data files live in a new `demo-data/` directory at the repo root
-     (or under the collab server package)
-   - The human GFF3 extract needs to be created and committed — download from
-     NCBI RefSeq, extract a small region with `bedtools intersect` or
-     `grep`/`awk`, include embedded FASTA for that region
-
-   **Nice-to-haves**:
-   - `--no-build` flag to skip rebuilding when iterating quickly
-   - `--reset` flag to force a fresh database (default: skip if DB already
-     has assemblies)
-   - Print a summary after loading: "Loaded 2 assemblies: volvox (N genes),
-     human-chr1-excerpt (M genes)"
-
-   **Files**:
-   - New: `scripts/start-with-demo-data.sh`, `demo-data/` directory
-   - Modified: root `package.json` (new script entry)
+   To regenerate after schema changes: `bash scripts/regenerate-demo-db.sh`
 
 ### P1 — Core Annotation Features (Apollo Classic Parity)
 
@@ -144,9 +107,10 @@ The repository pattern abstracts the database layer behind interfaces in
      `packages/jbrowse-plugin-apollo/src/components/`, extend "Edit feature
      details" dialog
 
-5. ~~**Non-canonical Splice Site Detection**~~ — **Already implemented.** `TranscriptCheck`
-   already detects non-canonical GT/AG splice sites at exon boundaries. Added GC
-   as valid 5' splice donor (matching Apollo Classic behavior).
+5. ~~**Non-canonical Splice Site Detection**~~ — **Already implemented.**
+   `TranscriptCheck` already detects non-canonical GT/AG splice sites at exon
+   boundaries. Added GC as valid 5' splice donor (matching Apollo Classic
+   behavior).
 
 ### P1 — Security
 
@@ -342,6 +306,81 @@ top-level resolution, replacing per-ID loops.
     - Frontend: "Sequence Search" dialog, results displayed as track
     - Config: search tool URL/path per assembly
     - **Files**: new module in server, new component in plugin
+
+### P2 — Gene Prediction
+
+16. **Tiberius on-the-fly gene prediction** — Run
+    [Tiberius](https://github.com/Gaius-Augustus/Tiberius) on a user-selected
+    genomic region to generate de novo gene predictions. Tiberius is an
+    end-to-end deep learning gene predictor (CNN + biLSTM + differentiable HMM)
+    that takes genomic DNA in FASTA format and outputs gene models in GTF.
+
+    **Core workflow**:
+
+    - User selects a genomic region in JBrowse (right-click menu or dedicated
+      dialog)
+    - Apollo extracts the FASTA sequence for that region from the assembly's
+      sequence adapter
+    - Server submits the sequence to Tiberius (containerized via Docker or
+      Singularity)
+    - Predicted gene models (GTF) are parsed and displayed as a results track
+    - User can accept/reject individual predictions, importing accepted ones as
+      Apollo annotation features
+
+    **RNA-seq evidence mode** (optional):
+
+    - If RNA-seq alignment tracks (BAM/CRAM) are visible in the current JBrowse
+      session, offer to include them as evidence for Tiberius
+    - Extract the corresponding BAM slice for the selected region
+    - Pass to Tiberius's evidence pipeline for evidence-informed predictions
+    - UI indicates which predictions are supported by RNA-seq evidence
+
+    **Configuration**:
+
+    - `TIBERIUS_BACKEND`: `docker` | `singularity` | `remote` (URL to a Tiberius
+      API service)
+    - `TIBERIUS_MODEL`: pre-trained model config (e.g.,
+      `mammalia_softmasking_v2`) — configurable per assembly
+    - `TIBERIUS_GPU`: enable/disable GPU acceleration
+    - `TIBERIUS_MAX_REGION`: maximum region size to prevent runaway jobs
+      (default: 5 Mb)
+
+    **Implementation considerations**:
+
+    - Tiberius requires GPU (8 GB+ VRAM) for reasonable performance; CPU
+      fallback is slow. Document hardware requirements clearly.
+    - Jobs should be async — submit and poll for results, with progress
+      indication in the UI
+    - Results stored as a separate track/layer (not committed as annotations
+      until user explicitly accepts)
+    - Rate limiting / queue to prevent concurrent heavy GPU jobs
+
+    **Backend**:
+
+    - New `GenePredictionModule` in the collaboration server
+    - `GenePredictionService`: manages job submission, status polling, result
+      parsing
+    - GTF→GFF3 conversion for importing accepted predictions as Apollo features
+    - Endpoint: `POST /gene-prediction/run`, `GET /gene-prediction/status/:id`,
+      `GET /gene-prediction/results/:id`
+
+    **Frontend**:
+
+    - Context menu item: "Run gene prediction on region…"
+    - Dialog: region coordinates (pre-filled from selection), model selection,
+      optional RNA-seq track picker
+    - Results panel: list of predicted genes with accept/reject actions
+    - Track display: predicted features rendered distinctly from curated
+      annotations
+
+    **Files**:
+
+    - New: `packages/apollo-collaboration-server/src/gene-prediction/` (module,
+      service, controller)
+    - New: `packages/jbrowse-plugin-apollo/src/components/GenePrediction/`
+      (dialog, results panel)
+    - Modified: plugin context menu registration, JBrowse config for prediction
+      results track
 
 ### P2 — Architecture
 

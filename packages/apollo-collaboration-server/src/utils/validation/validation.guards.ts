@@ -8,6 +8,8 @@ import {
 } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 
+import { IS_PUBLIC_KEY } from '../jwt-auth.guard.js'
+
 @Injectable()
 export class ValidationGuard implements CanActivate {
   private readonly logger = new Logger(ValidationGuard.name)
@@ -21,6 +23,13 @@ export class ValidationGuard implements CanActivate {
    *          FALSE: user is not allowed to execute endpoint
    */
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ])
+    if (isPublic) {
+      return true
+    }
     try {
       const validationResult = await validationRegistry.backendPreValidate({
         context,

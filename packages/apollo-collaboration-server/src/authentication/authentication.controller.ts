@@ -15,10 +15,9 @@ import {
 import type { Response } from 'express'
 
 import { GoogleAuthGuard } from '../utils/google.guard.js'
+import { Public } from '../utils/jwt-auth.guard.js'
 import { MicrosoftAuthGuard } from '../utils/microsoft.guard.js'
-import { Role } from '../utils/role/role.enum.js'
 import { AUTH_COOKIE_NAME } from '../utils/strategies/jwt.strategy.js'
-import { Validations } from '../utils/validation/validatation.decorator.js'
 
 import {
   AuthenticationService,
@@ -32,7 +31,7 @@ const COOKIE_OPTIONS = {
   maxAge: 24 * 60 * 60 * 1000,
 }
 
-@Validations(Role.None)
+@Public()
 @Controller('auth')
 export class AuthenticationController {
   private readonly logger = new Logger(AuthenticationController.name)
