@@ -12,7 +12,9 @@ in `apollo-common`, with SQL implementations in `apollo-entities`.
 - [x] Repository interfaces in `apollo-common/src/repositories/`
 - [x] SQL repository implementations in `apollo-entities/src/repositories/`
 - [x] Raw SQL for performance-critical tree queries (recursive CTEs)
-- [x] Unit tests for all repositories (40 tests passing)
+- [x] Unit tests for all repositories (42 tests passing)
+- [x] SQL-optimized `searchText` (LIKE + recursive CTE instead of loading all features)
+- [x] SQL-optimized `findByIndexedId` (LIKE + recursive CTE instead of loading all features)
 - [x] Import benchmark (see benchmark results below)
 - [x] Transactional UnitOfWork (BEGIN/COMMIT wrapping all change executions)
 - [x] Debug logging cleanup (removed `[DEBUG checkFeature]` and `[DEBUG seed]`)
@@ -29,7 +31,13 @@ in `apollo-common`, with SQL implementations in `apollo-entities`.
    NumberTextField's `should('not.be.disabled')` wait was added but timing is
    still flaky.
 
-2. **addAssembly tests — session setup failures** — `cy.click()` timeouts on
+2. **deleteFeature tests (0/3 passing)** — MUI dialog overlay covers Apollo
+   menu button during `addAssemblyFromGff`. Cypress `cy.click()` fails because
+   `MuiDialog-container` is covering the target element. Consistent across
+   runs. Root cause: dialog from login/startup flow not dismissing before
+   test proceeds. Not related to transaction changes.
+
+3. **addAssembly tests — session setup failures** — `cy.click()` timeouts on
    session creation. Likely a Cypress session caching issue, not
    transaction-related.
 
@@ -42,12 +50,38 @@ in `apollo-common`, with SQL implementations in `apollo-entities`.
    - **Investigation needed**: Profile GFF3 parsing to find bottlenecks.
      Consider streaming parser improvements or parallel parsing.
 
-4. **`searchText` loads all features into memory** — Currently fetches all
-   features for given refSeqs, tokenizes in JS. Should push filtering to SQL
-   with `LIKE` or `json_extract` for scalability.
+4. **`searchText` and `findByIndexedId`** — Now optimized to use SQL LIKE
+   filtering + recursive CTE for parent traversal. Previously loaded all
+   features into memory. Verified with unit tests (42 passing).
 
-5. **`findByIndexedId` loads all features into memory** — Same pattern as
-   searchText. Needs SQL-side attribute value search.
+### P1 — Test Infrastructure
+
+5. **Migrate E2E tests from Cypress to Playwright** — Cypress has poor
+   command-line debugging: no visibility into what's on screen, opaque session
+   caching, silent click failures when dialogs cover elements, and intercept
+   timing issues. Playwright provides:
+   - Direct screenshots/traces at any point
+   - Network request logging built in
+   - Explicit visibility checks with auto-waiting
+   - `page.evaluate()` for direct DOM inspection
+   - Better error messages with element screenshots on failure
+   - Trace viewer for post-mortem debugging
+   - Strategy: migrate one test suite (deleteFeature) as proof of concept,
+     then incrementally convert remaining suites.
+   - **Proof of concept started**: `pw-tests/` directory with helpers and
+     deleteFeature test. Login flow works, admin role verified, assembly form
+     navigation works. Blocked on file upload hanging (see P0 issue below).
+
+6. **File upload hangs** — uploading a 3.3KB GFF3 file via the Add Assembly
+   form hangs indefinitely at ~50% progress. Confirmed with both Playwright
+   and direct curl. The server-side code in `FileStorageEngine._handleFile`
+   uses streaming (`pipeline(stream, gz, fileWriteStream)`) which may have
+   issues. The `filesUtil.ts` `writeFileAndCalculateHash` function uses
+   `stream.on('data')` for progress + hash calculation, then
+   `pipeline(stream, gz, fileWriteStream)` — attaching both a data listener
+   and a pipeline to the same stream could cause backpressure issues.
+   **Next step**: investigate and fix the streaming code in
+   `filesUtil.ts`/`FileStorageEngine.ts`.
 
 ### P2 — Architecture
 

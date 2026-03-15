@@ -28,10 +28,12 @@ export class ApolloMikroOrmModule {
               allowGlobalContext: true,
             })
             if (dbType === 'sqlite') {
-              await orm.em.getConnection().execute('PRAGMA foreign_keys = ON')
-              await orm.em.getConnection().execute('PRAGMA journal_mode = WAL')
-              await orm.em.getConnection().execute('PRAGMA synchronous = NORMAL')
-              this.logger.log('SQLite foreign keys enabled, WAL mode set')
+              const conn = orm.em.getConnection()
+              await conn.execute('PRAGMA foreign_keys = ON')
+              await conn.execute('PRAGMA journal_mode = WAL')
+              await conn.execute('PRAGMA synchronous = NORMAL')
+              await conn.execute('PRAGMA busy_timeout = 5000')
+              this.logger.log('SQLite foreign keys enabled, WAL mode set, busy_timeout=5000ms')
             }
             this.logger.log('MikroORM initialized, updating schema...')
             await orm.schema.update()

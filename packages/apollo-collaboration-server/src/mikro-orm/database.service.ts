@@ -9,7 +9,6 @@ import type {
   JBrowseConfigRepository,
   RefSeqChunkRepository,
   RefSeqRepository,
-  UnitOfWork,
   UserRepository,
 } from '@apollo-annotation/common'
 import {
@@ -28,10 +27,29 @@ import {
 import { EntityManager } from '@mikro-orm/core'
 import { Inject, Injectable } from '@nestjs/common'
 
+export interface TransactionScope {
+  assembly: AssemblyRepository
+  feature: FeatureRepository
+  refSeq: RefSeqRepository
+  refSeqChunk: RefSeqChunkRepository
+  checkConfig: CheckRepository
+  check: CheckResultRepository
+  file: FileRepository
+  user: UserRepository
+  jbrowseConfig: JBrowseConfigRepository
+  counter: CounterRepository
+}
+
+// Provides repository access to the database. Each getter creates an isolated
+// EntityManager (via em.fork()) so that reads don't share identity-map state
+// between callers. For writes that need atomicity, use transactional().
 @Injectable()
 export class DatabaseService {
   constructor(@Inject(EntityManager) private readonly em: EntityManager) {}
 
+  // em.fork() creates a lightweight copy of the EntityManager with its own
+  // identity map but sharing the same connection pool. This prevents one
+  // caller's loaded entities from leaking into another caller's queries.
   private fork() {
     return this.em.fork()
   }
@@ -80,31 +98,24 @@ export class DatabaseService {
     return new MikroOrmChangeRepository(this.fork())
   }
 
-  async createUnitOfWork() {
-    const em = this.fork()
-    await em.begin()
-    return {
-      assembly: new MikroOrmAssemblyRepository(em) as AssemblyRepository,
-      feature: new MikroOrmFeatureRepository(em) as FeatureRepository,
-      refSeq: new MikroOrmRefSeqRepository(em) as RefSeqRepository,
-      refSeqChunk: new MikroOrmRefSeqChunkRepository(
-        em,
-      ) as RefSeqChunkRepository,
-      checkConfig: new MikroOrmCheckRepository(em) as CheckRepository,
-      check: new MikroOrmCheckResultRepository(em) as CheckResultRepository,
-      file: new MikroOrmFileRepository(em) as FileRepository,
-      user: new MikroOrmUserRepository(em) as UserRepository,
-      jbrowseConfig: new MikroOrmJBrowseConfigRepository(
-        em,
-      ) as JBrowseConfigRepository,
-      unitOfWork: {
-        async commit() {
-          await em.commit()
-        },
-        async rollback() {
-          await em.rollback()
-        },
-      } satisfies UnitOfWork,
-    }
+  // Runs a callback inside a database transaction. MikroORM's transactional()
+  // creates a forked EntityManager, wraps all operations in BEGIN/COMMIT, and
+  // automatically rolls back on error. All repositories in the callback share
+  // the same transactional EM so their writes are atomic.
+  async transactional<T>(callback: (scope: TransactionScope) => Promise<T>) {
+    return this.em.transactional(async (txEm) => {
+      return callback({
+        assembly: new MikroOrmAssemblyRepository(txEm),
+        feature: new MikroOrmFeatureRepository(txEm),
+        refSeq: new MikroOrmRefSeqRepository(txEm),
+        refSeqChunk: new MikroOrmRefSeqChunkRepository(txEm),
+        checkConfig: new MikroOrmCheckRepository(txEm),
+        check: new MikroOrmCheckResultRepository(txEm),
+        file: new MikroOrmFileRepository(txEm),
+        user: new MikroOrmUserRepository(txEm),
+        jbrowseConfig: new MikroOrmJBrowseConfigRepository(txEm),
+        counter: new MikroOrmCounterRepository(txEm),
+      })
+    })
   }
 }

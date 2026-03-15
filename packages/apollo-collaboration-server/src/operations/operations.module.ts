@@ -2,7 +2,6 @@ import { Module, forwardRef } from '@nestjs/common'
 
 import { AssembliesModule } from '../assemblies/assemblies.module.js'
 import { ChecksModule } from '../checks/checks.module.js'
-import { CountersModule } from '../counters/counters.module.js'
 import { FeaturesModule } from '../features/features.module.js'
 import { FilesModule } from '../files/files.module.js'
 import { JBrowseModule } from '../jbrowse/jbrowse.module.js'
@@ -19,7 +18,6 @@ import { OperationsService } from './operations.service.js'
     RefSeqsModule,
     FilesModule,
     UsersModule,
-    CountersModule,
     MessagesModule,
     JBrowseModule,
     ChecksModule,

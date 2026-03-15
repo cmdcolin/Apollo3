@@ -17,7 +17,6 @@ import {
 } from '@nestjs/common'
 
 import { ChecksService } from '../checks/checks.service.js'
-import { CountersService } from '../counters/counters.service.js'
 import { FilesService } from '../files/files.service.js'
 import { MessagesGateway } from '../messages/messages.gateway.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
@@ -35,27 +34,31 @@ const STATUS_ZERO_CHANGE_TYPES = new Set([
 export class ChangesService {
   constructor(
     private readonly filesService: FilesService,
-    private readonly countersService: CountersService,
     private readonly pluginsService: PluginsService,
     private readonly messagesGateway: MessagesGateway,
     private readonly db: DatabaseService,
     private readonly checksService: ChecksService,
   ) {}
 
-  private async buildServerDataStore(user: string): Promise<ServerDataStore> {
-    const uow = await this.db.createUnitOfWork()
+  private buildServerDataStore(
+    scope: import('../mikro-orm/database.service.js').TransactionScope,
+    user: string,
+  ): ServerDataStore {
     return {
       typeName: 'Server',
-      featureRepository: uow.feature,
-      assemblyRepository: uow.assembly,
-      refSeqRepository: uow.refSeq,
-      refSeqChunkRepository: uow.refSeqChunk,
-      checkRepository: uow.checkConfig,
-      checkResultRepository: uow.check,
-      fileRepository: uow.file,
-      userRepository: uow.user,
-      jbrowseConfigRepository: uow.jbrowseConfig,
-      unitOfWork: uow.unitOfWork,
+      featureRepository: scope.feature,
+      assemblyRepository: scope.assembly,
+      refSeqRepository: scope.refSeq,
+      refSeqChunkRepository: scope.refSeqChunk,
+      checkRepository: scope.checkConfig,
+      checkResultRepository: scope.check,
+      fileRepository: scope.file,
+      userRepository: scope.user,
+      jbrowseConfigRepository: scope.jbrowseConfig,
+      unitOfWork: {
+        async commit() {},
+        async rollback() {},
+      },
       filesService: {
         getFileStream: (file) => this.filesService.getFileStream(file),
         getFileHandle: (file) => this.filesService.getFileHandle(file),
@@ -70,7 +73,6 @@ export class ChangesService {
         },
       },
       pluginsService: this.pluginsService,
-      counterService: this.countersService,
       user,
     }
   }
@@ -78,15 +80,12 @@ export class ChangesService {
   private readonly logger = new Logger(ChangesService.name)
 
   async create(change: BaseChange, user: DecodedJWT) {
-    this.logger.debug(`Requested change: ${JSON.stringify(change)}`)
-
-    const sequence =
-      await this.countersService.getNextSequenceValue('changeCounter')
-    const uniqUserId = `${user.email}-${sequence}`
+    this.logger.log(`Change request: ${change.typeName} from ${user.email}`)
 
     const validationResult = await validationRegistry.backendPreValidate(change)
     if (!validationResult.ok) {
       const errorMessage = validationResult.resultsMessages
+      this.logger.error(`Pre-validation failed: ${errorMessage}`)
       throw new UnprocessableEntityException(
         `Error in backend pre-validation: ${errorMessage}`,
       )
@@ -109,14 +108,23 @@ export class ChangesService {
       }
     }
 
-    const backend = await this.buildServerDataStore(uniqUserId)
-    try {
+    const startTime = Date.now()
+    const sequence = await this.db.transactional(async (scope) => {
+      const seq =
+        await scope.counter.getNextSequenceValue('changeCounter')
+      const uniqUserId = `${user.email}-${seq}`
+      const backend = this.buildServerDataStore(scope, uniqUserId)
       await change.execute(backend)
-      await backend.unitOfWork.commit()
-    } catch (error) {
-      await backend.unitOfWork.rollback()
-      throw new UnprocessableEntityException(String(error))
-    }
+
+      if (STATUS_ZERO_CHANGE_TYPES.has(change.typeName)) {
+        await scope.assembly.activateByUser(uniqUserId)
+        await scope.refSeqChunk.activateByUser(uniqUserId)
+        await scope.feature.activateByUser(uniqUserId)
+        await scope.refSeq.activateByUser(uniqUserId)
+      }
+      return seq
+    })
+    this.logger.log(`Change executed in ${Date.now() - startTime}ms: ${change.typeName}`)
 
     const changeDoc = await this.db.changeLog.create({
       assembly: isAssemblySpecificChange(change) ? change.assembly : undefined,
@@ -126,14 +134,6 @@ export class ChangesService {
       user: user.email,
       sequence,
     })
-
-    if (STATUS_ZERO_CHANGE_TYPES.has(change.typeName)) {
-      this.logger.debug('Activating temporary documents')
-      await this.db.assembly.activateByUser(uniqUserId)
-      await this.db.refSeqChunk.activateByUser(uniqUserId)
-      await this.db.feature.activateByUser(uniqUserId)
-      await this.db.refSeq.activateByUser(uniqUserId)
-    }
 
     if (isFeatureChange(change)) {
       const checkedRootIds = new Set<string>()

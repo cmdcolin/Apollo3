@@ -7,7 +7,6 @@ import { AssembliesModule } from './assemblies/assemblies.module.js'
 import { AuthenticationModule } from './authentication/authentication.module.js'
 import { ChangesModule } from './changes/changes.module.js'
 import { ChecksModule } from './checks/checks.module.js'
-import { CountersModule } from './counters/counters.module.js'
 import { ExportModule } from './export/export.module.js'
 import { FeaturesModule } from './features/features.module.js'
 import { FilesModule } from './files/files.module.js'
@@ -120,7 +119,6 @@ const validationSchema = Joi.object({
     MessagesModule,
     ApolloMikroOrmModule.forRoot(),
     PluginsModule.registerAsync(),
-    CountersModule,
     RefSeqsModule,
     UsersModule,
     FilesModule,

@@ -21,23 +21,11 @@ Cypress.Commands.add('loginAsGuest', () => {
   )
   cy.visit('/?config=http://localhost:3999/jbrowse/config.json')
   cy.contains('button', 'Apollo', { timeout: 15_000 }).should('be.enabled')
-  // Debug: check if token is in sessionStorage after page load
-  cy.window().then((win) => {
-    const keys = Object.keys(win.sessionStorage)
-    cy.task(
-      'log',
-      `[DEBUG loginAsGuest] sessionStorage keys: ${JSON.stringify(keys)}`,
-    )
-    for (const key of keys) {
-      if (
-        key.toLowerCase().includes('token') ||
-        key.toLowerCase().includes('internet')
-      ) {
-        cy.task(
-          'log',
-          `[DEBUG loginAsGuest] ${key} = ${win.sessionStorage.getItem(key)?.slice(0, 80)}...`,
-        )
-      }
+  // Dismiss any dialogs that may appear (e.g. JBrowse "Local session not found" error)
+  cy.get('body').then(($body) => {
+    if ($body.find('.MuiDialog-root').length > 0) {
+      cy.get('body').type('{esc}')
+      cy.get('.MuiDialog-root').should('not.exist')
     }
   })
 })
@@ -191,6 +179,13 @@ Cypress.Commands.add(
     // Wait for the menu item to be registered before opening.
     // Admin menus are added asynchronously after login.
     cy.contains('button', 'Apollo', { timeout: 15_000 }).should('be.enabled')
+    // Dismiss any dialogs that may cover the menu button
+    cy.get('body').then(($body) => {
+      if ($body.find('.MuiDialog-root').length > 0) {
+        cy.get('body').type('{esc}')
+        cy.get('.MuiDialog-root').should('not.exist')
+      }
+    })
     cy.contains('button', 'Apollo').click()
     cy.contains('[role="menuitem"]', firstItem, { timeout: 15_000 })
     for (const pathPart of menuItemPathPrefix) {

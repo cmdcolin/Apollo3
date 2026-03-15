@@ -56,7 +56,8 @@ export abstract class FromFileBaseChange extends AssemblySpecificChange {
     let incompleteLine = ''
     let lastLineIsIncomplete = true
     let parsingStarted = false
-    logger.debug?.('starting sequence stream')
+    // eslint-disable-next-line no-console
+    console.log(`[addRefSeqIntoDb] Starting sequence stream for checksum=${fileRow.checksum} type=${fileRow.type}`)
     let lineCount = 0
     const decoder = new TextDecoder()
     for await (const data of sequenceStream) {
@@ -150,6 +151,8 @@ export abstract class FromFileBaseChange extends AssemblySpecificChange {
         }
       }
     }
+    // eslint-disable-next-line no-console
+    console.log(`[addRefSeqIntoDb] Stream complete: ${lineCount} lines, parsingStarted=${parsingStarted}`)
     if (!parsingStarted) {
       throw new Error('No reference sequences found in file')
     }

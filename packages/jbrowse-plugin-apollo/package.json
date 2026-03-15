@@ -41,6 +41,7 @@
     "test:e2e:desktop:ci": "bash test/e2e-desktop-setup.sh && xvfb-run --auto-servernum tsx test/e2e-desktop.ts --headless",
     "test:e2e:desktop:setup": "bash test/e2e-desktop-setup.sh",
     "test:e2e:headed": "yarn build && start-test \"yarn start:e2e-servers\" \"9000|8999|http://localhost:3999/health\" \"cypress run --browser chrome --headed\"",
+    "test:pw": "bash scripts/e2e-servers.sh test",
     "typecheck": "tsc --noEmit",
     "postversion": "git push --follow-tags"
   },
@@ -86,6 +87,7 @@
     "@jest/globals": "^29.0.3",
     "@mui/material": "^7.3.7",
     "@mui/x-data-grid": "^8.0.0",
+    "@playwright/test": "^1.58.2",
     "@types/autosuggest-highlight": "^3",
     "@types/file-saver": "^2",
     "@types/lodash.merge": "^4",
