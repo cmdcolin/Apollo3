@@ -14,29 +14,34 @@ The repository pattern abstracts the database layer behind interfaces in
 - [x] SQL repository implementations in `apollo-entities/src/repositories/`
 - [x] Raw SQL for performance-critical tree queries (recursive CTEs)
 - [x] Unit tests for all repositories (44 tests passing)
-- [x] SQL-optimized `searchText` (LIKE + recursive CTE instead of loading all features)
-- [x] SQL-optimized `findByIndexedId` (LIKE + recursive CTE instead of loading all features)
+- [x] SQL-optimized `searchText` (LIKE + recursive CTE instead of loading all
+      features)
+- [x] SQL-optimized `findByIndexedId` (LIKE + recursive CTE instead of loading
+      all features)
 - [x] Import benchmark (see benchmark results below)
 - [x] Transactional change execution via `em.transactional()`
 - [x] Debug logging cleanup (removed `[DEBUG checkFeature]` and `[DEBUG seed]`)
 - [x] WAL mode + synchronous=NORMAL SQLite pragmas
 - [x] Check seeding on server startup
 - [x] RequestContext middleware — per-request EM isolation, no manual fork
-- [x] Removed dead code: `UnitOfWork`, `CountersService`, `filesService.create/remove` from interface
+- [x] Removed dead code: `UnitOfWork`, `CountersService`,
+      `filesService.create/remove` from interface
 - [x] Removed `allowGlobalContext: true` — proper RequestContext everywhere
-- [x] Desktop driver simplified — `em.transactional()` instead of manual UnitOfWork
+- [x] Desktop driver simplified — `em.transactional()` instead of manual
+      UnitOfWork
 - [x] Simple queries migrated from raw SQL to `em.find()`/`em.findOne()`
-  (findAll, findById, findByIds, findByRange, findRootsByRange, findChildren)
+      (findAll, findById, findByIds, findByRange, findRootsByRange,
+      findChildren)
 - [x] PostgreSQL-compatible raw SQL (CAST(attributes AS TEXT) for LIKE on json)
 - [x] E2E server script supports `DB_BACKEND=postgresql`
-- [x] Dead code cleanup: duplicate `UploadedFile`, `MessagesService`, stub `file.entity.ts`,
-  unused `user` field in `CreateFileDto`
+- [x] Dead code cleanup: duplicate `UploadedFile`, `MessagesService`, stub
+      `file.entity.ts`, unused `user` field in `CreateFileDto`
 - [x] Stale MongoDB comment cleanup
-- [x] MongoDB feature repository (`MongoFeatureRepository`) with iterative
-  BFS tree traversal — works with any MikroORM driver
+- [x] MongoDB feature repository (`MongoFeatureRepository`) with iterative BFS
+      tree traversal — works with any MikroORM driver
 - [x] Repository factory pattern — `DatabaseService` selects
-  `MikroOrmFeatureRepository` (SQLite/PostgreSQL) or `MongoFeatureRepository`
-  (MongoDB) based on `DB_BACKEND` env var
+      `MikroOrmFeatureRepository` (SQLite/PostgreSQL) or
+      `MongoFeatureRepository` (MongoDB) based on `DB_BACKEND` env var
 - [x] `DB_BACKEND=mongo` accepted in Joi validation and mikro-orm module
 - [x] `docker-compose.yml` with PostgreSQL service for local development/testing
 - [x] Migrated all E2E tests from Cypress to Playwright
@@ -58,10 +63,11 @@ The repository pattern abstracts the database layer behind interfaces in
 2. **Set Translation Start / Set Longest ORF** — Apollo Classic's most-used
    curation operations. Annotators need to set the translation start site and
    auto-calculate the longest open reading frame.
-   - New `SetTranslationStartChange`: adjusts CDS boundaries based on a
-     selected start codon position
-   - New `SetLongestOrfChange`: scans transcript sequence, picks longest
-     reading frame, sets CDS boundaries accordingly
+
+   - New `SetTranslationStartChange`: adjusts CDS boundaries based on a selected
+     start codon position
+   - New `SetLongestOrfChange`: scans transcript sequence, picks longest reading
+     frame, sets CDS boundaries accordingly
    - Requires sequence retrieval during change execution (use existing
      `SequenceService`)
    - Frontend: right-click menu items on CDS/transcript features
@@ -71,35 +77,38 @@ The repository pattern abstracts the database layer behind interfaces in
 3. **Split Transcript** — Apollo Classic supports splitting a transcript into
    two independent transcripts. Apollo3 has `MergeTranscriptsChange` but no
    inverse split operation.
-   - New `SplitTranscriptChange`: given a transcript and a split point,
-     creates two new transcripts partitioning the child exons/CDSs
+
+   - New `SplitTranscriptChange`: given a transcript and a split point, creates
+     two new transcripts partitioning the child exons/CDSs
    - Exons spanning the split point should be assigned to whichever side
      contains the majority, or duplicated and trimmed
    - Frontend: right-click menu on transcript features
    - **Files**: `packages/apollo-shared/src/Changes/`, plugin context menu
 
 4. **Attribute/Metadata Editing UI** — Apollo Classic has rich editors for
-   dbxrefs, GO terms, gene products, and comments. Apollo3 stores attributes
-   as generic key-value pairs but has no dedicated editing UI.
+   dbxrefs, GO terms, gene products, and comments. Apollo3 stores attributes as
+   generic key-value pairs but has no dedicated editing UI.
+
    - Database cross-references (e.g., UniProt, NCBI Gene) with autocomplete
    - GO term annotation with evidence codes (EXP, IDA, ISS, etc.)
    - Gene product names
    - Free-text comments/notes
-   - **Files**: new components in `packages/jbrowse-plugin-apollo/src/components/`,
-     extend "Edit feature details" dialog
+   - **Files**: new components in
+     `packages/jbrowse-plugin-apollo/src/components/`, extend "Edit feature
+     details" dialog
 
-5. **Non-canonical Splice Site Detection** — Apollo Classic detects GT/AG
-   (and GC) splice donor/acceptor sites. Core QC check for gene annotators.
+5. **Non-canonical Splice Site Detection** — Apollo Classic detects GT/AG (and
+   GC) splice donor/acceptor sites. Core QC check for gene annotators.
    - New check type registered in `CheckRegistry`
-   - Requires reading sequence at exon boundaries (2bp upstream donor,
-     2bp downstream acceptor)
+   - Requires reading sequence at exon boundaries (2bp upstream donor, 2bp
+     downstream acceptor)
    - Report non-canonical sites as warnings (not errors — some are valid)
    - **Files**: `packages/apollo-shared/src/Checks/`, server check seeding
 
 ### P1 — Security
 
-6. **Authentication security audit** — Review the Passport + JWT cookie
-   auth implementation for:
+6. **Authentication security audit** — Review the Passport + JWT cookie auth
+   implementation for:
    - JWT secret strength and rotation
    - Cookie security settings (HttpOnly, Secure, SameSite)
    - CSRF protection for cookie-based auth
@@ -111,8 +120,9 @@ The repository pattern abstracts the database layer behind interfaces in
 
 ### P1 — Testing
 
-7. **Unit tests for untested repositories** — Four repositories have zero
-   unit test coverage:
+7. **Unit tests for untested repositories** — Four repositories have zero unit
+   test coverage:
+
    - `CheckRepository` (6 interface methods)
    - `CheckResultRepository` (9 interface methods)
    - `UserRepository` (9 interface methods)
@@ -120,54 +130,143 @@ The repository pattern abstracts the database layer behind interfaces in
    - Follow existing patterns in `repositories.test.ts`
    - **Files**: `packages/apollo-entities/src/repositories/repositories.test.ts`
 
-7. **MongoFeatureRepository integration tests** — The MongoDB feature
-   repository has no tests. Tree traversal (iterative BFS) and text search
-   (in-memory filtering) are completely untested.
+8. **MongoFeatureRepository integration tests** — The MongoDB feature repository
+   has no tests. Tree traversal (iterative BFS) and text search (in-memory
+   filtering) are completely untested.
    - Use `mongodb-memory-server` or a Docker-based MongoDB instance
    - Run the same feature repository test suite against MongoDB
    - **Files**: new test file in `packages/apollo-entities/src/repositories/`
 
 ### P1 — Performance
 
-8. **Import speed** — Current: ~8s for volvox test data. Breakdown:
-   - GFF3 parsing + file I/O: ~6s (dominant)
-   - DB writes: ~2s (already optimized with `insertMany` batching)
-   - Transaction wrapping gives ~12% speedup on DB writes (WAL+NORMAL config)
-   - **Investigation needed**: Profile GFF3 parsing to find bottlenecks.
+8. **N+1 queries in check execution after mutations** —
+   `changes.service.ts:130-136` loops through `changedIds` calling
+   `findRootParent()` individually for each changed feature, then calls
+   `checkFeature()` per root. A bulk edit touching 100 features fires 100+
+   database queries. Fix: batch `findByIds()` upfront, deduplicate roots.
+
+   - **Files**:
+     `packages/apollo-collaboration-server/src/changes/changes.service.ts`
+
+9. **N+1 queries in GFF3 export** — `export.service.ts:94-112` calls
+   `findDescendants()` per root feature in a loop. `findDescendantsOfMany()`
+   already exists in the repository but isn't used here. Exporting an assembly
+   with 500 genes = 500 tree traversal queries instead of 1.
+
+   - **Files**:
+     `packages/apollo-collaboration-server/src/export/export.service.ts`
+
+10. **N+1 queries in feature count** — `features.service.ts:39-47` loops through
+    all refSeqs calling `countByRange()` individually. An assembly with 30
+    chromosomes = 30 COUNT queries. Should be a single query with
+    `WHERE refSeq IN (...)`.
+
+    - **Files**:
+      `packages/apollo-collaboration-server/src/features/features.service.ts`
+
+11. **O(n^2) tree assembly in export** — `export.service.ts:21-44`
+    `featureRowToSnapshot()` does `allRows.filter(r => r.parentId === root._id)`
+    for each feature, scanning the full array each time. Should build a
+    parent→children map once upfront.
+
+    - **Files**:
+      `packages/apollo-collaboration-server/src/export/export.service.ts`
+
+12. **Import speed** — Current: ~8s for volvox test data. Breakdown:
+
+- GFF3 parsing + file I/O: ~6s (dominant)
+- DB writes: ~2s (already optimized with `insertMany` batching)
+- Transaction wrapping gives ~12% speedup on DB writes (WAL+NORMAL config)
+- **Investigation needed**: Profile GFF3 parsing to find bottlenecks.
+
+### P1 — Data Integrity
+
+13. **Counter race condition** — `MikroOrmCounterRepository.ts:9-21` does a
+    read-modify-write without atomicity. Two concurrent requests can read the
+    same counter value before either flushes, producing duplicate sequence
+    numbers. Fix: use atomic SQL `UPDATE ... SET value = value + 1 RETURNING`.
+
+    - **Files**:
+      `packages/apollo-entities/src/repositories/MikroOrmCounterRepository.ts`
+
+14. **CheckResult JSON array denormalization** — `CheckResultEntity.ids` stores
+    feature IDs as a JSON array, queried with `LIKE '%"featureId"%'` + in-memory
+    filtering. Risk of false positives (partial ID match) and slow on large
+    tables. Longer-term: normalize into a junction table.
+    - **Files**:
+      `packages/apollo-entities/src/repositories/MikroOrmCheckResultRepository.ts`
 
 ### P1 — Bug Fixes
 
-9. **ObjectId `.toString()` assumption in frontend** —
-   `ApolloInternetAccount/model.ts:336` calls `.toString()` on
-   `checkResult._id`, a MongoDB ObjectId assumption. With SQL backends, `_id`
-   is already a string and `.toString()` is harmless but misleading. Remove
-   the call for clarity and correctness.
-   - **File**: `packages/jbrowse-plugin-apollo/src/ApolloInternetAccount/model.ts`
+15. **ObjectId `.toString()` assumption in frontend** —
+    `ApolloInternetAccount/model.ts:336` calls `.toString()` on
+    `checkResult._id`, a MongoDB ObjectId assumption. With SQL backends, `_id`
+    is already a string and `.toString()` is harmless but misleading. Remove the
+    call for clarity and correctness.
+
+- **File**: `packages/jbrowse-plugin-apollo/src/ApolloInternetAccount/model.ts`
+
+### P2 — Simplification
+
+16. **Remove pending import status** — The `status` field on assemblies and
+    features (`-1` = pending, `0` = active) was designed to hide partially
+    imported data. With transactional imports (`em.transactional()`), partial
+    data is rolled back on failure, making the status flag redundant. Removing
+    it simplifies `findByRange`, `findAll`, and the import flow.
+
+    - **Files**: `AddAssemblyAndFeaturesFromFileChange`, `features.service.ts`,
+      `assemblies.service.ts`, entity definitions
+
+17. **Remove InternetAccount from Apollo plugin** — Phase 2 of the cookie-based
+    auth migration. Currently the InternetAccount still exists for websocket
+    management and menu registration. Move these to simpler plugin-level code
+    that reads role from config and connects websocket directly.
+    - **Files**: `packages/jbrowse-plugin-apollo/src/ApolloInternetAccount/`
+
+### P2 — Database Optimization
+
+16. **Missing indexes** — `ChangeEntity` has no indexes on `assembly` or
+    `sequence` (queried in `findAll`). `FileEntity.checksum` is queried by
+    `findByChecksum()` but unindexed. `ExportEntity.assembly` unindexed.
+
+    - **Files**: entity definitions in `packages/apollo-entities/src/entities/`
+
+17. **N+1 in bulk feature lookup** — `features.service.ts:112-127` loops calling
+    `findById()` per feature ID instead of batching with `findByIds()`.
+
+    - **Files**:
+      `packages/apollo-collaboration-server/src/features/features.service.ts`
+
+18. **Repository instance recreation** — `database.service.ts` getters create a
+    new repository instance on every access. Could cache per request scope.
+    - **Files**:
+      `packages/apollo-collaboration-server/src/mikro-orm/database.service.ts`
 
 ### P2 — Collaboration & Workflow
 
-10. **Per-assembly permissions** — Apollo Classic has user/group permissions
-    per organism. Apollo3 currently has global roles only
-    (admin/user/readOnly). Multi-assembly deployments need per-assembly
-    access control.
+19. **Per-assembly permissions** — Apollo Classic has user/group permissions per
+    organism. Apollo3 currently has global roles only (admin/user/readOnly).
+    Multi-assembly deployments need per-assembly access control.
+
     - New `AssemblyPermission` entity: maps user → assembly → role
     - `ValidationGuard` checks per-assembly permissions before changes
     - Admin UI for assigning users to assemblies
     - Fallback: global role applies when no per-assembly permission exists
-    - **Files**: new entity in `apollo-entities`, new guard logic in server,
-      new admin component in plugin
+    - **Files**: new entity in `apollo-entities`, new guard logic in server, new
+      admin component in plugin
 
-11. **Feature ownership & audit display** — Apollo Classic tracks who
+20. **Feature ownership & audit display** — Apollo Classic tracks who
     created/last edited each feature. Apollo3 stores `user` on entities but
     doesn't expose this in the UI.
+
     - Display last editor in "Edit feature details" dialog
     - Show creation/modification timestamps
     - Optional: highlight features by ownership in the track display
     - **Files**: plugin "Edit feature details" components
 
-12. **Canned comments/attributes** — Apollo Classic lets admins configure
-    preset comment templates and attribute keys/values, speeding up
-    annotation significantly.
+21. **Canned comments/attributes** — Apollo Classic lets admins configure preset
+    comment templates and attribute keys/values, speeding up annotation
+    significantly.
     - New `CannedElement` entity (type: comment|key|value, text, assembly?)
     - Admin UI for managing canned elements
     - Autocomplete in attribute editing UI (integrates with item 4)
@@ -176,13 +275,14 @@ The repository pattern abstracts the database layer behind interfaces in
 ### P2 — Export/Import
 
 13. **FASTA export (CDS, protein, transcript sequences)** — Apollo Classic
-    exports CDS sequences, protein translations, and genomic sequences.
-    Apollo3 only exports GFF3 + optional genomic FASTA.
+    exports CDS sequences, protein translations, and genomic sequences. Apollo3
+    only exports GFF3 + optional genomic FASTA.
+
     - Export types: CDS FASTA, protein FASTA, transcript FASTA
-    - Protein export requires codon translation using configurable
-      translation tables (NCBI tables, default table 1)
-    - **Files**: `packages/apollo-collaboration-server/src/export/`,
-      new `TranslationService`
+    - Protein export requires codon translation using configurable translation
+      tables (NCBI tables, default table 1)
+    - **Files**: `packages/apollo-collaboration-server/src/export/`, new
+      `TranslationService`
 
 14. **Filtered/partial export** — Apollo Classic allows exporting specific
     reference sequences. Apollo3 exports entire assemblies.
@@ -192,9 +292,9 @@ The repository pattern abstracts the database layer behind interfaces in
 
 ### P2 — Search & Navigation
 
-15. **Sequence search (BLAT/BLAST integration)** — Apollo Classic has
-    pluggable BLAT/BLAST search. Annotators paste a sequence and get genomic
-    hits. Essential for evidence-based annotation.
+15. **Sequence search (BLAT/BLAST integration)** — Apollo Classic has pluggable
+    BLAT/BLAST search. Annotators paste a sequence and get genomic hits.
+    Essential for evidence-based annotation.
     - Pluggable `SequenceSearchProvider` interface (backend)
     - Default implementation: BLAT via `gfClient`/`gfServer`
     - Frontend: "Sequence Search" dialog, results displayed as track
@@ -204,22 +304,24 @@ The repository pattern abstracts the database layer behind interfaces in
 ### P2 — Architecture
 
 16. **PostgreSQL E2E CI pipeline** — E2E script supports PostgreSQL and
-    `docker-compose.yml` provides a local PostgreSQL service, but no CI
-    pipeline runs tests against PostgreSQL yet.
+    `docker-compose.yml` provides a local PostgreSQL service, but no CI pipeline
+    runs tests against PostgreSQL yet.
+
     - **Action**: Add a CI job that starts PostgreSQL via docker-compose and
       runs unit tests + E2E against it.
 
-17. **MongoDB E2E testing** — `MongoFeatureRepository` exists but has no
-    test coverage beyond type-checking. Unit tests run only against SQLite
-    (and optionally PostgreSQL).
+17. **MongoDB E2E testing** — `MongoFeatureRepository` exists but has no test
+    coverage beyond type-checking. Unit tests run only against SQLite (and
+    optionally PostgreSQL).
     - **Action**: Add a MongoDB test configuration and test the
       `MongoFeatureRepository` against a real MongoDB instance.
 
 ### P3 — QC & Validation Checks
 
 18. **Reading frame validation check** — Verify CDS features maintain proper
-    reading frame across exon boundaries. Phase must be consistent with
-    upstream exon lengths.
+    reading frame across exon boundaries. Phase must be consistent with upstream
+    exon lengths.
+
     - New check in `CheckRegistry`
     - Requires sequence context to compute expected phase per exon
     - **Files**: `packages/apollo-shared/src/Checks/`
@@ -241,11 +343,11 @@ The repository pattern abstracts the database layer behind interfaces in
 
 Import simulation: 3 refSeqs × (100 chunks + 1500 features)
 
-| SQLite Config         | Without TX | With TX | Speedup |
-|-----------------------|-----------|---------|---------|
-| WAL + NORMAL (prod)   | 259ms     | 228ms   | 12%     |
-| WAL + FULL            | 231ms     | 212ms   | 8%      |
-| DELETE + FULL          | 322ms     | 262ms   | 19%     |
+| SQLite Config       | Without TX | With TX | Speedup |
+| ------------------- | ---------- | ------- | ------- |
+| WAL + NORMAL (prod) | 259ms      | 228ms   | 12%     |
+| WAL + FULL          | 231ms      | 212ms   | 8%      |
+| DELETE + FULL       | 322ms      | 262ms   | 19%     |
 
 Primary win from transactions is **atomicity** (failed imports roll back
 cleanly), not raw speed.
@@ -253,21 +355,25 @@ cleanly), not raw speed.
 ## Architecture Decisions
 
 ### Multi-database support
-SQLite for development/small deployments, PostgreSQL for production,
-MongoDB for existing users. Repository factory pattern selects the correct
-implementation based on `DB_BACKEND`:
+
+SQLite for development/small deployments, PostgreSQL for production, MongoDB for
+existing users. Repository factory pattern selects the correct implementation
+based on `DB_BACKEND`:
+
 - SQLite/PostgreSQL → `MikroOrmFeatureRepository` (raw SQL with recursive CTEs)
 - MongoDB → `MongoFeatureRepository` (iterative BFS via generic EntityManager)
-All other repositories use the standard `MikroOrm*Repository` implementations
-which work with any MikroORM driver.
+  All other repositories use the standard `MikroOrm*Repository` implementations
+  which work with any MikroORM driver.
 
 ### Raw SQL for tree queries
+
 Recursive CTEs (`findDescendants`, `findRootParent`, `deleteDescendants`) use
-raw SQL via `em.getConnection().execute()`. Uses `CAST(attributes AS TEXT)`
-for LIKE queries on json columns (compatible with both SQLite and PostgreSQL).
+raw SQL via `em.getConnection().execute()`. Uses `CAST(attributes AS TEXT)` for
+LIKE queries on json columns (compatible with both SQLite and PostgreSQL).
 MongoDB uses iterative BFS traversal via the generic EntityManager API.
 
 ### No `root_id` denormalization (unless proven necessary)
+
 A `root_id` column on `FeatureEntity` has been proposed to enable single-query
 gene tree loading. However, this denormalizes the data and introduces a
 maintenance burden (must be kept in sync on reparenting). The current recursive
@@ -275,11 +381,13 @@ CTE approach is correct and performant for typical workloads. Only add `root_id`
 if profiling proves that tree loading is a real bottleneck in production.
 
 ### Transactional change execution
-All change executions are wrapped in `em.transactional()` which auto-commits
-on success and auto-rolls-back on error. RequestContext middleware provides
+
+All change executions are wrapped in `em.transactional()` which auto-commits on
+success and auto-rolls-back on error. RequestContext middleware provides
 per-request EM isolation.
 
 ### Status field convention
+
 - `status: -1` = temporary (pending activation after import)
 - `status: 0` = active
 - `activateByUser(user)` flips -1 → 0 for a specific user's records
