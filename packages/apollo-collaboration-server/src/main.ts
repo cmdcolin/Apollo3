@@ -14,6 +14,7 @@ import {
   operations,
   validationRegistry,
 } from '@apollo-annotation/shared'
+import { MikroORM, RequestContext } from '@mikro-orm/core'
 import type { LogLevel } from '@nestjs/common'
 import { HttpAdapterHost, NestFactory } from '@nestjs/core'
 import { json, urlencoded } from 'express'
@@ -72,6 +73,14 @@ async function bootstrap() {
 
   const { httpAdapter } = app.get(HttpAdapterHost)
   app.useGlobalFilters(new GlobalExceptionsFilter(httpAdapter))
+
+  // RequestContext middleware gives each HTTP request its own EntityManager
+  // fork (via AsyncLocalStorage). This means all database operations within a
+  // request share one identity map and don't interfere with other requests.
+  const orm = app.get(MikroORM)
+  app.use((_req: unknown, _res: unknown, next: () => void) => {
+    RequestContext.create(orm.em, next)
+  })
 
   app.use(json({ limit: '50mb' }))
   app.use(urlencoded({ extended: true, limit: '50mb' }))
