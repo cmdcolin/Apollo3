@@ -1,6 +1,7 @@
 import {
   type CanActivate,
   type ExecutionContext,
+  ForbiddenException,
   Inject,
   Injectable,
   SetMetadata,
@@ -15,6 +16,7 @@ export const ROLES_KEY = 'roles'
 
 export const Public = () => SetMetadata(IS_PUBLIC_KEY, true)
 export const Roles = (role: Role) => SetMetadata(ROLES_KEY, role)
+export const Authenticated = () => SetMetadata(ROLES_KEY, Role.None)
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -43,7 +45,7 @@ export class RolesGuard implements CanActivate {
 
     const inherited = RoleInheritance[user.role as keyof typeof RoleInheritance]
     if (!inherited?.includes(requiredRole)) {
-      throw new UnauthorizedException()
+      throw new ForbiddenException()
     }
 
     return true

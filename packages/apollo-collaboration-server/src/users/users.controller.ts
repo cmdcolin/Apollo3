@@ -14,7 +14,7 @@ import {
 import type { Request } from 'express'
 
 import { Role } from '../utils/role/role.enum.js'
-import { Roles } from '../utils/roles.guard.js'
+import { Authenticated, Roles } from '../utils/roles.guard.js'
 
 import { UserLocationDto } from './dto/create-user.dto.js'
 import { UsersService } from './users.service.js'
@@ -26,7 +26,7 @@ export class UsersController {
   ) {}
   private readonly logger = new Logger(UsersController.name)
 
-  @Roles(Role.None)
+  @Authenticated()
   @Get('me')
   getMe(@Req() req: Request) {
     const { user } = req as unknown as { user: DecodedJWT }
@@ -46,7 +46,7 @@ export class UsersController {
    * User who is calling this endpoint does not have any role yet and therefore there can not be 'Role' -validation
    * @returns The oldest (in terms of creation date) admin email address.
    */
-  @Roles(Role.None)
+  @Authenticated()
   @Get('admin')
   findAdmin() {
     return this.usersService.findByRole(Role.Admin)

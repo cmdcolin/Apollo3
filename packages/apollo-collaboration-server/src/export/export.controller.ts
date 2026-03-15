@@ -13,10 +13,11 @@ import {
 import type { Response as ExpressResponse } from 'express'
 
 import { Role } from '../utils/role/role.enum.js'
-import { Public, Roles } from '../utils/roles.guard.js'
+import { Roles } from '../utils/roles.guard.js'
 
 import { ExportService } from './export.service.js'
 
+@Roles(Role.ReadOnly)
 @Controller('export')
 export class ExportController {
   constructor(
@@ -30,7 +31,6 @@ export class ExportController {
    * @param request -
    * @returns The ID of an export that will be valid for 5 minutes
    */
-  @Roles(Role.ReadOnly)
   @Get('getID')
   async getExportID(@Query() request: { assembly: string }) {
     const exportDoc = await this.exportService.getExportID(request.assembly)
@@ -44,7 +44,6 @@ export class ExportController {
    * @param res -
    * @returns A StreamableFile of the GFF3
    */
-  @Public()
   @Get()
   async exportGFF3(
     // @Query()

@@ -34,12 +34,10 @@ interface CurrentUser {
 function useCurrentUser() {
   const [user, setUser] = useState<CurrentUser | null>(null)
   const [checked, setChecked] = useState(false)
-  const [httpStatus, setHttpStatus] = useState<number>()
 
   useEffect(() => {
     fetch('/users/me')
       .then((r) => {
-        setHttpStatus(r.status)
         if (r.ok) {
           return r.json()
         }
@@ -55,7 +53,7 @@ function useCurrentUser() {
       })
   }, [])
 
-  return { user, checked, httpStatus }
+  return { user, checked }
 }
 
 function useLoginTypes() {
@@ -122,14 +120,14 @@ function Header({ user }: { user?: CurrentUser | null }) {
         >
           Apollo
         </Typography>
-        {user && (
+        {user ? (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Typography variant="body2">{user.username}</Typography>
             <Button color="inherit" size="small" href="/auth/logout">
               Sign out
             </Button>
           </Box>
-        )}
+        ) : null}
       </Toolbar>
     </AppBar>
   )
@@ -142,7 +140,7 @@ function LoginSection() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
       <Typography variant="h6">Sign in</Typography>
-      {types.includes('google') && (
+      {types.includes('google') ? (
         <Button
           variant="contained"
           fullWidth
@@ -150,8 +148,8 @@ function LoginSection() {
         >
           Sign in with Google
         </Button>
-      )}
-      {types.includes('microsoft') && (
+      ) : null}
+      {types.includes('microsoft') ? (
         <Button
           variant="contained"
           fullWidth
@@ -159,12 +157,12 @@ function LoginSection() {
         >
           Sign in with Microsoft
         </Button>
-      )}
-      {types.includes('guest') && (
+      ) : null}
+      {types.includes('guest') ? (
         <Button variant="outlined" fullWidth href="/auth/guest">
           Continue as Guest
         </Button>
-      )}
+      ) : null}
     </Box>
   )
 }
@@ -180,12 +178,12 @@ function PendingApproval({ user }: { user: CurrentUser }) {
       <Typography variant="body2" sx={{ mb: 2 }}>
         An administrator needs to assign you a role before you can access
         Apollo.
-        {adminEmail && adminEmail !== 'root_user' && (
+        {adminEmail && adminEmail !== 'root_user' ? (
           <>
             {' '}
             Contact <strong>{adminEmail}</strong> to request access.
           </>
-        )}
+        ) : null}
       </Typography>
     </Box>
   )
@@ -204,28 +202,26 @@ function LoggedInContent({ user }: { user: CurrentUser }) {
         <ListItemButton component="a" href="/ui/changes/">
           <ListItemText primary="Recent Changes" />
         </ListItemButton>
-        {user.role === 'admin' && (
+        {user.role === 'admin' ? (
           <>
             <Divider sx={{ my: 1 }} />
             <ListItemButton component="a" href="/admin/users/">
               <ListItemText primary="Manage Users" />
             </ListItemButton>
           </>
-        )}
+        ) : null}
       </List>
     </Box>
   )
 }
 
 function IndexPage() {
-  const { user, checked, httpStatus } = useCurrentUser()
+  const { user, checked } = useCurrentUser()
 
   if (!checked) {
     return null
   }
 
-  const isUnauthenticated =
-    !user && (httpStatus === 401 || httpStatus === undefined)
   const isPendingApproval = user?.role === 'none'
 
   return (
@@ -234,17 +230,19 @@ function IndexPage() {
       <Header user={user} />
       <Container maxWidth="sm" sx={{ mt: 4, textAlign: 'center' }}>
         <Typography variant="h4" gutterBottom>
-          {isUnauthenticated
-            ? 'Welcome to Apollo'
-            : `Welcome, ${user?.username}`}
+          {user ? `Welcome, ${user.username}` : 'Welcome to Apollo'}
         </Typography>
         <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 4 }}>
           Collaborative genome annotation editor
         </Typography>
         <Paper variant="outlined" sx={{ p: 3 }}>
-          {isUnauthenticated && <LoginSection />}
-          {user && isPendingApproval && <PendingApproval user={user} />}
-          {user && !isPendingApproval && <LoggedInContent user={user} />}
+          {!user ? (
+            <LoginSection />
+          ) : isPendingApproval ? (
+            <PendingApproval user={user} />
+          ) : (
+            <LoggedInContent user={user} />
+          )}
         </Paper>
       </Container>
     </ThemeProvider>

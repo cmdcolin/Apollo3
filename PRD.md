@@ -149,6 +149,11 @@ workspace packages in parallel in ~3s.
    transcript). Parent gene bounds are updated. Full undo support via
    `UndoSplitTranscriptChange`. Available in context menu on transcript features
    in both the linear display and tabular editor.
+   - Unit tests: 12 tests covering `makeSplitTranscripts`, `toJSON`,
+     `getInverse` for both `SplitTranscriptChange` and `UndoSplitTranscriptChange`
+     in `packages/apollo-shared/src/Changes/SplitTranscriptChange.test.ts`
+   - E2E Playwright tests (3 tests): split at boundary, single-exon error dialog,
+     split-then-undo in `packages/jbrowse-plugin-apollo/pw-tests/splitTranscript.test.ts`
 
 4. **Attribute/Metadata Editing UI** — Apollo Classic has rich editors for
    dbxrefs, GO terms, gene products, and comments. Apollo3 stores attributes as
@@ -186,12 +191,13 @@ workspace packages in parallel in ~3s.
    `CheckResultRepository`, `UserRepository`, and `JBrowseConfigRepository`.
    Total: 65 repository tests passing.
 
-8. **MongoFeatureRepository integration tests** — The MongoDB feature repository
-   has no tests. Tree traversal (iterative BFS) and text search (in-memory
-   filtering) are completely untested.
-   - Use `mongodb-memory-server` or a Docker-based MongoDB instance
-   - Run the same feature repository test suite against MongoDB
-   - **Files**: new test file in `packages/apollo-entities/src/repositories/`
+8. ~~**MongoFeatureRepository integration tests**~~ — **Done.** 21 tests covering
+   all BFS traversal methods (`findDescendants`, `findDescendantsOfMany`,
+   `deleteDescendants`, `findRootParent`, `findRootParentsOfMany`) and in-memory
+   search methods (`searchText`, `findByIndexedId`). Tests run against SQLite
+   in-memory (MongoFeatureRepository uses only the generic MikroORM API, so the
+   logic is driver-independent). Total: 86 repository tests passing.
+   - **Files**: `packages/apollo-entities/src/repositories/mongo-feature-repository.test.ts`
 
 ### P1 — Performance
 
