@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto'
+
 import {
   type DecodedJWT,
   type RequestUserInformationMessage,
@@ -6,7 +8,6 @@ import {
 } from '@apollo-annotation/shared'
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { randomBytes } from 'node:crypto'
 
 import { MessagesGateway } from '../messages/messages.gateway.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'

@@ -1,7 +1,7 @@
 import type { FileRepository, FileRow } from '@apollo-annotation/common'
 import type { EntityManager, InferEntity } from '@mikro-orm/core'
 
-import { FileEntity, FileType } from '../entities/FileEntity.js'
+import { FileEntity, type FileType } from '../entities/FileEntity.js'
 
 function toRow(entity: InferEntity<typeof FileEntity>): FileRow {
   return {
@@ -20,7 +20,7 @@ export class MikroOrmFileRepository implements FileRepository {
     if (entity) {
       return toRow(entity)
     }
-    return undefined
+    return
   }
 
   async findByChecksum(checksum: string) {
@@ -28,7 +28,7 @@ export class MikroOrmFileRepository implements FileRepository {
     if (entity) {
       return toRow(entity)
     }
-    return undefined
+    return
   }
 
   async findAll() {

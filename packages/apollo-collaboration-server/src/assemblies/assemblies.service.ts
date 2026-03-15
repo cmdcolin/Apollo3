@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto'
+
 import { GetAssembliesOperation } from '@apollo-annotation/shared'
 import {
   Injectable,
@@ -5,7 +7,6 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common'
-import { randomBytes } from 'node:crypto'
 
 import { ChecksService } from '../checks/checks.service.js'
 import { FeaturesService } from '../features/features.service.js'
@@ -54,7 +55,7 @@ export class AssembliesService {
     const refSeqs = await this.refSeqsService.findAll({ assembly: _id })
     for (const refSeq of refSeqs) {
       const features = await this.featuresService.findByRange({
-        refSeq: refSeq._id as string,
+        refSeq: refSeq._id,
         start: 0,
         end: refSeq.length,
       })

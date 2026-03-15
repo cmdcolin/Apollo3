@@ -37,7 +37,7 @@ export class MikroOrmCheckRepository implements CheckRepository {
     if (entity) {
       return toRow(entity)
     }
-    return undefined
+    return
   }
 
   async findByIds(ids: string[]) {
@@ -53,7 +53,7 @@ export class MikroOrmCheckRepository implements CheckRepository {
     if (entity) {
       return toRow(entity)
     }
-    return undefined
+    return
   }
 
   async upsert(row: CheckRow) {

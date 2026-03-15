@@ -1,7 +1,7 @@
-import type { ChangeRepository, ChangeRow } from '@apollo-annotation/common'
-import { QueryOrder } from '@mikro-orm/core'
-import type { EntityManager, InferEntity } from '@mikro-orm/core'
 import { randomBytes } from 'node:crypto'
+
+import type { ChangeRepository, ChangeRow } from '@apollo-annotation/common'
+import {type  EntityManager,type  InferEntity, QueryOrder } from '@mikro-orm/core'
 
 import { ChangeEntity } from '../entities/ChangeEntity.js'
 

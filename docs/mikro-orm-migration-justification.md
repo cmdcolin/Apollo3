@@ -169,7 +169,7 @@ nested documents. Each has a clear, bounded fix.
 
 | Area                                 | What is currently harder                                                                                                               | Mitigation                                                                                     |
 | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Loading a full gene tree             | With nested documents, one query returns the entire gene. With flat rows, loading all descendants currently requires multiple queries. | Add a `root_id` column to every feature — one query then fetches the entire tree               |
+| Loading a full gene tree             | With nested documents, one query returns the entire gene. With flat rows, loading all descendants requires recursive CTEs. | Recursive CTEs already batch this efficiently; denormalization (`root_id`) only if proven bottleneck |
 | Deleting a gene and all its children | ~~Currently walks the tree and deletes one feature at a time~~ **Fixed**                                                               | `ON DELETE CASCADE` on the parent foreign key — the database handles it in one operation       |
 | Deleting an assembly                 | ~~Related records must be deleted in a specific order~~ **Fixed**                                                                      | Cascade delete rules implemented — the database handles ordering automatically                 |
 | Full-text search                     | Currently uses basic pattern matching (`LIKE`), weaker than MongoDB's text index                                                       | Replace with SQLite FTS5 or PostgreSQL `tsvector` — both are mature, built-in full-text search |
@@ -366,8 +366,9 @@ _Performance and schema optimization (implemented):_
 
 _Performance and schema optimization (remaining):_
 
-- **Add `root_id` column to the feature table** — enables single-query gene tree
-  loading, range queries, and deletion
+- **(Deferred) Add `root_id` column to the feature table** — would enable
+  single-query gene tree loading but denormalizes the data; only pursue if
+  profiling proves tree loading is a bottleneck
 - **Replace `LIKE`-based text search with native full-text search** — SQLite
   FTS5 or PostgreSQL tsvector
 - **Normalize check result IDs** — junction table for indexed per-feature

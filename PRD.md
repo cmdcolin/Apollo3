@@ -128,6 +128,13 @@ raw SQL via `em.getConnection().execute()`. Uses `CAST(attributes AS TEXT)`
 for LIKE queries on json columns (compatible with both SQLite and PostgreSQL).
 MongoDB uses iterative BFS traversal via the generic EntityManager API.
 
+### No `root_id` denormalization (unless proven necessary)
+A `root_id` column on `FeatureEntity` has been proposed to enable single-query
+gene tree loading. However, this denormalizes the data and introduces a
+maintenance burden (must be kept in sync on reparenting). The current recursive
+CTE approach is correct and performant for typical workloads. Only add `root_id`
+if profiling proves that tree loading is a real bottleneck in production.
+
 ### Transactional change execution
 All change executions are wrapped in `em.transactional()` which auto-commits
 on success and auto-rolls-back on error. RequestContext middleware provides

@@ -1,7 +1,7 @@
 import {
+  type NestedFeature,
   assembleFeatureTrees,
   checkRegistry,
-  type NestedFeature,
 } from '@apollo-annotation/common'
 import type { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
 import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common'

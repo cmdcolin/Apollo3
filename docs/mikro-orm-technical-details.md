@@ -58,17 +58,11 @@ Two fixes are proposed (detailed in the Schema Assessment section below):
 
 - **`ON DELETE CASCADE`** on the parent foreign key — the database automatically
   removes all children when a parent is deleted. One operation, no application
-  code.
-- **A `root_id` column** on every feature row, storing the top-level gene's ID.
-  This enables `DELETE FROM feature WHERE root_id = ?` — one query for the
-  entire tree. It also enables one-query tree loading (see the range query
-  discussion below). This is a much simpler form of denormalization than
-  MongoDB's `allIds` list: one fixed value per row instead of a variable-length
-  list, with the only maintenance case being transcript reparenting (rare).
+  code. **This is already implemented.**
 
 The assembly-level deletion already uses this pattern: features are deleted with
-`DELETE WHERE refSeq IN (...)`, one query. Extending it to the gene level via
-`root_id` is the same idea.
+`DELETE WHERE refSeq IN (...)`, one query. Gene-level deletion uses recursive
+CTEs to collect descendant IDs, then bulk deletes.
 
 ---
 
@@ -110,22 +104,19 @@ require.
 Deletion complexity and the proposed fixes (`ON DELETE CASCADE` and a `root_id`
 column) are covered in the worked example above.
 
-**Why this is solvable:** The same `root_id` column proposed for deletion
-collapses step 2 into a single query:
+**Why this is already solvable without denormalization:** Recursive CTEs
+(already implemented) load the full tree in a single query per root. The
+current implementation uses `findDescendantsOfMany` which batches all roots
+into one CTE query. For typical viewport loads this is efficient.
 
-```
-Step 1: SELECT * FROM feature WHERE parent IS NULL AND refSeq = ? AND min <= ? AND max >= ?
-Step 2: SELECT * FROM feature WHERE root_id IN (matched gene IDs from step 1)
-```
+A `root_id` column has been proposed as an optimization, but it denormalizes
+the data and introduces a maintenance burden (must be kept in sync on
+reparenting). **This should only be pursued if profiling proves that tree
+loading is a real bottleneck in production.** The current recursive CTE
+approach is correct and performant for typical workloads.
 
-Two queries total, any number of genes, any nesting depth. This matches
-MongoDB's single-fetch behavior while retaining all the benefits of the flat
-model for edits.
-
-**Why the tradeoff is acceptable even before this optimization:** Range queries
-happen on viewport navigation; single-feature edits happen continuously. The
-read path is the right place to invest optimization, and `root_id` gives a clear
-path to parity.
+Range queries happen on viewport navigation; single-feature edits happen
+continuously. The read path can be optimized incrementally if needed.
 
 ### Previously identified implementation gaps (now fixed)
 
@@ -164,7 +155,7 @@ any architectural changes.
 
 | Operation                           | Relational is harder?            | Status    | Fix                                  |
 | ----------------------------------- | -------------------------------- | --------- | ------------------------------------ |
-| Loading a full gene tree            | Yes — multiple queries currently | Fixable   | `root_id` column (single round trip) |
+| Loading a full gene tree            | Yes — multiple queries currently | Acceptable | Recursive CTEs already batch this; `root_id` only if proven bottleneck |
 | Deleting a gene and all descendants | No — cascade handles it          | **Fixed** | `ON DELETE CASCADE` on parent FK     |
 | Assembly deletion ordering          | No — cascade handles it          | **Fixed** | Cascade delete on all FKs            |
 | Bulk queries (search, export)       | No — batched queries now         | **Fixed** | Batched `IN` filters throughout      |
@@ -233,10 +224,12 @@ features in memory, eliminating all per-match database queries.
 
 ### Remaining schema improvements
 
-**1. Add `root_id` column to `FeatureEntity`**
+**1. (Deferred) Add `root_id` column to `FeatureEntity`**
 
-This would eliminate multi-query tree loading entirely. One query fetches the
-entire gene tree. Highest-impact remaining change.
+This would enable single-query gene tree loading but denormalizes the data —
+the `root_id` value must be kept in sync whenever a feature is reparented.
+Recursive CTEs already handle tree loading efficiently. **Only pursue this if
+profiling proves tree loading is a bottleneck in production.**
 
 **2. Normalize the `CheckResultEntity.ids` field**
 

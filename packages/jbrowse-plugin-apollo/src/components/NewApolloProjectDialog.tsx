@@ -1,7 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-misused-promises */
+import type PluginManager from '@jbrowse/core/PluginManager'
 import { Dialog, FileSelector } from '@jbrowse/core/ui'
+import type { FileLocation } from '@jbrowse/core/util/types'
 import {
   Button,
   DialogActions,
@@ -11,8 +13,6 @@ import {
 } from '@mui/material'
 import React, { useState } from 'react'
 
-import type PluginManager from '@jbrowse/core/PluginManager'
-import type { FileLocation } from '@jbrowse/core/util/types'
 
 const blank = { uri: '' } as FileLocation
 
@@ -33,7 +33,7 @@ function getLocalPath(location: FileLocation) {
 function deriveDbPath(fastaLocation: FileLocation) {
   const fastaPath = getLocalPath(fastaLocation)
   if (fastaPath) {
-    return fastaPath.replace(/\.(fa|fasta|fna)(\.gz)?$/i, '') + '.apollo.sqlite'
+    return `${fastaPath.replace(/\.(fa|fasta|fna)(\.gz)?$/i, '')  }.apollo.sqlite`
   }
   return ''
 }
@@ -77,7 +77,7 @@ export function NewApolloProjectDialog({
       if (fastaPath) {
         setFaiLocation({
           locationType: 'LocalPathLocation',
-          localPath: fastaPath + '.fai',
+          localPath: `${fastaPath  }.fai`,
         } as FileLocation)
       }
     }
@@ -101,7 +101,7 @@ export function NewApolloProjectDialog({
     setError(undefined)
 
     try {
-      const { ipcRenderer } = window.require('electron')
+      const { ipcRenderer } = globalThis.require('electron')
 
       const metadata: Record<string, unknown> = {
         apollo: true,
@@ -139,9 +139,9 @@ export function NewApolloProjectDialog({
 
       setPluginManager(await loadPluginManager(path))
       onClose()
-    } catch (e) {
-      console.error(e)
-      setError(e)
+    } catch (error_) {
+      console.error(error_)
+      setError(error_)
       setLoading(false)
     }
   }

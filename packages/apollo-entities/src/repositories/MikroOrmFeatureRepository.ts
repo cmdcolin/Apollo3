@@ -1,6 +1,7 @@
 import type { FeatureRow } from '@apollo-annotation/common'
 
 import { FeatureEntity } from '../entities/FeatureEntity.js'
+
 import {
   BaseFeatureRepository,
   STOP_WORDS,
@@ -153,7 +154,7 @@ export class MikroOrmFeatureRepository extends BaseFeatureRepository {
   // Raw SQL required: LIKE on JSON attributes column for substring matching,
   // then recursive CTE to walk from matches up to root parents
   async findByIndexedId(id: string, refSeqIds?: string[]) {
-    const escapedId = id.replace(/%/g, '\\%').replace(/_/g, '\\_')
+    const escapedId = id.replaceAll('%', String.raw`\%`).replaceAll('_', String.raw`\_`)
     const likePattern = `%"${escapedId}"%`
 
     let matchSql = `SELECT _id FROM feature WHERE CAST(attributes AS TEXT) LIKE ?`

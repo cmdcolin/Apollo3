@@ -1,4 +1,4 @@
-import { type AssemblyRow } from '@apollo-annotation/common'
+import type { AssemblyRow } from '@apollo-annotation/common'
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import merge from 'deepmerge'

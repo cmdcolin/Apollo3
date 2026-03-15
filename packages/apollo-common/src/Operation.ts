@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-confusing-void-expression */
-/* eslint-disable @typescript-eslint/no-unnecessary-condition */
-/* eslint-disable @typescript-eslint/restrict-template-expressions */
+ 
+ 
 import type { GFF3Feature } from '@gmod/gff'
 import type { LoggerService } from '@nestjs/common'
 import type { GenericFilehandle } from 'generic-filehandle2'

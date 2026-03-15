@@ -18,7 +18,7 @@ import { getConf } from '@jbrowse/core/configuration'
 import { type Region, getSession } from '@jbrowse/core/util'
 import { getSnapshot } from '@jbrowse/mobx-state-tree'
 
-import { type SubmitOpts } from '../ChangeManager'
+import type { SubmitOpts } from '../ChangeManager'
 import { checkFeatures, loadAssemblyIntoClient } from '../util'
 
 import { BackendDriver, type RefNameAliases } from './BackendDriver'

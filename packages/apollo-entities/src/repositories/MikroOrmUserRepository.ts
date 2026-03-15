@@ -1,7 +1,7 @@
 import type { UserRepository, UserRow } from '@apollo-annotation/common'
 import type { EntityManager, InferEntity } from '@mikro-orm/core'
 
-import { UserEntity, UserRole } from '../entities/UserEntity.js'
+import { UserEntity, type UserRole } from '../entities/UserEntity.js'
 
 function toRow(entity: InferEntity<typeof UserEntity>): UserRow {
   return {
@@ -22,7 +22,7 @@ export class MikroOrmUserRepository implements UserRepository {
     if (entity) {
       return toRow(entity)
     }
-    return undefined
+    return
   }
 
   async findByEmail(email: string) {
@@ -30,7 +30,7 @@ export class MikroOrmUserRepository implements UserRepository {
     if (entity) {
       return toRow(entity)
     }
-    return undefined
+    return
   }
 
   async findByRole(role: string) {
@@ -42,7 +42,7 @@ export class MikroOrmUserRepository implements UserRepository {
     if (entity) {
       return toRow(entity)
     }
-    return undefined
+    return
   }
 
   async findAll() {
@@ -71,9 +71,13 @@ export class MikroOrmUserRepository implements UserRepository {
   async updateById(id: string, data: Partial<Omit<UserRow, '_id'>>) {
     const entity = await this.em.findOne(UserEntity, { _id: id })
     if (!entity) {
-      return undefined
+      return
     }
-    this.em.assign(entity, data as Record<string, unknown>)
+    const { role, ...rest } = data
+    if (role !== undefined) {
+      entity.role = role as UserRole
+    }
+    this.em.assign(entity, rest)
     await this.em.flush()
     return toRow(entity)
   }

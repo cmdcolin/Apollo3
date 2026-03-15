@@ -62,9 +62,9 @@ export default class RefNameAliasAdapter
           `[apollo-debug] ApolloRefNameAliasAdapter: got ${refNameAliases.length} aliases`,
         )
         return refNameAliases
-      } catch (e) {
-        console.warn(`[apollo-debug] ApolloRefNameAliasAdapter ERROR: ${e}`)
-        throw e
+      } catch (error) {
+        console.warn(`[apollo-debug] ApolloRefNameAliasAdapter ERROR: ${error}`)
+        throw error
       }
     }
     const refNameAliases = await new Promise(

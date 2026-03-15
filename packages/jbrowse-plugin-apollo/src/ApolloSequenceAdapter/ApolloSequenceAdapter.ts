@@ -70,7 +70,7 @@ export class ApolloSequenceAdapter extends BaseSequenceAdapter {
       }
       const backendDriver = dataStore.getBackendDriver(assemblyId)
       console.warn(
-        `[apollo-debug] getRegions: backendDriver=${!!backendDriver}, type=${backendDriver?.constructor?.name}`,
+        `[apollo-debug] getRegions: backendDriver=${!!backendDriver}, type=${backendDriver?.constructor.name}`,
       )
       if (!backendDriver) {
         throw new Error('No backend driver found')
@@ -80,9 +80,9 @@ export class ApolloSequenceAdapter extends BaseSequenceAdapter {
         console.warn(`[apollo-debug] getRegions: got ${regions.length} regions`)
         this.regions = regions
         return regions
-      } catch (e) {
-        console.warn(`[apollo-debug] getRegions ERROR: ${e}`)
-        throw e
+      } catch (error) {
+        console.warn(`[apollo-debug] getRegions ERROR: ${error}`)
+        throw error
       }
     }
     const regions = await new Promise(
