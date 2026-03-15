@@ -289,9 +289,18 @@ const stateModelFactory = (configSchema: ApolloInternetAccountConfigModel) => {
           )
           return
         }
+        const { apolloDataStore } = session
         const serializedChanges = yield response.json()
         for (const serializedChange of serializedChanges) {
           const change = Change.fromJSON(serializedChange)
+          if (isFeatureChange(change)) {
+            const hasRelevantData = change.changedIds.some((id) =>
+              apolloDataStore.getFeature(id),
+            )
+            if (!hasRelevantData) {
+              continue
+            }
+          }
           void changeManager.submit(change, { submitToBackend: false })
         }
       }),
