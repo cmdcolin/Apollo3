@@ -25,7 +25,6 @@ import { autorun } from 'mobx'
 import { io } from 'socket.io-client'
 
 import { addTopLevelAdminMenus } from '../menus/topLevelMenuAdmin'
-import type { Collaborator } from '../session'
 import type { ApolloRootModel } from '../types'
 import { createFetchErrorMessage } from '../util'
 
