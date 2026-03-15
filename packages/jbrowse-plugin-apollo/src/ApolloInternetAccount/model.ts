@@ -8,13 +8,8 @@
 import { Change, isFeatureChange } from '@apollo-annotation/common'
 import {
   COMMON_CHANNEL,
-  REQUEST_INFO_CHANNEL,
-  USER_LOCATION_CHANNEL,
   type ChangeMessage,
   type CheckResultUpdate,
-  type RequestUserInformationMessage,
-  type UserLocation,
-  type UserLocationMessage,
   getDecodedToken,
   makeUserSessionId,
 } from '@apollo-annotation/shared'
@@ -25,13 +20,7 @@ import {
   isAbstractMenuManager,
   isElectron,
 } from '@jbrowse/core/util'
-import {
-  type Instance,
-  flow,
-  getRoot,
-  isAlive,
-  types,
-} from '@jbrowse/mobx-state-tree'
+import { type Instance, flow, getRoot, types } from '@jbrowse/mobx-state-tree'
 import { autorun } from 'mobx'
 import { io } from 'socket.io-client'
 
@@ -364,138 +353,32 @@ const stateModelFactory = (configSchema: ApolloInternetAccountConfigModel) => {
             void changeManager.submit(change, { submitToBackend: false })
           },
         )
-        socket.on(USER_LOCATION_CHANNEL, (message: UserLocationMessage) => {
-          const { channel, locations, userName, userSessionId } = message
-          if (
-            channel === USER_LOCATION_CHANNEL &&
-            userSessionId !== localSessionId
-          ) {
-            const collaborator: Collaborator = {
-              name: userName,
-              id: userSessionId,
-              locations,
-            }
-            session.addOrUpdateCollaborator(collaborator)
-          }
-        })
-        socket.on(
-          REQUEST_INFO_CHANNEL,
-          (message: RequestUserInformationMessage) => {
-            const { channel, userSessionId } = message
-            if (channel === REQUEST_INFO_CHANNEL && userSessionId !== token) {
-              session.broadcastLocations()
-            }
-          },
-        )
       },
     }))
-    .actions((self) => {
-      async function postUserLocation(userLoc: UserLocation | null) {
-        if (!isAlive(self) || self.role === 'none') {
+    .volatile(() => ({ roleNotificationSent: false }))
+    .actions((self) => ({
+      initialize: flow(function* initialize(role: Role) {
+        if (role === 'none') {
+          if (!self.roleNotificationSent) {
+            const { session } = getRoot<ApolloRootModel>(self)
+            ;(session as unknown as AbstractSessionModel).notify(
+              'You have registered as an Apollo user but have not been given access. Ask your administrator to enable access for your account.',
+              'warning',
+            )
+            self.roleNotificationSent = true
+          }
           return
         }
-        const { baseURL, controller } = self
-        const url = new URL('users/userLocation', baseURL).href
-
-        const apolloFetch = self.getFetcher({
-          locationType: 'UriLocation',
-          uri: url,
-        })
-        try {
-          const response = await apolloFetch(url, {
-            method: 'POST',
-            body: JSON.stringify(userLoc),
-            headers: { 'Content-Type': 'application/json' },
-            signal: controller.signal,
-          })
-          if (!response.ok) {
-            throw new Error('ignore') // ignore message, will get caught by "catch"
+        if (role === 'admin') {
+          const rootModel = getRoot(self)
+          if (isAbstractMenuManager(rootModel)) {
+            addTopLevelAdminMenus(rootModel)
           }
-        } catch {
-          console.error('Broadcasting user location failed')
         }
-      }
-      const debounceTimeout = 300
-      const debouncePostUserLocation = (
-        fn: (userLocation: UserLocation | null) => void,
-      ) => {
-        let timeoutId: ReturnType<typeof setTimeout>
-        return (userLocation: UserLocation | null) => {
-          clearTimeout(timeoutId)
-          timeoutId = setTimeout(() => {
-            fn(userLocation)
-          }, debounceTimeout)
-        }
-      }
-      return { postUserLocation: debouncePostUserLocation(postUserLocation) }
-    })
-    .volatile(() => ({ roleNotificationSent: false }))
-    .actions((self) => {
-      function beforeUnloadListener() {
-        self.postUserLocation(null)
-      }
-      function visibilityChangeListener() {
-        // fires when user switches tabs, apps, goes to homescreen, etc.
-        if (document.visibilityState === 'hidden') {
-          self.postUserLocation(null)
-        }
-        // fires when app transitions from prerender, user returns to the app / tab.
-        if (document.visibilityState === 'visible') {
-          const { session } = getRoot<ApolloRootModel>(self)
-          session.broadcastLocations()
-        }
-      }
-      return {
-        initialize: flow(function* initialize(role: Role) {
-          if (role === 'none') {
-            if (!self.roleNotificationSent) {
-              const { session } = getRoot<ApolloRootModel>(self)
-              ;(session as unknown as AbstractSessionModel).notify(
-                'You have registered as an Apollo user but have not been given access. Ask your administrator to enable access for your account.',
-                'warning',
-              )
-              self.roleNotificationSent = true
-            }
-            return
-          }
-          if (role === 'admin') {
-            const rootModel = getRoot(self)
-            if (isAbstractMenuManager(rootModel)) {
-              addTopLevelAdminMenus(rootModel)
-            }
-          }
-          // Get and set server last change sequence into session storage
-          yield self.updateLastChangeSequenceNumber()
-          // Open socket listeners
-          self.addSocketListeners()
-          // request user locations
-          const { baseURL } = self
-          const uri = new URL('users/locations', baseURL).href
-          const apolloFetch = self.getFetcher({
-            locationType: 'UriLocation',
-            uri,
-          })
-          yield apolloFetch(uri, {
-            method: 'GET',
-            signal: self.controller.signal,
-          })
-          window.addEventListener('beforeunload', beforeUnloadListener)
-          document.addEventListener(
-            'visibilitychange',
-            visibilityChangeListener,
-          )
-        }),
-        removeBeforeUnloadListener() {
-          window.removeEventListener('beforeunload', beforeUnloadListener)
-        },
-        removeVisibilityChangeListener() {
-          document.removeEventListener(
-            'visibilitychange',
-            visibilityChangeListener,
-          )
-        },
-      }
-    })
+        yield self.updateLastChangeSequenceNumber()
+        self.addSocketListeners()
+      }),
+    }))
     .actions((self) => ({
       afterAttach() {
         self.setRole()

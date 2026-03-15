@@ -51,7 +51,6 @@ export const LinearApolloSixFrameDisplay = observer(
       regionCannotBeRendered,
       session,
       setCanvas,
-      setCollaboratorCanvas,
       setOverlayCanvas,
       setTheme,
       showCheckResults,
@@ -119,16 +118,6 @@ export const LinearApolloSixFrameDisplay = observer(
                 idx={1}
               />
               <TrackLines model={model} idx={2} />
-              <canvas
-                ref={async (node: HTMLCanvasElement) => {
-                  await Promise.resolve()
-                  setCollaboratorCanvas(node)
-                }}
-                width={lgv.dynamicBlocks.totalWidthPx}
-                height={featuresHeight}
-                className={classes.canvas}
-                data-testid="collaboratorCanvas"
-              />
               <canvas
                 ref={async (node: HTMLCanvasElement) => {
                   await Promise.resolve()

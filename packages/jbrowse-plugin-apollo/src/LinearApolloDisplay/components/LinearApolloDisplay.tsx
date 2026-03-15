@@ -39,7 +39,6 @@ export const LinearApolloDisplay = observer(function LinearApolloDisplay(
     regionCannotBeRendered,
     session,
     setCanvas,
-    setCollaboratorCanvas,
     setOverlayCanvas,
     setTheme,
   } = model
@@ -101,16 +100,6 @@ export const LinearApolloDisplay = observer(function LinearApolloDisplay(
           // Promise.resolve() in these 3 callbacks is to avoid infinite rendering loop
           // https://github.com/mobxjs/mobx/issues/3728#issuecomment-1715400931
           <>
-            <canvas
-              ref={async (node: HTMLCanvasElement) => {
-                await Promise.resolve()
-                setCollaboratorCanvas(node)
-              }}
-              width={lgv.dynamicBlocks.totalWidthPx}
-              height={featuresHeight}
-              className={classes.canvas}
-              data-testid="collaboratorCanvas"
-            />
             <canvas
               ref={async (node: HTMLCanvasElement) => {
                 await Promise.resolve()

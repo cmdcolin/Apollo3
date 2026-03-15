@@ -1,39 +1,20 @@
 import { randomBytes } from 'node:crypto'
 
-import {
-  type DecodedJWT,
-  REQUEST_INFO_CHANNEL,
-  type RequestUserInformationMessage,
-  USER_LOCATION_CHANNEL,
-  type UserLocationMessage,
-  makeUserSessionId,
-} from '@apollo-annotation/shared'
 import { Inject, Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
-import { MessagesGateway } from '../messages/messages.gateway.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
 import { GUEST_USER_EMAIL, GUEST_USER_NAME } from '../utils/constants.js'
 import { Role } from '../utils/role/role.enum.js'
 
-import { CreateUserDto, UserLocationDto } from './dto/create-user.dto.js'
-
-export interface User {
-  email: string
-  username: string
-  password: string
-}
+import { CreateUserDto } from './dto/create-user.dto.js'
 
 @Injectable()
 export class UsersService {
-  private readonly users: User[]
-
   constructor(
-    @Inject(MessagesGateway) private readonly messagesGateway: MessagesGateway,
     @Inject(ConfigService)
     private readonly configService: ConfigService<
       {
-        BROADCAST_USER_LOCATION: boolean
         ALLOW_GUEST_USER: boolean
         GUEST_USER_ROLE: Role
       },
@@ -108,52 +89,5 @@ export class UsersService {
       return
     }
     return this.db.user.deleteByEmail(GUEST_USER_EMAIL)
-  }
-
-  broadcastLocation(location: UserLocationDto | null, user: DecodedJWT) {
-    const broadcast = this.configService.get('BROADCAST_USER_LOCATION', {
-      infer: true,
-    })
-    if (!broadcast) {
-      return
-    }
-    const channel = USER_LOCATION_CHANNEL
-    const { username: userName } = user
-    const userSessionId = makeUserSessionId(user)
-    const locations = location
-      ? [
-          {
-            assemblyId: location.assemblyId,
-            refSeq: location.refSeq,
-            start: Number(location.start),
-            end: Number(location.end),
-          },
-        ]
-      : []
-    const msg: UserLocationMessage = {
-      locations,
-      channel,
-      userName,
-      userSessionId,
-    }
-    return this.messagesGateway.create(channel, msg)
-  }
-
-  requestUsersLocations(user: DecodedJWT) {
-    const channel = REQUEST_INFO_CHANNEL
-    const userSessionId = makeUserSessionId(user)
-    const { username: userName } = user
-    const msg: RequestUserInformationMessage = {
-      channel,
-      userName,
-      userSessionId,
-      reqType: 'CURRENT_LOCATION',
-    }
-    this.logger.debug(
-      `*** Broadcasting request to resend users's current locations. Channel "${channel}", the message is "${JSON.stringify(
-        msg,
-      )}"`,
-    )
-    return this.messagesGateway.create(channel, msg)
   }
 }

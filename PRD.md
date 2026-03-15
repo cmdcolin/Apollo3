@@ -199,9 +199,18 @@ The repository pattern abstracts the database layer behind interfaces in
     - Respects configurable translation table (some organisms use GTG, TTG)
     - **Files**: `packages/apollo-shared/src/Checks/`
 
+### P3 — Collaboration UX
+
+19. **Collaborator location visualization** — Previously removed to simplify the
+    codebase. Apollo Classic and the old Apollo3 code showed green rectangles on
+    the genome view indicating where other users were browsing. Re-add as a
+    lightweight feature: show collaborator cursors/regions on the annotation
+    track, with user names. Could use the WebSocket `COMMON` channel to
+    broadcast viewing positions.
+
 ### P3 — Cleanup
 
-19. **Remaining debug logging** — Standard `logger.debug()` calls exist
+20. **Remaining debug logging** — Standard `logger.debug()` calls exist
     throughout the server (features, changes, auth, files controllers). These
     are appropriate debug-level logging and can stay unless noisy.
 

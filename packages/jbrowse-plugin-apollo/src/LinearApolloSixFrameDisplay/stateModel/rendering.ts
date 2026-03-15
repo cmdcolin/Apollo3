@@ -11,7 +11,6 @@ import { type Instance, addDisposer, types } from '@jbrowse/mobx-state-tree'
 import { type Theme, createTheme } from '@mui/material'
 import { autorun } from 'mobx'
 
-import type { ApolloSessionModel } from '../../session'
 import { codonColorCode } from '../../util/displayUtils'
 
 import { layoutsModelFactory } from './layouts'
@@ -80,7 +79,6 @@ export function renderingModelFactory(
     .volatile(() => ({
       canvas: null as HTMLCanvasElement | null,
       overlayCanvas: null as HTMLCanvasElement | null,
-      collaboratorCanvas: null as HTMLCanvasElement | null,
       theme: createTheme(),
     }))
     .views((self) => ({
@@ -110,74 +108,12 @@ export function renderingModelFactory(
       setOverlayCanvas(canvas: HTMLCanvasElement | null) {
         self.overlayCanvas = canvas
       },
-      setCollaboratorCanvas(canvas: HTMLCanvasElement | null) {
-        self.collaboratorCanvas = canvas
-      },
       setTheme(theme: Theme) {
         self.theme = theme
       },
     }))
     .actions((self) => ({
       afterAttach() {
-        addDisposer(
-          self,
-          autorun(
-            () => {
-              if (!self.lgv.initialized || self.regionCannotBeRendered()) {
-                return
-              }
-              const ctx = self.collaboratorCanvas?.getContext('2d')
-              if (!ctx) {
-                return
-              }
-              ctx.clearRect(
-                0,
-                0,
-                self.lgv.dynamicBlocks.totalWidthPx,
-                self.featuresHeight,
-              )
-              for (const collaborator of (
-                self.session as unknown as ApolloSessionModel
-              ).collaborators) {
-                const { locations } = collaborator
-                if (locations.length === 0) {
-                  continue
-                }
-                let idx = 0
-                for (const displayedRegion of self.lgv.displayedRegions) {
-                  for (const location of locations) {
-                    if (location.refSeq !== displayedRegion.refName) {
-                      continue
-                    }
-                    const { end, refSeq, start } = location
-                    const locationStartPxInfo = self.lgv.bpToPx({
-                      refName: refSeq,
-                      coord: start,
-                      regionNumber: idx,
-                    })
-                    if (!locationStartPxInfo) {
-                      continue
-                    }
-                    const locationStartPx =
-                      locationStartPxInfo.offsetPx - self.lgv.offsetPx
-                    const locationWidthPx = (end - start) / self.lgv.bpPerPx
-                    ctx.fillStyle = 'rgba(0,255,0,.2)'
-                    ctx.fillRect(locationStartPx, 1, locationWidthPx, 100)
-                    ctx.fillStyle = 'black'
-                    ctx.fillText(
-                      collaborator.name,
-                      locationStartPx + 1,
-                      11,
-                      locationWidthPx - 2,
-                    )
-                  }
-                  idx++
-                }
-              }
-            },
-            { name: 'LinearApolloSixFrameDisplayRenderCollaborators' },
-          ),
-        )
         addDisposer(
           self,
           autorun(

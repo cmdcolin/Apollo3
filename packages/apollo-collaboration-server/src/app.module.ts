@@ -77,7 +77,6 @@ const validationSchema = Joi.object({
   DEFAULT_NEW_USER_ROLE: Joi.string()
     .valid('admin', 'user', 'readOnly', 'none')
     .default('none'),
-  BROADCAST_USER_LOCATION: Joi.boolean().default(true),
   ALLOW_GUEST_USER: Joi.boolean().default(false),
   GUEST_USER_ROLE: Joi.string()
     .valid('admin', 'user', 'readOnly')

@@ -8,7 +8,6 @@ import {
 import {
   ImportJBrowseConfigChange,
   type JBrowseConfig,
-  type UserLocation,
   filterJBrowseConfig,
 } from '@apollo-annotation/shared'
 import type PluginManager from '@jbrowse/core/PluginManager'
@@ -28,9 +27,8 @@ import {
   getSnapshot,
   types,
 } from '@jbrowse/mobx-state-tree'
-import type { LinearGenomeViewModel } from '@jbrowse/plugin-linear-genome-view'
 import SaveIcon from '@mui/icons-material/Save'
-import { autorun, observable } from 'mobx'
+import { autorun } from 'mobx'
 
 import type { ApolloInternetAccountModel } from '../ApolloInternetAccount/model'
 import { ApolloJobModel } from '../ApolloJobModel'
@@ -47,49 +45,9 @@ export interface ApolloSession extends AbstractSessionModel {
   apolloSetSelectedFeature(feature?: AnnotationFeature): void
 }
 
-export interface Collaborator {
-  name: string
-  id: string
-  locations: UserLocation[]
-}
-
 export interface HoveredFeature {
   feature: AnnotationFeature
   bp: number
-}
-
-function getFirstVisibleLocation(session: unknown): UserLocation | null {
-  const views = (session as AbstractSessionModel).views
-  for (const view of views) {
-    if (view.type !== 'LinearGenomeView') {
-      continue
-    }
-    const lgv = view as unknown as LinearGenomeViewModel
-    if (lgv.initialized) {
-      for (const block of lgv.dynamicBlocks.contentBlocks) {
-        const { assemblyName, end, refName, start } = block
-        const assembly = (
-          session as {
-            apolloDataStore: {
-              assemblies: Map<string, { backendDriverType: string }>
-            }
-          }
-        ).apolloDataStore.assemblies.get(assemblyName)
-        if (
-          assembly &&
-          assembly.backendDriverType === 'CollaborationServerDriver'
-        ) {
-          return {
-            assemblyId: assemblyName,
-            refSeq: refName,
-            start,
-            end,
-          }
-        }
-      }
-    }
-  }
-  return null
 }
 
 export function extendSession(
@@ -113,29 +71,6 @@ export function extendSession(
       abortController: new AbortController(),
       changeInProgress: false,
     }))
-    .extend(() => {
-      const collabs = observable.array<Collaborator>([])
-
-      return {
-        views: {
-          get collaborators() {
-            return collabs
-          },
-        },
-        actions: {
-          addOrUpdateCollaborator(collaborator: Collaborator) {
-            const existingCollaborator = collabs.find(
-              (obj: Collaborator) => obj.id === collaborator.id,
-            )
-            if (existingCollaborator) {
-              existingCollaborator.locations = collaborator.locations
-            } else {
-              collabs.push(collaborator)
-            }
-          },
-        },
-      }
-    })
     .actions((self) => ({
       apolloSetSelectedFeature(feature?: AnnotationFeature | string) {
         // @ts-expect-error Not sure why TS thinks these MST types don't match
@@ -187,15 +122,6 @@ export function extendSession(
           >
         return pluginConfiguration
       },
-      broadcastLocations() {
-        const { internetAccounts } = getRoot<ApolloRootModel>(self)
-        const location = getFirstVisibleLocation(self)
-        for (const internetAccount of internetAccounts) {
-          if ('baseURL' in internetAccount) {
-            internetAccount.postUserLocation(location)
-          }
-        }
-      },
     }))
     .volatile((self) => ({
       previousSnapshot: getSnapshot(self),
@@ -206,20 +132,6 @@ export function extendSession(
         // @ts-expect-error type is missing on ApolloRootModel
         const { internetAccounts, jbrowse, reloadPluginManagerCallback } =
           getRoot<ApolloRootModel>(self)
-        addDisposer(
-          self,
-          autorun(
-            () => {
-              const location = getFirstVisibleLocation(self)
-              for (const internetAccount of internetAccounts) {
-                if ('baseURL' in internetAccount) {
-                  internetAccount.postUserLocation(location)
-                }
-              }
-            },
-            { name: 'ApolloSessionBroadcastLocations' },
-          ),
-        )
         addDisposer(
           self,
           autorun(

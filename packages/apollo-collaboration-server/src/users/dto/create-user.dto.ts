@@ -5,10 +5,3 @@ export class CreateUserDto {
   readonly username: string
   role?: Role
 }
-
-export class UserLocationDto {
-  readonly assemblyId: string
-  readonly refSeq: string
-  readonly start: string
-  readonly end: string
-}
