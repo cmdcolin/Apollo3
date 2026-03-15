@@ -19,7 +19,6 @@ PID_FILE="$SCRIPT_DIR/.e2e-pids"
 LOG_FILE="$SCRIPT_DIR/.e2e-server.log"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-PLUGIN_PORT=9000
 JBROWSE_PORT=8999
 COLLAB_PORT=3999
 
@@ -41,7 +40,7 @@ kill_by_pidfile() {
 }
 
 kill_by_port() {
-  for port in $PLUGIN_PORT $JBROWSE_PORT $COLLAB_PORT; do
+  for port in $JBROWSE_PORT $COLLAB_PORT; do
     local pids
     pids=$(lsof -ti:"$port" 2>/dev/null) || true
     if [ -n "$pids" ]; then
@@ -49,7 +48,7 @@ kill_by_port() {
     fi
   done
   sleep 1
-  for port in $PLUGIN_PORT $JBROWSE_PORT $COLLAB_PORT; do
+  for port in $JBROWSE_PORT $COLLAB_PORT; do
     local pids
     pids=$(lsof -ti:"$port" 2>/dev/null) || true
     if [ -n "$pids" ]; then
@@ -66,7 +65,7 @@ stop_servers() {
 }
 
 check_status() {
-  for port_name in "plugin:$PLUGIN_PORT" "jbrowse:$JBROWSE_PORT" "collab:$COLLAB_PORT"; do
+  for port_name in "jbrowse:$JBROWSE_PORT" "collab:$COLLAB_PORT"; do
     local name="${port_name%%:*}"
     local port="${port_name##*:}"
     if lsof -ti:"$port" >/dev/null 2>&1; then
@@ -82,7 +81,7 @@ wait_for_servers() {
   local waited=0
   while [ $waited -lt $max_wait ]; do
     local all_up=true
-    for port in $PLUGIN_PORT $JBROWSE_PORT $COLLAB_PORT; do
+    for port in $JBROWSE_PORT $COLLAB_PORT; do
       if ! lsof -ti:"$port" >/dev/null 2>&1; then
         all_up=false
         break
@@ -154,20 +153,23 @@ start_servers() {
 
   cd "$SCRIPT_DIR" || exit 1
 
-  # Plugin serve (port 9000) — serves the built plugin files
-  yarn node "$(yarn bin serve)" --no-request-logging --cors --listen $PLUGIN_PORT --no-port-switching . \
-    >> "$LOG_FILE" 2>&1 &
-  echo $! >> "$PID_FILE"
+  # Copy built plugin into .jbrowse/ so it's served from the same origin
+  # as JBrowse — avoids the cross-origin plugin trust warning dialog
+  cp dist/jbrowse-plugin-apollo.umd.development.js .jbrowse/apollo-plugin.js
+  # Also copy test data into .jbrowse/ for same-origin access
+  cp -r test_data .jbrowse/test_data 2>/dev/null || true
 
-  # JBrowse browse (port 8999) — serves the JBrowse app
+  # JBrowse browse (port 8999) — serves the JBrowse app + plugin from same origin
   yarn node "$(yarn bin serve)" --no-request-logging --listen $JBROWSE_PORT --no-port-switching --symlinks .jbrowse \
     >> "$LOG_FILE" 2>&1 &
   echo $! >> "$PID_FILE"
 
   # Collaboration server (port 3999) — NestJS backend with guest admin access
-  # Pass through DB_BACKEND and DB_CONNECTION_URL if set
+  # PLUGIN_LOCATION points to same-origin path (served by JBrowse on port 8999)
   cd "$REPO_ROOT/packages/apollo-collaboration-server" || exit 1
   DB_BACKEND="${DB_BACKEND:-sqlite}" DB_CONNECTION_URL="${DB_CONNECTION_URL:-apollo-dev.sqlite}" \
+    PLUGIN_LOCATION="http://localhost:$JBROWSE_PORT/apollo-plugin.js" \
+    FEATURE_TYPE_ONTOLOGY_LOCATION="http://localhost:$JBROWSE_PORT/test_data/so-v3.1.json" \
     GUEST_USER_ROLE=admin LOG_LEVELS=error,warn,log NODE_ENV=development yarn node dist/main.js \
     >> "$LOG_FILE" 2>&1 &
   echo $! >> "$PID_FILE"

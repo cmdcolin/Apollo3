@@ -87,16 +87,35 @@ export function setupBrowserLogging(page: Page) {
   })
 }
 
+async function waitForAppReady(page: Page) {
+  const apolloButton = page.getByRole('button', { name: 'Apollo' })
+  const guestLoginText = page.getByText('Continue as Guest')
+  const trustButton = page.getByRole('button', { name: 'Yes, I trust it' })
+
+  // JBrowse may show a plugin trust warning dialog, a login dialog, or go
+  // straight to the main UI. Race all three possibilities.
+  await Promise.race([
+    apolloButton.waitFor({ timeout: 20_000 }),
+    guestLoginText.waitFor({ timeout: 20_000 }),
+    trustButton.waitFor({ timeout: 20_000 }),
+  ])
+
+  // Dismiss plugin trust dialog if present
+  if (await trustButton.isVisible().catch(() => false)) {
+    console.log('[login] Dismissing plugin trust dialog')
+    await trustButton.click()
+    await Promise.race([
+      apolloButton.waitFor({ timeout: 15_000 }),
+      guestLoginText.waitFor({ timeout: 15_000 }),
+    ])
+  }
+}
+
 export async function loginAsGuest(page: Page) {
   setupBrowserLogging(page)
 
   await page.goto(APP_URL)
-
-  // Wait for either Apollo button or login dialog to appear
-  await Promise.race([
-    page.getByRole('button', { name: 'Apollo' }).waitFor({ timeout: 15_000 }),
-    page.getByText('Continue as Guest').waitFor({ timeout: 15_000 }),
-  ])
+  await waitForAppReady(page)
 
   // If login dialog is showing, click "Continue as Guest" and reload
   const guestButton = page.getByText('Continue as Guest')
@@ -106,7 +125,9 @@ export async function loginAsGuest(page: Page) {
     await expect(page.locator('.MuiDialog-root')).not.toBeVisible({
       timeout: 10_000,
     })
+    // Reload and handle trust dialog again (JBrowse may re-prompt after reload)
     await page.reload()
+    await waitForAppReady(page)
   }
 
   // Wait for Apollo menu to be ready
@@ -216,16 +237,11 @@ export async function addAssemblyFromGff(
 
   // Reload so JBrowse picks up the new assembly from config
   await page.reload()
+  await waitForAppReady(page)
+
   await expect(
     page.getByRole('button', { name: 'Apollo' }),
   ).toBeEnabled({ timeout: 15_000 })
-
-  // Dismiss any dialogs
-  const dialog = page.locator('.MuiDialog-root')
-  if (await dialog.isVisible().catch(() => false)) {
-    await page.keyboard.press('Escape')
-    await expect(dialog).not.toBeVisible()
-  }
 
   if (launch) {
     await page.getByText('Launch view').click()

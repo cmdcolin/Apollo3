@@ -45,6 +45,8 @@ export function createMikroOrmConfig(
       driverOptions: new NodeSqliteDialect(connectionUrl),
     }
   }
+  // PostgreSQL and MongoDB: MikroORM auto-detects the driver from the
+  // clientUrl scheme (postgresql://, mongodb://, etc.)
   return {
     ...base,
     clientUrl: connectionUrl,

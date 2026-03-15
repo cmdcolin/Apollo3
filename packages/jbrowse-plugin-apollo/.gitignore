@@ -14,3 +14,4 @@ data/
 # Playwright specific files
 test-results/
 playwright-report/
+.e2e-pids
