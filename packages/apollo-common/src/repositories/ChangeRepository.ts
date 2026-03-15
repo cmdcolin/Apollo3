@@ -17,5 +17,6 @@ export interface ChangeRepository {
     sinceSequence?: number
     sort?: 'asc' | 'desc'
     limit?: number
+    offset?: number
   }): Promise<ChangeRow[]>
 }

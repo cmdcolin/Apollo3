@@ -1,0 +1,64 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Logger,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common'
+
+import { Role } from '../utils/role/role.enum.js'
+import { Validations } from '../utils/validation/validatation.decorator.js'
+
+import { CreateOrganismDto } from './dto/create-organism.dto.js'
+import { UpdateOrganismDto } from './dto/update-organism.dto.js'
+import { OrganismsService } from './organisms.service.js'
+
+@Validations(Role.ReadOnly)
+@Controller('organisms')
+export class OrganismsController {
+  constructor(private readonly organismsService: OrganismsService) {}
+  private readonly logger = new Logger(OrganismsController.name)
+
+  @Get('count')
+  async getCount() {
+    const count = await this.organismsService.count()
+    return { count }
+  }
+
+  @Post()
+  @Validations(Role.Admin)
+  create(@Body() dto: CreateOrganismDto) {
+    return this.organismsService.create(dto)
+  }
+
+  @Get()
+  findAll(
+    @Query('offset') offsetStr?: string,
+    @Query('limit') limitStr?: string,
+  ) {
+    const offset = offsetStr ? Number(offsetStr) : undefined
+    const limit = limitStr ? Number(limitStr) : undefined
+    return this.organismsService.findAll({ offset, limit })
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.organismsService.findOne(id)
+  }
+
+  @Patch(':id')
+  @Validations(Role.Admin)
+  update(@Param('id') id: string, @Body() dto: UpdateOrganismDto) {
+    return this.organismsService.update(id, dto)
+  }
+
+  @Delete(':id')
+  @Validations(Role.Admin)
+  remove(@Param('id') id: string) {
+    return this.organismsService.remove(id)
+  }
+}

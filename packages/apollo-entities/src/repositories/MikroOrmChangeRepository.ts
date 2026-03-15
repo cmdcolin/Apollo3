@@ -43,6 +43,7 @@ export class MikroOrmChangeRepository implements ChangeRepository {
     sinceSequence?: number
     sort?: 'asc' | 'desc'
     limit?: number
+    offset?: number
   }) {
     const where: Record<string, unknown> = {}
     if (opts?.filter) {
@@ -67,6 +68,7 @@ export class MikroOrmChangeRepository implements ChangeRepository {
     const entities = await this.em.find(ChangeEntity, where, {
       orderBy,
       limit: opts?.limit,
+      offset: opts?.offset,
     })
     return entities.map(toRow)
   }

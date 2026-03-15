@@ -17,11 +17,6 @@ export class ChangesController {
   constructor(private readonly changesService: ChangesService) {}
   private readonly logger = new Logger(ChangesController.name)
 
-  /**
-   * ...
-   * @param serializedChange - Information containing ...
-   * @returns Return 'HttpStatus.OK' if .... Otherwise throw exception.
-   */
   @Post()
   @Validations(Role.User)
   async create(@Body(ParseChangePipe) change: Change, @Req() request: Request) {
@@ -35,6 +30,16 @@ export class ChangesController {
       )}`,
     )
     return this.changesService.create(change, user)
+  }
+
+  @Get('recent')
+  async findRecent(
+    @Query('limit') limit?: string,
+    @Query('page') pageStr?: string,
+  ) {
+    const pageNum = Math.max(1, Number(pageStr) || 1)
+    const lim = Math.min(100, Math.max(1, Number(limit) || 25))
+    return this.changesService.findRecent(lim, (pageNum - 1) * lim)
   }
 
   @Get()

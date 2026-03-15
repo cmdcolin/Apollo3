@@ -4,7 +4,8 @@
   "description": "Monorepo containing Apollo front and back end code",
   "type": "module",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "packages/apollo-collaboration-server/client"
   ],
   "scripts": {
     "lint": "cross-env NODE_OPTIONS='--max-old-space-size=4096' yarn eslint --max-warnings 0",

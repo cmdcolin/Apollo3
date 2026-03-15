@@ -1,0 +1,58 @@
+import { randomBytes } from 'node:crypto'
+
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common'
+
+import { DatabaseService } from '../mikro-orm/database.service.js'
+
+import { CreateOrganismDto } from './dto/create-organism.dto.js'
+import { UpdateOrganismDto } from './dto/update-organism.dto.js'
+
+@Injectable()
+export class OrganismsService {
+  constructor(private readonly db: DatabaseService) {}
+
+  private readonly logger = new Logger(OrganismsService.name)
+
+  async create(dto: CreateOrganismDto) {
+    return this.db.organism.create({
+      _id: randomBytes(12).toString('hex'),
+      taxid: dto.taxid,
+      genus: dto.genus,
+      species: dto.species,
+      commonName: dto.commonName,
+      description: dto.description,
+    })
+  }
+
+  async findAll(opts?: { offset?: number; limit?: number }) {
+    return this.db.organism.findAll(opts)
+  }
+
+  async count() {
+    return this.db.organism.count()
+  }
+
+  async findOne(id: string) {
+    const organism = await this.db.organism.findById(id)
+    if (!organism) {
+      throw new NotFoundException(`Organism with id "${id}" not found`)
+    }
+    return organism
+  }
+
+  async update(id: string, dto: UpdateOrganismDto) {
+    const result = await this.db.organism.updateById(id, dto)
+    if (!result) {
+      throw new NotFoundException(`Organism with id "${id}" not found`)
+    }
+    return result
+  }
+
+  async remove(id: string) {
+    return this.db.organism.deleteById(id)
+  }
+}

@@ -5,6 +5,7 @@ import {
   Head,
   Logger,
   Param,
+  Patch,
   Post,
 } from '@nestjs/common'
 
@@ -45,5 +46,16 @@ export class AssembliesController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.assembliesService.findOne(id)
+  }
+
+  @Patch(':id/organism')
+  @Validations(Role.Admin)
+  updateOrganism(
+    @Param('id') id: string,
+    @Body() body: { organism: string | null },
+  ) {
+    return this.assembliesService.update(id, {
+      organism: body.organism ?? undefined,
+    })
   }
 }

@@ -36,6 +36,7 @@ export class AssembliesService {
       description: createAssemblyDto.description,
       aliases: createAssemblyDto.aliases,
       checks: defaultCheckIds,
+      organism: createAssemblyDto.organism,
     })
   }
 

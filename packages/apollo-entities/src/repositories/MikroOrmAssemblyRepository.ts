@@ -3,6 +3,18 @@ import type { EntityManager, InferEntity } from '@mikro-orm/core'
 
 import { AssemblyEntity } from '../entities/AssemblyEntity.js'
 
+function organismId(
+  val: InferEntity<typeof AssemblyEntity>['organism'],
+) {
+  if (!val) {
+    return undefined
+  }
+  if (typeof val === 'string') {
+    return val
+  }
+  return val._id
+}
+
 function toRow(entity: InferEntity<typeof AssemblyEntity>): AssemblyRow {
   return {
     _id: entity._id,
@@ -13,6 +25,7 @@ function toRow(entity: InferEntity<typeof AssemblyEntity>): AssemblyRow {
     user: entity.user ?? undefined,
     sequenceSource: entity.sequenceSource ?? undefined,
     checks: entity.checks ?? undefined,
+    organism: organismId(entity.organism),
   }
 }
 
@@ -45,6 +58,7 @@ export class MikroOrmAssemblyRepository implements AssemblyRepository {
       user: row.user,
       sequenceSource: row.sequenceSource,
       checks: row.checks,
+      organism: row.organism,
     })
     this.em.persist(entity)
     await this.em.flush()

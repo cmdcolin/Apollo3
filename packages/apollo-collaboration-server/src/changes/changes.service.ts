@@ -147,6 +147,14 @@ export class ChangesService {
     return changeDoc
   }
 
+  async findRecent(limit: number, offset: number) {
+    return this.db.changeLog.findAll({
+      sort: 'desc',
+      limit,
+      offset,
+    })
+  }
+
   async findAll(changeFilter: FindChangeDto) {
     this.logger.debug(`Search criteria: "${JSON.stringify(changeFilter)}"`)
     return this.db.changeLog.findAll({

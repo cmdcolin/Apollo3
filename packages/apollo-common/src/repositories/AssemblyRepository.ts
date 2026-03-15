@@ -12,6 +12,7 @@ export interface AssemblyRow {
   user?: string
   sequenceSource?: SequenceSource
   checks?: string[]
+  organism?: string
 }
 
 export interface AssemblyRepository {

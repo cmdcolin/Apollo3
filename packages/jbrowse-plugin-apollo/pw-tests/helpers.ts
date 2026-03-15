@@ -296,6 +296,24 @@ export async function selectAssemblyToView(
     await page.locator('li').filter({ hasText: assemblyName }).click()
   }
 
+  // If navigating by coordinates, ensure refSeqs are loaded first by clicking
+  // "Show all regions in assembly", waiting for regions, then closing the panel
+  const isCoordinate = /:.+\.\./.test(location)
+  if (isCoordinate) {
+    console.log('[nav] Coordinate navigation — loading refSeqs first')
+    const showAllButton = page.getByRole('button', {
+      name: 'Show all regions in assembly',
+    })
+    await showAllButton.click()
+    await expect(
+      page.locator('table').filter({ hasText: location.split(':')[0] }),
+    ).toBeVisible({ timeout: 15_000 })
+    console.log('[nav] RefSeqs loaded')
+    // Close the regions panel by clicking the overview header or pressing Escape
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(500)
+  }
+
   const locationInput = page
     .getByText('Enter sequence name, feature name, or location')
     .locator('..')

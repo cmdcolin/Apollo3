@@ -1,6 +1,10 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { APP_GUARD } from '@nestjs/core'
+import { ServeStaticModule } from '@nestjs/serve-static'
 import Joi from 'joi'
 
 import { AssembliesModule } from './assemblies/assemblies.module.js'
@@ -13,6 +17,7 @@ import { FilesModule } from './files/files.module.js'
 import { HealthModule } from './health/health.module.js'
 import { JBrowseModule } from './jbrowse/jbrowse.module.js'
 import { MessagesModule } from './messages/messages.module.js'
+import { OrganismsModule } from './organisms/organisms.module.js'
 import { ApolloMikroOrmModule } from './mikro-orm/mikro-orm.module.js'
 import { PluginsModule } from './plugins/plugins.module.js'
 import { RefSeqsModule } from './refSeqs/refSeqs.module.js'
@@ -115,6 +120,14 @@ const validationSchema = Joi.object({
       envFilePath: nodeEnv === 'production' ? '.env' : '.development.env',
       validationSchema,
     }),
+    ServeStaticModule.forRoot({
+      rootPath: path.join(
+        path.dirname(fileURLToPath(import.meta.url)),
+        'client',
+      ),
+      serveRoot: '/admin',
+      serveStaticOptions: { fallthrough: true },
+    }),
     HealthModule,
     MessagesModule,
     ApolloMikroOrmModule.forRoot(),
@@ -126,6 +139,7 @@ const validationSchema = Joi.object({
     SequenceModule,
     FeaturesModule,
     AssembliesModule,
+    OrganismsModule,
     JBrowseModule,
     ExportModule,
     ChangesModule,

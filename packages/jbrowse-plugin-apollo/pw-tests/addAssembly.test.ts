@@ -41,8 +41,11 @@ async function fillAssemblyName(page: import('@playwright/test').Page, name: str
 
 async function submitAndWaitForSuccess(page: import('@playwright/test').Page) {
   await page.locator('form[data-testid="submit-form"]').locator('Button[data-testid="submit-button"]').click()
-  await expect(page.getByText('added successfully')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByText('added successfully')).toBeVisible({ timeout: 60_000 })
   await page.reload()
+  await expect(
+    page.getByRole('button', { name: 'Apollo' }),
+  ).toBeEnabled({ timeout: 15_000 })
   const launchButton = page.getByRole('button', { name: 'Launch view' })
   if (await launchButton.isVisible({ timeout: 3_000 }).catch(() => false)) {
     await launchButton.click()

@@ -3,4 +3,5 @@ export class CreateAssemblyDto {
   readonly displayName?: string
   readonly description?: string
   readonly aliases?: string[]
+  readonly organism?: string
 }

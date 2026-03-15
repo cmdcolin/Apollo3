@@ -7,6 +7,7 @@ import type {
   FeatureRepository,
   FileRepository,
   JBrowseConfigRepository,
+  OrganismRepository,
   RefSeqChunkRepository,
   RefSeqRepository,
   UserRepository,
@@ -20,6 +21,7 @@ import {
   MikroOrmFeatureRepository,
   MikroOrmFileRepository,
   MikroOrmJBrowseConfigRepository,
+  MikroOrmOrganismRepository,
   MikroOrmRefSeqChunkRepository,
   MikroOrmRefSeqRepository,
   MikroOrmUserRepository,
@@ -30,6 +32,7 @@ import { Inject, Injectable } from '@nestjs/common'
 
 export interface TransactionScope {
   assembly: AssemblyRepository
+  organism: OrganismRepository
   feature: FeatureRepository
   refSeq: RefSeqRepository
   refSeqChunk: RefSeqChunkRepository
@@ -62,6 +65,10 @@ export class DatabaseService {
 
   get assembly(): AssemblyRepository {
     return new MikroOrmAssemblyRepository(this.em)
+  }
+
+  get organism(): OrganismRepository {
+    return new MikroOrmOrganismRepository(this.em)
   }
 
   get feature(): FeatureRepository {
@@ -111,6 +118,7 @@ export class DatabaseService {
     return this.em.transactional(async (txEm) => {
       return callback({
         assembly: new MikroOrmAssemblyRepository(txEm),
+        organism: new MikroOrmOrganismRepository(txEm),
         feature: createFeatureRepository(txEm, this.dbType),
         refSeq: new MikroOrmRefSeqRepository(txEm),
         refSeqChunk: new MikroOrmRefSeqChunkRepository(txEm),
