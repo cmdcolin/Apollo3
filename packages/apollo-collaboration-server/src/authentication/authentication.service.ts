@@ -162,7 +162,7 @@ export class AuthenticationService {
    * @returns Return token with HttpResponse status 'HttpStatus.OK'
    */
   async logIn(name: string, email: string) {
-    // Find user from Mongo
+    // Find existing user
     let user = await this.usersService.findByEmail(email)
     if (!user) {
       let newUserRole = this.defaultNewUserRole
@@ -188,7 +188,7 @@ export class AuthenticationService {
       }
       user = await this.usersService.addNew(newUser)
     }
-    this.logger.debug(`User found in Mongo: ${JSON.stringify(user)}`)
+    this.logger.debug(`User found: ${JSON.stringify(user)}`)
 
     const payload: JWTPayload = {
       username: user.username,

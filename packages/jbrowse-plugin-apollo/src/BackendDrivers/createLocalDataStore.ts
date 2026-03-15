@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable @typescript-eslint/consistent-type-imports */
-import type { ServerDataStore, UnitOfWork } from '@apollo-annotation/common'
+import type { ServerDataStore } from '@apollo-annotation/common'
 
 import { getElectronRequire } from './electronRequire'
 
-type MikroORM = import('@mikro-orm/core').MikroORM
+type EntityManager = import('@mikro-orm/core').EntityManager
 
-export function createLocalDataStore(orm: MikroORM): ServerDataStore {
+export function createLocalDataStore(em: EntityManager): ServerDataStore {
   const electronRequire = getElectronRequire()
   const {
     MikroOrmAssemblyRepository,
@@ -22,17 +22,6 @@ export function createLocalDataStore(orm: MikroORM): ServerDataStore {
     '@apollo-annotation/entities',
   ) as typeof import('@apollo-annotation/entities')
 
-  const em = orm.em.fork()
-
-  const unitOfWork: UnitOfWork = {
-    async commit() {
-      await em.flush()
-    },
-    async rollback() {
-      em.clear()
-    },
-  }
-
   return {
     typeName: 'Server',
     featureRepository: new MikroOrmFeatureRepository(em),
@@ -44,7 +33,6 @@ export function createLocalDataStore(orm: MikroORM): ServerDataStore {
     fileRepository: new MikroOrmFileRepository(em),
     userRepository: new MikroOrmUserRepository(em),
     jbrowseConfigRepository: new MikroOrmJBrowseConfigRepository(em),
-    unitOfWork,
     filesService: {
       getFileStream() {
         throw new Error('File service not available in desktop mode')
@@ -56,12 +44,6 @@ export function createLocalDataStore(orm: MikroORM): ServerDataStore {
         throw new Error('File service not available in desktop mode')
       },
       parseGFF3() {
-        throw new Error('File service not available in desktop mode')
-      },
-      create() {
-        throw new Error('File service not available in desktop mode')
-      },
-      remove() {
         throw new Error('File service not available in desktop mode')
       },
     },

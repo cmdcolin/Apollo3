@@ -97,25 +97,28 @@ async function bootstrap() {
   server.headersTimeout = 24 * 60 * 60 * 1000
   server.requestTimeout = 24 * 60 * 60 * 1000
 
-  // Seed checks into database
-  const db = app.get(DatabaseService)
-  const checksMap = checkRegistry.getChecks()
-  for (const [key, check] of checksMap.entries()) {
-    const existing = await db.checkConfig.findByName(key)
-    if (existing) {
-      if (existing.version !== check.version) {
-        await db.checkConfig.upsert({ ...existing, version: check.version })
+  // Seed checks into database. This runs outside of an HTTP request, so we
+  // need an explicit RequestContext to get an isolated EntityManager.
+  await RequestContext.create(orm.em, async () => {
+    const db = app.get(DatabaseService)
+    const checksMap = checkRegistry.getChecks()
+    for (const [key, check] of checksMap.entries()) {
+      const existing = await db.checkConfig.findByName(key)
+      if (existing) {
+        if (existing.version !== check.version) {
+          await db.checkConfig.upsert({ ...existing, version: check.version })
+        }
+      } else {
+        const newId = randomBytes(12).toString('hex')
+        await db.checkConfig.upsert({
+          _id: newId,
+          name: check.name,
+          version: check.version,
+          isDefault: true,
+        })
       }
-    } else {
-      const newId = randomBytes(12).toString('hex')
-      await db.checkConfig.upsert({
-        _id: newId,
-        name: check.name,
-        version: check.version,
-        isDefault: true,
-      })
     }
-  }
+  })
 
   // eslint-disable-next-line no-console
   console.log(

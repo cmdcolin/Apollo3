@@ -7,6 +7,10 @@
 #   ./scripts/e2e-servers.sh stop     - Stop running servers
 #   ./scripts/e2e-servers.sh status   - Check server status
 #   ./scripts/e2e-servers.sh logs     - Tail the server log
+#
+# Database backend (default: sqlite):
+#   DB_BACKEND=postgresql DB_CONNECTION_URL=postgresql://user:pass@localhost:5432/apollo_e2e \
+#     ./scripts/e2e-servers.sh test
 
 set -euo pipefail
 
@@ -126,12 +130,24 @@ build_all() {
   echo "=== Build complete ==="
 }
 
+reset_database() {
+  local db_backend="${DB_BACKEND:-sqlite}"
+  if [ "$db_backend" = "postgresql" ]; then
+    local url="${DB_CONNECTION_URL:?DB_CONNECTION_URL required for postgresql}"
+    echo "Resetting PostgreSQL database..."
+    # Drop and recreate all tables. MikroORM's schema.update() will recreate them on server start.
+    psql "$url" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" 2>/dev/null || true
+  else
+    rm -f "$REPO_ROOT/packages/apollo-collaboration-server/apollo-dev.sqlite"
+  fi
+}
+
 start_servers() {
   stop_servers
 
   # Fresh database for each test run
   rm -f "$LOG_FILE"
-  rm -f "$REPO_ROOT/packages/apollo-collaboration-server/apollo-dev.sqlite"
+  reset_database
 
   echo "Starting e2e servers..."
   echo "Server log: $LOG_FILE"
@@ -149,8 +165,10 @@ start_servers() {
   echo $! >> "$PID_FILE"
 
   # Collaboration server (port 3999) — NestJS backend with guest admin access
+  # Pass through DB_BACKEND and DB_CONNECTION_URL if set
   cd "$REPO_ROOT/packages/apollo-collaboration-server" || exit 1
-  GUEST_USER_ROLE=admin LOG_LEVELS=error,warn,log NODE_ENV=development yarn node dist/main.js \
+  DB_BACKEND="${DB_BACKEND:-sqlite}" DB_CONNECTION_URL="${DB_CONNECTION_URL:-apollo-dev.sqlite}" \
+    GUEST_USER_ROLE=admin LOG_LEVELS=error,warn,log NODE_ENV=development yarn node dist/main.js \
     >> "$LOG_FILE" 2>&1 &
   echo $! >> "$PID_FILE"
 

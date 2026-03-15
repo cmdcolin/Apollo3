@@ -10,3 +10,7 @@ cypress/cypress-image-diff-screenshots/comparison
 cypress/cypress-image-diff-screenshots/diff
 
 data/
+
+# Playwright specific files
+test-results/
+playwright-report/

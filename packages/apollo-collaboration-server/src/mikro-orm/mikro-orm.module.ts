@@ -23,10 +23,7 @@ export class ApolloMikroOrmModule {
           provide: MikroORM,
           useFactory: async () => {
             this.logger.log('Initializing MikroORM...')
-            const orm = await MikroORM.init({
-              ...config,
-              allowGlobalContext: true,
-            })
+            const orm = await MikroORM.init(config)
             if (dbType === 'sqlite') {
               const conn = orm.em.getConnection()
               await conn.execute('PRAGMA foreign_keys = ON')

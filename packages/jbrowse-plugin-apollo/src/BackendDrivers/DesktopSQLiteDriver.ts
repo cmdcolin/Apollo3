@@ -95,7 +95,7 @@ export class DesktopSQLiteDriver extends BackendDriver {
       return
     }
 
-    const dataStore = createLocalDataStore(orm)
+    const dataStore = createLocalDataStore(orm.em)
     const existingAssembly =
       await dataStore.assemblyRepository.findByName(assemblyName)
     if (existingAssembly) {
@@ -123,7 +123,7 @@ export class DesktopSQLiteDriver extends BackendDriver {
   }
 
   private async createEmptyAssembly(assemblyName: string, orm: MikroORM) {
-    const dataStore = createLocalDataStore(orm)
+    const dataStore = createLocalDataStore(orm.em)
     const assemblyId = new ObjectID().toHexString()
     await dataStore.assemblyRepository.create({
       _id: assemblyId,
@@ -164,7 +164,7 @@ export class DesktopSQLiteDriver extends BackendDriver {
     const fileContents = await fs.promises.readFile(gff3File, 'utf8')
     const gff3Result = parseStringSync(fileContents)
 
-    const dataStore = createLocalDataStore(orm)
+    const dataStore = createLocalDataStore(orm.em)
 
     const assemblyId = new ObjectID().toHexString()
     await dataStore.assemblyRepository.create({
@@ -236,7 +236,7 @@ export class DesktopSQLiteDriver extends BackendDriver {
     region: Region,
   ): Promise<[AnnotationFeatureSnapshot[], CheckResultSnapshot[]]> {
     const orm = await this.getOrmForAssembly(region.assemblyName)
-    const dataStore = createLocalDataStore(orm)
+    const dataStore = createLocalDataStore(orm.em)
 
     const assemblyRow = await dataStore.assemblyRepository.findByName(
       region.assemblyName,
@@ -284,7 +284,7 @@ export class DesktopSQLiteDriver extends BackendDriver {
 
   async getRegions(assemblyName: string): Promise<Region[]> {
     const orm = await this.getOrmForAssembly(assemblyName)
-    const dataStore = createLocalDataStore(orm)
+    const dataStore = createLocalDataStore(orm.em)
 
     const assemblyRow =
       await dataStore.assemblyRepository.findByName(assemblyName)
@@ -315,7 +315,7 @@ export class DesktopSQLiteDriver extends BackendDriver {
 
   async getRefNameAliases(assemblyName: string): Promise<RefNameAliases[]> {
     const orm = await this.getOrmForAssembly(assemblyName)
-    const dataStore = createLocalDataStore(orm)
+    const dataStore = createLocalDataStore(orm.em)
 
     const assemblyRow =
       await dataStore.assemblyRepository.findByName(assemblyName)
@@ -334,7 +334,7 @@ export class DesktopSQLiteDriver extends BackendDriver {
   }
 
   private async buildRefNameToIdMap(assemblyName: string, orm: MikroORM) {
-    const dataStore = createLocalDataStore(orm)
+    const dataStore = createLocalDataStore(orm.em)
     const assemblyRow =
       await dataStore.assemblyRepository.findByName(assemblyName)
     if (!assemblyRow) {
@@ -368,14 +368,10 @@ export class DesktopSQLiteDriver extends BackendDriver {
     )
     this.patchRefSeqIds(change, refNameMap)
 
-    const dataStore = createLocalDataStore(orm)
-    try {
+    await orm.em.transactional(async (txEm) => {
+      const dataStore = createLocalDataStore(txEm)
       await change.execute(dataStore)
-      await dataStore.unitOfWork.commit()
-    } catch (error) {
-      await dataStore.unitOfWork.rollback()
-      throw error
-    }
+    })
     return new ValidationResultSet()
   }
 
@@ -414,7 +410,7 @@ export class DesktopSQLiteDriver extends BackendDriver {
     const results: AnnotationFeatureSnapshot[] = []
     for (const assemblyName of assemblies) {
       const orm = await this.getOrmForAssembly(assemblyName)
-      const dataStore = createLocalDataStore(orm)
+      const dataStore = createLocalDataStore(orm.em)
       const assemblyRow =
         await dataStore.assemblyRepository.findByName(assemblyName)
       if (!assemblyRow) {

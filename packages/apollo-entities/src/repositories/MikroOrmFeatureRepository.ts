@@ -3,7 +3,7 @@ import type { EntityManager, InferEntity } from '@mikro-orm/core'
 
 import { FeatureEntity } from '../entities/FeatureEntity.js'
 
-// English stop words matching MongoDB's default text search behavior
+// English stop words for text search filtering
 const STOP_WORDS = new Set([
   'a',
   'an',
@@ -143,8 +143,8 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
   }
 
   async findAll() {
-    const rows = (await this.sql('SELECT * FROM feature')) as RawFeatureRow[]
-    return rows.map((r) => rawToRow(r))
+    const entities = await this.em.find(FeatureEntity, {})
+    return entities.map((e) => entityToRow(e))
   }
 
   async countAll() {
@@ -160,13 +160,9 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
   }
 
   async findById(id: string) {
-    const rows = (await this.sql(
-      'SELECT * FROM feature WHERE _id = ?',
-      [id],
-    )) as RawFeatureRow[]
-    const [first] = rows
-    if (first) {
-      return rawToRow(first)
+    const entity = await this.em.findOne(FeatureEntity, { _id: id })
+    if (entity) {
+      return entityToRow(entity)
     }
     return
   }
@@ -175,41 +171,40 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
     if (ids.length === 0) {
       return []
     }
-    const rows = (await this.sql(
-      `SELECT * FROM feature WHERE _id IN (${placeholders(ids.length)})`,
-      ids,
-    )) as RawFeatureRow[]
-    return rows.map((r) => rawToRow(r))
+    const entities = await this.em.find(FeatureEntity, { _id: { $in: ids } })
+    return entities.map((e) => entityToRow(e))
   }
 
   async findByRange(refSeqId: string, start: number, end: number) {
-    const rows = (await this.sql(
-      'SELECT * FROM feature WHERE ref_seq__id = ? AND min <= ? AND max >= ?',
-      [refSeqId, end, start],
-    )) as RawFeatureRow[]
-    return rows.map((r) => rawToRow(r))
+    const entities = await this.em.find(FeatureEntity, {
+      refSeq: refSeqId,
+      min: { $lte: end },
+      max: { $gte: start },
+    })
+    return entities.map((e) => entityToRow(e))
   }
 
   async findRootsByRange(refSeqId: string, start: number, end: number) {
-    const rows = (await this.sql(
-      'SELECT * FROM feature WHERE ref_seq__id = ? AND parent__id IS NULL AND min <= ? AND max >= ?',
-      [refSeqId, end, start],
-    )) as RawFeatureRow[]
-    return rows.map((r) => rawToRow(r))
+    const entities = await this.em.find(FeatureEntity, {
+      refSeq: refSeqId,
+      parent: null,
+      min: { $lte: end },
+      max: { $gte: start },
+    })
+    return entities.map((e) => entityToRow(e))
   }
 
   async findChildren(parentId: string) {
-    const rows = (await this.sql(
-      'SELECT * FROM feature WHERE parent__id = ?',
-      [parentId],
-    )) as RawFeatureRow[]
-    return rows.map((r) => rawToRow(r))
+    const entities = await this.em.find(FeatureEntity, { parent: parentId })
+    return entities.map((e) => entityToRow(e))
   }
 
   async findDescendants(rootId: string) {
     return this.findDescendantsOfMany([rootId])
   }
 
+  // Raw SQL required: recursive CTE for tree traversal cannot be expressed
+  // with MikroORM's filter operators
   async findDescendantsOfMany(rootIds: string[]) {
     if (rootIds.length === 0) {
       return []
@@ -319,6 +314,7 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
     return true
   }
 
+  // Raw SQL required: recursive CTE to collect all descendant IDs for deletion
   async deleteDescendants(id: string) {
     const rows = (await this.sql(
       `WITH RECURSIVE tree AS (
@@ -342,6 +338,8 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
     })
   }
 
+  // Raw SQL required: LIKE on computed expression (type || attributes) and
+  // recursive CTE to walk from matching features up to their root parents
   async searchText(refSeqIds: string[], query: string) {
     if (refSeqIds.length === 0) {
       return []
@@ -354,7 +352,7 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
     // Use SQL LIKE to pre-filter candidates, then precise phrase matching in JS
     const refSeqPh = placeholders(refSeqIds.length)
     const likeConditions = queryTokens.map(
-      () => `(LOWER(type) || ' ' || COALESCE(LOWER(attributes), '')) LIKE ?`,
+      () => `(LOWER(type) || ' ' || COALESCE(LOWER(CAST(attributes AS TEXT)), '')) LIKE ?`,
     )
     const likeParams = queryTokens.map((t) => `%${t}%`)
 
@@ -399,13 +397,13 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
     )
   }
 
+  // Raw SQL required: LIKE on JSON attributes column for substring matching,
+  // then recursive CTE to walk from matches up to root parents
   async findByIndexedId(id: string, refSeqIds?: string[]) {
-    // Use SQL LIKE to find features whose attributes JSON contains the id,
-    // then walk up to root parents using recursive CTE
     const escapedId = id.replace(/%/g, '\\%').replace(/_/g, '\\_')
     const likePattern = `%"${escapedId}"%`
 
-    let matchSql = `SELECT _id FROM feature WHERE attributes LIKE ?`
+    let matchSql = `SELECT _id FROM feature WHERE CAST(attributes AS TEXT) LIKE ?`
     const params: unknown[] = [likePattern]
     if (refSeqIds && refSeqIds.length > 0) {
       matchSql += ` AND ref_seq__id IN (${placeholders(refSeqIds.length)})`
@@ -419,19 +417,16 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
     // Verify matches precisely (LIKE may produce false positives for substring matches)
     const verifiedIds: string[] = []
     if (matchRows.length > 0) {
-      const fullRows = (await this.sql(
-        `SELECT _id, attributes FROM feature WHERE _id IN (${placeholders(matchRows.length)})`,
-        matchRows.map((r) => r._id),
-      )) as { _id: string; attributes: string | null }[]
-      for (const row of fullRows) {
-        if (row.attributes) {
-          const attributes = JSON.parse(row.attributes) as Record<
-            string,
-            string[]
-          >
-          for (const values of Object.values(attributes)) {
+      const entities = await this.em.find(
+        FeatureEntity,
+        { _id: { $in: matchRows.map((r) => r._id) } },
+        { fields: ['_id', 'attributes'] },
+      )
+      for (const entity of entities) {
+        if (entity.attributes) {
+          for (const values of Object.values(entity.attributes)) {
             if (values.includes(id)) {
-              verifiedIds.push(row._id)
+              verifiedIds.push(entity._id)
               break
             }
           }
@@ -456,6 +451,7 @@ export class MikroOrmFeatureRepository implements FeatureRepository {
     return rows.map((r) => rawToRow(r))
   }
 
+  // Raw SQL required: recursive CTE to walk parent chain up to root
   async findRootParent(id: string) {
     const rows = (await this.sql(
       `WITH RECURSIVE ancestors AS (

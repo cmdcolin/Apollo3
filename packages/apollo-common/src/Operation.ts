@@ -17,19 +17,6 @@ import type {
   UserRepository,
 } from './repositories/index.js'
 
-interface CreateFileDto {
-  readonly _id: string
-  readonly basename: string
-  readonly checksum: string
-  readonly type: 'text/x-gff3' | 'text/x-fasta'
-  readonly user: string
-}
-
-export interface UnitOfWork {
-  commit(): Promise<void>
-  rollback(): Promise<void>
-}
-
 export interface ServerDataStore {
   typeName: 'Server'
   featureRepository: FeatureRepository
@@ -41,7 +28,6 @@ export interface ServerDataStore {
   fileRepository: FileRepository
   userRepository: UserRepository
   jbrowseConfigRepository: JBrowseConfigRepository
-  unitOfWork: UnitOfWork
   filesService: {
     getFileStream(file: {
       _id: string
@@ -56,8 +42,6 @@ export interface ServerDataStore {
       stream: ReadableStream<Uint8Array>,
       parseOptions?: { bufferSize?: number },
     ): ReadableStream<GFF3Feature>
-    create(createFileDto: CreateFileDto): void
-    remove(id: string): void
   }
   pluginsService: {
     evaluateExtensionPoint(
