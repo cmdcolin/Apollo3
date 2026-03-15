@@ -17,8 +17,8 @@ import logoUrl from './apollo_logo.svg'
 
 const theme = createJBrowseTheme({
   palette: {
-    primary: { main: '#311b92' },
-    secondary: { main: '#0097a7' },
+    primary: { main: '#0c4f4b' },
+    secondary: { main: '#1AA39B' },
   },
 })
 
@@ -42,7 +42,12 @@ function useCurrentUser() {
 
 type Page = 'organisms' | 'assemblies' | 'changes' | 'users'
 
-const fileMenuItems: { label: string; href: string; value: Page; admin?: boolean }[] = [
+const fileMenuItems: {
+  label: string
+  href: string
+  value: Page
+  admin?: boolean
+}[] = [
   { label: 'Organisms', href: '/ui/organisms/', value: 'organisms' },
   { label: 'Assemblies', href: '/ui/assemblies/', value: 'assemblies' },
   { label: 'Recent Changes', href: '/ui/changes/', value: 'changes' },
@@ -63,7 +68,12 @@ function NavBar({ current, user }: { current: Page; user?: UserInfo }) {
         <Box
           component="a"
           href="/"
-          sx={{ display: 'flex', alignItems: 'center', mr: 1, textDecoration: 'none' }}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            mr: 1,
+            textDecoration: 'none',
+          }}
         >
           <img src={logoUrl} alt="Apollo" height={28} />
         </Box>
@@ -71,7 +81,12 @@ function NavBar({ current, user }: { current: Page; user?: UserInfo }) {
           variant="h6"
           component="a"
           href="/"
-          sx={{ textDecoration: 'none', color: 'inherit', mr: 2, fontSize: '1rem' }}
+          sx={{
+            textDecoration: 'none',
+            color: 'inherit',
+            mr: 2,
+            fontSize: '1rem',
+          }}
         >
           Apollo
         </Typography>
@@ -103,7 +118,12 @@ function NavBar({ current, user }: { current: Page; user?: UserInfo }) {
         {user && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Typography variant="body2">{user.username}</Typography>
-            <Chip label={user.role} size="small" variant="outlined" sx={{ color: 'inherit', borderColor: 'rgba(255,255,255,0.5)' }} />
+            <Chip
+              label={user.role}
+              size="small"
+              variant="outlined"
+              sx={{ color: 'inherit', borderColor: 'rgba(255,255,255,0.5)' }}
+            />
             <Button color="inherit" size="small" href="/auth/logout">
               Sign out
             </Button>
@@ -114,7 +134,13 @@ function NavBar({ current, user }: { current: Page; user?: UserInfo }) {
   )
 }
 
-export function Nav({ current, children }: { current: Page; children: React.ReactNode }) {
+export function Nav({
+  current,
+  children,
+}: {
+  current: Page
+  children: React.ReactNode
+}) {
   const user = useCurrentUser()
 
   return (
@@ -126,6 +152,12 @@ export function Nav({ current, children }: { current: Page; children: React.Reac
   )
 }
 
-export function AdminNav({ current, children }: { current: Page; children: React.ReactNode }) {
+export function AdminNav({
+  current,
+  children,
+}: {
+  current: Page
+  children: React.ReactNode
+}) {
   return <Nav current={current}>{children}</Nav>
 }

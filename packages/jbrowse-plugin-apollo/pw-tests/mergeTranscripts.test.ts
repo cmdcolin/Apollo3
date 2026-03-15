@@ -26,24 +26,19 @@ test.afterEach(async ({ page }) => {
 test('Merge multiple exons', async ({ page }) => {
   await addAssemblyFromGff(page, ASSEMBLY, GFF_PATH)
   await selectAssemblyToView(page, ASSEMBLY, 'chr2:1..60')
-  await annotationTrackAppearance(
-    page,
-    'Show both graphical and table display',
-  )
+  await annotationTrackAppearance(page, 'Show both graphical and table display')
 
   // Verify mrna03 is visible
   await expect(page.getByText('Id=mrna03,')).toBeVisible()
 
   // Right-click mrna02 and merge
   await page.getByText('Id=mrna02').click({ button: 'right', force: true })
-  await page.getByText('Merge transcripts', { exact: false }).click({ timeout: 10_000 })
+  await page
+    .getByText('Merge transcripts', { exact: false })
+    .click({ timeout: 10_000 })
 
   // Select mrna03 (y [5-30])
-  await page
-    .getByText('y [5-30]')
-    .locator('..')
-    .locator('input')
-    .click()
+  await page.getByText('y [5-30]').locator('..').locator('input').click()
   await page.getByRole('button', { name: 'Submit' }).click()
 
   // Check merged result
@@ -69,12 +64,10 @@ test('Merge multiple exons', async ({ page }) => {
 
   // Merge mrna05 into mrna02
   await page.getByText('Id=mrna02').click({ button: 'right', force: true })
-  await page.getByText('Merge transcripts', { exact: false }).click({ timeout: 10_000 })
   await page
-    .getByText('mrna05 [26-40]')
-    .locator('..')
-    .locator('input')
-    .click()
+    .getByText('Merge transcripts', { exact: false })
+    .click({ timeout: 10_000 })
+  await page.getByText('mrna05 [26-40]').locator('..').locator('input').click()
   await page.getByRole('button', { name: 'Submit' }).click()
   await expect(page.getByText('Id=mrna05,')).not.toBeVisible()
 
@@ -87,20 +80,17 @@ test('Merge multiple exons', async ({ page }) => {
   // Close view and reload to verify persistence
   await page.locator('button[data-testid="close_view"]').click()
   await expect(page.getByText('Launch view')).toBeVisible()
-  await page.goto('/')
-  await expect(
-    page.getByRole('button', { name: 'Launch view' }),
-  ).toBeVisible({ timeout: 15_000 })
+  await page.goto('/jbrowse/')
+  await expect(page.getByRole('button', { name: 'Launch view' })).toBeVisible({
+    timeout: 15_000,
+  })
   await page.getByRole('button', { name: 'Launch view' }).click()
   await expect(page.getByText('Select assembly to view')).toBeVisible({
     timeout: 10_000,
   })
 
   await selectAssemblyToView(page, ASSEMBLY, 'chr2:1..60')
-  await annotationTrackAppearance(
-    page,
-    'Show both graphical and table display',
-  )
+  await annotationTrackAppearance(page, 'Show both graphical and table display')
 
   await expect(
     page.getByText(

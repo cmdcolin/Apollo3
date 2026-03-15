@@ -20,8 +20,8 @@ import logoUrl from './apollo_logo.svg'
 
 const theme = createJBrowseTheme({
   palette: {
-    primary: { main: '#311b92' },
-    secondary: { main: '#0097a7' },
+    primary: { main: '#0c4f4b' },
+    secondary: { main: '#1AA39B' },
   },
 })
 
@@ -100,7 +100,12 @@ function Header({ user }: { user?: CurrentUser | null }) {
         <Box
           component="a"
           href="/"
-          sx={{ display: 'flex', alignItems: 'center', mr: 1, textDecoration: 'none' }}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            mr: 1,
+            textDecoration: 'none',
+          }}
         >
           <img src={logoUrl} alt="Apollo" height={28} />
         </Box>
@@ -108,7 +113,12 @@ function Header({ user }: { user?: CurrentUser | null }) {
           variant="h6"
           component="a"
           href="/"
-          sx={{ textDecoration: 'none', color: 'inherit', fontSize: '1rem', flexGrow: 1 }}
+          sx={{
+            textDecoration: 'none',
+            color: 'inherit',
+            fontSize: '1rem',
+            flexGrow: 1,
+          }}
         >
           Apollo
         </Typography>
@@ -151,11 +161,7 @@ function LoginSection() {
         </Button>
       )}
       {types.includes('guest') && (
-        <Button
-          variant="outlined"
-          fullWidth
-          href="/auth/guest"
-        >
+        <Button variant="outlined" fullWidth href="/auth/guest">
           Continue as Guest
         </Button>
       )}
@@ -172,9 +178,13 @@ function PendingApproval({ user }: { user: CurrentUser }) {
         Your account ({user.email}) is pending approval.
       </Alert>
       <Typography variant="body2" sx={{ mb: 2 }}>
-        An administrator needs to assign you a role before you can access Apollo.
+        An administrator needs to assign you a role before you can access
+        Apollo.
         {adminEmail && adminEmail !== 'root_user' && (
-          <> Contact <strong>{adminEmail}</strong> to request access.</>
+          <>
+            {' '}
+            Contact <strong>{adminEmail}</strong> to request access.
+          </>
         )}
       </Typography>
     </Box>
@@ -214,7 +224,8 @@ function IndexPage() {
     return null
   }
 
-  const isUnauthenticated = !user && (httpStatus === 401 || httpStatus === undefined)
+  const isUnauthenticated =
+    !user && (httpStatus === 401 || httpStatus === undefined)
   const isPendingApproval = user?.role === 'none'
 
   return (
@@ -223,7 +234,9 @@ function IndexPage() {
       <Header user={user} />
       <Container maxWidth="sm" sx={{ mt: 4, textAlign: 'center' }}>
         <Typography variant="h4" gutterBottom>
-          {isUnauthenticated ? 'Welcome to Apollo' : `Welcome, ${user?.username}`}
+          {isUnauthenticated
+            ? 'Welcome to Apollo'
+            : `Welcome, ${user?.username}`}
         </Typography>
         <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 4 }}>
           Collaborative genome annotation editor

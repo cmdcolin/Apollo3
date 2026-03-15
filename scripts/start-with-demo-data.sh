@@ -182,9 +182,9 @@ else
     \"assemblyName\": \"volvox\",
     \"sequenceSource\": {
       \"type\": \"external\",
-      \"fa\": \"http://127.0.0.1:$COLLAB_PORT/test_data/volvox.fa.gz\",
-      \"fai\": \"http://127.0.0.1:$COLLAB_PORT/test_data/volvox.fa.gz.fai\",
-      \"gzi\": \"http://127.0.0.1:$COLLAB_PORT/test_data/volvox.fa.gz.gzi\"
+      \"fa\": \"http://127.0.0.1:$COLLAB_PORT/jbrowse/test_data/volvox.fa.gz\",
+      \"fai\": \"http://127.0.0.1:$COLLAB_PORT/jbrowse/test_data/volvox.fa.gz.fai\",
+      \"gzi\": \"http://127.0.0.1:$COLLAB_PORT/jbrowse/test_data/volvox.fa.gz.gzi\"
     }
   }" > /dev/null
   echo "  volvox configured."

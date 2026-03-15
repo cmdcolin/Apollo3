@@ -41,18 +41,13 @@ export async function uploadFileViaApi(filePath: string, fileType: string) {
   return data
 }
 
-export async function addAssemblyViaApi(
-  assemblyName: string,
-  fileId: string,
-) {
+export async function addAssemblyViaApi(assemblyName: string, fileId: string) {
   const token = await getGuestToken()
   const assemblyId = [...Array(24)]
     .map(() => Math.floor(Math.random() * 16).toString(16))
     .join('')
 
-  console.log(
-    `[api] Creating assembly "${assemblyName}" (id=${assemblyId})...`,
-  )
+  console.log(`[api] Creating assembly "${assemblyName}" (id=${assemblyId})...`)
   const res = await fetch(`${API_BASE}/changes`, {
     method: 'POST',
     headers: {
@@ -163,7 +158,7 @@ export async function loginAsGuest(page: Page) {
   // its websocket. The key format is "${internetAccountId}-token".
   // The internetAccountId comes from the server config: "${NAME}-apolloInternetAccount"
   const internetAccountId = 'Demo Server-apolloInternetAccount'
-  await page.goto('/')
+  await page.goto('/jbrowse/')
   await page.evaluate(
     ([id, t]) => {
       sessionStorage.setItem(`${id}-token`, t)
@@ -173,11 +168,11 @@ export async function loginAsGuest(page: Page) {
 
   // Reload so JBrowse initializes with both the cookie and the sessionStorage token
   console.log('[login] Navigating with auth cookie + sessionStorage token...')
-  await page.goto('/')
+  await page.goto('/jbrowse/')
 
-  await expect(
-    page.getByRole('button', { name: 'Apollo' }),
-  ).toBeEnabled({ timeout: 20_000 })
+  await expect(page.getByRole('button', { name: 'Apollo' })).toBeEnabled({
+    timeout: 20_000,
+  })
   console.log('[login] Apollo button ready')
 }
 
@@ -192,9 +187,9 @@ export async function dismissDialogs(page: Page) {
 // ── Navigation helpers ──────────────────────────────────────────────
 
 export async function selectFromApolloMenu(page: Page, path: string[]) {
-  await expect(
-    page.getByRole('button', { name: 'Apollo' }),
-  ).toBeEnabled({ timeout: 15_000 })
+  await expect(page.getByRole('button', { name: 'Apollo' })).toBeEnabled({
+    timeout: 15_000,
+  })
   await dismissDialogs(page)
 
   const lastItem = path.at(-1)!
@@ -208,10 +203,7 @@ export async function selectFromApolloMenu(page: Page, path: string[]) {
   ).toBeVisible({ timeout: 15_000 })
 
   for (const item of prefixItems) {
-    await page
-      .locator('[role="menuitem"]')
-      .filter({ hasText: item })
-      .hover()
+    await page.locator('[role="menuitem"]').filter({ hasText: item }).hover()
   }
 
   await page
@@ -232,11 +224,11 @@ export async function addAssemblyFromGff(
 
   // Reload to pick up the new assembly in config.json
   console.log('[addAssembly] Reloading to pick up new assembly...')
-  await page.goto('/')
+  await page.goto('/jbrowse/')
 
-  await expect(
-    page.getByRole('button', { name: 'Apollo' }),
-  ).toBeEnabled({ timeout: 15_000 })
+  await expect(page.getByRole('button', { name: 'Apollo' })).toBeEnabled({
+    timeout: 15_000,
+  })
 
   // Verify the session token is present for data fetching
   const hasToken = await page.evaluate((id) => {
@@ -246,7 +238,9 @@ export async function addAssemblyFromGff(
     return !!token
   }, 'Demo Server-apolloInternetAccount')
   if (!hasToken) {
-    console.log('[addAssembly] WARNING: sessionStorage token missing, re-injecting')
+    console.log(
+      '[addAssembly] WARNING: sessionStorage token missing, re-injecting',
+    )
     const token = await getGuestToken()
     await page.evaluate(
       ([id, t]) => {
@@ -254,10 +248,10 @@ export async function addAssemblyFromGff(
       },
       ['Demo Server-apolloInternetAccount', token],
     )
-    await page.goto('/')
-    await expect(
-      page.getByRole('button', { name: 'Apollo' }),
-    ).toBeEnabled({ timeout: 15_000 })
+    await page.goto('/jbrowse/')
+    await expect(page.getByRole('button', { name: 'Apollo' })).toBeEnabled({
+      timeout: 15_000,
+    })
   }
   console.log('[addAssembly] App ready')
 
@@ -269,9 +263,9 @@ export async function addAssemblyFromGff(
       console.log('[addAssembly] Clicking Launch view...')
       await launchButton.click()
     }
-    await expect(
-      page.getByText('Select assembly to view'),
-    ).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText('Select assembly to view')).toBeVisible({
+      timeout: 15_000,
+    })
     console.log('[addAssembly] View ready')
   }
 }
@@ -369,7 +363,11 @@ export async function currentLocationEquals(
   expect(xend).toBeLessThanOrEqual(end + tolerance)
 }
 
-export async function downloadGff(page: Page, assemblyName: string, includeFasta: boolean) {
+export async function downloadGff(
+  page: Page,
+  assemblyName: string,
+  includeFasta: boolean,
+) {
   await selectFromApolloMenu(page, ['Download GFF3'])
 
   const selectAssembly = page.getByText('Select assembly').locator('..')
@@ -399,10 +397,7 @@ export async function refreshTableEditor(page: Page) {
   await page.getByText('Show both graphical and table display').click()
 }
 
-export async function annotationTrackAppearance(
-  page: Page,
-  option: string,
-) {
+export async function annotationTrackAppearance(page: Page, option: string) {
   console.log(`[track] Setting display: "${option}"`)
   await page.getByText('Open track selector', { exact: false }).click()
   // Track selector needs time to load available tracks
