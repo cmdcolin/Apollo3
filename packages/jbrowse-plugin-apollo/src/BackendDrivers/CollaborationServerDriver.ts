@@ -4,28 +4,19 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
-import {
-  type AssemblySpecificChange,
-  Change,
-  type FeatureChange,
-  isFeatureChange,
-} from '@apollo-annotation/common'
+import { type AssemblySpecificChange, Change } from '@apollo-annotation/common'
 import type {
   AnnotationFeatureSnapshot,
   ApolloRefSeqI,
   CheckResultSnapshot,
 } from '@apollo-annotation/mst'
-import {
-  type ChangeMessage,
-  ValidationResultSet,
-  makeUserSessionId,
-} from '@apollo-annotation/shared'
+import { ValidationResultSet } from '@apollo-annotation/shared'
 import { getConf } from '@jbrowse/core/configuration'
 import type { BaseInternetAccountModel } from '@jbrowse/core/pluggableElementTypes'
 import { type Region, getSession } from '@jbrowse/core/util'
 import type { Socket } from 'socket.io-client'
 
-import { ChangeManager, type SubmitOpts } from '../ChangeManager'
+import { type SubmitOpts } from '../ChangeManager'
 import { createFetchErrorMessage } from '../util'
 
 import { BackendDriver, type RefNameAliases } from './BackendDriver'
@@ -136,7 +127,7 @@ export class CollaborationServerDriver extends BackendDriver {
       )
       throw new Error(errorMessage)
     }
-    this.checkSocket(assemblyName, refName, internetAccount)
+
     return response.json() as Promise<AnnotationFeatureSnapshot[]>
   }
 
@@ -156,57 +147,6 @@ export class CollaborationServerDriver extends BackendDriver {
       return []
     }
     return response.json() as Promise<CheckResultSnapshot[]>
-  }
-
-  /**
-   * Checks if there is assembly-refSeq specific socket. If not, it opens one
-   * @param assembly - assemblyId
-   * @param refSeq - refSeqName
-   * @param internetAccount - internet account
-   */
-  checkSocket(
-    assembly: string,
-    refSeq: string,
-    internetAccount: ApolloInternetAccount,
-  ) {
-    const { socket } = internetAccount
-    const token = internetAccount.retrieveToken()
-    if (!token) {
-      return
-    }
-    const localSessionId = makeUserSessionId(token)
-    const channel = `${assembly}-${refSeq}`
-    const changeManager = new ChangeManager(this.clientStore)
-
-    if (!socket.hasListeners(channel)) {
-      socket.on(channel, async (message: ChangeMessage) => {
-        // Save server last change sequence into session storage
-        internetAccount.setLastChangeSequenceNumber(
-          Number(message.changeSequence),
-        )
-        if (message.userSessionId === localSessionId) {
-          return // we did this change, no need to apply it again
-        }
-        const change = Change.fromJSON(message.changeInfo)
-        if (isFeatureChange(change) && this.haveDataForChange(change)) {
-          await changeManager.submit(change, { submitToBackend: false })
-        }
-      })
-    }
-  }
-
-  private haveDataForChange(change: FeatureChange): boolean {
-    const { assembly, changedIds } = change
-    const apolloAssembly = this.clientStore.assemblies.get(assembly)
-    if (!apolloAssembly) {
-      return false
-    }
-    for (const changedId of changedIds) {
-      if (this.clientStore.getFeature(changedId)) {
-        return true
-      }
-    }
-    return false
   }
 
   /**
@@ -268,7 +208,7 @@ export class CollaborationServerDriver extends BackendDriver {
     )
     this.inFlight.set(inFlightKey, seqPromise)
     const seq = await seqPromise
-    this.checkSocket(assemblyName, refName, internetAccount)
+
     this.inFlight.delete(inFlightKey)
     return { seq, refSeq }
   }

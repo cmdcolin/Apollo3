@@ -56,20 +56,6 @@ export class ChangesService {
   async create(change: BaseChange, user: DecodedJWT) {
     this.logger.log(`Change request: ${change.typeName} from ${user.email}`)
 
-    const refNames: string[] = []
-    if (isFeatureChange(change)) {
-      const features = await this.db.feature.findByIds(change.changedIds)
-      if (features.length > 0) {
-        const uniqueRefSeqIds = [...new Set(features.map((f) => f.refSeq))]
-        for (const rsId of uniqueRefSeqIds) {
-          const refSeq = await this.db.refSeq.findById(rsId)
-          if (refSeq) {
-            refNames.push(refSeq.name)
-          }
-        }
-      }
-    }
-
     const startTime = Date.now()
     const sequence = await this.db.transactional(async (scope) => {
       const seq = await scope.counter.getNextSequenceValue('changeCounter')
@@ -100,21 +86,14 @@ export class ChangesService {
       }
     }
 
-    if (isAssemblySpecificChange(change)) {
-      const userSessionId = makeUserSessionId(user)
-      const channels = isFeatureChange(change)
-        ? refNames.map((name) => `${change.assembly}-${name}`)
-        : [COMMON_CHANNEL]
-      for (const channel of channels) {
-        await this.messagesGateway.create(channel, {
-          changeInfo: change.toJSON(),
-          userName: user.username,
-          userSessionId,
-          channel,
-          changeSequence: sequence,
-        })
-      }
-    }
+    const userSessionId = makeUserSessionId(user)
+    await this.messagesGateway.create(COMMON_CHANNEL, {
+      changeInfo: change.toJSON(),
+      userName: user.username,
+      userSessionId,
+      channel: COMMON_CHANNEL,
+      changeSequence: sequence,
+    })
     return changeDoc
   }
 
