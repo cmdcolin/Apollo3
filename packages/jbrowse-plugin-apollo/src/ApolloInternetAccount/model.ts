@@ -330,23 +330,24 @@ const stateModelFactory = (configSchema: ApolloInternetAccountConfigModel) => {
           notify('Could not connect to the Apollo server.', 'error')
         })
         socket.on(COMMON_CHANNEL, (message: ChangeMessage) => {
-          sessionStorage.setItem(
-            'LastChangeSequence',
-            String(message.changeSequence),
-          )
+          self.setLastChangeSequenceNumber(message.changeSequence)
           if (message.userSessionId === localSessionId) {
             return
           }
-          const change = Change.fromJSON(message.changeInfo)
-          if (isFeatureChange(change)) {
-            const hasRelevantData = change.changedIds.some((id) =>
-              apolloDataStore.getFeature(id),
-            )
-            if (!hasRelevantData) {
-              return
+          try {
+            const change = Change.fromJSON(message.changeInfo)
+            if (isFeatureChange(change)) {
+              const hasRelevantData = change.changedIds.some((id) =>
+                apolloDataStore.getFeature(id),
+              )
+              if (!hasRelevantData) {
+                return
+              }
             }
+            void changeManager.submit(change, { submitToBackend: false })
+          } catch (error) {
+            console.error('Failed to apply incoming change:', error)
           }
-          void changeManager.submit(change, { submitToBackend: false })
         })
       },
     }))
