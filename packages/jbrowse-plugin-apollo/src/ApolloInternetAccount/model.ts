@@ -5,7 +5,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/unbound-method */
 /* eslint-disable @typescript-eslint/no-misused-promises */
-import { Change } from '@apollo-annotation/common'
+import { Change, isFeatureChange } from '@apollo-annotation/common'
 import {
   COMMON_CHANNEL,
   REQUEST_INFO_CHANNEL,
@@ -353,6 +353,14 @@ const stateModelFactory = (configSchema: ApolloInternetAccountConfigModel) => {
               return // we did this change, no need to apply it again
             }
             const change = Change.fromJSON(message.changeInfo)
+            if (isFeatureChange(change)) {
+              const hasRelevantData = change.changedIds.some((id) =>
+                apolloDataStore.getFeature(id),
+              )
+              if (!hasRelevantData) {
+                return
+              }
+            }
             void changeManager.submit(change, { submitToBackend: false })
           },
         )
