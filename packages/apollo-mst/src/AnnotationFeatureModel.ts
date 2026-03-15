@@ -441,12 +441,7 @@ export type Children = IMSTMap<typeof AnnotationFeatureModel> | undefined
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface AnnotationFeatureRaw
   extends Instance<typeof AnnotationFeatureModel> {}
-// This type isn't exactly right, since "children" is actually an IMSTMap and
-// not a Map, but it's better than typing it as any.
-export interface AnnotationFeature
-  extends Omit<AnnotationFeatureRaw, 'children'> {
-  children?: Map<string | number, AnnotationFeature>
-}
+export interface AnnotationFeature extends AnnotationFeatureRaw {}
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface AnnotationFeatureSnapshotRaw
   extends SnapshotIn<typeof AnnotationFeatureModel> {}

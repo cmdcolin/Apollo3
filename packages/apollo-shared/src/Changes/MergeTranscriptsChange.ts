@@ -15,7 +15,7 @@ import type {
   AnnotationFeatureSnapshot,
 } from '@apollo-annotation/mst'
 import { doesIntersect2 } from '@jbrowse/core/util'
-import { getSnapshot } from '@jbrowse/mobx-state-tree'
+import { cast, getSnapshot } from '@jbrowse/mobx-state-tree'
 
 import { attributesToRecords, stringifyAttributes } from '../util.js'
 
@@ -267,12 +267,16 @@ export class MergeTranscriptsChange extends FeatureChange {
     firstTranscript: AnnotationFeature,
   ) {
     if (!firstTranscript.children) {
-      firstTranscript.children = new Map<string, AnnotationFeature>()
+      firstTranscript.children = cast({})
+    }
+    const { children } = firstTranscript
+    if (!children) {
+      return
     }
     let merged = false
     let mrgChild: AnnotationFeature | undefined
     let toDelete
-    for (const [, firstFeatureChild] of firstTranscript.children) {
+    for (const [, firstFeatureChild] of children) {
       if (!merged || !mrgChild) {
         toDelete = false
         mrgChild = firstFeatureChild
@@ -280,42 +284,43 @@ export class MergeTranscriptsChange extends FeatureChange {
         toDelete = true
       }
       if (
-        mrgChild.type === secondFeatureChild.type &&
-        mrgChild.type === firstFeatureChild.type &&
+        mrgChild!.type === secondFeatureChild.type &&
+        mrgChild!.type === firstFeatureChild.type &&
         doesIntersect2(
           secondFeatureChild.min,
           secondFeatureChild.max,
-          mrgChild.min,
-          mrgChild.max,
+          mrgChild!.min,
+          mrgChild!.max,
         ) &&
         doesIntersect2(
           firstFeatureChild.min,
           firstFeatureChild.max,
-          mrgChild.min,
-          mrgChild.max,
+          mrgChild!.min,
+          mrgChild!.max,
         )
       ) {
-        mrgChild.setMin(
-          Math.min(secondFeatureChild.min, mrgChild.min, firstFeatureChild.min),
+        mrgChild!.setMin(
+          Math.min(secondFeatureChild.min, mrgChild!.min, firstFeatureChild.min),
         )
-        mrgChild.setMax(
-          Math.max(secondFeatureChild.max, mrgChild.max, firstFeatureChild.max),
+        mrgChild!.setMax(
+          Math.max(secondFeatureChild.max, mrgChild!.max, firstFeatureChild.max),
         )
 
         const mergedWithAttributes =
-          mrgChild.attributes.get('merged_with')?.slice() ?? []
+          mrgChild!.attributes.get('merged_with')?.slice() ?? []
         mergedWithAttributes.push(
           stringifyAttributes(
             attributesToRecords(secondFeatureChild.attributes),
           ),
         )
         if (toDelete) {
+          const snap = getSnapshot<AnnotationFeatureSnapshot>(firstFeatureChild)
           mergedWithAttributes.push(
-            stringifyAttributes(getSnapshot(firstFeatureChild).attributes),
+            stringifyAttributes(snap.attributes),
           )
           firstTranscript.deleteChild(firstFeatureChild._id)
         }
-        mrgChild.setAttribute('merged_with', [...new Set(mergedWithAttributes)])
+        mrgChild!.setAttribute('merged_with', [...new Set(mergedWithAttributes)])
         merged = true
       }
     }

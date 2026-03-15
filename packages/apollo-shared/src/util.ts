@@ -26,7 +26,7 @@ export function attributesToRecords(
 }
 
 export function stringifyAttributes(
-  attributes: Record<string, string[] | undefined> | undefined,
+  attributes: Record<string, readonly string[] | undefined> | undefined,
 ): string {
   if (!attributes) {
     return ''

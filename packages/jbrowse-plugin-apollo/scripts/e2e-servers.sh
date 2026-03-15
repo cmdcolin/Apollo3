@@ -92,16 +92,13 @@ build_all() {
   echo "=== Building all packages ==="
   cd "$REPO_ROOT"
 
-  echo "Building shared packages (apollo-common, apollo-entities, apollo-shared)..."
-  yarn tsc -b --force
+  echo "Building server + dependencies (esbuild)..."
+  yarn --cwd packages/apollo-collaboration-server dev:build
 
-  echo "Building collaboration server..."
-  cd "$REPO_ROOT/packages/apollo-collaboration-server"
-  yarn tsc -b --force
-
-  echo "Building entities (separate tsconfig)..."
-  cd "$REPO_ROOT/packages/apollo-entities"
-  yarn tsc -b --force
+  echo "Generating type declarations for shared packages..."
+  yarn tsc --build --emitDeclarationOnly \
+    packages/apollo-common packages/apollo-entities \
+    packages/apollo-mst packages/apollo-shared
 
   echo "Building JBrowse plugin..."
   cd "$REPO_ROOT/packages/jbrowse-plugin-apollo"

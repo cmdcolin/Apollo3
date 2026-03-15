@@ -48,6 +48,62 @@ The repository pattern abstracts the database layer behind interfaces in
 - [x] Removed Cypress dependency and configuration
 - [x] Debug logging cleanup (`[DEBUG ...]` console.log → `logger.debug`)
 
+## Recently Completed — Build & Dev Server Performance
+
+### esbuild migration (build time: 28s → 3s)
+
+The collaboration server build pipeline was migrated from `tsc` to `esbuild`.
+Previously, `yarn start` ran two redundant TypeScript compilation passes
+(`build:shared` which did a clean rebuild every time, then `tsc -b` for the
+server) totaling ~28s before the server even started. The new pipeline uses a
+single `esbuild` invocation (`scripts/dev-build.mjs`) that transpiles all five
+workspace packages in parallel in ~3s.
+
+**What changed:**
+
+- **`emitDecoratorMetadata` removed.** NestJS uses this TypeScript feature for
+  implicit constructor-based dependency injection, but it is incompatible with
+  esbuild. All ~50 constructor parameters across controllers, services, guards,
+  and strategies now use explicit `@Inject(ServiceClass)` decorators. This is
+  the more robust pattern anyway — it makes DI dependencies visible and doesn't
+  rely on TypeScript reflection metadata.
+- **TypeScript stays at 5.5.** Since esbuild handles all transpilation, `tsc`
+  features like `--noCheck` (5.6+) are not needed. Staying on 5.5 avoids MST
+  type incompatibilities introduced in TS 5.6+.
+- **`scripts/dev-build.mjs`** — single Node.js script that calls esbuild's JS
+  API once, building all workspace packages (apollo-common, apollo-entities,
+  apollo-mst, apollo-shared, apollo-collaboration-server) in parallel.
+- **Graceful shutdown** — added `app.enableShutdownHooks()` to `main.ts`. The
+  server now shuts down cleanly on SIGTERM/SIGINT, releasing the port and
+  closing database connections. Previously, killing the dev server left the port
+  bound, requiring manual cleanup.
+
+**Caveats:**
+
+- **No type checking at dev time.** esbuild strips types without checking them.
+  Type errors will only surface when running `yarn tsc -b` explicitly or in CI.
+  IDE type checking (via tsconfig) still works normally.
+- **No `.d.ts` generation in dev builds.** The esbuild pipeline only emits `.js`
+  files. This is fine for running the server but means downstream packages that
+  import types from workspace packages rely on IDE resolution of `.ts` source
+  files. Production builds (`yarn build`) still use `tsc` for declaration
+  generation.
+- **esbuild decorator handling.** esbuild supports TypeScript's legacy
+  `experimentalDecorators` syntax natively, but does NOT support
+  `emitDecoratorMetadata`. If a new NestJS service or controller is added, it
+  **must** include explicit `@Inject()` on all constructor parameters. Omitting
+  `@Inject()` will cause a runtime DI error (not a build error), so this is
+  easy to miss. A linter rule to enforce explicit `@Inject()` would be a good
+  addition.
+
+**Build time comparison:**
+
+| Scenario | Before | After |
+| --- | --- | --- |
+| Clean build (all packages) | ~28s | ~3s |
+| Incremental (no changes) | ~28s (no caching — `rimraf dist` on every start) | ~3s |
+| Server startup (NestJS init) | ~6s | ~6s (unchanged) |
+
 ## Outstanding Issues (Priority Order)
 
 ### P1 — Playwright E2E Tests
@@ -59,6 +115,10 @@ The repository pattern abstracts the database layer behind interfaces in
    - undo: MST detached node during undo
 
 ### P1 — Developer Experience
+
+1. ~~**Dev server startup speed**~~ — **Done.** Migrated build from `tsc` to
+   `esbuild` (28s → 3s). Added graceful shutdown. See "Recently Completed"
+   section above for details and caveats.
 
 2. ~~**Demo dev instance with sample data**~~ — **Done.** Pre-built SQLite
    database (`demo-data/demo.sqlite`, 256KB) with two assemblies configured

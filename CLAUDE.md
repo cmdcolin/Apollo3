@@ -10,17 +10,30 @@ cannot resolve packages.
 ## Building
 
 ```bash
-# Build shared TypeScript packages (apollo-common, apollo-mst, apollo-shared)
+# Fast dev build — esbuild, no type checking (~3s for all packages)
+yarn --cwd packages/apollo-collaboration-server dev:build
+
+# Full production build (includes web UI client)
+yarn --cwd packages/apollo-collaboration-server build
+
+# Type-check only (no emit) — run separately or in CI
 yarn tsc -b
-
-# Build collaboration server (has its own tsconfig, not included in root tsc -b)
-cd packages/apollo-collaboration-server && yarn tsc -b
-
-# Build entities package
-cd packages/apollo-entities && yarn tsc -b
 
 # Build JBrowse plugin
 yarn --cwd packages/jbrowse-plugin-apollo build
+```
+
+### esbuild and @Inject()
+
+The dev build uses esbuild instead of tsc. Because esbuild does not support
+`emitDecoratorMetadata`, all NestJS constructor parameters **must** have
+explicit `@Inject()` decorators. Omitting `@Inject()` causes a runtime DI
+error (not a build error). Example:
+
+```typescript
+constructor(
+  @Inject(MyService) private readonly myService: MyService,
+) {}
 ```
 
 ## Running Tests
