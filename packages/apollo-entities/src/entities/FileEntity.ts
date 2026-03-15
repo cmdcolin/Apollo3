@@ -17,4 +17,5 @@ export const FileEntity = defineEntity({
     checksum: p.string(),
     type: p.enum(() => FileType),
   },
+  indexes: [{ properties: ['checksum'] }],
 })

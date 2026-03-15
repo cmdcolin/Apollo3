@@ -140,13 +140,13 @@ The repository pattern abstracts the database layer behind interfaces in
 ### P1 — Performance
 
 8. ~~**N+1 queries in check execution after mutations**~~ — **Fixed.** Added
-   `findRootParentsOfMany()` (single recursive CTE for SQL, batched upward
-   walk for MongoDB) to replace per-ID `findRootParent()` loop. Also batched
-   the refName gathering with `findByIds()` + deduplication.
+   `findRootParentsOfMany()` (single recursive CTE for SQL, batched upward walk
+   for MongoDB) to replace per-ID `findRootParent()` loop. Also batched the
+   refName gathering with `findByIds()` + deduplication.
 
 9. ~~**N+1 queries in GFF3 export**~~ — **Fixed.** Export now calls
-   `findDescendantsOfMany()` once per refSeq instead of `findDescendants()`
-   per root feature.
+   `findDescendantsOfMany()` once per refSeq instead of `findDescendants()` per
+   root feature.
 
 10. ~~**N+1 queries in feature count**~~ — **Fixed.** Added
     `countByRangeMultiple()` to the repository interface. Uses a single
@@ -166,9 +166,10 @@ The repository pattern abstracts the database layer behind interfaces in
 ### P1 — Data Integrity
 
 13. ~~**Counter race condition**~~ — **Fixed.** Added
-    `LockMode.PESSIMISTIC_WRITE` to the counter read (`SELECT ... FOR UPDATE`
-    in PostgreSQL). Prevents two concurrent transactions from reading the same
+    `LockMode.PESSIMISTIC_WRITE` to the counter read (`SELECT ... FOR UPDATE` in
+    PostgreSQL). Prevents two concurrent transactions from reading the same
     value. No-op on SQLite (writes are engine-serialized).
+
     - **Files**:
       `packages/apollo-entities/src/repositories/MikroOrmCounterRepository.ts`
 
@@ -204,21 +205,52 @@ The repository pattern abstracts the database layer behind interfaces in
     auth migration. Currently the InternetAccount still exists for websocket
     management and menu registration. Move these to simpler plugin-level code
     that reads role from config and connects websocket directly.
+
     - **Files**: `packages/jbrowse-plugin-apollo/src/ApolloInternetAccount/`
+
+18. **Remove chunked RefSeqChunk storage** — Apollo3 currently stores reference
+    sequences as chunked text blobs in the `ref_seq_chunk` table. This is
+    redundant with JBrowse 2's existing sequence adapters (IndexedFastaAdapter,
+    BgzipFastaAdapter, etc.) which handle indexed FASTA efficiently. The chunked
+    storage adds import time (~6s for FASTA parsing), database bloat, and
+    maintenance complexity (chunk size management, assembly sequence source
+    types). Instead, always refer to an external indexed FASTA file (or any
+    other JBrowse 2 sequence adapter) for sequence data.
+
+    - Remove `RefSeqChunkEntity` and `MikroOrmRefSeqChunkRepository`
+    - Remove `refSeqChunk` from `DatabaseService` and `ServerDataStore`
+    - Remove chunked FASTA parsing from `FromFileBaseChange`
+    - Simplify `Assembly.sequenceSource` to always reference an external adapter
+      config (indexed FASTA, bgzip FASTA, or other JBrowse 2 adapter)
+    - Update `SequenceService` to always read from the adapter, never from
+      chunks
+    - Migration script: existing chunked data → export to FASTA file + index
+    - **Files**: entity definitions, `FromFileBaseChange`, `SequenceService`,
+      `assemblies.service.ts`, `DatabaseService`
+
+19. **Direct flat-row GFF3 export** — The GFF3 export currently reassembles flat
+    database rows into nested `AnnotationFeatureSnapshot` trees, then converts
+    those trees back to flat GFF3 lines via `annotationFeatureToGFF3`. GFF3 is
+    inherently flat — each line is one feature with a `Parent=` attribute. A
+    direct `FeatureRow → GFF3 line` conversion would skip the tree assembly step
+    entirely.
+    - New `featureRowToGFF3Line()` function that maps FeatureRow fields directly
+      to GFF3 tab-separated columns (seqid, source, type, start+1, end, score,
+      strand, phase, attributes including Parent=)
+    - Remove `featureRowToSnapshot` and `buildChildrenMap` from export
+    - Stream rows directly from DB → GFF3 lines → file, no in-memory trees
+    - **Files**:
+      `packages/apollo-collaboration-server/src/export/export.service.ts`, new
+      utility in `packages/apollo-shared/src/GFF3/`
 
 ### P2 — Database Optimization
 
-16. **Missing indexes** — `ChangeEntity` has no indexes on `assembly` or
-    `sequence` (queried in `findAll`). `FileEntity.checksum` is queried by
-    `findByChecksum()` but unindexed. `ExportEntity.assembly` unindexed.
+~~16.~~ ~~**Missing indexes**~~ — **Fixed.** Added indexes on
+`ChangeEntity.assembly`, `ChangeEntity.sequence`, and `FileEntity.checksum`.
 
-    - **Files**: entity definitions in `packages/apollo-entities/src/entities/`
-
-17. **N+1 in bulk feature lookup** — `features.service.ts:112-127` loops calling
-    `findById()` per feature ID instead of batching with `findByIds()`.
-
-    - **Files**:
-      `packages/apollo-collaboration-server/src/features/features.service.ts`
+~~17.~~ ~~**N+1 in bulk feature lookup**~~ — **Fixed.** `findByFeatureIds()` now
+uses `findByIds()` for direct lookups and `findRootParentsOfMany()` for
+top-level resolution, replacing per-ID loops.
 
 18. **Repository instance recreation** — `database.service.ts` getters create a
     new repository instance on every access. Could cache per request scope.

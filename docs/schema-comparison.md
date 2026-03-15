@@ -13,20 +13,20 @@ relationships are enforced**.
 
 ### Entities (old and new)
 
-| Entity | What it stores | Structural change? |
-|--------|---------------|-------------------|
-| **Assembly** | A genome (e.g., "Human GRCh38") | Minor — consolidated file refs into one JSON field |
-| **RefSeq** | A chromosome/scaffold within an assembly | Added CASCADE delete to assembly |
-| **RefSeqChunk** | Chunked DNA sequence data | Added CASCADE delete to ref_seq |
-| **Feature** | A genomic annotation (gene, transcript, exon, CDS) | **Major** — see below |
-| **CheckResult** | Validation results for a genomic region | Added CASCADE delete to ref_seq |
-| **User** | User accounts and roles | Minimal |
-| **File** | Uploaded file metadata | Minimal |
-| **Check** | Quality check definitions | Minimal |
-| **Change** | Audit log of every edit | Minimal |
-| **Export** | Temporary export records | Added CASCADE delete to assembly |
-| **JBrowseConfig** | Browser UI configuration | Minimal |
-| **Counter** | Sequence number generators | Minimal |
+| Entity            | What it stores                                     | Structural change?                                 |
+| ----------------- | -------------------------------------------------- | -------------------------------------------------- |
+| **Assembly**      | A genome (e.g., "Human GRCh38")                    | Minor — consolidated file refs into one JSON field |
+| **RefSeq**        | A chromosome/scaffold within an assembly           | Added CASCADE delete to assembly                   |
+| **RefSeqChunk**   | Chunked DNA sequence data                          | Added CASCADE delete to ref_seq                    |
+| **Feature**       | A genomic annotation (gene, transcript, exon, CDS) | **Major** — see below                              |
+| **CheckResult**   | Validation results for a genomic region            | Added CASCADE delete to ref_seq                    |
+| **User**          | User accounts and roles                            | Minimal                                            |
+| **File**          | Uploaded file metadata                             | Minimal                                            |
+| **Check**         | Quality check definitions                          | Minimal                                            |
+| **Change**        | Audit log of every edit                            | Minimal                                            |
+| **Export**        | Temporary export records                           | Added CASCADE delete to assembly                   |
+| **JBrowseConfig** | Browser UI configuration                           | Minimal                                            |
+| **Counter**       | Sequence number generators                         | Minimal                                            |
 
 ### Relationships (both schemas)
 
@@ -80,7 +80,8 @@ features collection:
 ```
 
 - The entire gene tree is **one record** in the database
-- Every edit (even moving one exon by 1 bp) loads and rewrites the whole document
+- Every edit (even moving one exon by 1 bp) loads and rewrites the whole
+  document
 - The `allIds` array must be manually kept in sync on every add/remove/move
 - MongoDB's 16 MB document size limit constrains large genes
 
@@ -111,14 +112,14 @@ feature table:
 
 ### What this means in practice
 
-| Scenario | MongoDB | Relational |
-|----------|---------|------------|
-| Edit one exon | Load entire gene doc, modify, write back | Update one row |
-| Two users edit different exons of same gene | Second save overwrites first user's changes | No conflict — separate rows |
-| Look up a feature by ID | Scan `allIds` arrays across all gene docs | Direct primary key lookup |
-| Delete a gene | One delete (whole doc) | One delete (CASCADE removes children) |
-| Large gene (thousands of exons) | May hit 16 MB doc limit | No limit |
-| Add/remove a child feature | Must update parent's `allIds` array | Just insert/delete the row |
+| Scenario                                    | MongoDB                                     | Relational                            |
+| ------------------------------------------- | ------------------------------------------- | ------------------------------------- |
+| Edit one exon                               | Load entire gene doc, modify, write back    | Update one row                        |
+| Two users edit different exons of same gene | Second save overwrites first user's changes | No conflict — separate rows           |
+| Look up a feature by ID                     | Scan `allIds` arrays across all gene docs   | Direct primary key lookup             |
+| Delete a gene                               | One delete (whole doc)                      | One delete (CASCADE removes children) |
+| Large gene (thousands of exons)             | May hit 16 MB doc limit                     | No limit                              |
+| Add/remove a child feature                  | Must update parent's `allIds` array         | Just insert/delete the row            |
 
 ---
 
@@ -160,11 +161,11 @@ changes roll back automatically.
 
 The same codebase now supports three database backends:
 
-| Backend | Use case | Setup required |
-|---------|----------|---------------|
-| **SQLite** | Desktop, development, CI | None — file created automatically |
-| **PostgreSQL** | Collaborative server deployments | One container |
-| **MongoDB** | Existing deployments (backward compat) | Existing infrastructure |
+| Backend        | Use case                               | Setup required                    |
+| -------------- | -------------------------------------- | --------------------------------- |
+| **SQLite**     | Desktop, development, CI               | None — file created automatically |
+| **PostgreSQL** | Collaborative server deployments       | One container                     |
+| **MongoDB**    | Existing deployments (backward compat) | Existing infrastructure           |
 
 Switching between backends is a single environment variable (`DB_BACKEND`).
 
@@ -172,16 +173,16 @@ Switching between backends is a single environment variable (`DB_BACKEND`).
 
 ## Deployment Comparison
 
-| Metric | MongoDB (before) | PostgreSQL (after) | SQLite (new option) |
-|--------|------------------|--------------------|---------------------|
-| Containers required | 2 (replica set) | 1 | 0 (in-process) |
-| Data volumes | 4 | 1 | 0 (single file) |
-| Init scripts needed | Yes (replica set) | No | No |
-| Min hosting cost | ~$50-60/mo | ~$5-15/mo | $0 |
-| Developer setup | Install + configure MongoDB | `docker compose up` | Run the server |
-| CI setup | Service container + init | None needed | None needed |
-| Desktop deployment | Not possible | Not practical | Fully supported |
-| Backup method | `mongodump` | `pg_dump` | Copy one file |
+| Metric              | MongoDB (before)            | PostgreSQL (after)  | SQLite (new option) |
+| ------------------- | --------------------------- | ------------------- | ------------------- |
+| Containers required | 2 (replica set)             | 1                   | 0 (in-process)      |
+| Data volumes        | 4                           | 1                   | 0 (single file)     |
+| Init scripts needed | Yes (replica set)           | No                  | No                  |
+| Min hosting cost    | ~$50-60/mo                  | ~$5-15/mo           | $0                  |
+| Developer setup     | Install + configure MongoDB | `docker compose up` | Run the server      |
+| CI setup            | Service container + init    | None needed         | None needed         |
+| Desktop deployment  | Not possible                | Not practical       | Fully supported     |
+| Backup method       | `mongodump`                 | `pg_dump`           | Copy one file       |
 
 ---
 
@@ -200,16 +201,12 @@ scratch, on every request.
 For a region with 1,000 visible genes, each pan or zoom triggered this sequence:
 
 1. Query the database for genes overlapping the visible region
-2. **For each of the 1,000 genes**, individually:
-   a. Load the gene by ID (1 database query)
-   b. Load all of the gene's descendants — transcripts, exons, CDS (1 database
-      query)
-   c. Reassemble the gene tree in memory
-   d. Look up the assembly and check configuration
-   e. Delete all previous check results for this gene
-   f. Re-run every configured quality check (potentially fetching DNA sequence
-      data)
-   g. Save the new check results to the database
+2. **For each of the 1,000 genes**, individually: a. Load the gene by ID (1
+   database query) b. Load all of the gene's descendants — transcripts, exons,
+   CDS (1 database query) c. Reassemble the gene tree in memory d. Look up the
+   assembly and check configuration e. Delete all previous check results for
+   this gene f. Re-run every configured quality check (potentially fetching DNA
+   sequence data) g. Save the new check results to the database
 3. After all checks complete, return the features and check results
 
 **Total per request:** thousands of database queries and expensive computations,
@@ -228,6 +225,23 @@ performance improvement discovered during the migration work.
 This fix was possible independent of the MongoDB-to-relational migration, but
 was discovered during the migration process as part of the systematic
 performance review.
+
+---
+
+## Additional Optimizations Delivered During Migration
+
+Beyond the checks-on-GET fix, several N+1 query patterns and algorithmic
+inefficiencies were identified and fixed:
+
+| Issue                           | Before                                                                                       | After                                                       |
+| ------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| **Check execution after edits** | 1 query per changed feature to find its root gene                                            | 1 recursive CTE query for all changed features              |
+| **GFF3 export tree loading**    | 1 `findDescendants` query per root gene                                                      | 1 batched `findDescendantsOfMany` query per chromosome      |
+| **GFF3 export tree assembly**   | O(n^2) — full array scan per feature to find children                                        | O(n) — pre-built parent→children hash map                   |
+| **Feature count by assembly**   | 1 COUNT query per chromosome (30 queries for human genome)                                   | 1 COUNT query with `IN` filter for all chromosomes          |
+| **Counter sequence numbers**    | Read-modify-write without locking — risk of duplicate values under concurrent PostgreSQL use | Row-level locking (`SELECT FOR UPDATE`) prevents duplicates |
+
+These are all shipping — no follow-up work needed.
 
 ---
 

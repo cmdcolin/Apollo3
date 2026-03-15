@@ -13,6 +13,10 @@ export const ChangeEntity = defineEntity({
     user: p.string(),
     sequence: p.integer().nullable(),
     createdAt: p.datetime().nullable(),
-    updatedAt: p.datetime().nullable().onUpdate(() => new Date()),
+    updatedAt: p
+      .datetime()
+      .nullable()
+      .onUpdate(() => new Date()),
   },
+  indexes: [{ properties: ['assembly'] }, { properties: ['sequence'] }],
 })

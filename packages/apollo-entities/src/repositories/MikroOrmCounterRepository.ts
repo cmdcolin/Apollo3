@@ -10,17 +10,19 @@ export class MikroOrmCounterRepository implements CounterRepository {
   // Used to generate unique, monotonically increasing sequence numbers
   // (e.g. change sequence numbers for ordering undo/redo operations).
   //
-  // PESSIMISTIC_WRITE locks the counter row for the duration of the
-  // transaction (SELECT ... FOR UPDATE in PostgreSQL). Without this,
-  // two concurrent requests under PostgreSQL's default READ COMMITTED
-  // isolation could both read the same value before either commits,
-  // producing duplicate sequence numbers. SQLite serializes writers
-  // at the engine level so the lock is a no-op there.
+  // When called inside a transaction (the normal production path via
+  // db.transactional()), PESSIMISTIC_WRITE locks the counter row for
+  // the duration of the transaction (SELECT ... FOR UPDATE in PostgreSQL).
+  // Without this, two concurrent requests under PostgreSQL's default
+  // READ COMMITTED isolation could both read the same value before either
+  // commits, producing duplicate sequence numbers. SQLite serializes
+  // writers at the engine level so the lock is a no-op there.
   async getNextSequenceValue(sequenceName: string) {
+    const inTransaction = this.em.getTransactionContext() !== undefined
     let counter = await this.em.findOne(
       CounterEntity,
       { _id: sequenceName },
-      { lockMode: LockMode.PESSIMISTIC_WRITE },
+      inTransaction ? { lockMode: LockMode.PESSIMISTIC_WRITE } : {},
     )
     if (counter) {
       counter.sequenceValue++

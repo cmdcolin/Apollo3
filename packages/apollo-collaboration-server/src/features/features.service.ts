@@ -105,26 +105,20 @@ export class FeaturesService {
   }
 
   async findByFeatureIds(featureIds: string[], topLevel?: boolean) {
-    const foundFeatures: FeatureRow[] = []
-    const fetchedFeatureIds = new Set<string>()
-
-    for (const featureId of featureIds) {
-      if (fetchedFeatureIds.has(featureId)) {
-        continue
+    const uniqueIds = [...new Set(featureIds)]
+    if (topLevel) {
+      const roots = await this.db.feature.findRootParentsOfMany(uniqueIds)
+      const seen = new Set<string>()
+      const deduplicated: FeatureRow[] = []
+      for (const root of roots) {
+        if (!seen.has(root._id)) {
+          seen.add(root._id)
+          deduplicated.push(root)
+        }
       }
-
-      try {
-        const feature = await this.findById(featureId, topLevel)
-        foundFeatures.push(feature)
-        fetchedFeatureIds.add(featureId)
-      } catch (error) {
-        this.logger.error(
-          `Error occurred while fetching feature ${featureId}`,
-          error instanceof Error ? error.stack : String(error),
-        )
-      }
+      return deduplicated
     }
-    return foundFeatures
+    return this.db.feature.findByIds(uniqueIds)
   }
 
   async findById(featureId: string, topLevel?: boolean) {
@@ -150,8 +144,7 @@ export class FeaturesService {
     let features: FeatureRow[] = []
     if (roots.length > 0) {
       const rootIds = roots.map((r) => r._id)
-      const descendants =
-        await this.db.feature.findDescendantsOfMany(rootIds)
+      const descendants = await this.db.feature.findDescendantsOfMany(rootIds)
       features = assembleFeatureTrees([...roots, ...descendants])
     }
     const checkResults = await this.checksService.findByRange(searchDto)

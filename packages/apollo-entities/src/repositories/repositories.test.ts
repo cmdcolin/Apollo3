@@ -29,7 +29,6 @@ describe('MikroOrmAssemblyRepository', () => {
     const created = await repo.create({
       _id: 'asm-1',
       name: 'test-assembly',
-      status: 0,
     })
     expect(created._id).toBe('asm-1')
     expect(created.name).toBe('test-assembly')
@@ -41,7 +40,7 @@ describe('MikroOrmAssemblyRepository', () => {
 
   it('should find assembly by name', async () => {
     const repo = new MikroOrmAssemblyRepository(orm.em.fork())
-    await repo.create({ _id: 'asm-1', name: 'volvox', status: 0 })
+    await repo.create({ _id: 'asm-1', name: 'volvox' })
 
     const found = await repo.findByName('volvox')
     expect(found).toBeDefined()
@@ -53,8 +52,8 @@ describe('MikroOrmAssemblyRepository', () => {
 
   it('should find all assemblies', async () => {
     const repo = new MikroOrmAssemblyRepository(orm.em.fork())
-    await repo.create({ _id: 'asm-1', name: 'volvox', status: 0 })
-    await repo.create({ _id: 'asm-2', name: 'yeast', status: 0 })
+    await repo.create({ _id: 'asm-1', name: 'volvox' })
+    await repo.create({ _id: 'asm-2', name: 'yeast' })
 
     const all = await repo.findAll()
     expect(all).toHaveLength(2)
@@ -62,7 +61,7 @@ describe('MikroOrmAssemblyRepository', () => {
 
   it('should update assembly by id', async () => {
     const repo = new MikroOrmAssemblyRepository(orm.em.fork())
-    await repo.create({ _id: 'asm-1', name: 'volvox', status: 0 })
+    await repo.create({ _id: 'asm-1', name: 'volvox' })
 
     const updated = await repo.updateById('asm-1', {
       checks: ['check-1', 'check-2'],
@@ -76,7 +75,7 @@ describe('MikroOrmAssemblyRepository', () => {
 
   it('should delete assembly by id', async () => {
     const repo = new MikroOrmAssemblyRepository(orm.em.fork())
-    await repo.create({ _id: 'asm-1', name: 'volvox', status: 0 })
+    await repo.create({ _id: 'asm-1', name: 'volvox' })
 
     expect(await repo.deleteById('asm-1')).toBe(true)
     expect(await repo.findById('asm-1')).toBeUndefined()
@@ -88,7 +87,7 @@ describe('MikroOrmAssemblyRepository', () => {
     await repo.create({
       _id: 'asm-ext',
       name: 'external',
-      status: 0,
+
       sequenceSource: {
         type: 'external',
         fa: 'https://example.com/genome.fa',
@@ -108,7 +107,7 @@ describe('MikroOrmRefSeqRepository', () => {
   it('should create and find a refSeq', async () => {
     const em = orm.em.fork()
     const asmRepo = new MikroOrmAssemblyRepository(em)
-    await asmRepo.create({ _id: 'asm-1', name: 'volvox', status: 0 })
+    await asmRepo.create({ _id: 'asm-1', name: 'volvox' })
 
     const refSeqRepo = new MikroOrmRefSeqRepository(em)
     const created = await refSeqRepo.create({
@@ -129,8 +128,8 @@ describe('MikroOrmRefSeqRepository', () => {
   it('should find refSeqs by assembly', async () => {
     const em = orm.em.fork()
     const asmRepo = new MikroOrmAssemblyRepository(em)
-    await asmRepo.create({ _id: 'asm-1', name: 'volvox', status: 0 })
-    await asmRepo.create({ _id: 'asm-2', name: 'yeast', status: 0 })
+    await asmRepo.create({ _id: 'asm-1', name: 'volvox' })
+    await asmRepo.create({ _id: 'asm-2', name: 'yeast' })
 
     const refSeqRepo = new MikroOrmRefSeqRepository(em)
     await refSeqRepo.create({
@@ -162,7 +161,7 @@ describe('MikroOrmRefSeqRepository', () => {
   it('should find all refSeqs', async () => {
     const em = orm.em.fork()
     const asmRepo = new MikroOrmAssemblyRepository(em)
-    await asmRepo.create({ _id: 'asm-1', name: 'volvox', status: 0 })
+    await asmRepo.create({ _id: 'asm-1', name: 'volvox' })
 
     const refSeqRepo = new MikroOrmRefSeqRepository(em)
     await refSeqRepo.create({
@@ -186,7 +185,7 @@ describe('MikroOrmRefSeqRepository', () => {
   it('should find by name and assembly', async () => {
     const em = orm.em.fork()
     const asmRepo = new MikroOrmAssemblyRepository(em)
-    await asmRepo.create({ _id: 'asm-1', name: 'volvox', status: 0 })
+    await asmRepo.create({ _id: 'asm-1', name: 'volvox' })
 
     const refSeqRepo = new MikroOrmRefSeqRepository(em)
     await refSeqRepo.create({
@@ -209,7 +208,7 @@ describe('MikroOrmRefSeqRepository', () => {
   it('should update refSeq by id', async () => {
     const em = orm.em.fork()
     const asmRepo = new MikroOrmAssemblyRepository(em)
-    await asmRepo.create({ _id: 'asm-1', name: 'volvox', status: 0 })
+    await asmRepo.create({ _id: 'asm-1', name: 'volvox' })
 
     const refSeqRepo = new MikroOrmRefSeqRepository(em)
     await refSeqRepo.create({
@@ -218,18 +217,19 @@ describe('MikroOrmRefSeqRepository', () => {
       name: 'ctgA',
       length: 50000,
       chunkSize: 20000,
-      status: -1,
     })
 
-    const updated = await refSeqRepo.updateById('rs-1', { status: 0 })
+    const updated = await refSeqRepo.updateById('rs-1', {
+      name: 'ctgA-updated',
+    })
     expect(updated).toBeDefined()
-    expect(updated!.status).toBe(0)
+    expect(updated!.name).toBe('ctgA-updated')
   })
 
   it('should delete refSeqs by assembly', async () => {
     const em = orm.em.fork()
     const asmRepo = new MikroOrmAssemblyRepository(em)
-    await asmRepo.create({ _id: 'asm-1', name: 'volvox', status: 0 })
+    await asmRepo.create({ _id: 'asm-1', name: 'volvox' })
 
     const refSeqRepo = new MikroOrmRefSeqRepository(em)
     await refSeqRepo.create({
@@ -254,7 +254,7 @@ describe('MikroOrmRefSeqRepository', () => {
   it('should create many refSeqs', async () => {
     const em = orm.em.fork()
     const asmRepo = new MikroOrmAssemblyRepository(em)
-    await asmRepo.create({ _id: 'asm-1', name: 'volvox', status: 0 })
+    await asmRepo.create({ _id: 'asm-1', name: 'volvox' })
 
     const refSeqRepo = new MikroOrmRefSeqRepository(em)
     const created = await refSeqRepo.createMany([
@@ -282,7 +282,6 @@ describe('MikroOrmRefSeqChunkRepository', () => {
     await new MikroOrmAssemblyRepository(em).create({
       _id: 'asm-1',
       name: 'volvox',
-      status: 0,
     })
     await new MikroOrmRefSeqRepository(em).create({
       _id: 'rs-1',
@@ -368,7 +367,6 @@ describe('MikroOrmFeatureRepository', () => {
     await new MikroOrmAssemblyRepository(em).create({
       _id: 'asm-1',
       name: 'volvox',
-      status: 0,
     })
     await new MikroOrmRefSeqRepository(em).create({
       _id: 'rs-1',
@@ -391,7 +389,6 @@ describe('MikroOrmFeatureRepository', () => {
       min: 100,
       max: 500,
       strand: 1,
-      status: 0,
     })
     expect(created._id).toBe('feat-1')
     expect(created.type).toBe('gene')
@@ -413,7 +410,6 @@ describe('MikroOrmFeatureRepository', () => {
       type: 'gene',
       min: 100,
       max: 500,
-      status: 0,
     })
     await featureRepo.create({
       _id: 'f2',
@@ -421,7 +417,6 @@ describe('MikroOrmFeatureRepository', () => {
       type: 'gene',
       min: 600,
       max: 900,
-      status: 0,
     })
     await featureRepo.create({
       _id: 'f3',
@@ -429,7 +424,6 @@ describe('MikroOrmFeatureRepository', () => {
       type: 'gene',
       min: 1000,
       max: 1500,
-      status: 0,
     })
 
     expect(await featureRepo.findByRange('rs-1', 400, 700)).toHaveLength(2)
@@ -448,7 +442,6 @@ describe('MikroOrmFeatureRepository', () => {
       type: 'gene',
       min: 100,
       max: 500,
-      status: 0,
     })
     await featureRepo.create({
       _id: 'mrna-1',
@@ -457,7 +450,6 @@ describe('MikroOrmFeatureRepository', () => {
       min: 100,
       max: 500,
       parentId: 'gene-1',
-      status: 0,
     })
 
     const roots = await featureRepo.findRootsByRange('rs-1', 0, 1000)
@@ -476,7 +468,6 @@ describe('MikroOrmFeatureRepository', () => {
       type: 'gene',
       min: 100,
       max: 500,
-      status: 0,
     })
     await featureRepo.create({
       _id: 'mrna-1',
@@ -485,7 +476,6 @@ describe('MikroOrmFeatureRepository', () => {
       min: 100,
       max: 500,
       parentId: 'gene-1',
-      status: 0,
     })
     await featureRepo.create({
       _id: 'exon-1',
@@ -494,7 +484,6 @@ describe('MikroOrmFeatureRepository', () => {
       min: 100,
       max: 300,
       parentId: 'mrna-1',
-      status: 0,
     })
     await featureRepo.create({
       _id: 'exon-2',
@@ -503,7 +492,6 @@ describe('MikroOrmFeatureRepository', () => {
       min: 400,
       max: 500,
       parentId: 'mrna-1',
-      status: 0,
     })
 
     const children = await featureRepo.findChildren('gene-1')
@@ -525,7 +513,6 @@ describe('MikroOrmFeatureRepository', () => {
       type: 'gene',
       min: 100,
       max: 500,
-      status: 0,
     })
 
     const updated = await featureRepo.updateById('feat-1', {
@@ -548,7 +535,6 @@ describe('MikroOrmFeatureRepository', () => {
       type: 'gene',
       min: 100,
       max: 500,
-      status: 0,
     })
     await featureRepo.create({
       _id: 'mrna-1',
@@ -557,7 +543,6 @@ describe('MikroOrmFeatureRepository', () => {
       min: 100,
       max: 500,
       parentId: 'gene-1',
-      status: 0,
     })
     await featureRepo.create({
       _id: 'exon-1',
@@ -566,7 +551,6 @@ describe('MikroOrmFeatureRepository', () => {
       min: 100,
       max: 300,
       parentId: 'mrna-1',
-      status: 0,
     })
 
     const descendantCount = await featureRepo.deleteDescendants('gene-1')
@@ -588,7 +572,6 @@ describe('MikroOrmFeatureRepository', () => {
       type: 'gene',
       min: 100,
       max: 500,
-      status: 0,
     })
     await featureRepo.create({
       _id: 'f2',
@@ -596,7 +579,6 @@ describe('MikroOrmFeatureRepository', () => {
       type: 'mRNA',
       min: 100,
       max: 500,
-      status: 0,
     })
     await featureRepo.create({
       _id: 'f3',
@@ -604,7 +586,6 @@ describe('MikroOrmFeatureRepository', () => {
       type: 'exon',
       min: 100,
       max: 300,
-      status: 0,
     })
 
     expect(await featureRepo.searchText(['rs-1'], 'gene')).toHaveLength(1)
@@ -623,7 +604,6 @@ describe('MikroOrmFeatureRepository', () => {
         type: 'gene',
         min: 100,
         max: 500,
-        status: 0,
       },
       {
         _id: 'f2',
@@ -631,7 +611,6 @@ describe('MikroOrmFeatureRepository', () => {
         type: 'gene',
         min: 600,
         max: 900,
-        status: 0,
       },
     ])
     expect(created).toHaveLength(2)
@@ -648,7 +627,7 @@ describe('MikroOrmFeatureRepository', () => {
       type: 'gene',
       min: 100,
       max: 500,
-      status: 0,
+
       attributes: { Name: ['BRCA1'] },
     })
     await featureRepo.create({
@@ -658,7 +637,7 @@ describe('MikroOrmFeatureRepository', () => {
       min: 100,
       max: 500,
       parentId: 'gene-1',
-      status: 0,
+
       attributes: { Name: ['BRCA1-mRNA'] },
     })
     await featureRepo.create({
@@ -668,7 +647,7 @@ describe('MikroOrmFeatureRepository', () => {
       min: 100,
       max: 300,
       parentId: 'mrna-1',
-      status: 0,
+
       attributes: { Name: ['special-cds'] },
     })
 
@@ -694,7 +673,7 @@ describe('MikroOrmFeatureRepository', () => {
       type: 'gene',
       min: 100,
       max: 500,
-      status: 0,
+
       attributes: { ID: ['gene-1-id'] },
     })
     await featureRepo.create({
@@ -704,7 +683,7 @@ describe('MikroOrmFeatureRepository', () => {
       min: 100,
       max: 500,
       parentId: 'gene-1',
-      status: 0,
+
       attributes: { ID: ['mrna-1-id'], Parent: ['gene-1-id'] },
     })
     await featureRepo.create({
@@ -714,7 +693,7 @@ describe('MikroOrmFeatureRepository', () => {
       min: 100,
       max: 300,
       parentId: 'mrna-1',
-      status: 0,
+
       attributes: { ID: ['cds-1-id'], Parent: ['mrna-1-id'] },
     })
 
@@ -744,7 +723,6 @@ describe('MikroOrmFeatureRepository', () => {
       type: 'gene',
       min: 100,
       max: 500,
-      status: 0,
     })
     await featureRepo.create({
       _id: 'f2',
@@ -752,7 +730,6 @@ describe('MikroOrmFeatureRepository', () => {
       type: 'gene',
       min: 600,
       max: 900,
-      status: 0,
     })
 
     expect(await featureRepo.deleteByRefSeqs(['rs-1'])).toBe(2)
@@ -769,7 +746,6 @@ describe('MikroOrmFeatureRepository', () => {
       type: 'gene',
       min: 100,
       max: 500,
-      status: 0,
     })
     await featureRepo.create({
       _id: 'f2',
@@ -777,7 +753,6 @@ describe('MikroOrmFeatureRepository', () => {
       type: 'gene',
       min: 600,
       max: 900,
-      status: 0,
     })
     await featureRepo.create({
       _id: 'f3',
@@ -785,7 +760,6 @@ describe('MikroOrmFeatureRepository', () => {
       type: 'gene',
       min: 1000,
       max: 1500,
-      status: 0,
     })
 
     expect(await featureRepo.findByIds(['f1', 'f3'])).toHaveLength(2)
@@ -913,116 +887,6 @@ describe('MikroOrmChangeRepository', () => {
   })
 })
 
-describe('activateByUser', () => {
-  it('should activate temporary assemblies by user', async () => {
-    const repo = new MikroOrmAssemblyRepository(orm.em.fork())
-    await repo.create({
-      _id: 'asm-1',
-      name: 'temp',
-      status: -1,
-      user: 'user-1',
-    })
-    await repo.create({
-      _id: 'asm-2',
-      name: 'other',
-      status: -1,
-      user: 'user-2',
-    })
-
-    const count = await repo.activateByUser('user-1')
-    expect(count).toBe(1)
-
-    const freshRepo = new MikroOrmAssemblyRepository(orm.em.fork())
-    const asm1 = await freshRepo.findById('asm-1')
-    expect(asm1!.status).toBe(0)
-    const asm2 = await freshRepo.findById('asm-2')
-    expect(asm2!.status).toBe(-1)
-  })
-
-  it('should activate temporary features by user', async () => {
-    const em = orm.em.fork()
-    const asmRepo = new MikroOrmAssemblyRepository(em)
-    await asmRepo.create({ _id: 'asm-1', name: 'test', status: 0 })
-    const rsRepo = new MikroOrmRefSeqRepository(em)
-    await rsRepo.create({
-      _id: 'rs-1',
-      assembly: 'asm-1',
-      name: 'ctgA',
-      length: 1000,
-      chunkSize: 500,
-    })
-    const repo = new MikroOrmFeatureRepository(em)
-    await repo.create({
-      _id: 'f1',
-      refSeq: 'rs-1',
-      type: 'gene',
-      min: 0,
-      max: 100,
-      status: -1,
-      user: 'user-1',
-    })
-    await repo.create({
-      _id: 'f2',
-      refSeq: 'rs-1',
-      type: 'gene',
-      min: 200,
-      max: 300,
-      status: -1,
-      user: 'user-2',
-    })
-
-    expect(await repo.activateByUser('user-1')).toBe(1)
-    const freshRepo = new MikroOrmFeatureRepository(orm.em.fork())
-    expect((await freshRepo.findById('f1'))!.status).toBe(0)
-    expect((await freshRepo.findById('f2'))!.status).toBe(-1)
-  })
-
-  it('should activate temporary refSeqs by user', async () => {
-    const em = orm.em.fork()
-    const asmRepo = new MikroOrmAssemblyRepository(em)
-    await asmRepo.create({ _id: 'asm-1', name: 'test', status: 0 })
-    const repo = new MikroOrmRefSeqRepository(em)
-    await repo.create({
-      _id: 'rs-1',
-      assembly: 'asm-1',
-      name: 'ctgA',
-      length: 100,
-      chunkSize: 100,
-      status: -1,
-      user: 'user-1',
-    })
-
-    expect(await repo.activateByUser('user-1')).toBe(1)
-    const freshRepo = new MikroOrmRefSeqRepository(orm.em.fork())
-    expect((await freshRepo.findById('rs-1'))!.status).toBe(0)
-  })
-
-  it('should activate temporary refSeq chunks by user', async () => {
-    const em = orm.em.fork()
-    const asmRepo = new MikroOrmAssemblyRepository(em)
-    await asmRepo.create({ _id: 'asm-1', name: 'test', status: 0 })
-    const rsRepo = new MikroOrmRefSeqRepository(em)
-    await rsRepo.create({
-      _id: 'rs-1',
-      assembly: 'asm-1',
-      name: 'ctgA',
-      length: 1000,
-      chunkSize: 500,
-    })
-    const repo = new MikroOrmRefSeqChunkRepository(em)
-    await repo.create({
-      _id: 'c1',
-      refSeq: 'rs-1',
-      n: 0,
-      sequence: 'ATCG',
-      status: -1,
-      user: 'user-1',
-    })
-
-    expect(await repo.activateByUser('user-1')).toBe(1)
-  })
-})
-
 describe('End-to-end: assembly with features and sequence', () => {
   it('should store and retrieve a complete assembly with features and chunks', async () => {
     const em = orm.em.fork()
@@ -1031,7 +895,7 @@ describe('End-to-end: assembly with features and sequence', () => {
     const chunkRepo = new MikroOrmRefSeqChunkRepository(em)
     const featureRepo = new MikroOrmFeatureRepository(em)
 
-    await asmRepo.create({ _id: 'asm-1', name: 'volvox', status: 0 })
+    await asmRepo.create({ _id: 'asm-1', name: 'volvox' })
     await refSeqRepo.create({
       _id: 'rs-1',
       assembly: 'asm-1',
@@ -1051,7 +915,6 @@ describe('End-to-end: assembly with features and sequence', () => {
       min: 2,
       max: 14,
       strand: 1,
-      status: 0,
     })
     await featureRepo.create({
       _id: 'mrna-1',
@@ -1061,7 +924,6 @@ describe('End-to-end: assembly with features and sequence', () => {
       max: 14,
       strand: 1,
       parentId: 'gene-1',
-      status: 0,
     })
     await featureRepo.create({
       _id: 'exon-1',
@@ -1071,7 +933,6 @@ describe('End-to-end: assembly with features and sequence', () => {
       max: 6,
       strand: 1,
       parentId: 'mrna-1',
-      status: 0,
     })
     await featureRepo.create({
       _id: 'exon-2',
@@ -1081,7 +942,6 @@ describe('End-to-end: assembly with features and sequence', () => {
       max: 14,
       strand: 1,
       parentId: 'mrna-1',
-      status: 0,
     })
 
     // Verify assembly
@@ -1139,7 +999,7 @@ describe('End-to-end: assembly with features and sequence', () => {
     const chunkRepo = new MikroOrmRefSeqChunkRepository(em)
     const featureRepo = new MikroOrmFeatureRepository(em)
 
-    await asmRepo.create({ _id: 'asm-1', name: 'volvox', status: 0 })
+    await asmRepo.create({ _id: 'asm-1', name: 'volvox' })
     await refSeqRepo.create({
       _id: 'rs-1',
       assembly: 'asm-1',
@@ -1159,7 +1019,6 @@ describe('End-to-end: assembly with features and sequence', () => {
       type: 'gene',
       min: 0,
       max: 100,
-      status: 0,
     })
 
     // Simulate DeleteAssemblyChange cleanup order

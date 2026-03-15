@@ -71,8 +71,7 @@ function generateFeatures(count: number, refSeqId: string, prefix: string) {
       min: i * 100,
       max: i * 100 + 50,
       strand: (i % 2 === 0 ? 1 : -1) as 1 | -1,
-      status: -1,
-      user: 'benchmark-user',
+
       attributes: { Name: [`feature-${i}`], ID: [`id-${i}`] },
     })
   }
@@ -87,8 +86,6 @@ function generateChunks(count: number, refSeqId: string, prefix: string) {
       refSeq: refSeqId,
       n: i,
       sequence: 'ATCGATCGATCG'.repeat(100),
-      status: -1,
-      user: 'benchmark-user',
     })
   }
   return chunks
@@ -111,8 +108,6 @@ async function simulateImport(
   await asmRepo.create({
     _id: `${prefix}-asm`,
     name: `bench-${prefix}`,
-    status: -1,
-    user: 'u',
   })
 
   for (let r = 0; r < refSeqCount; r++) {
@@ -134,7 +129,11 @@ async function simulateImport(
 
     await rsRepo.updateById(rsId, { length: chunksPerRefSeq * 1200 })
 
-    const features = generateFeatures(featuresPerRefSeq, rsId, `${prefix}-r${r}`)
+    const features = generateFeatures(
+      featuresPerRefSeq,
+      rsId,
+      `${prefix}-r${r}`,
+    )
     for (let i = 0; i < features.length; i += 500) {
       await featRepo.createMany(features.slice(i, i + 500))
     }
@@ -151,7 +150,13 @@ describe('Benchmark: import simulation with and without transactions', () => {
     const em = orm.em.fork()
 
     const start = performance.now()
-    await simulateImport(em, 'no-tx', REF_SEQ_COUNT, CHUNKS_PER_RS, FEATURES_PER_RS)
+    await simulateImport(
+      em,
+      'no-tx',
+      REF_SEQ_COUNT,
+      CHUNKS_PER_RS,
+      FEATURES_PER_RS,
+    )
     const elapsed = performance.now() - start
 
     console.log(
@@ -165,7 +170,13 @@ describe('Benchmark: import simulation with and without transactions', () => {
 
     const start = performance.now()
     await em.begin()
-    await simulateImport(em, 'tx', REF_SEQ_COUNT, CHUNKS_PER_RS, FEATURES_PER_RS)
+    await simulateImport(
+      em,
+      'tx',
+      REF_SEQ_COUNT,
+      CHUNKS_PER_RS,
+      FEATURES_PER_RS,
+    )
     await em.commit()
     const elapsed = performance.now() - start
 
