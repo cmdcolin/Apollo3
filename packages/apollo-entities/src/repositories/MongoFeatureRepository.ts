@@ -1,4 +1,5 @@
 import type { FeatureRow } from '@apollo-annotation/common'
+import type { InferEntity } from '@mikro-orm/core'
 
 import { FeatureEntity } from '../entities/FeatureEntity.js'
 
@@ -156,21 +157,34 @@ export class MongoFeatureRepository extends BaseFeatureRepository {
 
   // Walk up the parent chain iteratively to find the root
   async findRootParent(id: string) {
-    let current = await this.em.findOne(FeatureEntity, { _id: id })
-    if (!current) {
-      return
+    const roots = await this.findRootParentsOfMany([id])
+    return roots[0]
+  }
+
+  // Walk parent chains upward in batches to find root ancestors.
+  // Each iteration loads the next level of parents for all unresolved
+  // features at once, so the total number of queries equals tree depth
+  // (typically 3-4), not the number of input IDs.
+  async findRootParentsOfMany(ids: string[]) {
+    if (ids.length === 0) {
+      return []
     }
-    let parentId = current.parent?._id
-    while (parentId) {
-      const parentEntity = await this.em.findOne(FeatureEntity, {
-        _id: parentId,
+    const resolved = new Map<string, InferEntity<typeof FeatureEntity>>()
+    let currentIds = ids
+    while (currentIds.length > 0) {
+      const entities = await this.em.find(FeatureEntity, {
+        _id: { $in: currentIds },
       })
-      if (!parentEntity) {
-        break
+      const nextParentIds: string[] = []
+      for (const entity of entities) {
+        if (entity.parent?._id) {
+          nextParentIds.push(entity.parent._id)
+        } else {
+          resolved.set(entity._id, entity)
+        }
       }
-      current = parentEntity
-      parentId = parentEntity.parent?._id
+      currentIds = nextParentIds
     }
-    return entityToRow(current)
+    return [...resolved.values()].map((e) => entityToRow(e))
   }
 }

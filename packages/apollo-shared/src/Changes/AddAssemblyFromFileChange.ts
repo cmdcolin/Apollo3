@@ -118,8 +118,6 @@ export class AddAssemblyFromFileChange extends FromFileBaseChange {
     await backend.assemblyRepository.create({
       _id: this.assembly,
       name: assemblyName,
-      user: backend.user,
-      status: -1,
       sequenceSource,
       checks,
     })
@@ -134,8 +132,6 @@ export class AddAssemblyFromFileChange extends FromFileBaseChange {
         assembly: this.assembly,
         length: allSequenceSizes[sequenceName] ?? 0,
         chunkSize: customChunkSize ?? 262_144,
-        user: backend.user,
-        status: -1,
       }
       await backend.refSeqRepository.create(refSeqRow)
       this.logger.debug?.(
@@ -230,8 +226,6 @@ export class AddAssemblyFromFileChange extends FromFileBaseChange {
     await backend.assemblyRepository.create({
       _id: this.assembly,
       name: assemblyName,
-      user: backend.user,
-      status: -1,
       sequenceSource: { type: 'chunked', fa: fileId },
       checks,
     })

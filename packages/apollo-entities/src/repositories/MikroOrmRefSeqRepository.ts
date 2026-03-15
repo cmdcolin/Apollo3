@@ -15,7 +15,6 @@ function toRow(entity: InferEntity<typeof RefSeqEntity>): RefSeqRow {
     aliases: entity.aliases ?? undefined,
     length: entity.length,
     chunkSize: entity.chunkSize,
-    status: entity.status ?? undefined,
     user: entity.user ?? undefined,
   }
 }
@@ -54,7 +53,6 @@ export class MikroOrmRefSeqRepository implements RefSeqRepository {
       aliases: row.aliases,
       length: row.length,
       chunkSize: row.chunkSize,
-      status: row.status,
       user: row.user,
     })
     this.em.persist(entity)
@@ -89,7 +87,6 @@ export class MikroOrmRefSeqRepository implements RefSeqRepository {
       aliases: row.aliases ?? null,
       length: row.length,
       chunkSize: row.chunkSize,
-      status: row.status ?? null,
       user: row.user ?? null,
     }))
     await this.em.insertMany(RefSeqEntity, data)
@@ -109,13 +106,5 @@ export class MikroOrmRefSeqRepository implements RefSeqRepository {
     this.em.assign(entity, data)
     await this.em.flush()
     return toRow(entity)
-  }
-
-  async activateByUser(user: string) {
-    return this.em.nativeUpdate(
-      RefSeqEntity,
-      { status: -1, user },
-      { status: 0 },
-    )
   }
 }

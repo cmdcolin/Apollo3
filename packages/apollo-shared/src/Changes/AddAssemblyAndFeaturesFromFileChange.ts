@@ -86,8 +86,6 @@ export class AddAssemblyAndFeaturesFromFileChange extends FromFileBaseChange {
       await backend.assemblyRepository.create({
         _id: assembly,
         name: assemblyName,
-        user: backend.user,
-        status: -1,
         sequenceSource,
         checks,
       })

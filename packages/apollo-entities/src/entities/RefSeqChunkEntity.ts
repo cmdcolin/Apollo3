@@ -10,7 +10,6 @@ export const RefSeqChunkEntity = defineEntity({
     refSeq: () => p.manyToOne(RefSeqEntity).deleteRule('cascade'),
     n: p.integer(),
     sequence: p.text(),
-    status: p.integer().nullable(),
     user: p.string().nullable(),
   },
   indexes: [{ properties: ['refSeq'] }],

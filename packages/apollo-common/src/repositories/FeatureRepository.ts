@@ -8,7 +8,6 @@ export interface FeatureRow {
   strand?: 1 | -1
   phase?: 0 | 1 | 2
   attributes?: Record<string, string[]>
-  status?: number
   user?: string
   createdAt?: Date
   updatedAt?: Date
@@ -20,6 +19,12 @@ export interface FeatureRepository {
   findAll(): Promise<FeatureRow[]>
   countAll(): Promise<number>
   countByRange(refSeqId: string, start: number, end: number): Promise<number>
+  countByRangeMultiple(
+    refSeqIds: string[],
+    start: number,
+    end: number,
+  ): Promise<number>
+  findRootParentsOfMany(ids: string[]): Promise<FeatureRow[]>
   findByRange(
     refSeqId: string,
     start: number,
@@ -43,7 +48,6 @@ export interface FeatureRepository {
   deleteDescendants(id: string): Promise<number>
   deleteByRefSeqs(refSeqIds: string[]): Promise<number>
   searchText(refSeqIds: string[], query: string): Promise<FeatureRow[]>
-  activateByUser(user: string): Promise<number>
   findByIndexedId(id: string, refSeqIds?: string[]): Promise<FeatureRow[]>
   findRootParent(id: string): Promise<FeatureRow | undefined>
 }

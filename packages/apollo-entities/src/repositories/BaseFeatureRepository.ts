@@ -56,7 +56,6 @@ export function entityToRow(entity: InferEntity<typeof FeatureEntity>): FeatureR
     strand: (entity.strand ?? undefined) as 1 | -1 | undefined,
     phase: (entity.phase ?? undefined) as 0 | 1 | 2 | undefined,
     attributes: entity.attributes ?? undefined,
-    status: entity.status ?? undefined,
     user: entity.user ?? undefined,
     createdAt: entity.createdAt ?? undefined,
     updatedAt: entity.updatedAt ?? undefined,
@@ -84,6 +83,17 @@ export abstract class BaseFeatureRepository implements FeatureRepository {
   async countByRange(refSeqId: string, start: number, end: number) {
     return this.em.count(FeatureEntity, {
       refSeq: refSeqId,
+      min: { $lte: end },
+      max: { $gte: start },
+    })
+  }
+
+  async countByRangeMultiple(refSeqIds: string[], start: number, end: number) {
+    if (refSeqIds.length === 0) {
+      return 0
+    }
+    return this.em.count(FeatureEntity, {
+      refSeq: { $in: refSeqIds },
       min: { $lte: end },
       max: { $gte: start },
     })
@@ -140,7 +150,6 @@ export abstract class BaseFeatureRepository implements FeatureRepository {
       strand: row.strand,
       phase: row.phase,
       attributes: row.attributes,
-      status: row.status,
       user: row.user,
       createdAt: row.createdAt ?? new Date(),
       updatedAt: row.updatedAt ?? new Date(),
@@ -165,7 +174,6 @@ export abstract class BaseFeatureRepository implements FeatureRepository {
       strand: row.strand ?? null,
       phase: row.phase ?? null,
       attributes: row.attributes ?? null,
-      status: row.status ?? null,
       user: row.user ?? null,
       createdAt: row.createdAt ?? now,
       updatedAt: row.updatedAt ?? now,
@@ -207,18 +215,11 @@ export abstract class BaseFeatureRepository implements FeatureRepository {
     })
   }
 
-  async activateByUser(user: string) {
-    return this.em.nativeUpdate(
-      FeatureEntity,
-      { status: -1, user },
-      { status: 0 },
-    )
-  }
-
   abstract findDescendants(rootId: string): Promise<FeatureRow[]>
   abstract findDescendantsOfMany(rootIds: string[]): Promise<FeatureRow[]>
   abstract deleteDescendants(id: string): Promise<number>
   abstract searchText(refSeqIds: string[], query: string): Promise<FeatureRow[]>
   abstract findByIndexedId(id: string, refSeqIds?: string[]): Promise<FeatureRow[]>
   abstract findRootParent(id: string): Promise<FeatureRow | undefined>
+  abstract findRootParentsOfMany(ids: string[]): Promise<FeatureRow[]>
 }

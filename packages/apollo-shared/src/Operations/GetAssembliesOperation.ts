@@ -18,7 +18,6 @@ export class GetAssembliesOperation extends Operation {
   }
 
   async executeOnServer(backend: ServerDataStore) {
-    const rows = await backend.assemblyRepository.findAll()
-    return rows.filter((r) => r.status === 0)
+    return backend.assemblyRepository.findAll()
   }
 }

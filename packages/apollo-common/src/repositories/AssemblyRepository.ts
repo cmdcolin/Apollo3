@@ -9,7 +9,6 @@ export interface AssemblyRow {
   displayName?: string
   aliases?: string[]
   description?: string
-  status?: number
   user?: string
   sequenceSource?: SequenceSource
   checks?: string[]
@@ -25,5 +24,4 @@ export interface AssemblyRepository {
   ): Promise<AssemblyRow | undefined>
   deleteById(id: string): Promise<boolean>
   findAll(): Promise<AssemblyRow[]>
-  activateByUser(user: string): Promise<number>
 }

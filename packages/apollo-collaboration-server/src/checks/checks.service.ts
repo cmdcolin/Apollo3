@@ -71,9 +71,6 @@ export class ChecksService {
     if (featureRow.parentId) {
       return
     }
-    if (featureRow.status != null && featureRow.status !== 0) {
-      return
-    }
     const descendants = await this.db.feature.findDescendants(featureId)
     const allRows = [featureRow, ...descendants]
     const trees = assembleFeatureTrees(allRows)

@@ -10,7 +10,6 @@ function toRow(entity: InferEntity<typeof AssemblyEntity>): AssemblyRow {
     displayName: entity.displayName ?? undefined,
     aliases: entity.aliases ?? undefined,
     description: entity.description ?? undefined,
-    status: entity.status ?? undefined,
     user: entity.user ?? undefined,
     sequenceSource: entity.sequenceSource ?? undefined,
     checks: entity.checks ?? undefined,
@@ -43,7 +42,6 @@ export class MikroOrmAssemblyRepository implements AssemblyRepository {
       displayName: row.displayName,
       aliases: row.aliases,
       description: row.description,
-      status: row.status,
       user: row.user,
       sequenceSource: row.sequenceSource,
       checks: row.checks,
@@ -76,13 +74,5 @@ export class MikroOrmAssemblyRepository implements AssemblyRepository {
     this.em.remove(entity)
     await this.em.flush()
     return true
-  }
-
-  async activateByUser(user: string) {
-    return this.em.nativeUpdate(
-      AssemblyEntity,
-      { status: -1, user },
-      { status: 0 },
-    )
   }
 }

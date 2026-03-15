@@ -6,7 +6,6 @@ export interface RefSeqRow {
   aliases?: string[]
   length: number
   chunkSize: number
-  status?: number
   user?: string
 }
 
@@ -26,5 +25,4 @@ export interface RefSeqRepository {
   findAll(): Promise<RefSeqRow[]>
   deleteByAssembly(assemblyId: string): Promise<number>
   createMany(rows: RefSeqRow[]): Promise<RefSeqRow[]>
-  activateByUser(user: string): Promise<number>
 }

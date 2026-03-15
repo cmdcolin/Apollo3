@@ -20,15 +20,15 @@ import { DatabaseService } from '../mikro-orm/database.service.js'
 
 function featureRowToSnapshot(
   root: FeatureRow,
-  allRows: FeatureRow[],
+  childrenMap: Map<string, FeatureRow[]>,
 ): AnnotationFeatureSnapshot {
-  const childRows = allRows.filter((r) => r.parentId === root._id)
+  const childRows = childrenMap.get(root._id)
   const children: Record<string, AnnotationFeatureSnapshot> | undefined =
-    childRows.length > 0
+    childRows && childRows.length > 0
       ? Object.fromEntries(
           childRows.map((child) => [
             child._id,
-            featureRowToSnapshot(child, allRows),
+            featureRowToSnapshot(child, childrenMap),
           ]),
         )
       : undefined
@@ -42,6 +42,21 @@ function featureRowToSnapshot(
     attributes: root.attributes ?? {},
     children,
   } as AnnotationFeatureSnapshot
+}
+
+function buildChildrenMap(rows: FeatureRow[]) {
+  const map = new Map<string, FeatureRow[]>()
+  for (const row of rows) {
+    if (row.parentId) {
+      const siblings = map.get(row.parentId)
+      if (siblings) {
+        siblings.push(row)
+      } else {
+        map.set(row.parentId, [row])
+      }
+    }
+  }
+  return map
 }
 
 @Injectable()
@@ -97,10 +112,15 @@ export class ExportService {
         0,
         refSeq.length,
       )
+      if (rootFeatures.length === 0) {
+        continue
+      }
+      const rootIds = rootFeatures.map((r) => r._id)
+      const descendants =
+        await this.db.feature.findDescendantsOfMany(rootIds)
+      const childrenMap = buildChildrenMap([...rootFeatures, ...descendants])
       for (const root of rootFeatures) {
-        const descendants = await this.db.feature.findDescendants(root._id)
-        const allRows = [root, ...descendants]
-        const snapshot = featureRowToSnapshot(root, allRows)
+        const snapshot = featureRowToSnapshot(root, childrenMap)
         const gff3Feature = annotationFeatureToGFF3(
           snapshot,
           undefined,

@@ -40,8 +40,7 @@ export abstract class FromFileBaseChange extends AssemblySpecificChange {
     backend: ServerDataStore,
   ) {
     const { logger } = this
-    const { filesService, refSeqChunkRepository, refSeqRepository, user } =
-      backend
+    const { filesService, refSeqChunkRepository, refSeqRepository } = backend
     const { CHUNK_SIZE } = process.env
     const customChunkSize = CHUNK_SIZE ? Number(CHUNK_SIZE) : undefined
     const defaultChunkSize = customChunkSize ?? 262_144
@@ -95,8 +94,6 @@ export abstract class FromFileBaseChange extends AssemblySpecificChange {
               refSeq: currentRefSeqId,
               n: chunkIndex,
               sequence: sequenceBuffer,
-              user,
-              status: -1,
             }
             await this.bufferChunk(chunkRow, backend)
             await this.flushChunkBuffer(backend)
@@ -121,8 +118,6 @@ export abstract class FromFileBaseChange extends AssemblySpecificChange {
             assembly,
             length: 0,
             chunkSize: currentChunkSize,
-            user,
-            status: -1,
           }
           await refSeqRepository.create(refSeqRow)
           logger.debug?.(
@@ -141,8 +136,6 @@ export abstract class FromFileBaseChange extends AssemblySpecificChange {
               refSeq: currentRefSeqId,
               n: chunkIndex,
               sequence,
-              user,
-              status: -1,
             }
             await this.bufferChunk(chunkRow, backend)
             chunkIndex++
@@ -173,8 +166,6 @@ export abstract class FromFileBaseChange extends AssemblySpecificChange {
         refSeq: currentRefSeqId,
         n: chunkIndex,
         sequence: sequenceBuffer,
-        user,
-        status: -1,
       }
       await this.bufferChunk(chunkRow, backend)
       await this.flushChunkBuffer(backend)
@@ -222,8 +213,6 @@ export abstract class FromFileBaseChange extends AssemblySpecificChange {
     const newFeature = gff3ToAnnotationFeature(gff3Feature, refSeqRow._id)
     const rows = flattenFeatureSnapshot(newFeature, refSeqRow._id)
     for (const row of rows) {
-      row.user = backend.user
-      row.status = -1
       this.featureBuffer.push(row)
     }
     if (this.featureBuffer.length >= this.FEATURE_BATCH_SIZE) {

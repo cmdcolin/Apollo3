@@ -53,9 +53,6 @@ export function assembleFeatureTrees(flatFeatures: FeatureRow[]) {
     if (node.attributes != null) {
       result.attributes = node.attributes
     }
-    if (node.status != null) {
-      result.status = node.status
-    }
     if (node.user != null) {
       result.user = node.user
     }

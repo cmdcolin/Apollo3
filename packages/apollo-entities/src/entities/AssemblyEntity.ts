@@ -14,7 +14,6 @@ export const AssemblyEntity = defineEntity({
     displayName: p.string().nullable(),
     aliases: p.json<string[]>().nullable(),
     description: p.string().nullable(),
-    status: p.integer().nullable(),
     user: p.string().nullable(),
     sequenceSource: p.json<SequenceSource>().nullable(),
     checks: p.json<string[]>().nullable(),

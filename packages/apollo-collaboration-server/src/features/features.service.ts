@@ -38,13 +38,12 @@ export class FeaturesService {
       )
     } else if (assemblyId) {
       const refSeqs = await this.db.refSeq.findByAssembly(assemblyId)
-      for (const refSeq of refSeqs) {
-        count += await this.db.feature.countByRange(
-          refSeq._id,
-          start ?? 0,
-          end ?? Number.MAX_SAFE_INTEGER,
-        )
-      }
+      const refSeqIds = refSeqs.map((rs) => rs._id)
+      count = await this.db.feature.countByRangeMultiple(
+        refSeqIds,
+        start ?? 0,
+        end ?? Number.MAX_SAFE_INTEGER,
+      )
     } else {
       count = await this.db.feature.countAll()
     }
@@ -142,20 +141,18 @@ export class FeaturesService {
     return feature
   }
 
-  // status=0 means active (published), status=-1 means pending import
   async findByRange(searchDto: FeatureRangeSearchDto) {
     const roots = await this.db.feature.findRootsByRange(
       searchDto.refSeq,
       Number(searchDto.start),
       Number(searchDto.end),
     )
-    const activeRoots = roots.filter((r) => r.status === 0)
     let features: FeatureRow[] = []
-    if (activeRoots.length > 0) {
-      const rootIds = activeRoots.map((r) => r._id)
+    if (roots.length > 0) {
+      const rootIds = roots.map((r) => r._id)
       const descendants =
         await this.db.feature.findDescendantsOfMany(rootIds)
-      features = assembleFeatureTrees([...activeRoots, ...descendants])
+      features = assembleFeatureTrees([...roots, ...descendants])
     }
     const checkResults = await this.checksService.findByRange(searchDto)
     return [features, checkResults]

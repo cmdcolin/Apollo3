@@ -13,7 +13,6 @@ function toRow(entity: InferEntity<typeof RefSeqChunkEntity>): RefSeqChunkRow {
       typeof entity.refSeq === 'string' ? entity.refSeq : entity.refSeq._id,
     n: entity.n,
     sequence: entity.sequence,
-    status: entity.status ?? undefined,
     user: entity.user ?? undefined,
   }
 }
@@ -43,7 +42,6 @@ export class MikroOrmRefSeqChunkRepository implements RefSeqChunkRepository {
       refSeq: row.refSeq,
       n: row.n,
       sequence: row.sequence,
-      status: row.status,
       user: row.user,
     })
     this.em.persist(entity)
@@ -66,18 +64,9 @@ export class MikroOrmRefSeqChunkRepository implements RefSeqChunkRepository {
       refSeq: row.refSeq,
       n: row.n,
       sequence: row.sequence,
-      status: row.status ?? null,
       user: row.user ?? null,
     }))
     await this.em.insertMany(RefSeqChunkEntity, data)
     return rows
-  }
-
-  async activateByUser(user: string) {
-    return this.em.nativeUpdate(
-      RefSeqChunkEntity,
-      { status: -1, user },
-      { status: 0 },
-    )
   }
 }

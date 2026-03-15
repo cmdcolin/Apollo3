@@ -24,12 +24,6 @@ import { PluginsService } from '../plugins/plugins.service.js'
 
 import { FindChangeDto } from './dto/find-change.dto.js'
 
-const STATUS_ZERO_CHANGE_TYPES = new Set([
-  'AddAssemblyAndFeaturesFromFileChange',
-  'AddAssemblyFromFileChange',
-  'AddFeaturesFromFileChange',
-])
-
 @Injectable()
 export class ChangesService {
   constructor(
@@ -83,14 +77,11 @@ export class ChangesService {
 
     const refNames: string[] = []
     if (isFeatureChange(change)) {
-      const { changedIds } = change
-      for (const changedId of changedIds) {
-        const features = await this.db.feature.findByIds([changedId])
-        if (features.length > 0) {
-          const firstFeature = features[0]
-          const refSeq = firstFeature
-            ? await this.db.refSeq.findById(firstFeature.refSeq)
-            : undefined
+      const features = await this.db.feature.findByIds(change.changedIds)
+      if (features.length > 0) {
+        const uniqueRefSeqIds = [...new Set(features.map((f) => f.refSeq))]
+        for (const rsId of uniqueRefSeqIds) {
+          const refSeq = await this.db.refSeq.findById(rsId)
           if (refSeq) {
             refNames.push(refSeq.name)
           }
@@ -105,13 +96,6 @@ export class ChangesService {
       const uniqUserId = `${user.email}-${seq}`
       const backend = this.buildServerDataStore(scope, uniqUserId)
       await change.execute(backend)
-
-      if (STATUS_ZERO_CHANGE_TYPES.has(change.typeName)) {
-        await scope.assembly.activateByUser(uniqUserId)
-        await scope.refSeqChunk.activateByUser(uniqUserId)
-        await scope.feature.activateByUser(uniqUserId)
-        await scope.refSeq.activateByUser(uniqUserId)
-      }
       return seq
     })
     this.logger.log(`Change executed in ${Date.now() - startTime}ms: ${change.typeName}`)
@@ -126,13 +110,11 @@ export class ChangesService {
     })
 
     if (isFeatureChange(change)) {
-      const checkedRootIds = new Set<string>()
-      for (const changedId of change.changedIds) {
-        const rootFeature = await this.db.feature.findRootParent(changedId)
-        if (rootFeature && !checkedRootIds.has(rootFeature._id)) {
-          checkedRootIds.add(rootFeature._id)
-          await this.checksService.checkFeature(rootFeature._id)
-        }
+      const rootFeatures = await this.db.feature.findRootParentsOfMany(
+        change.changedIds,
+      )
+      for (const rootFeature of rootFeatures) {
+        await this.checksService.checkFeature(rootFeature._id)
       }
     }
 

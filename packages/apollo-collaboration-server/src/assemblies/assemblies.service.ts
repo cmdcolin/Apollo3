@@ -35,7 +35,6 @@ export class AssembliesService {
       displayName: createAssemblyDto.displayName,
       description: createAssemblyDto.description,
       aliases: createAssemblyDto.aliases,
-      status: 0,
       checks: defaultCheckIds,
     })
   }
@@ -64,10 +63,8 @@ export class AssembliesService {
     }
   }
 
-  // status=0 means active (published), status=-1 means pending import
   async findAll() {
-    const rows = await this.db.assembly.findAll()
-    return rows.filter((r) => r.status === 0)
+    return this.db.assembly.findAll()
   }
 
   async findOne(id: string) {

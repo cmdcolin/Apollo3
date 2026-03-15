@@ -139,38 +139,22 @@ The repository pattern abstracts the database layer behind interfaces in
 
 ### P1 — Performance
 
-8. **N+1 queries in check execution after mutations** —
-   `changes.service.ts:130-136` loops through `changedIds` calling
-   `findRootParent()` individually for each changed feature, then calls
-   `checkFeature()` per root. A bulk edit touching 100 features fires 100+
-   database queries. Fix: batch `findByIds()` upfront, deduplicate roots.
+8. ~~**N+1 queries in check execution after mutations**~~ — **Fixed.** Added
+   `findRootParentsOfMany()` (single recursive CTE for SQL, batched upward
+   walk for MongoDB) to replace per-ID `findRootParent()` loop. Also batched
+   the refName gathering with `findByIds()` + deduplication.
 
-   - **Files**:
-     `packages/apollo-collaboration-server/src/changes/changes.service.ts`
+9. ~~**N+1 queries in GFF3 export**~~ — **Fixed.** Export now calls
+   `findDescendantsOfMany()` once per refSeq instead of `findDescendants()`
+   per root feature.
 
-9. **N+1 queries in GFF3 export** — `export.service.ts:94-112` calls
-   `findDescendants()` per root feature in a loop. `findDescendantsOfMany()`
-   already exists in the repository but isn't used here. Exporting an assembly
-   with 500 genes = 500 tree traversal queries instead of 1.
+10. ~~**N+1 queries in feature count**~~ — **Fixed.** Added
+    `countByRangeMultiple()` to the repository interface. Uses a single
+    `em.count()` with `$in` filter instead of looping per refSeq.
 
-   - **Files**:
-     `packages/apollo-collaboration-server/src/export/export.service.ts`
-
-10. **N+1 queries in feature count** — `features.service.ts:39-47` loops through
-    all refSeqs calling `countByRange()` individually. An assembly with 30
-    chromosomes = 30 COUNT queries. Should be a single query with
-    `WHERE refSeq IN (...)`.
-
-    - **Files**:
-      `packages/apollo-collaboration-server/src/features/features.service.ts`
-
-11. **O(n^2) tree assembly in export** — `export.service.ts:21-44`
-    `featureRowToSnapshot()` does `allRows.filter(r => r.parentId === root._id)`
-    for each feature, scanning the full array each time. Should build a
-    parent→children map once upfront.
-
-    - **Files**:
-      `packages/apollo-collaboration-server/src/export/export.service.ts`
+11. ~~**O(n^2) tree assembly in export**~~ — **Fixed.** `featureRowToSnapshot()`
+    now takes a pre-built `Map<parentId, children[]>` (O(n) construction)
+    instead of filtering the full array per node.
 
 12. **Import speed** — Current: ~8s for volvox test data. Breakdown:
 
@@ -181,11 +165,10 @@ The repository pattern abstracts the database layer behind interfaces in
 
 ### P1 — Data Integrity
 
-13. **Counter race condition** — `MikroOrmCounterRepository.ts:9-21` does a
-    read-modify-write without atomicity. Two concurrent requests can read the
-    same counter value before either flushes, producing duplicate sequence
-    numbers. Fix: use atomic SQL `UPDATE ... SET value = value + 1 RETURNING`.
-
+13. ~~**Counter race condition**~~ — **Fixed.** Added
+    `LockMode.PESSIMISTIC_WRITE` to the counter read (`SELECT ... FOR UPDATE`
+    in PostgreSQL). Prevents two concurrent transactions from reading the same
+    value. No-op on SQLite (writes are engine-serialized).
     - **Files**:
       `packages/apollo-entities/src/repositories/MikroOrmCounterRepository.ts`
 

@@ -15,7 +15,6 @@ export const FeatureEntity = defineEntity({
     strand: p.integer().nullable(),
     phase: p.integer().nullable(),
     attributes: p.json<Record<string, string[]>>().nullable(),
-    status: p.integer().nullable(),
     user: p.string().nullable(),
     createdAt: p.datetime().nullable(),
     updatedAt: p.datetime().nullable().onUpdate(() => new Date()),

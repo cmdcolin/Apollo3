@@ -42,13 +42,12 @@ export class GetFeaturesOperation extends Operation {
       this.start,
       this.end,
     )
-    const publishedRoots = rootRows.filter((r) => r.status === 0)
-    if (publishedRoots.length === 0) {
+    if (rootRows.length === 0) {
       return []
     }
-    const rootIds = publishedRoots.map((r) => r._id)
+    const rootIds = rootRows.map((r) => r._id)
     const allDescendants = await featureRepository.findDescendantsOfMany(rootIds)
-    const allRows = [...publishedRoots, ...allDescendants]
+    const allRows = [...rootRows, ...allDescendants]
     return assembleFeatureTrees(allRows)
   }
 }

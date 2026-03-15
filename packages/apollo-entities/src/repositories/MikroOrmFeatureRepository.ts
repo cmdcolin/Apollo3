@@ -21,7 +21,6 @@ interface RawFeatureRow {
   strand: number | null
   phase: number | null
   attributes: string | null
-  status: number | null
   user: string | null
   created_at: string | null
   updated_at: string | null
@@ -40,7 +39,6 @@ function rawToRow(raw: RawFeatureRow): FeatureRow {
     attributes: raw.attributes
       ? (JSON.parse(raw.attributes) as Record<string, string[]>)
       : undefined,
-    status: raw.status ?? undefined,
     user: raw.user ?? undefined,
     createdAt: raw.created_at ? new Date(raw.created_at) : undefined,
     updatedAt: raw.updated_at ? new Date(raw.updated_at) : undefined,
@@ -207,19 +205,25 @@ export class MikroOrmFeatureRepository extends BaseFeatureRepository {
 
   // Raw SQL required: recursive CTE to walk parent chain up to root
   async findRootParent(id: string) {
+    const roots = await this.findRootParentsOfMany([id])
+    return roots[0]
+  }
+
+  // Raw SQL required: recursive CTE to walk parent chains up to roots for
+  // multiple features in a single query
+  async findRootParentsOfMany(ids: string[]) {
+    if (ids.length === 0) {
+      return []
+    }
     const rows = (await this.sql(
       `WITH RECURSIVE ancestors AS (
-        SELECT * FROM feature WHERE _id = ?
+        SELECT * FROM feature WHERE _id IN (${placeholders(ids.length)})
         UNION ALL
         SELECT f.* FROM feature f JOIN ancestors a ON f._id = a.parent__id
       )
-      SELECT * FROM ancestors WHERE parent__id IS NULL`,
-      [id],
+      SELECT DISTINCT * FROM ancestors WHERE parent__id IS NULL`,
+      ids,
     )) as RawFeatureRow[]
-    const [first] = rows
-    if (first) {
-      return rawToRow(first)
-    }
-    return
+    return rows.map((r) => rawToRow(r))
   }
 }
