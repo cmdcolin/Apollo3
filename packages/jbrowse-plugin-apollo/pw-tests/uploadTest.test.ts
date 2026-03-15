@@ -8,8 +8,8 @@ const GFF_PATH = path.resolve(__dirname, '../test_data/deleteFeature.gff3')
 const API_BASE = 'http://localhost:3999'
 
 test('Upload file via browser fetch', async ({ page }) => {
-  // Load a minimal page
-  await page.goto('http://localhost:8999')
+  // Load the app page (same server as API)
+  await page.goto('http://localhost:3999')
 
   // Read file content and pass to browser
   const fileContent = readFileSync(GFF_PATH).toString('base64')

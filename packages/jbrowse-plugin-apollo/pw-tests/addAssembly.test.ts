@@ -22,8 +22,12 @@ test.afterEach(async ({ page }) => {
 })
 
 async function assertAssemblyLoaded(page: import('@playwright/test').Page, assemblyName: string) {
+  // After reload, verify the assembly appears in the "Select assembly to view" dropdown
   await expect(
-    page.locator('[data-testid="assembly-selector-textfield"]').filter({ hasText: assemblyName }),
+    page.getByText('Select assembly to view'),
+  ).toBeVisible({ timeout: 15_000 })
+  await expect(
+    page.getByText(assemblyName),
   ).toBeVisible({ timeout: 10_000 })
 }
 
@@ -50,8 +54,8 @@ test('Can add assembly and features from gff3', async ({ page }) => {
   const form = page.locator('form[data-testid="submit-form"]')
   await fillAssemblyName(page, 'volvox')
 
-  // Open GFF3 input section
-  await form.getByText('GFF3 input').locator('..').locator('..').locator('button').click()
+  // Switch to GFF3 input panel
+  await form.getByText('GFF3 input').click()
   await form.locator('input[data-testid="gff3-input-file"]').setInputFiles(
     path.join(TEST_DATA, 'volvox.fasta.gff3'),
   )
@@ -72,13 +76,13 @@ test('Can add assembly from gff3 without importing features', async ({
   const form = page.locator('form[data-testid="submit-form"]')
   await fillAssemblyName(page, 'volvox')
 
-  await form.getByText('GFF3 input').locator('..').locator('..').locator('button').click()
+  await form.getByText('GFF3 input').click()
   await form.locator('input[data-testid="gff3-input-file"]').setInputFiles(
     path.join(TEST_DATA, 'volvox.fasta.gff3'),
   )
 
   // Uncheck "Load features from GFF3"
-  await form.getByText('Load features from GFF3').locator('input[type="checkbox"]').click()
+  await form.getByText('Load features from GFF3 file').locator('..').locator('input[type="checkbox"]').click()
 
   await submitAndWaitForSuccess(page)
   await assertAssemblyLoaded(page, 'volvox')
@@ -151,13 +155,13 @@ test('Keep original defaults when switching panels', async ({ page }) => {
   await fillAssemblyName(page, 'volvox')
 
   // Select GFF3 first (implicitly enables editable mode)
-  await form.getByText('GFF3 input').locator('..').locator('..').locator('button').click()
+  await form.getByText('GFF3 input').click()
   await form.locator('input[data-testid="gff3-input-file"]').setInputFiles(
     path.join(TEST_DATA, 'volvox.fasta.gff3'),
   )
 
   // Switch back to FASTA input
-  await form.getByText('FASTA input').locator('..').locator('button').click()
+  await form.getByText('FASTA input').click()
 
   // Indexes should still be required (not disabled)
   await expect(form.locator('input[data-testid="fai-input-file"]')).toBeEnabled()
@@ -197,15 +201,15 @@ test('Can add assembly from remote url', async ({ page }) => {
   await expect(gzipCheckbox).toBeDisabled()
 
   await form.locator('[data-testid="fasta-input-url"]').locator('input').fill(
-    'http://localhost:9000/test_data/volvox.fa.gz',
+    'http://localhost:3999/test_data/volvox.fa.gz',
   )
   await form.locator('[data-testid="fai-input-url"]').locator('input').clear()
   await form.locator('[data-testid="fai-input-url"]').locator('input').fill(
-    'http://localhost:9000/test_data/volvox.fa.gz.fai',
+    'http://localhost:3999/test_data/volvox.fa.gz.fai',
   )
   await form.locator('[data-testid="gzi-input-url"]').locator('input').clear()
   await form.locator('[data-testid="gzi-input-url"]').locator('input').fill(
-    'http://localhost:9000/test_data/volvox.fa.gz.gzi',
+    'http://localhost:3999/test_data/volvox.fa.gz.gzi',
   )
 
   await submitAndWaitForSuccess(page)

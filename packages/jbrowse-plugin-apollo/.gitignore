@@ -1,17 +1,7 @@
 .jbrowse/
-
-# Cypress specific files
-cypress/videos
-cypress/screenshots
-cypress/downloads
-cypress/cypress-image-diff-html-report
-cypress-image-diff-html-report
-cypress/cypress-image-diff-screenshots/comparison
-cypress/cypress-image-diff-screenshots/diff
-
 data/
 
-# Playwright specific files
+# Playwright
 test-results/
 playwright-report/
 .e2e-pids

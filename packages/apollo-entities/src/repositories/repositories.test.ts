@@ -3,11 +3,15 @@ import type { MikroORM } from '@mikro-orm/core'
 import { createTestORM } from '../test-utils.js'
 import { MikroOrmAssemblyRepository } from './MikroOrmAssemblyRepository.js'
 import { MikroOrmChangeRepository } from './MikroOrmChangeRepository.js'
+import { MikroOrmCheckRepository } from './MikroOrmCheckRepository.js'
+import { MikroOrmCheckResultRepository } from './MikroOrmCheckResultRepository.js'
 import { MikroOrmCounterRepository } from './MikroOrmCounterRepository.js'
 import { MikroOrmFeatureRepository } from './MikroOrmFeatureRepository.js'
 import { MikroOrmFileRepository } from './MikroOrmFileRepository.js'
+import { MikroOrmJBrowseConfigRepository } from './MikroOrmJBrowseConfigRepository.js'
 import { MikroOrmRefSeqChunkRepository } from './MikroOrmRefSeqChunkRepository.js'
 import { MikroOrmRefSeqRepository } from './MikroOrmRefSeqRepository.js'
+import { MikroOrmUserRepository } from './MikroOrmUserRepository.js'
 
 let orm: MikroORM
 
@@ -884,6 +888,535 @@ describe('MikroOrmChangeRepository', () => {
 
     const limited = await repo.findAll({ limit: 2 })
     expect(limited).toHaveLength(2)
+  })
+})
+
+describe('MikroOrmCheckRepository', () => {
+  it('should upsert and find a check', async () => {
+    const repo = new MikroOrmCheckRepository(orm.em.fork())
+    const created = await repo.upsert({
+      _id: 'chk-1',
+      name: 'MissingAttributeCheck',
+      isDefault: true,
+      version: 1,
+    })
+    expect(created._id).toBe('chk-1')
+    expect(created.name).toBe('MissingAttributeCheck')
+
+    const found = await repo.findById('chk-1')
+    expect(found).toBeDefined()
+    expect(found!.name).toBe('MissingAttributeCheck')
+    expect(found!.isDefault).toBe(true)
+  })
+
+  it('should upsert to update an existing check', async () => {
+    const repo = new MikroOrmCheckRepository(orm.em.fork())
+    await repo.upsert({
+      _id: 'chk-1',
+      name: 'MissingAttributeCheck',
+      isDefault: true,
+      version: 1,
+    })
+
+    const updated = await repo.upsert({
+      _id: 'chk-1',
+      name: 'MissingAttributeCheck',
+      isDefault: false,
+      version: 2,
+    })
+    expect(updated.version).toBe(2)
+    expect(updated.isDefault).toBe(false)
+
+    const all = await repo.findAll()
+    expect(all).toHaveLength(1)
+  })
+
+  it('should find by name', async () => {
+    const repo = new MikroOrmCheckRepository(orm.em.fork())
+    await repo.upsert({ _id: 'chk-1', name: 'CDSCheck', version: 1 })
+    await repo.upsert({ _id: 'chk-2', name: 'SpliceCheck', version: 1 })
+
+    const found = await repo.findByName('CDSCheck')
+    expect(found).toBeDefined()
+    expect(found!._id).toBe('chk-1')
+
+    expect(await repo.findByName('nonexistent')).toBeUndefined()
+  })
+
+  it('should find defaults', async () => {
+    const repo = new MikroOrmCheckRepository(orm.em.fork())
+    await repo.upsert({
+      _id: 'chk-1',
+      name: 'CDSCheck',
+      isDefault: true,
+      version: 1,
+    })
+    await repo.upsert({
+      _id: 'chk-2',
+      name: 'SpliceCheck',
+      isDefault: false,
+      version: 1,
+    })
+    await repo.upsert({
+      _id: 'chk-3',
+      name: 'ORFCheck',
+      isDefault: true,
+      version: 1,
+    })
+
+    const defaults = await repo.findDefaults()
+    expect(defaults).toHaveLength(2)
+    expect(defaults.map((d) => d.name).sort()).toEqual(['CDSCheck', 'ORFCheck'])
+  })
+
+  it('should find by ids', async () => {
+    const repo = new MikroOrmCheckRepository(orm.em.fork())
+    await repo.upsert({ _id: 'chk-1', name: 'Check1', version: 1 })
+    await repo.upsert({ _id: 'chk-2', name: 'Check2', version: 1 })
+    await repo.upsert({ _id: 'chk-3', name: 'Check3', version: 1 })
+
+    const found = await repo.findByIds(['chk-1', 'chk-3'])
+    expect(found).toHaveLength(2)
+
+    expect(await repo.findByIds([])).toHaveLength(0)
+  })
+
+  it('should find all checks sorted by name', async () => {
+    const repo = new MikroOrmCheckRepository(orm.em.fork())
+    await repo.upsert({ _id: 'chk-1', name: 'Zebra', version: 1 })
+    await repo.upsert({ _id: 'chk-2', name: 'Alpha', version: 1 })
+    await repo.upsert({ _id: 'chk-3', name: 'Middle', version: 1 })
+
+    const all = await repo.findAll()
+    expect(all).toHaveLength(3)
+    expect(all[0].name).toBe('Alpha')
+    expect(all[2].name).toBe('Zebra')
+  })
+})
+
+describe('MikroOrmCheckResultRepository', () => {
+  async function setupRefSeq(em: ReturnType<typeof orm.em.fork>) {
+    await new MikroOrmAssemblyRepository(em).create({
+      _id: 'asm-1',
+      name: 'volvox',
+    })
+    await new MikroOrmRefSeqRepository(em).create({
+      _id: 'rs-1',
+      assembly: 'asm-1',
+      name: 'ctgA',
+      length: 50000,
+      chunkSize: 20000,
+    })
+  }
+
+  it('should create and find check results by range', async () => {
+    const em = orm.em.fork()
+    await setupRefSeq(em)
+    const repo = new MikroOrmCheckResultRepository(em)
+
+    await repo.create({
+      _id: 'cr-1',
+      name: 'CDSCheck',
+      ids: ['feat-1'],
+      refSeq: 'rs-1',
+      start: 100,
+      end: 500,
+      ignored: false,
+    })
+    await repo.create({
+      _id: 'cr-2',
+      name: 'CDSCheck',
+      ids: ['feat-2'],
+      refSeq: 'rs-1',
+      start: 1000,
+      end: 2000,
+      ignored: false,
+    })
+
+    const inRange = await repo.findByRange('rs-1', 0, 600)
+    expect(inRange).toHaveLength(1)
+    expect(inRange[0]._id).toBe('cr-1')
+
+    const allRange = await repo.findByRange('rs-1', 0, 5000)
+    expect(allRange).toHaveLength(2)
+  })
+
+  it('should find by feature id', async () => {
+    const em = orm.em.fork()
+    await setupRefSeq(em)
+    const repo = new MikroOrmCheckResultRepository(em)
+
+    await repo.create({
+      _id: 'cr-1',
+      name: 'CDSCheck',
+      ids: ['feat-1', 'feat-2'],
+      refSeq: 'rs-1',
+      start: 100,
+      end: 500,
+      ignored: false,
+    })
+    await repo.create({
+      _id: 'cr-2',
+      name: 'CDSCheck',
+      ids: ['feat-3'],
+      refSeq: 'rs-1',
+      start: 600,
+      end: 800,
+      ignored: false,
+    })
+
+    const results = await repo.findByFeatureId('feat-2')
+    expect(results).toHaveLength(1)
+    expect(results[0]._id).toBe('cr-1')
+
+    expect(await repo.findByFeatureId('nonexistent')).toHaveLength(0)
+  })
+
+  it('should find by refSeq ids', async () => {
+    const em = orm.em.fork()
+    await setupRefSeq(em)
+    const repo = new MikroOrmCheckResultRepository(em)
+
+    await repo.create({
+      _id: 'cr-1',
+      name: 'CDSCheck',
+      ids: ['feat-1'],
+      refSeq: 'rs-1',
+      start: 100,
+      end: 500,
+      ignored: false,
+    })
+
+    const results = await repo.findByRefSeqIds(['rs-1'])
+    expect(results).toHaveLength(1)
+
+    expect(await repo.findByRefSeqIds(['rs-nonexistent'])).toHaveLength(0)
+  })
+
+  it('should create many check results', async () => {
+    const em = orm.em.fork()
+    await setupRefSeq(em)
+    const repo = new MikroOrmCheckResultRepository(em)
+
+    const created = await repo.createMany([
+      {
+        _id: 'cr-1',
+        name: 'CDSCheck',
+        ids: ['feat-1'],
+        refSeq: 'rs-1',
+        start: 100,
+        end: 500,
+        ignored: false,
+      },
+      {
+        _id: 'cr-2',
+        name: 'CDSCheck',
+        ids: ['feat-2'],
+        refSeq: 'rs-1',
+        start: 600,
+        end: 800,
+        ignored: false,
+      },
+    ])
+    expect(created).toHaveLength(2)
+
+    expect(await repo.createMany([])).toHaveLength(0)
+  })
+
+  it('should delete by ids', async () => {
+    const em = orm.em.fork()
+    await setupRefSeq(em)
+    const repo = new MikroOrmCheckResultRepository(em)
+
+    await repo.create({
+      _id: 'cr-1',
+      name: 'CDSCheck',
+      ids: ['feat-1'],
+      refSeq: 'rs-1',
+      start: 100,
+      end: 500,
+      ignored: false,
+    })
+    await repo.create({
+      _id: 'cr-2',
+      name: 'CDSCheck',
+      ids: ['feat-2'],
+      refSeq: 'rs-1',
+      start: 600,
+      end: 800,
+      ignored: false,
+    })
+
+    expect(await repo.deleteByIds(['cr-1'])).toBe(1)
+    expect(await repo.findByRange('rs-1', 0, 5000)).toHaveLength(1)
+  })
+
+  it('should delete by refSeq', async () => {
+    const em = orm.em.fork()
+    await setupRefSeq(em)
+    const repo = new MikroOrmCheckResultRepository(em)
+
+    await repo.create({
+      _id: 'cr-1',
+      name: 'CDSCheck',
+      ids: ['feat-1'],
+      refSeq: 'rs-1',
+      start: 100,
+      end: 500,
+      ignored: false,
+    })
+    await repo.create({
+      _id: 'cr-2',
+      name: 'CDSCheck',
+      ids: ['feat-2'],
+      refSeq: 'rs-1',
+      start: 600,
+      end: 800,
+      ignored: false,
+    })
+
+    expect(await repo.deleteByRefSeq('rs-1')).toBe(2)
+    expect(await repo.findByRange('rs-1', 0, 5000)).toHaveLength(0)
+  })
+
+  it('should delete by feature ids and check name', async () => {
+    const em = orm.em.fork()
+    await setupRefSeq(em)
+    const repo = new MikroOrmCheckResultRepository(em)
+
+    await repo.create({
+      _id: 'cr-1',
+      name: 'CDSCheck',
+      ids: ['feat-1'],
+      refSeq: 'rs-1',
+      start: 100,
+      end: 500,
+      ignored: false,
+    })
+    await repo.create({
+      _id: 'cr-2',
+      name: 'CDSCheck',
+      ids: ['feat-2'],
+      refSeq: 'rs-1',
+      start: 600,
+      end: 800,
+      ignored: false,
+    })
+    await repo.create({
+      _id: 'cr-3',
+      name: 'SpliceCheck',
+      ids: ['feat-1'],
+      refSeq: 'rs-1',
+      start: 100,
+      end: 500,
+      ignored: false,
+    })
+
+    expect(await repo.deleteByFeatureIdsAndName(['feat-1'], 'CDSCheck')).toBe(1)
+    expect(await repo.findByRange('rs-1', 0, 5000)).toHaveLength(2)
+  })
+
+  it('should update by id', async () => {
+    const em = orm.em.fork()
+    await setupRefSeq(em)
+    const repo = new MikroOrmCheckResultRepository(em)
+
+    await repo.create({
+      _id: 'cr-1',
+      name: 'CDSCheck',
+      ids: ['feat-1'],
+      refSeq: 'rs-1',
+      start: 100,
+      end: 500,
+      ignored: false,
+    })
+
+    const updated = await repo.updateById('cr-1', { ignored: true })
+    expect(updated).toBeDefined()
+    expect(updated!.ignored).toBe(true)
+
+    expect(await repo.updateById('nonexistent', { ignored: true })).toBeUndefined()
+  })
+})
+
+describe('MikroOrmUserRepository', () => {
+  it('should create and find a user', async () => {
+    const repo = new MikroOrmUserRepository(orm.em.fork())
+    const created = await repo.create({
+      _id: 'user-1',
+      username: 'alice',
+      email: 'alice@example.com',
+      role: 'admin',
+    })
+    expect(created._id).toBe('user-1')
+    expect(created.username).toBe('alice')
+
+    const found = await repo.findById('user-1')
+    expect(found).toBeDefined()
+    expect(found!.email).toBe('alice@example.com')
+    expect(found!.role).toBe('admin')
+  })
+
+  it('should find by email', async () => {
+    const repo = new MikroOrmUserRepository(orm.em.fork())
+    await repo.create({
+      _id: 'user-1',
+      username: 'alice',
+      email: 'alice@example.com',
+      role: 'admin',
+    })
+
+    const found = await repo.findByEmail('alice@example.com')
+    expect(found).toBeDefined()
+    expect(found!._id).toBe('user-1')
+
+    expect(await repo.findByEmail('nobody@example.com')).toBeUndefined()
+  })
+
+  it('should find by role', async () => {
+    const repo = new MikroOrmUserRepository(orm.em.fork())
+    await repo.create({
+      _id: 'user-1',
+      username: 'alice',
+      email: 'alice@example.com',
+      role: 'admin',
+    })
+    await repo.create({
+      _id: 'user-2',
+      username: 'bob',
+      email: 'bob@example.com',
+      role: 'user',
+    })
+
+    const admin = await repo.findByRole('admin')
+    expect(admin).toBeDefined()
+    expect(admin!.username).toBe('alice')
+
+    expect(await repo.findByRole('none')).toBeUndefined()
+  })
+
+  it('should find all users', async () => {
+    const repo = new MikroOrmUserRepository(orm.em.fork())
+    await repo.create({
+      _id: 'user-1',
+      username: 'alice',
+      email: 'alice@example.com',
+      role: 'admin',
+    })
+    await repo.create({
+      _id: 'user-2',
+      username: 'bob',
+      email: 'bob@example.com',
+      role: 'user',
+    })
+
+    expect(await repo.findAll()).toHaveLength(2)
+  })
+
+  it('should count users', async () => {
+    const repo = new MikroOrmUserRepository(orm.em.fork())
+    expect(await repo.count()).toBe(0)
+
+    await repo.create({
+      _id: 'user-1',
+      username: 'alice',
+      email: 'alice@example.com',
+      role: 'admin',
+    })
+    expect(await repo.count()).toBe(1)
+  })
+
+  it('should update user by id', async () => {
+    const repo = new MikroOrmUserRepository(orm.em.fork())
+    await repo.create({
+      _id: 'user-1',
+      username: 'alice',
+      email: 'alice@example.com',
+      role: 'user',
+    })
+
+    const updated = await repo.updateById('user-1', { role: 'admin' })
+    expect(updated).toBeDefined()
+    expect(updated!.role).toBe('admin')
+
+    expect(
+      await repo.updateById('nonexistent', { role: 'admin' }),
+    ).toBeUndefined()
+  })
+
+  it('should delete by id', async () => {
+    const repo = new MikroOrmUserRepository(orm.em.fork())
+    await repo.create({
+      _id: 'user-1',
+      username: 'alice',
+      email: 'alice@example.com',
+      role: 'admin',
+    })
+
+    expect(await repo.deleteById('user-1')).toBe(true)
+    expect(await repo.findById('user-1')).toBeUndefined()
+    expect(await repo.deleteById('user-1')).toBe(false)
+  })
+
+  it('should delete by email', async () => {
+    const repo = new MikroOrmUserRepository(orm.em.fork())
+    await repo.create({
+      _id: 'user-1',
+      username: 'alice',
+      email: 'alice@example.com',
+      role: 'admin',
+    })
+
+    expect(await repo.deleteByEmail('alice@example.com')).toBe(true)
+    expect(await repo.findByEmail('alice@example.com')).toBeUndefined()
+    expect(await repo.deleteByEmail('alice@example.com')).toBe(false)
+  })
+})
+
+describe('MikroOrmJBrowseConfigRepository', () => {
+  it('should upsert and find a config', async () => {
+    const repo = new MikroOrmJBrowseConfigRepository(orm.em.fork())
+
+    expect(await repo.findOne()).toBeUndefined()
+
+    const created = await repo.upsert({
+      _id: 'cfg-1',
+      config: { assemblies: [], tracks: [] },
+    })
+    expect(created._id).toBe('cfg-1')
+    expect(created.config).toEqual({ assemblies: [], tracks: [] })
+
+    const found = await repo.findOne()
+    expect(found).toBeDefined()
+    expect(found!._id).toBe('cfg-1')
+  })
+
+  it('should upsert to update existing config', async () => {
+    const repo = new MikroOrmJBrowseConfigRepository(orm.em.fork())
+    await repo.upsert({
+      _id: 'cfg-1',
+      config: { assemblies: [] },
+    })
+
+    await repo.upsert({
+      _id: 'cfg-1',
+      config: { assemblies: [{ name: 'volvox' }] },
+    })
+
+    const found = await repo.findOne()
+    expect(found).toBeDefined()
+    expect(found!.config).toEqual({ assemblies: [{ name: 'volvox' }] })
+  })
+
+  it('should delete all configs', async () => {
+    const repo = new MikroOrmJBrowseConfigRepository(orm.em.fork())
+    await repo.upsert({
+      _id: 'cfg-1',
+      config: { assemblies: [] },
+    })
+
+    await repo.deleteAll()
+    expect(await repo.findOne()).toBeUndefined()
   })
 })
 

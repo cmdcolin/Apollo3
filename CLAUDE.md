@@ -33,16 +33,16 @@ cd packages/apollo-entities && NODE_OPTIONS='--experimental-vm-modules' yarn jes
 
 ### E2E tests (Playwright)
 
-The `test:pw` script builds everything, starts servers, runs tests, and stops
+The `test:e2e` script builds everything, starts servers, runs tests, and stops
 servers in one command:
 
 ```bash
 # Full E2E run (build + start + test + stop)
-yarn --cwd packages/jbrowse-plugin-apollo test:pw
+yarn --cwd packages/jbrowse-plugin-apollo test:e2e
 
 # Or use the script directly for more control:
 cd packages/jbrowse-plugin-apollo
-bash scripts/e2e-servers.sh test              # same as test:pw
+bash scripts/e2e-servers.sh test
 bash scripts/e2e-servers.sh start             # build + start servers only
 bash scripts/e2e-servers.sh stop              # stop servers
 bash scripts/e2e-servers.sh status            # check server status

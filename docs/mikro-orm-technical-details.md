@@ -482,5 +482,5 @@ DB_BACKEND=postgresql DB_CONNECTION_URL=postgresql://apollo:apollo@localhost:543
 
 # Run E2E tests against PostgreSQL
 DB_BACKEND=postgresql DB_CONNECTION_URL=postgresql://apollo:apollo@localhost:5432/apollo \
-  yarn --cwd packages/jbrowse-plugin-apollo test:pw
+  yarn --cwd packages/jbrowse-plugin-apollo test:e2e
 ```

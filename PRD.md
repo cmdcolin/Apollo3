@@ -120,15 +120,10 @@ The repository pattern abstracts the database layer behind interfaces in
 
 ### P1 — Testing
 
-7. **Unit tests for untested repositories** — Four repositories have zero unit
-   test coverage:
-
-   - `CheckRepository` (6 interface methods)
-   - `CheckResultRepository` (9 interface methods)
-   - `UserRepository` (9 interface methods)
-   - `JBrowseConfigRepository` (3 interface methods)
-   - Follow existing patterns in `repositories.test.ts`
-   - **Files**: `packages/apollo-entities/src/repositories/repositories.test.ts`
+7. ~~**Unit tests for untested repositories**~~ — **Done.** Added 25 tests
+   covering all 27 interface methods across `CheckRepository`,
+   `CheckResultRepository`, `UserRepository`, and `JBrowseConfigRepository`.
+   Total: 65 repository tests passing.
 
 8. **MongoFeatureRepository integration tests** — The MongoDB feature repository
    has no tests. Tree traversal (iterative BFS) and text search (in-memory

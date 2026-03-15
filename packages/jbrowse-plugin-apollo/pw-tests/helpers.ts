@@ -84,7 +84,7 @@ export async function deleteAssemblies() {
   const res = await fetch(`${API_BASE}/assemblies`, { headers })
   const assemblies = (await res.json()) as { _id: string }[]
   for (const assembly of assemblies) {
-    await fetch(`${API_BASE}/changes`, {
+    const delRes = await fetch(`${API_BASE}/changes`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -92,6 +92,30 @@ export async function deleteAssemblies() {
         assembly: assembly._id,
       }),
     })
+    if (!delRes.ok) {
+      console.log(
+        `[cleanup] WARNING: Failed to delete assembly ${assembly._id}: ${delRes.status}`,
+      )
+    }
+  }
+  // Verify cleanup completed
+  const verifyRes = await fetch(`${API_BASE}/assemblies`, { headers })
+  const remaining = (await verifyRes.json()) as { _id: string }[]
+  if (remaining.length > 0) {
+    console.log(
+      `[cleanup] WARNING: ${remaining.length} assemblies still remain after cleanup`,
+    )
+    // Retry once
+    for (const assembly of remaining) {
+      await fetch(`${API_BASE}/changes`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          typeName: 'DeleteAssemblyChange',
+          assembly: assembly._id,
+        }),
+      })
+    }
   }
   console.log(`[cleanup] Deleted ${assemblies.length} assemblies`)
 }

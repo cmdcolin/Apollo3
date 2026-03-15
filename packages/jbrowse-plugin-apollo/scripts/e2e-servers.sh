@@ -137,6 +137,12 @@ start_servers() {
   cp dist/jbrowse-plugin-apollo.umd.development.js .jbrowse/apollo-plugin.js
   cp test_data/so-v3.1.json .jbrowse/so-v3.1.json
 
+  # Copy test data files so remote URL tests can reference them
+  mkdir -p .jbrowse/test_data
+  cp test_data/volvox.fa.gz .jbrowse/test_data/
+  cp test_data/volvox.fa.gz.fai .jbrowse/test_data/
+  cp test_data/volvox.fa.gz.gzi .jbrowse/test_data/
+
   # Single server: NestJS serves both the API and JBrowse static files.
   # JBROWSE_STATIC_DIR tells the server where to find the JBrowse web app.
   cd "$REPO_ROOT/packages/apollo-collaboration-server" || exit 1

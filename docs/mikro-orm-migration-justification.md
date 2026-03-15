@@ -140,6 +140,72 @@ alternatives for several reasons:
 | Undo / redo              | Unchanged — undo logic lives in TypeScript and does not depend on the database                       |                                                                                           |
 | Continuity with Apollo 2 | Apollo 2 used PostgreSQL; Apollo 3 moved to MongoDB                                                  | Returns to a relational model (like Apollo 2) while keeping Apollo 3's architecture       |
 
+### Resource efficiency: from dedicated database servers to minimal infrastructure
+
+The move away from MongoDB dramatically reduces the hardware needed to run
+Apollo 3. MongoDB requires a dedicated server process with significant memory
+overhead — even a minimal replica set deployment consumes several hundred
+megabytes of RAM before any data is loaded. This made it impractical to run
+Apollo 3 on inexpensive cloud instances or resource-constrained environments.
+
+With SQLite as the default backend, the entire Apollo 3 server — application and
+database — runs in a single Node.js process. A NestJS application with SQLite
+typically consumes 80–150 MB of RAM at idle, well within the capacity of the
+smallest cloud instances available:
+
+| Instance type | RAM | Monthly cost | Can run Apollo 3? |
+|---|---|---|---|
+| AWS t4g.nano | 512 MB | ~$3/month | Yes (SQLite) |
+| AWS t4g.micro | 1 GB | ~$6/month | Yes (SQLite, comfortable headroom) |
+| AWS t4g.small | 2 GB | ~$15/month | Yes (SQLite or PostgreSQL) |
+| MongoDB Atlas (minimum) | — | ~$50–60/month | MongoDB only |
+
+This means a research group can run a fully functional Apollo 3 instance on a
+$3–6/month nano or micro instance — an order of magnitude cheaper than the
+minimum MongoDB deployment.
+
+**Serverless and scale-to-zero deployments.** The relational model also unlocks
+deployment patterns where infrastructure costs approach zero when idle:
+
+- **Scale-to-zero containers** (AWS Fargate, Google Cloud Run): The Apollo 3
+  Docker image starts on demand when a user opens the interface and shuts down
+  after inactivity. Paired with a serverless PostgreSQL provider (AWS Aurora
+  Serverless v2 or Neon), total idle cost is approximately $0–5/month. This is
+  the recommended serverless approach because it requires no code changes — the
+  existing NestJS server, WebSocket collaboration, and all features work as-is
+  inside a container.
+- **AWS Lambda** (future option): NestJS can run inside Lambda via
+  `@vendia/serverless-express`, and MikroORM has
+  [community-proven patterns](https://github.com/thomaschaaf/serverless-mikro-orm-example-app)
+  for Lambda. MikroORM v7 reduced its core to zero runtime dependencies,
+  improving cold start times. Today, Lambda works for read-only use cases
+  (serving annotation data to a public JBrowse instance without collaborative
+  editing). Full collaborative support on Lambda is blocked by one thing:
+  Apollo 3 uses WebSockets (Socket.IO) for real-time change broadcast, and
+  Lambda does not support persistent connections. A realistic path to full
+  Lambda support is replacing Socket.IO with **Server-Sent Events (SSE)**:
+  - Client-to-server edits already travel as plain HTTP POST requests, which
+    Lambda handles natively
+  - Server-to-client change notifications (the only thing WebSockets are used
+    for) can be delivered via SSE, which Lambda supports through response
+    streaming
+  - SSE is a simpler protocol than WebSockets — it uses standard HTTP, requires
+    no special client libraries, and works through proxies and CDNs without
+    configuration
+  - This change is contained to the collaboration transport layer; no database,
+    entity, or business logic changes are needed
+  - The result would be a fully serverless Apollo 3 running on Lambda with no
+    extra services — just the Lambda function and a serverless database
+
+MikroORM's architecture is well suited for resource-constrained environments:
+the `@mikro-orm/core` package has zero runtime dependencies as of v7, and the
+ORM initializes once at startup with fast per-request forking via
+`em.fork()` — forking creates lightweight class instances with shared resources,
+adding negligible overhead per request.
+
+For detailed deployment scenarios and configuration, see
+[Technical Details — Deployment Simplification](./mikro-orm-technical-details.md#deployment-simplification).
+
 ### Future capabilities enabled by the relational model
 
 The following improvements are now straightforward to implement on the
