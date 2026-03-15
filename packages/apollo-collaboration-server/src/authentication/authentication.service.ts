@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
  
+import { randomBytes } from 'node:crypto'
 import fs from 'node:fs/promises'
 
 import type { JWTPayload } from '@apollo-annotation/shared'
@@ -44,6 +45,7 @@ const ROOT_USER_NAME = 'root'
 export class AuthenticationService {
   private readonly logger = new Logger(AuthenticationService.name)
   private defaultNewUserRole: Role
+  private setupToken: string | undefined
 
   constructor(
     private readonly usersService: UsersService,
@@ -53,6 +55,52 @@ export class AuthenticationService {
     this.defaultNewUserRole = configService.get('DEFAULT_NEW_USER_ROLE', {
       infer: true,
     })
+  }
+
+  async generateSetupTokenIfNeeded() {
+    const hasAdmin = await this.hasRealAdmin()
+    if (!hasAdmin && !this.setupToken) {
+      this.setupToken = randomBytes(32).toString('hex')
+      this.logger.log(
+        '========================================================',
+      )
+      this.logger.log(
+        'No admin user found. Use the following URL to set up the',
+      )
+      this.logger.log('first admin account:')
+      this.logger.log('')
+      this.logger.log(`  /auth/setup?token=${this.setupToken}`)
+      this.logger.log('')
+      this.logger.log(
+        '========================================================',
+      )
+    }
+    return this.setupToken
+  }
+
+  validateAndActivateSetup(token: string) {
+    if (!this.setupToken || token !== this.setupToken) {
+      return false
+    }
+    this.setupActive = true
+    return true
+  }
+
+  private setupActive = false
+
+  private consumeSetup() {
+    this.setupActive = false
+    this.setupToken = undefined
+  }
+
+  private async hasRealAdmin() {
+    const users = await this.usersService.findAll()
+    return users.some(
+      (u) =>
+        u.role === Role.Admin &&
+        u.email !== 'root_user' &&
+        u.email !== 'guest_user',
+    )
   }
 
   handleRedirect(req: RequestWithUserToken) {
@@ -162,24 +210,16 @@ export class AuthenticationService {
    * @returns Return token with HttpResponse status 'HttpStatus.OK'
    */
   async logIn(name: string, email: string) {
-    // Find existing user
     let user = await this.usersService.findByEmail(email)
     if (!user) {
       let newUserRole = this.defaultNewUserRole
       const isRootUser = name === ROOT_USER_NAME && email === ROOT_USER_EMAIL
       if (isRootUser) {
         newUserRole = Role.Admin
-      } else {
-        const users = await this.usersService.findAll()
-        const hasAdmin = users.some(
-          (user) =>
-            user.role === Role.Admin &&
-            user.email !== 'root_user' &&
-            user.email !== 'guest_user',
-        )
-        // If there is not a non-guest and non-root user yet, the 1st user to
-        // log in will be made an admin
-        newUserRole = hasAdmin ? this.defaultNewUserRole : Role.Admin
+      } else if (this.setupActive) {
+        newUserRole = Role.Admin
+        this.consumeSetup()
+        this.logger.log(`Setup complete: ${email} promoted to admin`)
       }
       const newUser: CreateUserDto = {
         email,
@@ -187,6 +227,11 @@ export class AuthenticationService {
         role: newUserRole,
       }
       user = await this.usersService.addNew(newUser)
+    } else if (user.role === 'none' && this.setupActive) {
+      await this.usersService.updateRole(user._id, Role.Admin)
+      user = { ...user, role: Role.Admin }
+      this.consumeSetup()
+      this.logger.log(`Setup complete: ${email} promoted to admin`)
     }
     this.logger.debug(`User found: ${JSON.stringify(user)}`)
 

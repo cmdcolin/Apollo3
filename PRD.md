@@ -58,21 +58,68 @@ The repository pattern abstracts the database layer behind interfaces in
    - editFeature: MST addChild failure
    - undo: MST detached node during undo
 
+### P1 — Developer Experience
+
+2. **Demo dev instance with sample data** — There is no one-command way to
+   start a dev server pre-loaded with realistic annotation data. Developers
+   and evaluators have to manually upload assemblies through the UI or API
+   every time they reset the database.
+
+   **Goal**: `yarn start-with-demo-data` (or similar) starts the collaboration
+   server and pre-loads sample assemblies so you immediately have data to work
+   with.
+
+   **Datasets to include**:
+   - **Volvox** — existing synthetic test organism
+     (`packages/jbrowse-plugin-apollo/test_data/volvox.fasta.gff3`). Small,
+     fast to load, good for basic feature testing.
+   - **Human (GRCh38) region** — a small region of human annotation (e.g.,
+     NCBI RefSeq GFF3 for chr1:11,869–14,409 covering a few GENCODE genes).
+     Provides realistic gene models with UTRs, multiple transcripts,
+     alternative splicing, and CDS features. Should be committed as a small
+     extract (~50–100 genes), not the full genome GFF3.
+
+   **Implementation approach**:
+   - New script: `scripts/start-with-demo-data.sh` (or
+     `packages/apollo-collaboration-server/scripts/`)
+   - Script flow:
+     1. Build all packages (reuse `build_all` from `e2e-servers.sh`)
+     2. Reset the database (fresh SQLite file)
+     3. Start the collaboration server (same as `yarn start`)
+     4. Wait for `/health` endpoint
+     5. Upload demo GFF3 files via `POST /files` + `POST /changes` with
+        `AddAssemblyAndFeaturesFromFileChange` (reuse the pattern from
+        `pw-tests/helpers.ts:addAssemblyFromGff`)
+     6. Print URL to open in browser
+   - Add `"start-with-demo-data"` script to root `package.json`
+   - Demo data files live in a new `demo-data/` directory at the repo root
+     (or under the collab server package)
+   - The human GFF3 extract needs to be created and committed — download from
+     NCBI RefSeq, extract a small region with `bedtools intersect` or
+     `grep`/`awk`, include embedded FASTA for that region
+
+   **Nice-to-haves**:
+   - `--no-build` flag to skip rebuilding when iterating quickly
+   - `--reset` flag to force a fresh database (default: skip if DB already
+     has assemblies)
+   - Print a summary after loading: "Loaded 2 assemblies: volvox (N genes),
+     human-chr1-excerpt (M genes)"
+
+   **Files**:
+   - New: `scripts/start-with-demo-data.sh`, `demo-data/` directory
+   - Modified: root `package.json` (new script entry)
+
 ### P1 — Core Annotation Features (Apollo Classic Parity)
 
 2. **Set Translation Start / Set Longest ORF** — Apollo Classic's most-used
-   curation operations. Annotators need to set the translation start site and
-   auto-calculate the longest open reading frame.
+   curation operations.
 
-   - New `SetTranslationStartChange`: adjusts CDS boundaries based on a selected
-     start codon position
-   - New `SetLongestOrfChange`: scans transcript sequence, picks longest reading
-     frame, sets CDS boundaries accordingly
-   - Requires sequence retrieval during change execution (use existing
-     `SequenceService`)
-   - Frontend: right-click menu items on CDS/transcript features
-   - **Files**: `packages/apollo-shared/src/Changes/`, server `ChangesService`,
-     plugin `glyphUtils.ts` (context menu)
+   - ~~Set Longest ORF~~ — **Done.** `SetCdsBoundsChange` atomically updates CDS
+     min/max. `SetLongestOrf` dialog scans all three reading frames of the
+     spliced exon sequence, finds the longest ATG→stop ORF, and submits the
+     change. Context menu item on transcript features in `GeneGlyph.ts`.
+   - **TODO: Set Translation Start** — adjusts CDS boundaries based on a
+     user-selected start codon position. Needs a position-picking UI.
 
 3. **Split Transcript** — Apollo Classic supports splitting a transcript into
    two independent transcripts. Apollo3 has `MergeTranscriptsChange` but no
@@ -97,13 +144,9 @@ The repository pattern abstracts the database layer behind interfaces in
      `packages/jbrowse-plugin-apollo/src/components/`, extend "Edit feature
      details" dialog
 
-5. **Non-canonical Splice Site Detection** — Apollo Classic detects GT/AG (and
-   GC) splice donor/acceptor sites. Core QC check for gene annotators.
-   - New check type registered in `CheckRegistry`
-   - Requires reading sequence at exon boundaries (2bp upstream donor, 2bp
-     downstream acceptor)
-   - Report non-canonical sites as warnings (not errors — some are valid)
-   - **Files**: `packages/apollo-shared/src/Checks/`, server check seeding
+5. ~~**Non-canonical Splice Site Detection**~~ — **Already implemented.** `TranscriptCheck`
+   already detects non-canonical GT/AG splice sites at exon boundaries. Added GC
+   as valid 5' splice donor (matching Apollo Classic behavior).
 
 ### P1 — Security
 
@@ -177,13 +220,8 @@ The repository pattern abstracts the database layer behind interfaces in
 
 ### P1 — Bug Fixes
 
-15. **ObjectId `.toString()` assumption in frontend** —
-    `ApolloInternetAccount/model.ts:336` calls `.toString()` on
-    `checkResult._id`, a MongoDB ObjectId assumption. With SQL backends, `_id`
-    is already a string and `.toString()` is harmless but misleading. Remove the
-    call for clarity and correctness.
-
-- **File**: `packages/jbrowse-plugin-apollo/src/ApolloInternetAccount/model.ts`
+15. ~~**ObjectId `.toString()` assumption in frontend**~~ — **Fixed.** Removed
+    `.toString()` call on `checkResult._id` in `ApolloInternetAccount/model.ts`.
 
 ### P2 — Simplification
 

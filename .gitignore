@@ -132,3 +132,10 @@ __pycache__/
 
 packages/jbrowse-plugin-apollo/meta.json
 
+# Demo data (downloaded at runtime)
+demo-data/
+
+# Demo server state
+.demo-server.log
+.demo-server.pid
+

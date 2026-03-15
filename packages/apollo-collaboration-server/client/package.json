@@ -1,12 +1,16 @@
 {
-  "name": "@apollo-annotation/admin-ui",
+  "name": "@apollo-annotation/web-ui",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite build --watch",
+    "dev": "vite",
     "build": "vite build"
   },
   "dependencies": {
+    "@emotion/react": "^11.10.6",
+    "@emotion/styled": "^11.10.6",
+    "@jbrowse/core": "^4.1.1",
+    "@mui/material": "^7.3.7",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

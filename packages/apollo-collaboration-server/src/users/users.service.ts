@@ -75,6 +75,10 @@ export class UsersService {
     })
   }
 
+  async updateRole(id: string, role: 'admin' | 'user' | 'readOnly' | 'none') {
+    return this.db.user.updateById(id, { role })
+  }
+
   async getCount() {
     return this.db.user.count()
   }

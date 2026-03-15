@@ -103,14 +103,16 @@ async function bootstrap() {
     }),
   )
 
-  // Serve JBrowse static files from JBROWSE_STATIC_DIR (if configured).
-  // config.json is excluded — it's served dynamically by JBrowseController.
+  // Serve JBrowse static files from JBROWSE_STATIC_DIR (if configured)
+  // under /jbrowse/. config.json is excluded — served dynamically by
+  // JBrowseController.
   if (JBROWSE_STATIC_DIR) {
     const staticDir = path.resolve(JBROWSE_STATIC_DIR)
     // eslint-disable-next-line no-console
     console.log(`Serving JBrowse static files from: ${staticDir}`)
     const staticMiddleware = express.static(staticDir)
     app.use(
+      '/jbrowse',
       (req: Request, res: Response, next: () => void) => {
         if (req.path === '/config.json') {
           next()
@@ -145,6 +147,20 @@ async function bootstrap() {
           isDefault: true,
         })
       }
+    }
+  })
+
+  // Generate setup token if no admin exists
+  await RequestContext.create(orm.em, async () => {
+    const { AuthenticationService } = await import(
+      './authentication/authentication.service.js'
+    )
+    const authService = app.get(AuthenticationService)
+    const setupToken = await authService.generateSetupTokenIfNeeded()
+    if (setupToken) {
+      const appUrl = await app.getUrl()
+      // eslint-disable-next-line no-console
+      console.log(`Setup URL: ${appUrl}/auth/setup?token=${setupToken}`)
     }
   })
 

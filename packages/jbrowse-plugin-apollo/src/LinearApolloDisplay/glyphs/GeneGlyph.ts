@@ -13,7 +13,12 @@ import type { LinearGenomeViewModel } from '@jbrowse/plugin-linear-genome-view'
 import { alpha } from '@mui/material'
 
 import type { OntologyRecord } from '../../OntologyManager'
-import { MergeExons, MergeTranscripts, SplitExon } from '../../components'
+import {
+  MergeExons,
+  MergeTranscripts,
+  SetLongestOrf,
+  SplitExon,
+} from '../../components'
 import { DuplicateTranscript } from '../../components/DuplicateTranscript'
 import {
   type MousePosition,
@@ -999,6 +1004,27 @@ function getContextMenuItems(
             },
           },
         )
+        contextMenuItemsForFeature.push({
+          label: 'Set longest ORF',
+          disabled: !admin,
+          onClick: () => {
+            ;(session as unknown as AbstractSessionModel).queueDialog(
+              (doneCallback) => [
+                SetLongestOrf,
+                {
+                  session,
+                  handleClose: () => {
+                    doneCallback()
+                  },
+                  changeManager,
+                  sourceFeature: feature,
+                  sourceAssemblyId: currentAssemblyId,
+                  refName: region.refName,
+                },
+              ],
+            )
+          },
+        })
         if (isSessionModelWithWidgets(session)) {
           contextMenuItemsForFeature.splice(1, 0, {
             label: 'Open transcript editor',

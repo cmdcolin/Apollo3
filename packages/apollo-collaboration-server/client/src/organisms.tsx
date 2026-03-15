@@ -1,8 +1,20 @@
 import { createRoot } from 'react-dom/client'
 import { useCallback, useEffect, useState } from 'react'
+import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Container from '@mui/material/Container'
+import Table from '@mui/material/Table'
+import TableBody from '@mui/material/TableBody'
+import TableCell from '@mui/material/TableCell'
+import TableContainer from '@mui/material/TableContainer'
+import TableHead from '@mui/material/TableHead'
+import TableRow from '@mui/material/TableRow'
+import Paper from '@mui/material/Paper'
+import Typography from '@mui/material/Typography'
 
 import { Nav } from './Nav.js'
-import './styles.css'
+import { fetchJson } from './fetchUtil.js'
 
 interface Organism {
   _id: string
@@ -17,18 +29,22 @@ function OrganismsPage() {
   const [organisms, setOrganisms] = useState<Organism[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
+  const [error, setError] = useState<string>()
   const pageSize = 25
 
   const load = useCallback(async () => {
-    const offset = (page - 1) * pageSize
-    const [items, countRes] = await Promise.all([
-      fetch(`/organisms?offset=${offset}&limit=${pageSize}`).then((r) =>
-        r.json(),
-      ),
-      fetch('/organisms/count').then((r) => r.json()),
-    ])
-    setOrganisms(items)
-    setTotal(countRes.count)
+    try {
+      setError(undefined)
+      const offset = (page - 1) * pageSize
+      const [items, countData] = await Promise.all([
+        fetchJson<Organism[]>(`/organisms?offset=${offset}&limit=${pageSize}`),
+        fetchJson<{ count: number }>('/organisms/count'),
+      ])
+      setOrganisms(items)
+      setTotal(countData.count)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    }
   }, [page])
 
   useEffect(() => {
@@ -38,58 +54,57 @@ function OrganismsPage() {
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   return (
-    <>
-      <Nav current="organisms" />
-      <h1>Organisms</h1>
-      <p className="info">
-        Total: {total} | Page {page} of {totalPages}
-      </p>
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Taxid</th>
-            <th>Genus</th>
-            <th>Species</th>
-            <th>Common Name</th>
-            <th>Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          {organisms.map((o) => (
-            <tr key={o._id}>
-              <td>{o._id}</td>
-              <td>{o.taxid ?? ''}</td>
-              <td>{o.genus ?? ''}</td>
-              <td>{o.species ?? ''}</td>
-              <td>{o.commonName ?? ''}</td>
-              <td>{o.description ?? ''}</td>
-            </tr>
-          ))}
-          {organisms.length === 0 && (
-            <tr>
-              <td colSpan={6} style={{ textAlign: 'center', color: '#999' }}>
-                No organisms found
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-      <div className="pagination">
-        <button disabled={page <= 1} onClick={() => setPage(page - 1)}>
-          ← Previous
-        </button>
-        <span>
-          Page {page} of {totalPages}
-        </span>
-        <button
-          disabled={page >= totalPages}
-          onClick={() => setPage(page + 1)}
-        >
-          Next →
-        </button>
-      </div>
-    </>
+    <Nav current="organisms">
+      <Container>
+        <Typography variant="h4" gutterBottom>Organisms</Typography>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          Total: {total} | Page {page} of {totalPages}
+        </Typography>
+        <TableContainer component={Paper} variant="outlined">
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>ID</TableCell>
+                <TableCell>Taxid</TableCell>
+                <TableCell>Genus</TableCell>
+                <TableCell>Species</TableCell>
+                <TableCell>Common Name</TableCell>
+                <TableCell>Description</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {organisms.map((o) => (
+                <TableRow key={o._id} hover>
+                  <TableCell>{o._id}</TableCell>
+                  <TableCell>{o.taxid ?? ''}</TableCell>
+                  <TableCell>{o.genus ?? ''}</TableCell>
+                  <TableCell>{o.species ?? ''}</TableCell>
+                  <TableCell>{o.commonName ?? ''}</TableCell>
+                  <TableCell>{o.description ?? ''}</TableCell>
+                </TableRow>
+              ))}
+              {organisms.length === 0 && !error && (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ color: 'text.secondary' }}>
+                    No organisms found
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <Box sx={{ display: 'flex', gap: 1, mt: 2, alignItems: 'center' }}>
+          <Button size="small" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+            Previous
+          </Button>
+          <Typography variant="body2">Page {page} of {totalPages}</Typography>
+          <Button size="small" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+            Next
+          </Button>
+        </Box>
+      </Container>
+    </Nav>
   )
 }
 

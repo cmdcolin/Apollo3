@@ -15,6 +15,16 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
   private readonly logger = new Logger(UsersController.name)
 
+  @Validations(Role.None)
+  @Get('me')
+  getMe(@Req() req: Request) {
+    const { user } = req as unknown as { user: DecodedJWT }
+    if (!user) {
+      throw new Error('No user attached to request')
+    }
+    return { username: user.username, email: user.email, role: user.role }
+  }
+
   @Get()
   findAll() {
     return this.usersService.findAll()

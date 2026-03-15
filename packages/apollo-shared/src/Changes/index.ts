@@ -12,6 +12,7 @@ import { ImportJBrowseConfigChange } from './ImportJBrowseConfigChange.js'
 import { LocationEndChange } from './LocationEndChange.js'
 import { LocationStartChange } from './LocationStartChange.js'
 import { MergeExonsChange } from './MergeExonsChange.js'
+import { SetCdsBoundsChange } from './SetCdsBoundsChange.js'
 import { MergeTranscriptsChange } from './MergeTranscriptsChange.js'
 import { SplitExonChange } from './SplitExonChange.js'
 import { StrandChange } from './StrandChange.js'
@@ -34,6 +35,7 @@ export const changes = {
   LocationEndChange,
   LocationStartChange,
   MergeExonsChange,
+  SetCdsBoundsChange,
   SplitExonChange,
   MergeTranscriptsChange,
   UndoMergeExonsChange,
@@ -58,6 +60,7 @@ export * from './ImportJBrowseConfigChange.js'
 export * from './LocationEndChange.js'
 export * from './LocationStartChange.js'
 export * from './MergeExonsChange.js'
+export * from './SetCdsBoundsChange.js'
 export * from './SplitExonChange.js'
 export * from './MergeTranscriptsChange.js'
 export * from './UndoMergeExonsChange.js'

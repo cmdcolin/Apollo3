@@ -12,6 +12,7 @@
     "build:shared": "yarn workspace @apollo-annotation/shared run build",
     "release": "tsx scripts/makeGitTag.ts",
     "start": "yarn workspace @apollo-annotation/collaboration-server run start",
+    "start-with-demo-data": "bash scripts/start-with-demo-data.sh",
     "test": "yarn workspaces foreach --all run test:ci",
     "postinstall": "husky"
   },

@@ -316,20 +316,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@apollo-annotation/admin-ui@workspace:packages/apollo-collaboration-server/client":
-  version: 0.0.0-use.local
-  resolution: "@apollo-annotation/admin-ui@workspace:packages/apollo-collaboration-server/client"
-  dependencies:
-    "@types/react": "npm:^18.3.4"
-    "@types/react-dom": "npm:^18.3.0"
-    "@vitejs/plugin-react": "npm:^4.5.2"
-    react: "npm:^18.2.0"
-    react-dom: "npm:^18.2.0"
-    typescript: "npm:^5.5.3"
-    vite: "npm:^6.3.5"
-  languageName: unknown
-  linkType: soft
-
 "@apollo-annotation/cli@workspace:packages/apollo-cli":
   version: 0.0.0-use.local
   resolution: "@apollo-annotation/cli@workspace:packages/apollo-cli"
@@ -639,6 +625,24 @@ __metadata:
     react-dom: ^18.2.0
     reflect-metadata: ^0.1.13
     rxjs: ^7.4.0
+  languageName: unknown
+  linkType: soft
+
+"@apollo-annotation/web-ui@workspace:packages/apollo-collaboration-server/client":
+  version: 0.0.0-use.local
+  resolution: "@apollo-annotation/web-ui@workspace:packages/apollo-collaboration-server/client"
+  dependencies:
+    "@emotion/react": "npm:^11.10.6"
+    "@emotion/styled": "npm:^11.10.6"
+    "@jbrowse/core": "npm:^4.1.1"
+    "@mui/material": "npm:^7.3.7"
+    "@types/react": "npm:^18.3.4"
+    "@types/react-dom": "npm:^18.3.0"
+    "@vitejs/plugin-react": "npm:^4.5.2"
+    react: "npm:^18.2.0"
+    react-dom: "npm:^18.2.0"
+    typescript: "npm:^5.5.3"
+    vite: "npm:^6.3.5"
   languageName: unknown
   linkType: soft
 

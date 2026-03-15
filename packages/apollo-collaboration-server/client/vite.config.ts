@@ -4,16 +4,29 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [react()],
+  server: {
+    port: 5173,
+    proxy: {
+      '/organisms': 'http://localhost:3999',
+      '/assemblies': 'http://localhost:3999',
+      '/changes': 'http://localhost:3999',
+      '/users': 'http://localhost:3999',
+      '/auth': 'http://localhost:3999',
+      '/refSeqs': 'http://localhost:3999',
+      '/features': 'http://localhost:3999',
+    },
+  },
   build: {
-    outDir: '../dist/client',
+    outDir: '../dist/pages',
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        organisms: resolve(__dirname, 'organisms/index.html'),
-        assemblies: resolve(__dirname, 'assemblies/index.html'),
-        changes: resolve(__dirname, 'changes/index.html'),
+        index: resolve(__dirname, 'index.html'),
+        'ui/organisms/index': resolve(__dirname, 'ui/organisms/index.html'),
+        'ui/assemblies/index': resolve(__dirname, 'ui/assemblies/index.html'),
+        'ui/changes/index': resolve(__dirname, 'ui/changes/index.html'),
+        'admin/users/index': resolve(__dirname, 'admin/users/index.html'),
       },
     },
   },
-  base: '/admin/',
 })

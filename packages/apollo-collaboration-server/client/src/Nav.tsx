@@ -1,15 +1,131 @@
-export function Nav({ current }: { current: 'organisms' | 'assemblies' | 'changes' }) {
-  return (
-    <nav>
-      <a href="/admin/organisms/" className={current === 'organisms' ? 'active' : ''}>
-        Organisms
-      </a>
-      <a href="/admin/assemblies/" className={current === 'assemblies' ? 'active' : ''}>
-        Assemblies
-      </a>
-      <a href="/admin/changes/" className={current === 'changes' ? 'active' : ''}>
-        Recent Changes
-      </a>
-    </nav>
+import { useEffect, useRef, useState } from 'react'
+import { createJBrowseTheme } from '@jbrowse/core/ui/theme'
+import { ThemeProvider } from '@mui/material/styles'
+import CssBaseline from '@mui/material/CssBaseline'
+import AppBar from '@mui/material/AppBar'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Chip from '@mui/material/Chip'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
+import ListItemText from '@mui/material/ListItemText'
+import Toolbar from '@mui/material/Toolbar'
+import Typography from '@mui/material/Typography'
+
+import { fetchJson } from './fetchUtil.js'
+import logoUrl from './apollo_logo.svg'
+
+const theme = createJBrowseTheme({
+  palette: {
+    primary: { main: '#311b92' },
+    secondary: { main: '#0097a7' },
+  },
+})
+
+interface UserInfo {
+  username: string
+  email: string
+  role: string
+}
+
+function useCurrentUser() {
+  const [user, setUser] = useState<UserInfo>()
+
+  useEffect(() => {
+    fetchJson<UserInfo>('/users/me')
+      .then(setUser)
+      .catch(() => {})
+  }, [])
+
+  return user
+}
+
+type Page = 'organisms' | 'assemblies' | 'changes' | 'users'
+
+const fileMenuItems: { label: string; href: string; value: Page; admin?: boolean }[] = [
+  { label: 'Organisms', href: '/ui/organisms/', value: 'organisms' },
+  { label: 'Assemblies', href: '/ui/assemblies/', value: 'assemblies' },
+  { label: 'Recent Changes', href: '/ui/changes/', value: 'changes' },
+  { label: 'Users', href: '/admin/users/', value: 'users', admin: true },
+]
+
+function NavBar({ current, user }: { current: Page; user?: UserInfo }) {
+  const [open, setOpen] = useState(false)
+  const anchorRef = useRef<HTMLButtonElement>(null)
+
+  const visibleItems = fileMenuItems.filter(
+    (item) => !item.admin || user?.role === 'admin',
   )
+
+  return (
+    <AppBar position="static" color="secondary" sx={{ mb: 3 }}>
+      <Toolbar variant="dense">
+        <Box
+          component="a"
+          href="/"
+          sx={{ display: 'flex', alignItems: 'center', mr: 1, textDecoration: 'none' }}
+        >
+          <img src={logoUrl} alt="Apollo" height={28} />
+        </Box>
+        <Typography
+          variant="h6"
+          component="a"
+          href="/"
+          sx={{ textDecoration: 'none', color: 'inherit', mr: 2, fontSize: '1rem' }}
+        >
+          Apollo
+        </Typography>
+        <Button
+          ref={anchorRef}
+          color="inherit"
+          size="small"
+          onClick={() => setOpen(true)}
+        >
+          File
+        </Button>
+        <Menu
+          anchorEl={anchorRef.current}
+          open={open}
+          onClose={() => setOpen(false)}
+        >
+          {visibleItems.map((item) => (
+            <MenuItem
+              key={item.value}
+              component="a"
+              href={item.href}
+              selected={item.value === current}
+            >
+              <ListItemText>{item.label}</ListItemText>
+            </MenuItem>
+          ))}
+        </Menu>
+        <Box sx={{ flexGrow: 1 }} />
+        {user && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Typography variant="body2">{user.username}</Typography>
+            <Chip label={user.role} size="small" variant="outlined" sx={{ color: 'inherit', borderColor: 'rgba(255,255,255,0.5)' }} />
+            <Button color="inherit" size="small" href="/auth/logout">
+              Sign out
+            </Button>
+          </Box>
+        )}
+      </Toolbar>
+    </AppBar>
+  )
+}
+
+export function Nav({ current, children }: { current: Page; children: React.ReactNode }) {
+  const user = useCurrentUser()
+
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <NavBar current={current} user={user} />
+      {children}
+    </ThemeProvider>
+  )
+}
+
+export function AdminNav({ current, children }: { current: Page; children: React.ReactNode }) {
+  return <Nav current={current}>{children}</Nav>
 }

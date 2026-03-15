@@ -2,7 +2,6 @@ import { createRoot } from 'react-dom/client'
 import { useCallback, useEffect, useState } from 'react'
 import Alert from '@mui/material/Alert'
 import Container from '@mui/material/Container'
-import Link from '@mui/material/Link'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
@@ -12,25 +11,25 @@ import TableRow from '@mui/material/TableRow'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
 
-import { Nav } from './Nav.js'
+import { AdminNav } from './Nav.js'
 import { fetchJson } from './fetchUtil.js'
 
-interface Assembly {
+interface User {
   _id: string
-  name: string
-  displayName?: string
-  description?: string
-  organism?: string
+  username: string
+  email: string
+  role: string
+  createdAt?: string
 }
 
-function AssembliesPage() {
-  const [assemblies, setAssemblies] = useState<Assembly[]>([])
+function UsersPage() {
+  const [users, setUsers] = useState<User[]>([])
   const [error, setError] = useState<string>()
 
   const load = useCallback(async () => {
     try {
       setError(undefined)
-      setAssemblies(await fetchJson<Assembly[]>('/assemblies'))
+      setUsers(await fetchJson<User[]>('/users'))
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }
@@ -41,42 +40,38 @@ function AssembliesPage() {
   }, [load])
 
   return (
-    <Nav current="assemblies">
+    <AdminNav current="users">
       <Container>
-        <Typography variant="h4" gutterBottom>Assemblies</Typography>
+        <Typography variant="h4" gutterBottom>Users</Typography>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          Total: {assemblies.length}
+          Total: {users.length}
         </Typography>
         <TableContainer component={Paper} variant="outlined">
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Display Name</TableCell>
-                <TableCell>Description</TableCell>
-                <TableCell>Organism</TableCell>
-                <TableCell>Open</TableCell>
+                <TableCell>Username</TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell>Role</TableCell>
+                <TableCell>Created</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {assemblies.map((a) => (
-                <TableRow key={a._id} hover>
-                  <TableCell>{a.name}</TableCell>
-                  <TableCell>{a.displayName ?? ''}</TableCell>
-                  <TableCell>{a.description ?? ''}</TableCell>
-                  <TableCell>{a.organism ?? ''}</TableCell>
+              {users.map((u) => (
+                <TableRow key={u._id} hover>
+                  <TableCell>{u.username}</TableCell>
+                  <TableCell>{u.email}</TableCell>
+                  <TableCell>{u.role}</TableCell>
                   <TableCell>
-                    <Link href={`/jbrowse/?assembly=${encodeURIComponent(a.name)}`}>
-                      Open in JBrowse
-                    </Link>
+                    {u.createdAt ? new Date(u.createdAt).toLocaleString() : ''}
                   </TableCell>
                 </TableRow>
               ))}
-              {assemblies.length === 0 && !error && (
+              {users.length === 0 && !error && (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ color: 'text.secondary' }}>
-                    No assemblies found
+                  <TableCell colSpan={4} align="center" sx={{ color: 'text.secondary' }}>
+                    No users found
                   </TableCell>
                 </TableRow>
               )}
@@ -84,11 +79,11 @@ function AssembliesPage() {
           </Table>
         </TableContainer>
       </Container>
-    </Nav>
+    </AdminNav>
   )
 }
 
 const root = document.getElementById('root')
 if (root) {
-  createRoot(root).render(<AssembliesPage />)
+  createRoot(root).render(<UsersPage />)
 }

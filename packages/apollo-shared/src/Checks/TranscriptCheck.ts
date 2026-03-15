@@ -68,7 +68,7 @@ async function checkTranscript(
 ): Promise<CheckResultSnapshot[]> {
   const checkResults: CheckResultSnapshot[] = []
 
-  const VALID_FIVE_PRIME_SEQ = new Set(['GT'])
+  const VALID_FIVE_PRIME_SEQ = new Set(['GT', 'GC'])
   const VALID_THREE_PRIME_SEQ = new Set(['AG'])
   const spliceSequences = await getSpliceSequences(feature, getSequence)
   for (const spliceSequence of spliceSequences) {
