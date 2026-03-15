@@ -96,9 +96,10 @@ const validationSchema = Joi.object({
     })
     .default(''),
   PLUGIN_URLS_FILE: Joi.string(),
-  DB_BACKEND: Joi.string().valid('sqlite', 'postgresql'),
+  DB_BACKEND: Joi.string().valid('sqlite', 'postgresql', 'mongo'),
   DB_CONNECTION_URL: Joi.string(),
   OAUTH_HTTP_PROXY: Joi.string(),
+  JBROWSE_STATIC_DIR: Joi.string(),
 })
   .oxor('GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_ID_FILE')
   .oxor('GOOGLE_CLIENT_SECRET', 'GOOGLE_CLIENT_SECRET_FILE')

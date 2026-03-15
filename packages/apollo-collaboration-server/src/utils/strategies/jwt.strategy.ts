@@ -4,11 +4,26 @@ import type { DecodedJWT } from '@apollo-annotation/shared'
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { PassportStrategy } from '@nestjs/passport'
+import type { Request } from 'express'
 import { ExtractJwt, Strategy } from 'passport-jwt'
+
+export const AUTH_COOKIE_NAME = 'apollo-token'
 
 interface JWTSecretConfig {
   JWT_SECRET?: string
   JWT_SECRET_FILE?: string
+}
+
+function extractFromCookieOrHeader(req: Request) {
+  const fromHeader = ExtractJwt.fromAuthHeaderAsBearerToken()(req)
+  if (fromHeader) {
+    return fromHeader
+  }
+  const cookies = req.cookies as Record<string, string> | undefined
+  if (cookies?.[AUTH_COOKIE_NAME]) {
+    return cookies[AUTH_COOKIE_NAME]
+  }
+  return null
 }
 
 @Injectable()
@@ -23,7 +38,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       jwtSecret = fs.readFileSync(uriFile, 'utf8').trim()
     }
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: extractFromCookieOrHeader,
       ignoreExpiration: false,
       secretOrKey: jwtSecret,
     })

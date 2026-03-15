@@ -23,8 +23,10 @@ desktop use) or PostgreSQL (for collaborative server deployments) with only a
 configuration change.
 
 **The migration is complete.** All existing change operations, undo/redo, and
-real-time collaboration work as before. MongoDB has been fully removed from the
-active codebase.
+real-time collaboration work as before. MongoDB remains available as a backend
+option through a dedicated `MongoFeatureRepository`, but the default and
+recommended backends are SQLite (desktop/development) and PostgreSQL
+(production).
 
 **What this unblocks for shipping:**
 
@@ -310,10 +312,13 @@ to undo/redo.
 If anything, the relational model provides better guarantees: each change now
 executes inside a transactional unit of work with automatic rollback on failure.
 
-### MongoDB dependency has been removed
+### MongoDB remains available as a backend
 
-No active code in the application depends on MongoDB. A one-time migration
-script is available for converting existing production data into the new schema.
+MongoDB is still supported as a backend option via `DB_BACKEND=mongo`. A
+dedicated `MongoFeatureRepository` handles tree traversal using iterative BFS
+(since recursive CTEs are SQL-only). All other repository operations use
+MikroORM's generic API, which works with MongoDB natively. A migration script
+is available for converting existing MongoDB data to the new schema.
 
 ---
 
@@ -331,6 +336,11 @@ script is available for converting existing production data into the new schema.
   or early deployments can migrate their data without starting over.
 - **Data portability**: Annotation data can be inspected, exported, or backed up
   with standard SQL tools — no specialized tooling required.
+- **Multi-database support**: A single codebase supports SQLite, PostgreSQL,
+  and MongoDB. The `DB_BACKEND` environment variable selects the backend, and
+  a repository factory pattern ensures the correct implementation is used.
+- **Local PostgreSQL testing**: A `docker-compose.yml` provides a PostgreSQL
+  service for local development and testing.
 - **Test coverage**: The existing end-to-end test suite (Cypress) runs against
   the new data layer. 35 of 45 tests pass; the remaining failures are timing
   issues related to asynchronous change submission, not data layer bugs.
