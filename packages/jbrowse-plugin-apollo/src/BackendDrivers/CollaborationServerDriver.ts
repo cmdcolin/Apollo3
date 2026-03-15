@@ -60,15 +60,11 @@ export class CollaborationServerDriver extends BackendDriver {
   private refSeqMaps = new Map<string, RefSeqMap>()
 
   private async fetch(
-    internetAccount: ApolloInternetAccount,
+    _internetAccount: ApolloInternetAccount,
     info: RequestInfo,
     init?: RequestInit,
   ) {
-    const customFetch = internetAccount.getFetcher({
-      locationType: 'UriLocation',
-      uri: info.toString(),
-    })
-    return customFetch(info, init)
+    return fetch(info, { ...init, credentials: 'same-origin' })
   }
 
   async searchFeatures(term: string, assemblies: string[]) {

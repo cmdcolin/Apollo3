@@ -55,27 +55,21 @@ export class LocationStartChange extends FeatureChange {
     const { changes, logger } = this
     for (const change of changes) {
       const { featureId, oldStart, newStart } = change
-      console.log(
-        `[DEBUG LocationStartChange] featureId=${featureId}, oldStart=${oldStart}, newStart=${newStart}`,
-      )
+      logger.debug?.(`featureId=${featureId}, oldStart=${oldStart}, newStart=${newStart}`)
       const row = await featureRepository.findById(featureId)
       if (!row) {
         const errMsg = `Feature not found: ${featureId}`
         logger.error(errMsg)
         throw new Error(errMsg)
       }
-      console.log(
-        `[DEBUG LocationStartChange] row.min=${row.min}, oldStart=${oldStart}`,
-      )
+      logger.debug?.(`row.min=${row.min}, oldStart=${oldStart}`)
       if (row.min !== oldStart) {
         const errMsg = `Expected previous min does not match: row.min=${row.min}, oldStart=${oldStart}`
         logger.error(errMsg)
         throw new Error(errMsg)
       }
       await featureRepository.updateById(featureId, { min: newStart })
-      console.log(
-        `[DEBUG LocationStartChange] updated featureId=${featureId} min to ${newStart}`,
-      )
+      logger.debug?.(`updated featureId=${featureId} min to ${newStart}`)
     }
   }
   async executeOnClient(dataStore: ClientDataStore) {

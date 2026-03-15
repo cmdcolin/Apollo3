@@ -1,64 +1,34 @@
 # jbrowse-plugin-apollo
 
-## Testing with cypress
+## E2E Testing with Playwright
 
-These notes setup cypress and run tests. These notes are likely to change.
+Tests are in `pw-tests/` and use Playwright.
 
-- One time step: **Outside** the Apollo dev container
-  [install cypress](https://docs.cypress.io/guides/getting-started/installing-cypress).
-  E.g. on your OS terminal (not vscode) run:
+### Full E2E run (build + start servers + test + stop)
 
-```
-yarn --cwd packages/jbrowse-plugin-apollo add cypress --dev
-```
-
-Then run `yarn` again.
-
----
-
-- Start [jbrowse](https://github.com/GMOD/jbrowse-components): You may want to
-  pull the latest code to be consistent with the GitHub workflow
-
-```
-cd /path/to/jbrowse-components
-git pull
-yarn --cwd products/jbrowse-web start
+```bash
+yarn test:e2e
+# or equivalently:
+bash scripts/e2e-servers.sh test
 ```
 
-- Start Apollo server. Within the docker container (_i.e_ within vscode) and in
-  distinct terminals run:
+### Run with servers already running
 
-```
-yarn --cwd packages/apollo-shared start
-```
-
-```
-yarn --cwd packages/apollo-collaboration-server run cypress:start
+```bash
+yarn playwright test
 ```
 
-```
-yarn --cwd packages/jbrowse-plugin-apollo start
-```
+### Run a single test file
 
-- Open cypress in the testing directory, _i.e._ where yo have the relevant
-  `package.json`. Typically (again outside the dev container/vscode):
-
-```
-yarn --cwd packages/jbrowse-plugin-apollo run cypress open --config baseUrl=http://localhost:3000
+```bash
+yarn playwright test pw-tests/deleteFeature.test.ts
 ```
 
-- For end-to-end testing, click "E2E Testing" `->` Chrome `->`
-  `Start E2E Testing`. Click on one of the available test scripts.
+### Server management
 
-To run tests locally in headless mode:
-
-```
-yarn --cwd packages/jbrowse-plugin-apollo run cypress run \
-  --browser chrome \
-  --config '{"baseUrl": "http://localhost:3000",
-             "screenshotOnRunFailure": true,
-             "video": true,
-             "videoCompression": false,
-             "retries": {"runMode": 0}}' \
-  --spec cypress/e2e/editFeature.cy.ts
+```bash
+bash scripts/e2e-servers.sh start    # build + start servers
+bash scripts/e2e-servers.sh stop     # stop servers
+bash scripts/e2e-servers.sh status   # check server status
+bash scripts/e2e-servers.sh logs     # tail server log
 ```

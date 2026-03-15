@@ -100,8 +100,10 @@ export async function deleteAssemblies() {
 
 export function setupBrowserLogging(page: Page) {
   page.on('console', (msg) => {
-    if (msg.type() === 'error') {
-      console.log(`[browser error] ${msg.text()}`)
+    const type = msg.type()
+    const text = msg.text()
+    if (type === 'error' || type === 'warning') {
+      console.log(`[browser ${type}] ${text}`)
     }
   })
   page.on('pageerror', (err) => {
@@ -211,6 +213,28 @@ export async function addAssemblyFromGff(
   await expect(
     page.getByRole('button', { name: 'Apollo' }),
   ).toBeEnabled({ timeout: 15_000 })
+
+  // Verify the session token is present for data fetching
+  const hasToken = await page.evaluate((id) => {
+    const key = `${id}-token`
+    const token = sessionStorage.getItem(key)
+    console.log(`[sessionStorage] key="${key}" present=${!!token}`)
+    return !!token
+  }, 'Demo Server-apolloInternetAccount')
+  if (!hasToken) {
+    console.log('[addAssembly] WARNING: sessionStorage token missing, re-injecting')
+    const token = await getGuestToken()
+    await page.evaluate(
+      ([id, t]) => {
+        sessionStorage.setItem(`${id}-token`, t)
+      },
+      ['Demo Server-apolloInternetAccount', token],
+    )
+    await page.goto('/')
+    await expect(
+      page.getByRole('button', { name: 'Apollo' }),
+    ).toBeEnabled({ timeout: 15_000 })
+  }
   console.log('[addAssembly] App ready')
 
   if (launch) {
@@ -256,6 +280,81 @@ export async function selectAssemblyToView(
   await locationInput.press('Enter')
   console.log(`[nav] Navigated to ${location}`)
   await page.waitForTimeout(1000)
+}
+
+export async function searchFeatures(
+  page: Page,
+  query: string,
+  expectedNumOfHits: number,
+) {
+  const locationInput = page.getByPlaceholder('Search for location')
+  await locationInput.fill(query)
+  await locationInput.press('Enter')
+
+  if (expectedNumOfHits === 0) {
+    await expect(
+      page.getByText(`Error: Unknown feature or sequence "${query}"`),
+    ).toBeVisible({ timeout: 10_000 })
+  } else if (expectedNumOfHits === 1) {
+    await page.waitForResponse(
+      (resp) =>
+        resp.url().includes('/users/userLocation') && resp.status() === 200,
+    )
+  } else {
+    const searchResults = page.getByText('Search results').locator('..')
+    await expect(searchResults).toBeVisible({ timeout: 10_000 })
+    const rows = searchResults.locator('tbody tr')
+    await expect(rows).toHaveCount(expectedNumOfHits, { timeout: 10_000 })
+  }
+}
+
+export async function currentLocationEquals(
+  page: Page,
+  contig: string,
+  start: number,
+  end: number,
+  tolerance: number,
+) {
+  const locationInput = page.getByPlaceholder('Search for location')
+  const currentLocation = await locationInput.inputValue()
+  const [xcontig, s, e] = currentLocation.split(/:|\.\./)
+  const xstart = Number.parseInt(s.replace(',', ''), 10)
+  const xend = Number.parseInt(e.replace(',', ''), 10)
+  expect(xcontig).toBe(contig)
+  expect(xstart).toBeGreaterThanOrEqual(start - tolerance)
+  expect(xstart).toBeLessThanOrEqual(start + tolerance)
+  expect(xend).toBeGreaterThanOrEqual(end - tolerance)
+  expect(xend).toBeLessThanOrEqual(end + tolerance)
+}
+
+export async function downloadGff(page: Page, assemblyName: string, includeFasta: boolean) {
+  await selectFromApolloMenu(page, ['Download GFF3'])
+
+  const selectAssembly = page.getByText('Select assembly').locator('..')
+  await selectAssembly.locator('input').first().click()
+  await page.locator('li').filter({ hasText: assemblyName }).click()
+
+  if (includeFasta) {
+    await page
+      .locator('[data-testid="include-fasta-checkbox"]')
+      .locator('input')
+      .click()
+  }
+
+  const downloadPromise = page.waitForResponse(
+    (resp) => resp.url().includes('/export?exportID=') && resp.status() === 200,
+  )
+  await page.getByRole('button', { name: 'Download' }).click()
+  const response = await downloadPromise
+  return await response.text()
+}
+
+export async function refreshTableEditor(page: Page) {
+  const trackMenu = page.locator('[data-testid="track_menu_icon"]').first()
+  await trackMenu.click()
+  await page.getByText('Show graphical display').click()
+  await trackMenu.click()
+  await page.getByText('Show both graphical and table display').click()
 }
 
 export async function annotationTrackAppearance(

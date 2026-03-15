@@ -81,14 +81,8 @@ export class AddAssemblyAndFeaturesFromFileChange extends FromFileBaseChange {
       }
       const checkRows = await backend.checkRepository.findDefaults()
       const checks = checkRows.map((c) => c._id)
-      // eslint-disable-next-line no-console
-      console.log(
-        `[DEBUG AddAssembly] findDefaults returned ${checkRows.length} checks: ${JSON.stringify(checkRows.map((c) => ({ _id: c._id, name: c.name, isDefault: c.isDefault })))}`,
-      )
-      // eslint-disable-next-line no-console
-      console.log(
-        `[DEBUG AddAssembly] assembly will have checks: ${JSON.stringify(checks)}`,
-      )
+      logger.debug?.(`findDefaults returned ${checkRows.length} checks`)
+      logger.debug?.(`assembly will have checks: ${JSON.stringify(checks)}`)
       await backend.assemblyRepository.create({
         _id: assembly,
         name: assemblyName,
@@ -97,12 +91,10 @@ export class AddAssemblyAndFeaturesFromFileChange extends FromFileBaseChange {
         sequenceSource,
         checks,
       })
-      // eslint-disable-next-line no-console
-      console.log(`[AddAssembly] Created assembly "${assemblyName}" id="${assembly}"`)
+      logger.debug?.(`Created assembly "${assemblyName}" id="${assembly}"`)
 
       await this.addRefSeqIntoDb(fileRow, assembly, backend)
-      // eslint-disable-next-line no-console
-      console.log(`[AddAssembly] RefSeqs added for "${assemblyName}"`)
+      logger.debug?.(`RefSeqs added for "${assemblyName}"`)
 
       const { bufferSize = 10_000 } = parseOptions ?? {}
       const featureStream = backend.filesService.parseGFF3(
@@ -115,11 +107,9 @@ export class AddAssemblyAndFeaturesFromFileChange extends FromFileBaseChange {
         await this.addFeatureIntoDb(gff3Feature, backend)
         featureCount++
       }
-      // eslint-disable-next-line no-console
-      console.log(`[AddAssembly] ${featureCount} features parsed for "${assemblyName}"`)
+      logger.debug?.(`${featureCount} features parsed for "${assemblyName}"`)
       await this.flushFeatureBuffer(backend)
-      // eslint-disable-next-line no-console
-      console.log(`[AddAssembly] Features flushed for "${assemblyName}"`)
+      logger.debug?.(`Features flushed for "${assemblyName}"`)
     }
   }
   // eslint-disable-next-line @typescript-eslint/no-empty-function

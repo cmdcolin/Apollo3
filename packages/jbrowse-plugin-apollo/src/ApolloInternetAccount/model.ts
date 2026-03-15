@@ -441,13 +441,10 @@ const stateModelFactory = (configSchema: ApolloInternetAccountConfigModel) => {
             }
             return
           }
-          console.log(`[DEBUG initialize] role=${role}`)
           if (role === 'admin') {
             const rootModel = getRoot(self)
             if (isAbstractMenuManager(rootModel)) {
-              console.log('[DEBUG initialize] adding admin menus')
               addTopLevelAdminMenus(rootModel)
-              console.log('[DEBUG initialize] admin menus added')
             }
           }
           // Get and set server last change sequence into session storage
