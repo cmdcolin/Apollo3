@@ -60,7 +60,6 @@ export class FilesController {
       basename: file.originalname,
       checksum: file.checksum,
       type,
-      user: 'na',
     })
   }
 
@@ -102,13 +101,13 @@ export class FilesController {
   }
 
   /**
-   * Delete file from Files collection in Mongo. Check and see if that checksum is used elsewhere in the collection; if not, delete the file as well
+   * Delete file. Check and see if that checksum is used elsewhere; if not, delete the file as well
    * @param id - fileId to be deleted
    * @returns
    */
   @Delete(':id')
   async remove(@Param('id') id: string) {
-    this.logger.debug(`Delete fileId "${id}" from Mongo`)
+    this.logger.debug(`Delete fileId "${id}")`)
     return this.filesService.remove(id)
   }
 }

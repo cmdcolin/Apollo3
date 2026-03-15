@@ -5,13 +5,9 @@ import {
 } from '@nestjs/common'
 import type { StorageEngine } from 'multer'
 
-import { writeFileAndCalculateHash } from './filesUtil.js'
+import { type UploadedFile, writeFileAndCalculateHash } from './filesUtil.js'
 
-export interface UploadedFile extends Express.Multer.File {
-  checksum: string
-}
-
-export interface FileUpload extends Express.Multer.File {
+interface FileUpload extends Express.Multer.File {
   contentEncoding?: string
 }
 

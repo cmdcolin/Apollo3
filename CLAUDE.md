@@ -10,11 +10,17 @@ cannot resolve packages.
 ## Building
 
 ```bash
-# Build all TypeScript packages
+# Build shared TypeScript packages (apollo-common, apollo-mst, apollo-shared)
 yarn tsc -b
 
-# Build shared package (needed before plugin)
-yarn build:shared
+# Build collaboration server (has its own tsconfig, not included in root tsc -b)
+cd packages/apollo-collaboration-server && yarn tsc -b
+
+# Build entities package
+cd packages/apollo-entities && yarn tsc -b
+
+# Build JBrowse plugin
+yarn --cwd packages/jbrowse-plugin-apollo build
 ```
 
 ## Running Tests
@@ -23,6 +29,37 @@ yarn build:shared
 
 ```bash
 cd packages/apollo-entities && NODE_OPTIONS='--experimental-vm-modules' yarn jest
+```
+
+### E2E tests (Playwright)
+
+The `test:pw` script builds everything, starts servers, runs tests, and stops
+servers in one command:
+
+```bash
+# Full E2E run (build + start + test + stop)
+yarn --cwd packages/jbrowse-plugin-apollo test:pw
+
+# Or use the script directly for more control:
+cd packages/jbrowse-plugin-apollo
+bash scripts/e2e-servers.sh test              # same as test:pw
+bash scripts/e2e-servers.sh start             # build + start servers only
+bash scripts/e2e-servers.sh stop              # stop servers
+bash scripts/e2e-servers.sh status            # check server status
+bash scripts/e2e-servers.sh logs              # tail server log
+
+# Run E2E tests against PostgreSQL instead of SQLite:
+DB_BACKEND=postgresql DB_CONNECTION_URL=postgresql://user:pass@localhost:5432/apollo_e2e \
+  bash scripts/e2e-servers.sh test
+```
+
+### Unit tests with PostgreSQL
+
+```bash
+# Run entity tests against PostgreSQL (defaults to in-memory SQLite)
+cd packages/apollo-entities
+DB_BACKEND=postgresql DB_CONNECTION_URL=postgresql://user:pass@localhost:5432/apollo_test \
+  NODE_OPTIONS='--experimental-vm-modules' yarn jest
 ```
 
 ### E2E tests (Cypress)
@@ -68,6 +105,23 @@ resolution.
 ```bash
 yarn lint
 ```
+
+## Database Compatibility
+
+The MikroORM layer must remain compatible with **SQLite, MongoDB, and
+PostgreSQL**. Some users will continue to use MongoDB after the MikroORM
+migration; others may prefer PostgreSQL for production deployments. This means:
+
+- Repository implementations use the generic `EntityManager` from
+  `@mikro-orm/core`, **not** driver-specific types like `SqlEntityManager`
+- The `@mikro-orm/mongodb` and `@mikro-orm/postgresql` packages must remain
+  as dependencies
+- Do **not** delete the MongoDB migration script
+  (`packages/apollo-collaboration-server/scripts/migrate-mongo-to-mikroorm.ts`)
+  — existing users need it to migrate from MongoDB
+- Raw SQL (recursive CTEs) is acceptable where necessary for performance, but
+  must be commented, benchmarked, and ideally have a fallback path for
+  non-SQL drivers
 
 ## Monorepo Structure
 

@@ -1,3 +1,4 @@
+import { MikroORM, RequestContext } from '@mikro-orm/core'
 import { Logger, Module, type OnApplicationBootstrap } from '@nestjs/common'
 
 import { MessagesModule } from '../messages/messages.module.js'
@@ -14,11 +15,17 @@ import { UsersService } from './users.service.js'
 export class UsersModule implements OnApplicationBootstrap {
   private readonly logger = new Logger(UsersModule.name)
 
-  constructor(private usersService: UsersService) {}
+  constructor(
+    private usersService: UsersService,
+    private orm: MikroORM,
+  ) {}
+
   async onApplicationBootstrap() {
     this.logger.log('Bootstrapping users database...')
     try {
-      await this.usersService.bootstrapDB()
+      await RequestContext.create(this.orm.em, async () => {
+        await this.usersService.bootstrapDB()
+      })
       this.logger.log('Users database bootstrapped')
     } catch (error) {
       this.logger.error(`Failed to bootstrap users database: ${error}`)
