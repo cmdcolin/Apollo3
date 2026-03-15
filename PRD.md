@@ -68,22 +68,13 @@ The repository pattern abstracts the database layer behind interfaces in
    - **Files**: entity definitions, `FromFileBaseChange`, `SequenceService`,
      `assemblies.service.ts`, `DatabaseService`
 
-7. **Direct flat-row GFF3 export** — The GFF3 export currently reassembles flat
-   database rows into nested `AnnotationFeatureSnapshot` trees, then converts
-   those trees back to flat GFF3 lines via `annotationFeatureToGFF3`. GFF3 is
-   inherently flat — each line is one feature with a `Parent=` attribute. A
-   direct `FeatureRow → GFF3 line` conversion would skip the tree assembly step
-   entirely.
-   - **Caveat**: CDS features under mRNAs require tree context for phase
-     computation via exon intersection (`getTranscriptParts`), so a fully flat
-     approach only works for non-mRNA features. A hybrid approach may be needed.
-   - New `featureRowToGFF3Line()` function that maps FeatureRow fields directly
-     to GFF3 tab-separated columns (seqid, source, type, start+1, end, score,
-     strand, phase, attributes including Parent=)
-   - Stream rows directly from DB → GFF3 lines → file, no in-memory trees
-   - **Files**:
-     `packages/apollo-collaboration-server/src/export/export.service.ts`, new
-     utility in `packages/apollo-shared/src/GFF3/`
+7. ~~**GFF3 export code deduplication**~~ **DONE** — The export service had its
+   own copy of the gene hierarchy assembly logic (`buildChildrenMap` +
+   `featureRowToSnapshot`). Replaced with the shared `assembleFeatureTrees()`
+   function, removing ~40 lines of duplicate code. A fully flat database-row to
+   GFF3 conversion was evaluated but rejected: CDS phase computation requires
+   parent-child context (exon/CDS intersection), and the in-memory hierarchy
+   assembly is O(n) — the bottleneck is database I/O, not in-memory processing.
 
 ### P2 — Collaboration & Workflow
 

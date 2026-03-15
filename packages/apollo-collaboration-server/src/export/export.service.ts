@@ -5,8 +5,7 @@ import path from 'node:path'
 import { Readable } from 'node:stream'
 import { ReadableStream } from 'node:stream/web'
 
-import type { FeatureRow } from '@apollo-annotation/common'
-import type { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
+import { assembleFeatureTrees } from '@apollo-annotation/common'
 import {
   annotationFeatureToGFF3,
   splitStringIntoChunks,
@@ -17,47 +16,6 @@ import { ConfigService } from '@nestjs/config'
 import StreamConcat from 'stream-concat'
 
 import { DatabaseService } from '../mikro-orm/database.service.js'
-
-function featureRowToSnapshot(
-  root: FeatureRow,
-  childrenMap: Map<string, FeatureRow[]>,
-): AnnotationFeatureSnapshot {
-  const childRows = childrenMap.get(root._id)
-  const children: Record<string, AnnotationFeatureSnapshot> | undefined =
-    childRows && childRows.length > 0
-      ? Object.fromEntries(
-          childRows.map((child) => [
-            child._id,
-            featureRowToSnapshot(child, childrenMap),
-          ]),
-        )
-      : undefined
-  return {
-    _id: root._id,
-    refSeq: root.refSeq,
-    type: root.type,
-    min: root.min,
-    max: root.max,
-    strand: root.strand,
-    attributes: root.attributes ?? {},
-    children,
-  } as AnnotationFeatureSnapshot
-}
-
-function buildChildrenMap(rows: FeatureRow[]) {
-  const map = new Map<string, FeatureRow[]>()
-  for (const row of rows) {
-    if (row.parentId) {
-      const siblings = map.get(row.parentId)
-      if (siblings) {
-        siblings.push(row)
-      } else {
-        map.set(row.parentId, [row])
-      }
-    }
-  }
-  return map
-}
 
 @Injectable()
 export class ExportService {
@@ -118,11 +76,10 @@ export class ExportService {
       }
       const rootIds = rootFeatures.map((r) => r._id)
       const descendants = await this.db.feature.findDescendantsOfMany(rootIds)
-      const childrenMap = buildChildrenMap([...rootFeatures, ...descendants])
-      for (const root of rootFeatures) {
-        const snapshot = featureRowToSnapshot(root, childrenMap)
+      const trees = assembleFeatureTrees([...rootFeatures, ...descendants])
+      for (const tree of trees) {
         const gff3Feature = annotationFeatureToGFF3(
-          snapshot,
+          tree,
           undefined,
           refSeqNames,
         )
