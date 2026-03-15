@@ -9,7 +9,6 @@ import { Change, isFeatureChange } from '@apollo-annotation/common'
 import {
   COMMON_CHANNEL,
   type ChangeMessage,
-  type CheckResultUpdate,
   getDecodedToken,
   makeUserSessionId,
 } from '@apollo-annotation/shared'
@@ -312,8 +311,8 @@ const stateModelFactory = (configSchema: ApolloInternetAccountConfigModel) => {
         const user = getDecodedToken(token)
         const localSessionId = makeUserSessionId(user)
         const { socket } = self
-        const { addCheckResult, changeManager, deleteCheckResult } =
-          session.apolloDataStore
+        const { apolloDataStore } = session
+        const { changeManager } = apolloDataStore
         socket.on('connect', () => {
           void self.getMissingChanges()
         })
@@ -321,37 +320,25 @@ const stateModelFactory = (configSchema: ApolloInternetAccountConfigModel) => {
           console.error(error)
           notify('Could not connect to the Apollo server.', 'error')
         })
-        socket.on(
-          COMMON_CHANNEL,
-          (message: ChangeMessage | CheckResultUpdate) => {
-            if ('checkResult' in message) {
-              if (message.deleted) {
-                deleteCheckResult(message.checkResult._id)
-              } else {
-                addCheckResult(message.checkResult)
-              }
+        socket.on(COMMON_CHANNEL, (message: ChangeMessage) => {
+          sessionStorage.setItem(
+            'LastChangeSequence',
+            String(message.changeSequence),
+          )
+          if (message.userSessionId === localSessionId) {
+            return
+          }
+          const change = Change.fromJSON(message.changeInfo)
+          if (isFeatureChange(change)) {
+            const hasRelevantData = change.changedIds.some((id) =>
+              apolloDataStore.getFeature(id),
+            )
+            if (!hasRelevantData) {
               return
             }
-            // Save server last change sequence into session storage
-            sessionStorage.setItem(
-              'LastChangeSequence',
-              String(message.changeSequence),
-            )
-            if (message.userSessionId === localSessionId) {
-              return // we did this change, no need to apply it again
-            }
-            const change = Change.fromJSON(message.changeInfo)
-            if (isFeatureChange(change)) {
-              const hasRelevantData = change.changedIds.some((id) =>
-                apolloDataStore.getFeature(id),
-              )
-              if (!hasRelevantData) {
-                return
-              }
-            }
-            void changeManager.submit(change, { submitToBackend: false })
-          },
-        )
+          }
+          void changeManager.submit(change, { submitToBackend: false })
+        })
       },
     }))
     .volatile(() => ({ roleNotificationSent: false }))
