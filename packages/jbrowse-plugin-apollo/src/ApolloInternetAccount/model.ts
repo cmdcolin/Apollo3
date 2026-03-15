@@ -301,7 +301,8 @@ const stateModelFactory = (configSchema: ApolloInternetAccountConfigModel) => {
               continue
             }
           }
-          void changeManager.submit(change, { submitToBackend: false })
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
+          changeManager.submit(change, { submitToBackend: false })
         }
       }),
     }))
@@ -323,7 +324,8 @@ const stateModelFactory = (configSchema: ApolloInternetAccountConfigModel) => {
         const { apolloDataStore } = session
         const { changeManager } = apolloDataStore
         socket.on('connect', () => {
-          void self.getMissingChanges()
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
+          self.getMissingChanges()
         })
         socket.on('connect_error', (error) => {
           console.error(error)
@@ -344,7 +346,8 @@ const stateModelFactory = (configSchema: ApolloInternetAccountConfigModel) => {
                 return
               }
             }
-            void changeManager.submit(change, { submitToBackend: false })
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
+            changeManager.submit(change, { submitToBackend: false })
           } catch (error) {
             console.error('Failed to apply incoming change:', error)
           }
