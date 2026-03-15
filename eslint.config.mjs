@@ -1,4 +1,3 @@
-import pluginCypress from 'eslint-plugin-cypress/flat'
 import tseslint from 'typescript-eslint'
 
 import js from '@eslint/js'
@@ -33,7 +32,6 @@ export default [
   pluginReact.configs.flat.recommended,
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   pluginJSXA11y.flatConfigs.recommended,
-  pluginCypress.configs.recommended,
   {
     languageOptions: {
       globals: { ...globals.browser, ...globals.node },
@@ -104,7 +102,7 @@ export default [
       'unicorn/filename-case': 'off', // Doesn't match our file naming, maybe can be configured later
       'unicorn/no-empty-file': 'off', // False positives
       'unicorn/no-null': 'off', // A lot of null in React and other libraries
-      'unicorn/prefer-module': 'off', // Cypress and apollo-collaboration-server need this
+      'unicorn/prefer-module': 'off', // apollo-collaboration-server needs this
       'unicorn/prevent-abbreviations': 'off', // Doesn't guess a lot of abbreviations correctly
     },
   },

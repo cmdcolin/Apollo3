@@ -17,7 +17,10 @@ test.beforeEach(async ({ page }) => {
   await loginAsGuest(page)
 })
 
-test.afterEach(async () => {
+test.afterEach(async ({ page }) => {
+  // Navigate away to close the websocket connection before cleanup.
+  // Otherwise the websocket holds the SQLite connection and API calls deadlock.
+  await page.goto('about:blank')
   await deleteAssemblies()
 })
 
@@ -28,6 +31,9 @@ async function setupDeleteFeatureTest(page: import('@playwright/test').Page) {
     page,
     'Show both graphical and table display',
   )
+  // Wait for features to load in the table
+  await expect(page.getByText('Id=gene02')).toBeVisible({ timeout: 30_000 })
+  console.log('[setup] Features loaded in table')
 }
 
 async function deleteFeatureByName(page: import('@playwright/test').Page, featureName: string) {

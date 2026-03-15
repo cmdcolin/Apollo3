@@ -1,10 +1,11 @@
-# Apollo3 MikroORM Migration — Project Requirements Document
+# Apollo3 — Project Requirements Document
 
 ## Overview
 
-Migration from MongoDB to MikroORM with multi-database support (SQLite,
-PostgreSQL, MongoDB). The repository pattern abstracts the database layer behind
-interfaces in `apollo-common`, with implementations in `apollo-entities`.
+Apollo3 is a collaborative gene annotation editor built on JBrowse 2. The
+backend uses MikroORM with multi-database support (SQLite, PostgreSQL, MongoDB).
+The repository pattern abstracts the database layer behind interfaces in
+`apollo-common`, with implementations in `apollo-entities`.
 
 ## Completed
 
@@ -38,65 +39,190 @@ interfaces in `apollo-common`, with implementations in `apollo-entities`.
   (MongoDB) based on `DB_BACKEND` env var
 - [x] `DB_BACKEND=mongo` accepted in Joi validation and mikro-orm module
 - [x] `docker-compose.yml` with PostgreSQL service for local development/testing
+- [x] Migrated all E2E tests from Cypress to Playwright
+- [x] Removed Cypress dependency and configuration
+- [x] Debug logging cleanup (`[DEBUG ...]` console.log → `logger.debug`)
 
 ## Outstanding Issues (Priority Order)
 
 ### P1 — Playwright E2E Tests
 
-1. **deleteFeature Playwright tests (0/2 passing)** — UI tests timeout
-   waiting for the Apollo button. The `loginAsGuest` helper waits for either
-   the Apollo button or "Continue as Guest" text, but neither appears within
-   15s. Likely a JBrowse plugin loading timing issue.
-   - **Action**: Investigate the screenshot/trace artifacts to determine what
-     the page shows at timeout. May need to wait for JBrowse to fully
-     initialize before looking for the Apollo button.
+1. **Playwright test stabilization** — All Cypress tests have been ported to
+   Playwright (`pw-tests/`), but some may need timing adjustments:
+   - showWarnings: changeInProgress timing issues
+   - editFeature: MST addChild failure
+   - undo: MST detached node during undo
 
-2. **Playwright test coverage** — Currently only `deleteFeature`,
-   `assemblyApi`, `uploadTest`, and `fetchDebug` tests exist in `pw-tests/`.
-   Need to port remaining Cypress suites:
-   - addAssembly, editFeature, searchFeatures, showWarnings,
-     mergeTranscripts, undo, downloadGff, largeAssembly, visualGeneModel
+### P1 — Core Annotation Features (Apollo Classic Parity)
 
-3. **Cypress test issues (pre-existing)** — Several Cypress suites have
-   known failures unrelated to MikroORM migration:
-   - showWarnings: 1/5 (changeInProgress timing)
-   - editFeature: 5/8 (1 MST addChild failure, 2 pending)
-   - searchFeatures: 7/9 (FIXME quote handling, multi-assembly timing)
-   - undo: 2/3 (MST detached node during undo)
+2. **Set Translation Start / Set Longest ORF** — Apollo Classic's most-used
+   curation operations. Annotators need to set the translation start site and
+   auto-calculate the longest open reading frame.
+   - New `SetTranslationStartChange`: adjusts CDS boundaries based on a
+     selected start codon position
+   - New `SetLongestOrfChange`: scans transcript sequence, picks longest
+     reading frame, sets CDS boundaries accordingly
+   - Requires sequence retrieval during change execution (use existing
+     `SequenceService`)
+   - Frontend: right-click menu items on CDS/transcript features
+   - **Files**: `packages/apollo-shared/src/Changes/`, server `ChangesService`,
+     plugin `glyphUtils.ts` (context menu)
+
+3. **Split Transcript** — Apollo Classic supports splitting a transcript into
+   two independent transcripts. Apollo3 has `MergeTranscriptsChange` but no
+   inverse split operation.
+   - New `SplitTranscriptChange`: given a transcript and a split point,
+     creates two new transcripts partitioning the child exons/CDSs
+   - Exons spanning the split point should be assigned to whichever side
+     contains the majority, or duplicated and trimmed
+   - Frontend: right-click menu on transcript features
+   - **Files**: `packages/apollo-shared/src/Changes/`, plugin context menu
+
+4. **Attribute/Metadata Editing UI** — Apollo Classic has rich editors for
+   dbxrefs, GO terms, gene products, and comments. Apollo3 stores attributes
+   as generic key-value pairs but has no dedicated editing UI.
+   - Database cross-references (e.g., UniProt, NCBI Gene) with autocomplete
+   - GO term annotation with evidence codes (EXP, IDA, ISS, etc.)
+   - Gene product names
+   - Free-text comments/notes
+   - **Files**: new components in `packages/jbrowse-plugin-apollo/src/components/`,
+     extend "Edit feature details" dialog
+
+5. **Non-canonical Splice Site Detection** — Apollo Classic detects GT/AG
+   (and GC) splice donor/acceptor sites. Core QC check for gene annotators.
+   - New check type registered in `CheckRegistry`
+   - Requires reading sequence at exon boundaries (2bp upstream donor,
+     2bp downstream acceptor)
+   - Report non-canonical sites as warnings (not errors — some are valid)
+   - **Files**: `packages/apollo-shared/src/Checks/`, server check seeding
+
+### P1 — Testing
+
+6. **Unit tests for untested repositories** — Four repositories have zero
+   unit test coverage:
+   - `CheckRepository` (6 interface methods)
+   - `CheckResultRepository` (9 interface methods)
+   - `UserRepository` (9 interface methods)
+   - `JBrowseConfigRepository` (3 interface methods)
+   - Follow existing patterns in `repositories.test.ts`
+   - **Files**: `packages/apollo-entities/src/repositories/repositories.test.ts`
+
+7. **MongoFeatureRepository integration tests** — The MongoDB feature
+   repository has no tests. Tree traversal (iterative BFS) and text search
+   (in-memory filtering) are completely untested.
+   - Use `mongodb-memory-server` or a Docker-based MongoDB instance
+   - Run the same feature repository test suite against MongoDB
+   - **Files**: new test file in `packages/apollo-entities/src/repositories/`
 
 ### P1 — Performance
 
-4. **Import speed** — Current: ~8s for volvox test data. Breakdown:
+8. **Import speed** — Current: ~8s for volvox test data. Breakdown:
    - GFF3 parsing + file I/O: ~6s (dominant)
    - DB writes: ~2s (already optimized with `insertMany` batching)
    - Transaction wrapping gives ~12% speedup on DB writes (WAL+NORMAL config)
    - **Investigation needed**: Profile GFF3 parsing to find bottlenecks.
 
+### P1 — Bug Fixes
+
+9. **ObjectId `.toString()` assumption in frontend** —
+   `ApolloInternetAccount/model.ts:336` calls `.toString()` on
+   `checkResult._id`, a MongoDB ObjectId assumption. With SQL backends, `_id`
+   is already a string and `.toString()` is harmless but misleading. Remove
+   the call for clarity and correctness.
+   - **File**: `packages/jbrowse-plugin-apollo/src/ApolloInternetAccount/model.ts`
+
+### P2 — Collaboration & Workflow
+
+10. **Per-assembly permissions** — Apollo Classic has user/group permissions
+    per organism. Apollo3 currently has global roles only
+    (admin/user/readOnly). Multi-assembly deployments need per-assembly
+    access control.
+    - New `AssemblyPermission` entity: maps user → assembly → role
+    - `ValidationGuard` checks per-assembly permissions before changes
+    - Admin UI for assigning users to assemblies
+    - Fallback: global role applies when no per-assembly permission exists
+    - **Files**: new entity in `apollo-entities`, new guard logic in server,
+      new admin component in plugin
+
+11. **Feature ownership & audit display** — Apollo Classic tracks who
+    created/last edited each feature. Apollo3 stores `user` on entities but
+    doesn't expose this in the UI.
+    - Display last editor in "Edit feature details" dialog
+    - Show creation/modification timestamps
+    - Optional: highlight features by ownership in the track display
+    - **Files**: plugin "Edit feature details" components
+
+12. **Canned comments/attributes** — Apollo Classic lets admins configure
+    preset comment templates and attribute keys/values, speeding up
+    annotation significantly.
+    - New `CannedElement` entity (type: comment|key|value, text, assembly?)
+    - Admin UI for managing canned elements
+    - Autocomplete in attribute editing UI (integrates with item 4)
+    - **Files**: new entity, new admin component, new API endpoints
+
+### P2 — Export/Import
+
+13. **FASTA export (CDS, protein, transcript sequences)** — Apollo Classic
+    exports CDS sequences, protein translations, and genomic sequences.
+    Apollo3 only exports GFF3 + optional genomic FASTA.
+    - Export types: CDS FASTA, protein FASTA, transcript FASTA
+    - Protein export requires codon translation using configurable
+      translation tables (NCBI tables, default table 1)
+    - **Files**: `packages/apollo-collaboration-server/src/export/`,
+      new `TranslationService`
+
+14. **Filtered/partial export** — Apollo Classic allows exporting specific
+    reference sequences. Apollo3 exports entire assemblies.
+    - Filter by: reference sequence(s), feature type(s), coordinate range
+    - Frontend: checkboxes/filters in "Download GFF3" dialog
+    - **Files**: export controller + frontend DownloadGFF3 component
+
+### P2 — Search & Navigation
+
+15. **Sequence search (BLAT/BLAST integration)** — Apollo Classic has
+    pluggable BLAT/BLAST search. Annotators paste a sequence and get genomic
+    hits. Essential for evidence-based annotation.
+    - Pluggable `SequenceSearchProvider` interface (backend)
+    - Default implementation: BLAT via `gfClient`/`gfServer`
+    - Frontend: "Sequence Search" dialog, results displayed as track
+    - Config: search tool URL/path per assembly
+    - **Files**: new module in server, new component in plugin
+
 ### P2 — Architecture
 
-5. **PostgreSQL E2E CI pipeline** — E2E script supports PostgreSQL and
-   `docker-compose.yml` provides a local PostgreSQL service, but no CI
-   pipeline runs tests against PostgreSQL yet.
-   - **Action**: Add a CI job that starts PostgreSQL via docker-compose and
-     runs unit tests + E2E against it.
+16. **PostgreSQL E2E CI pipeline** — E2E script supports PostgreSQL and
+    `docker-compose.yml` provides a local PostgreSQL service, but no CI
+    pipeline runs tests against PostgreSQL yet.
+    - **Action**: Add a CI job that starts PostgreSQL via docker-compose and
+      runs unit tests + E2E against it.
 
-6. **MongoDB E2E testing** — `MongoFeatureRepository` exists but has no
-   test coverage beyond type-checking. Unit tests run only against SQLite
-   (and optionally PostgreSQL).
-   - **Action**: Add a MongoDB test configuration and test the
-     `MongoFeatureRepository` against a real MongoDB instance.
+17. **MongoDB E2E testing** — `MongoFeatureRepository` exists but has no
+    test coverage beyond type-checking. Unit tests run only against SQLite
+    (and optionally PostgreSQL).
+    - **Action**: Add a MongoDB test configuration and test the
+      `MongoFeatureRepository` against a real MongoDB instance.
+
+### P3 — QC & Validation Checks
+
+18. **Reading frame validation check** — Verify CDS features maintain proper
+    reading frame across exon boundaries. Phase must be consistent with
+    upstream exon lengths.
+    - New check in `CheckRegistry`
+    - Requires sequence context to compute expected phase per exon
+    - **Files**: `packages/apollo-shared/src/Checks/`
+
+19. **Start codon presence check** — Verify CDS features begin with ATG (or
+    valid alternative start codons per translation table).
+    - New check in `CheckRegistry`
+    - Requires reading first 3bp of CDS sequence
+    - Respects configurable translation table (some organisms use GTG, TTG)
+    - **Files**: `packages/apollo-shared/src/Checks/`
 
 ### P3 — Cleanup
 
-7. **Remaining debug logging** — Standard `logger.debug()` calls exist
-   throughout the server (features, changes, auth, files controllers). These
-   are appropriate debug-level logging and can stay unless noisy.
-
-8. **`[DEBUG ...]` console.log lines** — Several debug log lines in
-   `AddAssemblyAndFeaturesFromFileChange`, `LocationStartChange`,
-   `DeleteFeature.tsx`, and `ApolloInternetAccount/model.ts` use raw
-   `console.log` with `[DEBUG ...]` prefixes instead of proper loggers.
-   Should be reviewed and either removed or converted to logger calls.
+20. **Remaining debug logging** — Standard `logger.debug()` calls exist
+    throughout the server (features, changes, auth, files controllers). These
+    are appropriate debug-level logging and can stay unless noisy.
 
 ## Benchmark Results
 

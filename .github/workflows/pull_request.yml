@@ -46,15 +46,11 @@ jobs:
         env:
           DB_BACKEND: sqlite
 
-      # Cypress tests
-      - name: Get latest JBrowse
-        run: yarn run jbrowse create --nightly .jbrowse
+      # Playwright E2E tests
+      - name: Install Playwright browsers
+        run: yarn playwright install --with-deps chromium
         working-directory: packages/jbrowse-plugin-apollo
-      - name: Start local file server
-        run:
-          yarn --cwd packages/apollo-collaboration-server/test/data/ serve
-          --listen 3131 &
-      - name: Run Cypress tests
+      - name: Run Playwright tests
         run: yarn run test:e2e
         working-directory: packages/jbrowse-plugin-apollo
 
