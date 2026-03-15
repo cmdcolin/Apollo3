@@ -61,11 +61,13 @@ export class DesktopFileDriver extends BackendDriver {
     return refNameAliases
   }
 
-  async getFeatures(
-    region: Region,
-  ): Promise<[AnnotationFeatureSnapshot[], CheckResultSnapshot[]]> {
+  async getFeatures(region: Region): Promise<AnnotationFeatureSnapshot[]> {
     await this.getAssembly(region.assemblyName)
-    return [[], []]
+    return []
+  }
+
+  async getCheckResults(): Promise<CheckResultSnapshot[]> {
+    return []
   }
 
   async getSequence(region: Region) {

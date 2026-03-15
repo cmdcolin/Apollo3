@@ -309,9 +309,9 @@ export function clientDataStoreFactory(
           if (!backendDriver) {
             return
           }
-          const [features, checkResults] = (yield backendDriver.getFeatures(
+          const features = (yield backendDriver.getFeatures(
             region,
-          )) as [AnnotationFeatureSnapshot[], CheckResultSnapshot[]]
+          )) as AnnotationFeatureSnapshot[]
           if (features.length === 0) {
             continue
           }
@@ -334,6 +334,9 @@ export function clientDataStoreFactory(
               ref.features.put(feature)
             }
           }
+          const checkResults = (yield backendDriver.getCheckResults(
+            region,
+          )) as CheckResultSnapshot[]
           self.addCheckResults(checkResults)
         }
       }),

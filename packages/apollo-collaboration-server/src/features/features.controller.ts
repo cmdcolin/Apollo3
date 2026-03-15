@@ -52,12 +52,7 @@ export class FeaturesController {
     this.logger.debug(
       `getFeatures endpoint: refSeq: ${request.refSeq}, start: ${request.start}, end: ${request.end}`,
     )
-
-    const [features, checkResults] = await Promise.all([
-      this.featuresService.findFeaturesByRange(request),
-      this.featuresService.findCheckResultsByRange(request),
-    ])
-    return [features, checkResults]
+    return this.featuresService.findFeaturesByRange(request)
   }
 
   @Post('getByIds')

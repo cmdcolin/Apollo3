@@ -12,7 +12,12 @@ features in the assembly. But `featuresService.findByRange()` returns a
 result IDs to `checkFeature()` as if they were feature IDs. The check-result
 iterations silently failed (feature not found).
 
-**Fix**: Destructure the tuple: `const [features] = await ...findByRange(...)`.
+**Fix**: Split `findByRange` into `findFeaturesByRange` (returns only features)
+and removed `findCheckResultsByRange` (check results already have their own
+endpoint at `GET /checks/range`). The `getFeatures` API endpoint now returns
+only features. The frontend fetches check results separately via
+`BackendDriver.getCheckResults()` which calls `GET /checks/range`. This
+eliminates the confusing tuple and makes both concepts independently fetchable.
 
 ### 2. RefSeqsService.remove() deleted wrong scope (Pre-existing, dead code)
 

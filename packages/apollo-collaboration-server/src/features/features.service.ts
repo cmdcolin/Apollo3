@@ -149,10 +149,6 @@ export class FeaturesService {
     return assembleFeatureTrees([...roots, ...descendants])
   }
 
-  async findCheckResultsByRange(searchDto: FeatureRangeSearchDto) {
-    return this.checksService.findByRange(searchDto)
-  }
-
   async checkFeature(featureId: string, checkTimestamps = true) {
     return this.checksService.checkFeature(featureId, checkTimestamps)
   }

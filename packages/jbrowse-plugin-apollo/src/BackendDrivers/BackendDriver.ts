@@ -18,9 +18,9 @@ export interface RefNameAliases {
 export abstract class BackendDriver {
   constructor(protected clientStore: ClientDataStore) {}
 
-  abstract getFeatures(
-    region: Region,
-  ): Promise<[AnnotationFeatureSnapshot[], CheckResultSnapshot[]]>
+  abstract getFeatures(region: Region): Promise<AnnotationFeatureSnapshot[]>
+
+  abstract getCheckResults(region: Region): Promise<CheckResultSnapshot[]>
 
   abstract getSequence(region: Region): Promise<{ seq: string; refSeq: string }>
 

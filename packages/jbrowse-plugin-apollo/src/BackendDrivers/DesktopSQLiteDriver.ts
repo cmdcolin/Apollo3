@@ -231,9 +231,7 @@ export class DesktopSQLiteDriver extends BackendDriver {
     return orm
   }
 
-  async getFeatures(
-    region: Region,
-  ): Promise<[AnnotationFeatureSnapshot[], CheckResultSnapshot[]]> {
+  async getFeatures(region: Region): Promise<AnnotationFeatureSnapshot[]> {
     const orm = await this.getOrmForAssembly(region.assemblyName)
     const dataStore = createLocalDataStore(orm.em)
 
@@ -241,7 +239,7 @@ export class DesktopSQLiteDriver extends BackendDriver {
       region.assemblyName,
     )
     if (!assemblyRow) {
-      return [[], []]
+      return []
     }
 
     const refSeqRow = await dataStore.refSeqRepository.findByNameAndAssembly(
@@ -249,7 +247,7 @@ export class DesktopSQLiteDriver extends BackendDriver {
       assemblyRow._id,
     )
     if (!refSeqRow) {
-      return [[], []]
+      return []
     }
 
     const rootRows = await dataStore.featureRepository.findRootsByRange(
@@ -269,9 +267,11 @@ export class DesktopSQLiteDriver extends BackendDriver {
     }
 
     const nestedFeatures = assembleFeatureTrees(allRows)
-    const snapshots = nestedFeatures.map((f) => nestedToSnapshot(f))
+    return nestedFeatures.map((f) => nestedToSnapshot(f))
+  }
 
-    return [snapshots, []]
+  async getCheckResults(): Promise<CheckResultSnapshot[]> {
+    return []
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await

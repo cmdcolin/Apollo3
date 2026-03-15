@@ -92,13 +92,8 @@ export class CollaborationServerDriver extends BackendDriver {
     return response.json() as Promise<AnnotationFeatureSnapshot[]>
   }
 
-  /**
-   * Call backend endpoint to get features by criteria
-   * @param region -  Searchable region containing refSeq, start and end
-   * @returns
-   */
-  async getFeatures(region: Region) {
-    const { assemblyName, end, refName, start } = region
+  private async resolveRefSeq(region: Region) {
+    const { assemblyName, refName, start, end } = region
     const { assemblyManager } = getSession(this.clientStore)
     const assembly = assemblyManager.get(assemblyName)
     if (!assembly) {
@@ -109,22 +104,31 @@ export class CollaborationServerDriver extends BackendDriver {
     if (!refSeqEntry) {
       throw new Error(`Could not find refSeq "${refName}"`)
     }
-    const refSeq = refSeqEntry.id
     const internetAccount = this.clientStore.getInternetAccount(
       assemblyName,
     ) as ApolloInternetAccount
-    const { baseURL } = internetAccount
+    return {
+      refSeq: refSeqEntry.id,
+      start,
+      end,
+      assemblyName,
+      refName,
+      internetAccount,
+    }
+  }
 
+  async getFeatures(region: Region) {
+    const { refSeq, start, end, assemblyName, refName, internetAccount } =
+      await this.resolveRefSeq(region)
+    const { baseURL } = internetAccount
     const url = new URL('features/getFeatures', baseURL)
-    const searchParams = new URLSearchParams({
+    url.search = new URLSearchParams({
       refSeq,
       start: String(start),
       end: String(end),
-    })
-    url.search = searchParams.toString()
-    const uri = url.toString()
+    }).toString()
 
-    const response = await this.fetch(internetAccount, uri)
+    const response = await this.fetch(internetAccount, url.toString())
     if (!response.ok) {
       const errorMessage = await createFetchErrorMessage(
         response,
@@ -133,9 +137,25 @@ export class CollaborationServerDriver extends BackendDriver {
       throw new Error(errorMessage)
     }
     this.checkSocket(assemblyName, refName, internetAccount)
-    return response.json() as Promise<
-      [AnnotationFeatureSnapshot[], CheckResultSnapshot[]]
-    >
+    return response.json() as Promise<AnnotationFeatureSnapshot[]>
+  }
+
+  async getCheckResults(region: Region) {
+    const { refSeq, start, end, internetAccount } =
+      await this.resolveRefSeq(region)
+    const { baseURL } = internetAccount
+    const url = new URL('checks/range', baseURL)
+    url.search = new URLSearchParams({
+      refSeq,
+      start: String(start),
+      end: String(end),
+    }).toString()
+
+    const response = await this.fetch(internetAccount, url.toString())
+    if (!response.ok) {
+      return []
+    }
+    return response.json() as Promise<CheckResultSnapshot[]>
   }
 
   /**

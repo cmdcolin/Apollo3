@@ -14,10 +14,12 @@ import { checkFeatures } from '../util'
 import { BackendDriver, type RefNameAliases } from './BackendDriver'
 
 export class InMemoryFileDriver extends BackendDriver {
-  async getFeatures(): Promise<
-    [AnnotationFeatureSnapshot[], CheckResultSnapshot[]]
-  > {
-    return [[], []]
+  async getFeatures(): Promise<AnnotationFeatureSnapshot[]> {
+    return []
+  }
+
+  async getCheckResults(): Promise<CheckResultSnapshot[]> {
+    return []
   }
 
   async getSequence(region: Region) {
