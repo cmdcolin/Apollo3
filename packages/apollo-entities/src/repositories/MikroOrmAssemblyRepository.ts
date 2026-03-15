@@ -25,7 +25,7 @@ export class MikroOrmAssemblyRepository implements AssemblyRepository {
     if (entity) {
       return toRow(entity)
     }
-    return undefined
+    return
   }
 
   async findByName(name: string) {
@@ -33,7 +33,7 @@ export class MikroOrmAssemblyRepository implements AssemblyRepository {
     if (entity) {
       return toRow(entity)
     }
-    return undefined
+    return
   }
 
   async create(row: AssemblyRow) {
@@ -56,7 +56,7 @@ export class MikroOrmAssemblyRepository implements AssemblyRepository {
   async updateById(id: string, data: Partial<Omit<AssemblyRow, '_id'>>) {
     const entity = await this.em.findOne(AssemblyEntity, { _id: id })
     if (!entity) {
-      return undefined
+      return
     }
     this.em.assign(entity, data)
     await this.em.flush()

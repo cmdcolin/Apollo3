@@ -179,35 +179,14 @@ export abstract class BaseFeatureRepository implements FeatureRepository {
     if (!entity) {
       return
     }
-    if (data.parentId !== undefined) {
-      entity.parent = data.parentId
-        ? this.em.getReference(FeatureEntity, data.parentId)
+    // parentId maps to a relation reference, handle separately
+    const { parentId, ...rest } = data
+    if (parentId !== undefined) {
+      entity.parent = parentId
+        ? this.em.getReference(FeatureEntity, parentId)
         : undefined
     }
-    if (data.type !== undefined) {
-      entity.type = data.type
-    }
-    if (data.min !== undefined) {
-      entity.min = data.min
-    }
-    if (data.max !== undefined) {
-      entity.max = data.max
-    }
-    if (data.strand !== undefined) {
-      entity.strand = data.strand
-    }
-    if (data.phase !== undefined) {
-      entity.phase = data.phase
-    }
-    if (data.attributes !== undefined) {
-      entity.attributes = data.attributes
-    }
-    if (data.status !== undefined) {
-      entity.status = data.status
-    }
-    if (data.user !== undefined) {
-      entity.user = data.user
-    }
+    this.em.assign(entity, rest)
     await this.em.flush()
     return entityToRow(entity)
   }

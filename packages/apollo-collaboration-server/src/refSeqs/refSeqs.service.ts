@@ -1,5 +1,6 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { randomBytes } from 'node:crypto'
+
+import { Injectable, Logger, NotFoundException } from '@nestjs/common'
 
 import { DatabaseService } from '../mikro-orm/database.service.js'
 
@@ -20,7 +21,7 @@ export class RefSeqsService {
       description: createRefSeqDto.description,
       assembly: createRefSeqDto.assembly,
       length: Number(createRefSeqDto.length),
-      chunkSize: 262144,
+      chunkSize: 262_144,
     })
   }
 

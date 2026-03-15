@@ -112,7 +112,7 @@ export class MikroOrmCheckResultRepository implements CheckResultRepository {
   async updateById(id: string, data: Partial<Omit<CheckResultRow, '_id'>>) {
     const entity = await this.em.findOne(CheckResultEntity, { _id: id })
     if (!entity) {
-      return undefined
+      return
     }
     this.em.assign(entity, data)
     await this.em.flush()

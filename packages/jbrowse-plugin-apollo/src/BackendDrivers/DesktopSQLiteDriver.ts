@@ -1,16 +1,16 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
+ 
 /* eslint-disable @typescript-eslint/consistent-type-imports */
 import {
-  type Change,
   type AssemblySpecificChange,
-  isAssemblySpecificChange,
-  assembleFeatureTrees,
+  type Change,
   type NestedFeature,
+  assembleFeatureTrees,
+  isAssemblySpecificChange,
 } from '@apollo-annotation/common'
 import type { FeatureRow, RefSeqRow } from '@apollo-annotation/common'
-import {
-  type AnnotationFeatureSnapshot,
-  type CheckResultSnapshot,
+import type {
+  AnnotationFeatureSnapshot,
+  CheckResultSnapshot,
 } from '@apollo-annotation/mst'
 import {
   ValidationResultSet,
@@ -19,11 +19,11 @@ import {
 import { getConf } from '@jbrowse/core/configuration'
 import { type Region, getSession } from '@jbrowse/core/util'
 // MikroORM is loaded dynamically via require() in Electron environments
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+ 
 type MikroORM = import('@mikro-orm/core').MikroORM
 import ObjectID from 'bson-objectid'
 
-import { type SubmitOpts } from '../ChangeManager'
+import type { SubmitOpts } from '../ChangeManager'
 
 import { BackendDriver, type RefNameAliases } from './BackendDriver'
 import { createLocalDataStore } from './createLocalDataStore'
@@ -199,7 +199,7 @@ export class DesktopSQLiteDriver extends BackendDriver {
         continue
       }
       const firstLoc = item[0]
-      if (!firstLoc?.seq_id) {
+      if (!firstLoc.seq_id) {
         continue
       }
       const refSeqId = refSeqMap.get(firstLoc.seq_id)
@@ -356,7 +356,7 @@ export class DesktopSQLiteDriver extends BackendDriver {
         `Cannot use this type of change with desktop SQLite: "${change.typeName}"`,
       )
     }
-    const assemblyChange = change as AssemblySpecificChange
+    const assemblyChange = change
     const orm = await this.getOrmForAssembly(assemblyChange.assembly)
 
     // Translate refNames to refSeq IDs in the change's feature snapshots.
@@ -375,9 +375,9 @@ export class DesktopSQLiteDriver extends BackendDriver {
     return new ValidationResultSet()
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   private patchRefSeqIds(change: Change, refNameMap: Map<string, string>) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const c = change as unknown as Record<string, unknown>
     if ('changes' in c && Array.isArray(c.changes)) {
       for (const sub of c.changes) {

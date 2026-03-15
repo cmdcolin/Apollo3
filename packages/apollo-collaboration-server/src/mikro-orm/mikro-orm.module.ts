@@ -1,5 +1,5 @@
 import { createMikroOrmConfig } from '@apollo-annotation/entities'
-import { MikroORM, EntityManager } from '@mikro-orm/core'
+import { EntityManager, MikroORM } from '@mikro-orm/core'
 import { type DynamicModule, Logger, Module } from '@nestjs/common'
 
 import { DatabaseService } from './database.service.js'

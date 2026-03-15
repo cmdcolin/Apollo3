@@ -1,6 +1,7 @@
 import type { FeatureRow } from '@apollo-annotation/common'
 
 import { FeatureEntity } from '../entities/FeatureEntity.js'
+
 import {
   BaseFeatureRepository,
   STOP_WORDS,

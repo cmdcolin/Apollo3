@@ -74,8 +74,8 @@ export class ApolloTextSearchAdapter
           `[apollo-debug] ApolloTextSearchAdapter: found ${features.length} features for "${query}" in ${assemblyName}`,
         )
         results.push(...this.mapBaseResult(features, assembly, query))
-      } catch (e) {
-        console.warn(`[apollo-debug] ApolloTextSearchAdapter ERROR: ${e}`)
+      } catch (error) {
+        console.warn(`[apollo-debug] ApolloTextSearchAdapter ERROR: ${error}`)
       }
     }
 

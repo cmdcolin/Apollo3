@@ -65,9 +65,8 @@ to find a single gene's history is not acceptable.
 Since history tracking is most useful at the gene level — "show me all edits to
 this gene, including changes to its transcripts, exons, and CDS features" — the
 simplest fix is to add an indexed `gene_id` column directly on `ChangeEntity`.
-Every change that affects a feature records the top-level gene's ID. This is the
-same gene that the proposed `root_id` column on `FeatureEntity` would point to,
-so the two improvements reinforce each other.
+Every change that affects a feature records the top-level gene's ID (resolved
+by walking up the parent chain via the existing `findRootParent` method).
 
 ```
 | Table  | New column                        |
@@ -141,8 +140,8 @@ transcripts, its exons, and its CDS features — all in one timeline.
    some changes (e.g., `AddAssemblyChange`, `UserChange`) are not gene-specific
 2. Update `ChangesService.create()` to resolve the top-level gene ID when
    persisting a feature change. The `changedIds` already contain the affected
-   feature IDs; look up each feature's `root_id` (or walk up the parent chain if
-   `root_id` is not yet implemented) and set `gene_id` accordingly
+   feature IDs; walk up the parent chain via `findRootParent` to resolve
+   each to its top-level gene, and set `gene_id` accordingly
 3. Add `findByGeneId(geneId)` method to `ChangeRepository`
 4. Add `GET /changes?geneId=<id>` query parameter to `ChangesController`
 5. Write a backfill migration that reads existing `changedIds` JSON from all

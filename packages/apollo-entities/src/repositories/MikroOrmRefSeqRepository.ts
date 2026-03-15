@@ -28,7 +28,7 @@ export class MikroOrmRefSeqRepository implements RefSeqRepository {
     if (entity) {
       return toRow(entity)
     }
-    return undefined
+    return
   }
 
   async findByAssembly(assemblyId: string) {
@@ -70,7 +70,7 @@ export class MikroOrmRefSeqRepository implements RefSeqRepository {
     if (entity) {
       return toRow(entity)
     }
-    return undefined
+    return
   }
 
   async deleteByAssembly(assemblyId: string) {
@@ -104,7 +104,7 @@ export class MikroOrmRefSeqRepository implements RefSeqRepository {
   async updateById(id: string, data: Partial<Omit<RefSeqRow, '_id'>>) {
     const entity = await this.em.findOne(RefSeqEntity, { _id: id })
     if (!entity) {
-      return undefined
+      return
     }
     this.em.assign(entity, data)
     await this.em.flush()

@@ -2,6 +2,7 @@
 import { type Change, Validation } from '@apollo-annotation/common'
 
 import type { TypeChange } from '../Changes/index.js'
+
 import soSequenceTypes from './soSequenceTypes.js'
 
 export function isTypeChange(thing: Change): thing is TypeChange {

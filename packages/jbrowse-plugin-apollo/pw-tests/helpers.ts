@@ -264,16 +264,34 @@ export async function annotationTrackAppearance(
 ) {
   console.log(`[track] Setting display: "${option}"`)
   await page.getByText('Open track selector', { exact: false }).click()
-  await page.getByText('Annotations (', { exact: false }).click()
+  // Track selector needs time to load available tracks
+  const annotationTrack = page.getByText('Annotations (', { exact: false })
+  await expect(annotationTrack).toBeVisible({ timeout: 15_000 })
+  await annotationTrack.click()
   await page.getByRole('button', { name: 'Minimize drawer' }).click()
 
   const trackMenu = page.locator('[data-testid="track_menu_icon"]').first()
   await trackMenu.click()
 
+  // The display option may be under "Appearance" or "Display types" submenu
+  const appearanceMenu = page
+    .locator('[role="menuitem"]')
+    .filter({ hasText: 'Appearance' })
+  if (await appearanceMenu.isVisible().catch(() => false)) {
+    await appearanceMenu.hover()
+    const optionEl = page.getByText(option)
+    if (await optionEl.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await optionEl.click()
+      console.log(`[track] Display set via Appearance: "${option}"`)
+      return
+    }
+  }
+
+  // Fallback: try Display types submenu
   await page
     .locator('[role="menuitem"]')
     .filter({ hasText: 'Display types' })
     .hover()
   await page.getByText(option).click()
-  console.log(`[track] Display set to "${option}"`)
+  console.log(`[track] Display set via Display types: "${option}"`)
 }

@@ -26,7 +26,7 @@
  *   yarn tsx src/test/benchmark.ts --skip-download
  */
 
-import { execSync, spawn, type ChildProcess } from 'node:child_process'
+import { type ChildProcess, execSync, spawn } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -44,10 +44,10 @@ const ITERATIONS = 3
 const GENCODE_GFF3_URL = 'https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.chr_patch_hapl_scaff.annotation.gff3.gz'
 const GENCODE_FASTA_URL = 'https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/GRCh38.p14.genome.fa.gz'
 
-const args = process.argv.slice(2)
-const compareMode = args.includes('--compare')
-const syntheticMode = args.includes('--synthetic')
-const skipDownload = args.includes('--skip-download')
+const args = new Set(process.argv.slice(2))
+const compareMode = args.has('--compare')
+const syntheticMode = args.has('--synthetic')
+const skipDownload = args.has('--skip-download')
 
 // --- Utilities ---
 
@@ -71,15 +71,15 @@ function median(values: number[]) {
   const sorted = [...values].sort((a, b) => a - b)
   const mid = Math.floor(sorted.length / 2)
   if (sorted.length % 2 === 0) {
-    return (sorted[mid - 1]! + sorted[mid]!) / 2
+    return (sorted[mid - 1] + sorted[mid]) / 2
   }
-  return sorted[mid]!
+  return sorted[mid]
 }
 
 function p95(values: number[]) {
   const sorted = [...values].sort((a, b) => a - b)
   const idx = Math.ceil(0.95 * sorted.length) - 1
-  return sorted[idx]!
+  return sorted[idx]
 }
 
 function formatMs(ms: number) {
@@ -145,16 +145,12 @@ function generateSyntheticData() {
   for (let g = 0; g < 1000; g++) {
     const gs = pos
     const ge = pos + 3000
-    lines.push(`ctgA\t.\tgene\t${gs}\t${ge}\t.\t+\t.\tID=gene_${g};Name=gene_${g}`)
-    lines.push(`ctgA\t.\tmRNA\t${gs}\t${ge}\t.\t+\t.\tID=mRNA_${g};Parent=gene_${g};Name=mRNA_${g}`)
-    lines.push(`ctgA\t.\texon\t${gs}\t${gs + 500}\t.\t+\t.\tID=exon_${g}_1;Parent=mRNA_${g}`)
-    lines.push(`ctgA\t.\texon\t${gs + 1500}\t${gs + 2000}\t.\t+\t.\tID=exon_${g}_2;Parent=mRNA_${g}`)
-    lines.push(`ctgA\t.\tCDS\t${gs + 50}\t${ge - 50}\t.\t+\t0\tID=CDS_${g};Parent=mRNA_${g}`)
+    lines.push(`ctgA\t.\tgene\t${gs}\t${ge}\t.\t+\t.\tID=gene_${g};Name=gene_${g}`, `ctgA\t.\tmRNA\t${gs}\t${ge}\t.\t+\t.\tID=mRNA_${g};Parent=gene_${g};Name=mRNA_${g}`, `ctgA\t.\texon\t${gs}\t${gs + 500}\t.\t+\t.\tID=exon_${g}_1;Parent=mRNA_${g}`, `ctgA\t.\texon\t${gs + 1500}\t${gs + 2000}\t.\t+\t.\tID=exon_${g}_2;Parent=mRNA_${g}`, `ctgA\t.\tCDS\t${gs + 50}\t${ge - 50}\t.\t+\t0\tID=CDS_${g};Parent=mRNA_${g}`)
     pos = ge + 500
   }
 
   lines.push('###', '##FASTA', ...fastaLines)
-  fs.writeFileSync(outputPath, lines.join('\n') + '\n')
+  fs.writeFileSync(outputPath, `${lines.join('\n')  }\n`)
   console.log(`Generated ${outputPath}`)
   return outputPath
 }
@@ -222,7 +218,7 @@ function startServer(repoDir: string, port: number, useMongo: boolean): ChildPro
     detached: true,
   })
 
-  child.stderr?.on('data', (data: Buffer) => {
+  child.stderr.on('data', (data: Buffer) => {
     const msg = data.toString()
     if (msg.includes('Error') || msg.includes('EADDRINUSE')) {
       console.error(`[port ${port}] ${msg.trim()}`)
@@ -364,9 +360,9 @@ function buildMarkdownTable(mikroResults: BenchmarkResult[], mainResults: Benchm
   if (mainResults) {
     md += '| Scenario | MikroORM/SQLite (median) | MikroORM/SQLite (p95) | MongoDB (median) | MongoDB (p95) | Speedup |\n'
     md += '|----------|------------------------|----------------------|-----------------|--------------|--------|\n'
-    for (let i = 0; i < mikroResults.length; i++) {
-      const m = mikroResults[i]!
-      const o = mainResults[i]!
+    for (const [i, mikroResult] of mikroResults.entries()) {
+      const m = mikroResult
+      const o = mainResults[i]
       const speedup = o.medianMs / m.medianMs
       const speedupStr = speedup >= 1 ? `${speedup.toFixed(1)}x faster` : `${(1 / speedup).toFixed(1)}x slower`
       md += `| ${m.scenario} | ${formatMs(m.medianMs)} | ${formatMs(m.p95Ms)} | ${formatMs(o.medianMs)} | ${formatMs(o.p95Ms)} | ${speedupStr} |\n`
@@ -382,11 +378,7 @@ function buildMarkdownTable(mikroResults: BenchmarkResult[], mainResults: Benchm
   md += '\n## Reproduction\n\n'
   md += '```bash\n'
   md += 'cd packages/apollo-cli\n'
-  if (mainResults) {
-    md += 'yarn tsx src/test/benchmark.ts --compare\n'
-  } else {
-    md += 'yarn tsx src/test/benchmark.ts\n'
-  }
+  md += mainResults ? 'yarn tsx src/test/benchmark.ts --compare\n' : 'yarn tsx src/test/benchmark.ts\n';
   md += '```\n'
 
   return md
@@ -431,9 +423,9 @@ async function main() {
   const mikroServer = startServer(MIKRO_ORM_DIR, MIKRO_ORM_PORT, false)
   try {
     waitForServer(MIKRO_ORM_PORT)
-  } catch (e) {
+  } catch (error) {
     killServer(mikroServer)
-    throw new Error(`MikroORM server failed to start: ${e}`)
+    throw new Error(`MikroORM server failed to start: ${error}`)
   }
   console.log('MikroORM server ready.')
 
@@ -455,8 +447,8 @@ async function main() {
       shell('yarn tsc -b', MAIN_DIR)
       shell('yarn build:shared', MAIN_DIR)
       shell('yarn build', path.join(MAIN_DIR, 'packages/apollo-collaboration-server'))
-    } catch (e) {
-      console.warn(`Main branch build failed: ${e}`)
+    } catch (error) {
+      console.warn(`Main branch build failed: ${error}`)
       console.warn('Skipping MongoDB comparison.')
     }
 
@@ -470,8 +462,8 @@ async function main() {
         const mainCliDir = path.join(MAIN_DIR, 'packages/apollo-cli')
         configureProfile('benchMain', MAIN_PORT, mainCliDir)
         mainResults = runBenchmarks('benchMain', gffFile, 'MongoDB', mainCliDir)
-      } catch (e) {
-        console.warn(`Main branch server failed: ${e}`)
+      } catch (error) {
+        console.warn(`Main branch server failed: ${error}`)
       } finally {
         killServer(mainServer)
       }
@@ -480,15 +472,15 @@ async function main() {
 
   // Report
   const md = buildMarkdownTable(mikroResults, mainResults, datasetName)
-  console.log('\n' + md)
+  console.log(`\n${  md}`)
 
   const resultsFile = path.join(MIKRO_ORM_DIR, 'docs/benchmark-results.md')
   fs.writeFileSync(resultsFile, md)
   console.log(`Results saved to ${resultsFile}`)
 }
 
-main().catch((err) => {
-  console.error('Benchmark failed:', err)
+main().catch((error) => {
+  console.error('Benchmark failed:', error)
   // Try to kill any stray servers
   try { shell(`lsof -ti:${MIKRO_ORM_PORT} | xargs kill -9 2>/dev/null || true`) } catch { /* */ }
   try { shell(`lsof -ti:${MAIN_PORT} | xargs kill -9 2>/dev/null || true`) } catch { /* */ }

@@ -1,8 +1,7 @@
+import { randomBytes } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
-import { randomBytes } from 'node:crypto'
 
-import type { Request, Response } from 'express'
 import {
   changeRegistry,
   checkRegistry,
@@ -20,7 +19,7 @@ import { MikroORM, RequestContext } from '@mikro-orm/core'
 import type { LogLevel } from '@nestjs/common'
 import { HttpAdapterHost, NestFactory } from '@nestjs/core'
 import cookieParser from 'cookie-parser'
-import express, { json, urlencoded } from 'express'
+import express, { type Request, type Response , json, urlencoded } from 'express'
 import session from 'express-session'
 
 import { AppModule } from './app.module.js'
@@ -161,6 +160,6 @@ function convertToBoolean(input: string) {
   try {
     return JSON.parse(input)
   } catch {
-    return undefined
+    return
   }
 }

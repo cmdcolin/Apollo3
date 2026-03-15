@@ -4,7 +4,7 @@
 // through bracket notation on `globalThis`, we bypass rollup's static
 // analysis and get the real Node.js require provided by Electron.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type GlobalWithRequire = typeof globalThis & { require?: NodeRequire }
 
 export function getElectronRequire() {

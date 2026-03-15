@@ -2,8 +2,8 @@
 
 import fs from 'node:fs'
 
-import { defineConfig } from 'cypress'
 import { plugin as grepPlugin } from '@cypress/grep/plugin'
+import { defineConfig } from 'cypress'
 import failFast from 'cypress-fail-fast/plugin'
 import getCompareSnapshotsPlugin from 'cypress-image-diff-js/plugin'
 import installLogsPrinter from 'cypress-terminal-report/src/installLogsPrinter'

@@ -23,7 +23,7 @@ export class MikroOrmJBrowseConfigRepository
     if (entity) {
       return toRow(entity)
     }
-    return undefined
+    return
   }
 
   async deleteAll() {
