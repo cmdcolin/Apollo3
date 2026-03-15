@@ -72,7 +72,7 @@ export class FeaturesService {
     }
     const results: FeatureRow[] = []
     for (const rootFeature of topLevelFeatures) {
-      const match = await this.findIndexedIdInTree(id, rootFeature)
+      const match = await this.findFeatureWithAttribute(rootFeature, id)
       if (match) {
         results.push(match)
       }
@@ -80,24 +80,18 @@ export class FeaturesService {
     return results
   }
 
-  async findIndexedIdInTree(
-    id: string,
-    feature: FeatureRow,
-  ): Promise<FeatureRow | undefined> {
-    if (feature.attributes) {
-      for (const attributeValue of Object.values(feature.attributes)) {
-        if (attributeValue.includes(id)) {
+  private async findFeatureWithAttribute(
+    rootFeature: FeatureRow,
+    value: string,
+  ) {
+    const descendants = await this.db.feature.findDescendants(rootFeature._id)
+    for (const feature of [rootFeature, ...descendants]) {
+      if (feature.attributes) {
+        const hasMatch = Object.values(feature.attributes).some((vals) =>
+          vals.includes(value),
+        )
+        if (hasMatch) {
           return feature
-        }
-      }
-    }
-    const descendants = await this.db.feature.findDescendants(feature._id)
-    for (const descendant of descendants) {
-      if (descendant.attributes) {
-        for (const attributeValue of Object.values(descendant.attributes)) {
-          if (attributeValue.includes(id)) {
-            return descendant
-          }
         }
       }
     }
@@ -108,15 +102,9 @@ export class FeaturesService {
     const uniqueIds = [...new Set(featureIds)]
     if (topLevel) {
       const roots = await this.db.feature.findRootParentsOfMany(uniqueIds)
-      const seen = new Set<string>()
-      const deduplicated: FeatureRow[] = []
-      for (const root of roots) {
-        if (!seen.has(root._id)) {
-          seen.add(root._id)
-          deduplicated.push(root)
-        }
-      }
-      return deduplicated
+      return roots.filter(
+        (root, i, arr) => arr.findIndex((r) => r._id === root._id) === i,
+      )
     }
     return this.db.feature.findByIds(uniqueIds)
   }

@@ -41,25 +41,13 @@ export class RefSeqsService {
   }
 
   async update(id: string, updateRefSeqDto: UpdateRefSeqDto) {
-    const data: Partial<{
-      name: string
-      description: string
-      length: number
-      assembly: string
-    }> = {}
-    if (updateRefSeqDto.name !== undefined) {
-      data.name = updateRefSeqDto.name
-    }
-    if (updateRefSeqDto.description !== undefined) {
-      data.description = updateRefSeqDto.description
-    }
-    if (updateRefSeqDto.length !== undefined) {
-      data.length = Number(updateRefSeqDto.length)
-    }
-    if (updateRefSeqDto.assembly !== undefined) {
-      data.assembly = updateRefSeqDto.assembly
-    }
-    return this.db.refSeq.updateById(id, data)
+    return this.db.refSeq.updateById(id, {
+      ...updateRefSeqDto,
+      length:
+        updateRefSeqDto.length !== undefined
+          ? Number(updateRefSeqDto.length)
+          : undefined,
+    })
   }
 
   async remove(assemblyId: string) {
