@@ -2,25 +2,24 @@
 
 ## Package Manager
 
-This repo uses **Yarn PnP** (Plug'n'Play). There is no `node_modules` directory.
+This repo uses **pnpm** with workspaces. Dependencies are in `node_modules/`.
 
-**NEVER use `npx`**. Always use `yarn` to invoke commands. With PnP, `npx`
-cannot resolve packages.
+**NEVER use `npx`**. Always use `pnpm` (or `pnpm exec`) to invoke commands.
 
 ## Building
 
 ```bash
 # Fast dev build — esbuild, no type checking (~3s for all packages)
-yarn --cwd packages/apollo-collaboration-server dev:build
+pnpm -C packages/apollo-collaboration-server dev:build
 
 # Full production build (includes web UI client)
-yarn --cwd packages/apollo-collaboration-server build
+pnpm -C packages/apollo-collaboration-server build
 
 # Type-check only (no emit) — run separately or in CI
-yarn tsc -b
+pnpm tsc -b
 
 # Build JBrowse plugin
-yarn --cwd packages/jbrowse-plugin-apollo build
+pnpm -C packages/jbrowse-plugin-apollo build
 ```
 
 ### esbuild and @Inject()
@@ -41,7 +40,7 @@ constructor(
 ### Unit tests (apollo-entities)
 
 ```bash
-cd packages/apollo-entities && NODE_OPTIONS='--experimental-vm-modules' yarn jest
+cd packages/apollo-entities && NODE_OPTIONS='--experimental-vm-modules' pnpm jest
 ```
 
 ### E2E tests (Playwright)
@@ -51,7 +50,7 @@ servers in one command:
 
 ```bash
 # Full E2E run (build + start + test + stop)
-yarn --cwd packages/jbrowse-plugin-apollo test:e2e
+pnpm -C packages/jbrowse-plugin-apollo test:e2e
 
 # Or use the script directly for more control:
 cd packages/jbrowse-plugin-apollo
@@ -72,23 +71,20 @@ DB_BACKEND=postgresql DB_CONNECTION_URL=postgresql://user:pass@localhost:5432/ap
 # Run entity tests against PostgreSQL (defaults to in-memory SQLite)
 cd packages/apollo-entities
 DB_BACKEND=postgresql DB_CONNECTION_URL=postgresql://user:pass@localhost:5432/apollo_test \
-  NODE_OPTIONS='--experimental-vm-modules' yarn jest
+  NODE_OPTIONS='--experimental-vm-modules' pnpm jest
 ```
 
 ### Running the collaboration server
 
 ```bash
-yarn --cwd packages/apollo-collaboration-server start
-# Or for e2e: yarn --cwd packages/apollo-collaboration-server e2e:start
+pnpm -C packages/apollo-collaboration-server start
+# Or for e2e: pnpm -C packages/apollo-collaboration-server e2e:start
 ```
-
-The server must be run via `yarn node dist/main.js` (not bare `node`) for PnP
-resolution.
 
 ## Linting
 
 ```bash
-yarn lint
+pnpm lint
 ```
 
 ## Database Compatibility

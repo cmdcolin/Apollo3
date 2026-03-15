@@ -22,11 +22,11 @@
   "scripts": {
     "build": "shx rm -rf dist && tsc -b",
     "dev": "tsx bin/dev.js",
-    "prepack": "yarn build && oclif manifest && oclif readme && prettier --write README.md",
+    "prepack": "pnpm build && oclif manifest && oclif readme && prettier --write README.md",
     "postpack": "shx rm -f oclif.manifest.json",
-    "prepare": "yarn build",
-    "test": "yarn tsx src/test/test.ts",
-    "test:ci": "yarn tsx src/test/test.ts",
+    "prepare": "pnpm build",
+    "test": "tsx src/test/test.ts",
+    "test:ci": "tsx src/test/test.ts",
     "version": "oclif readme --multi --dir ../website/docs/03-guides/04-cli/ && oclif readme && git add README.md"
   },
   "oclif": {

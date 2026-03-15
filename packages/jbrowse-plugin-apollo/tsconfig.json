@@ -3,6 +3,8 @@
   "compilerOptions": {
     "rootDir": "./src",
     "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
     "resolveJsonModule": true,
     "module": "esnext",
     "moduleResolution": "bundler",

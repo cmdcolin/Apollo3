@@ -12,55 +12,57 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
       - name: Use Node.js 24.x
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: yarn
+          cache: pnpm
       - name: Install
-        run: yarn --immutable
+        run: pnpm install --frozen-lockfile
       # Have to build shared before linting so type-based lint rules can
       # run correctly
       - name: Build shared
-        run: yarn build
+        run: pnpm build
         working-directory: packages/apollo-shared
       - name: Lint codebase
-        run: yarn eslint --max-warnings 0
+        run: pnpm eslint --max-warnings 0
 
       # apollo-shared tests
       - name: Build shared
-        run: yarn build
+        run: pnpm build
         working-directory: packages/apollo-shared
       - name: Run apollo-shared tests
-        run: yarn run test:ci
+        run: pnpm run test:ci
         working-directory: packages/apollo-shared
 
       # jbrowse-plugin-apollo tests
       - name: Run jbrowse-plugin-apollo tests
-        run: yarn run test:ci
+        run: pnpm run test:ci
         working-directory: packages/jbrowse-plugin-apollo
 
       # Entity tests
       - name: Run Jest tests (SQLite backend)
-        run: yarn workspace @apollo-annotation/entities test
+        run: pnpm --filter @apollo-annotation/entities test
         env:
           DB_BACKEND: sqlite
 
       # Playwright E2E tests
       - name: Install Playwright browsers
-        run: yarn playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
         working-directory: packages/jbrowse-plugin-apollo
       - name: Run Playwright tests
-        run: yarn run test:e2e
+        run: pnpm run test:e2e
         working-directory: packages/jbrowse-plugin-apollo
 
       # CLI tests
       - name: Start apollo
         run: |
-          yarn --cwd packages/apollo-shared start &
-          yarn --cwd packages/apollo-collaboration-server test:cli:start &
+          pnpm -C packages/apollo-shared start &
+          pnpm -C packages/apollo-collaboration-server test:cli:start &
       - name: Run CLI tests
-        run: yarn run test:ci
+        run: pnpm run test:ci
         working-directory: packages/apollo-cli
 
       # - name: Run docker tests
@@ -89,18 +91,20 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
       - name: Use Node.js 20.x
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: yarn
+          cache: pnpm
       - name: Install
-        run: yarn --immutable
+        run: pnpm install --frozen-lockfile
       - name: Build
-        run: yarn build
+        run: pnpm build
         working-directory: packages/apollo-shared
       - name: Run entity tests (PostgreSQL)
-        run: yarn workspace @apollo-annotation/entities test
+        run: pnpm --filter @apollo-annotation/entities test
         env:
           DB_BACKEND: postgresql
           DB_CONNECTION_URL: postgres://apollo:apollo@localhost:5432/apollo_test

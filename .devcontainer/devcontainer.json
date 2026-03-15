@@ -17,7 +17,7 @@
       "extensions": [
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
-        "arcanis.vscode-zipfs",
+
         "eamodio.gitlens",
       ],
     },
@@ -27,5 +27,5 @@
   "forwardPorts": [3999, 5432],
 
   // Use 'postCreateCommand' to run commands after the container is created.
-  "postCreateCommand": "yarn install --immutable",
+  "postCreateCommand": "pnpm install --frozen-lockfile",
 }

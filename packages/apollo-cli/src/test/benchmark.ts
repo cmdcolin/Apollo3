@@ -14,16 +14,16 @@
  *   cd packages/apollo-cli
  *
  *   # Run MikroORM-only benchmark (no MongoDB needed):
- *   yarn tsx src/test/benchmark.ts
+ *   tsx src/test/benchmark.ts
  *
  *   # Run comparison (requires MongoDB for main branch):
- *   yarn tsx src/test/benchmark.ts --compare
+ *   tsx src/test/benchmark.ts --compare
  *
  *   # Use smaller synthetic dataset (faster, for CI):
- *   yarn tsx src/test/benchmark.ts --synthetic
+ *   tsx src/test/benchmark.ts --synthetic
  *
  *   # Skip data download (if already downloaded):
- *   yarn tsx src/test/benchmark.ts --skip-download
+ *   tsx src/test/benchmark.ts --skip-download
  */
 
 import { type ChildProcess, execSync, spawn } from 'node:child_process'
@@ -211,7 +211,7 @@ function startServer(repoDir: string, port: number, useMongo: boolean): ChildPro
     env.DB_CONNECTION_URL = dbFile
   }
 
-  const child = spawn('yarn', ['node', 'dist/main.js'], {
+  const child = spawn('node', ['dist/main.js'], {
     cwd: serverDir,
     env,
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -241,7 +241,7 @@ function killServer(child: ChildProcess) {
 // --- Profile setup ---
 
 function configureProfile(profileName: string, port: number, cliDir?: string) {
-  const apollo = 'yarn dev'
+  const apollo = 'pnpm dev'
   const dir = cliDir ?? CLI_DIR
   shell(`${apollo} config --profile ${profileName} address http://localhost:${port}`, dir)
   shell(`${apollo} config --profile ${profileName} accessType root`, dir)
@@ -261,7 +261,7 @@ interface BenchmarkResult {
 function runBenchmarks(profile: string, gffFile: string, label: string, cliDir?: string): BenchmarkResult[] {
   const results: BenchmarkResult[] = []
   const effectiveCliDir = cliDir ?? CLI_DIR
-  const apollo = 'yarn dev'
+  const apollo = 'pnpm dev'
   const P = `--profile ${profile}`
 
   function cliShell(cmd: string) {
@@ -378,7 +378,7 @@ function buildMarkdownTable(mikroResults: BenchmarkResult[], mainResults: Benchm
   md += '\n## Reproduction\n\n'
   md += '```bash\n'
   md += 'cd packages/apollo-cli\n'
-  md += mainResults ? 'yarn tsx src/test/benchmark.ts --compare\n' : 'yarn tsx src/test/benchmark.ts\n';
+  md += mainResults ? 'tsx src/test/benchmark.ts --compare\n' : 'tsx src/test/benchmark.ts\n';
   md += '```\n'
 
   return md
@@ -414,9 +414,9 @@ async function main() {
 
   // Build MikroORM branch
   console.log('Building MikroORM branch server...')
-  shell('yarn tsc -b', MIKRO_ORM_DIR)
-  shell('yarn build:shared', MIKRO_ORM_DIR)
-  shell('yarn build', path.join(MIKRO_ORM_DIR, 'packages/apollo-collaboration-server'))
+  shell('pnpm tsc -b', MIKRO_ORM_DIR)
+  shell('pnpm build:shared', MIKRO_ORM_DIR)
+  shell('pnpm build', path.join(MIKRO_ORM_DIR, 'packages/apollo-collaboration-server'))
 
   // Start MikroORM server
   console.log('Starting MikroORM server on port 3999...')
@@ -439,14 +439,14 @@ async function main() {
     if (!fs.existsSync(MAIN_DIR)) {
       console.log(`\nCloning main branch to ${MAIN_DIR}...`)
       shell(`git clone ${MIKRO_ORM_DIR} ${MAIN_DIR} --branch main --single-branch`)
-      shell('yarn install', MAIN_DIR)
+      shell('pnpm install', MAIN_DIR)
     }
 
     console.log('\nBuilding main branch server...')
     try {
-      shell('yarn tsc -b', MAIN_DIR)
-      shell('yarn build:shared', MAIN_DIR)
-      shell('yarn build', path.join(MAIN_DIR, 'packages/apollo-collaboration-server'))
+      shell('pnpm tsc -b', MAIN_DIR)
+      shell('pnpm build:shared', MAIN_DIR)
+      shell('pnpm build', path.join(MAIN_DIR, 'packages/apollo-collaboration-server'))
     } catch (error) {
       console.warn(`Main branch build failed: ${error}`)
       console.warn('Skipping MongoDB comparison.')

@@ -9,11 +9,11 @@
  * USAGE
  * From package root directory (`packages/apollo-cli`). Run all tests:
  *
- * yarn test:cli
+ * pnpm test:cli
  *
  * Run only matching pattern:
  *
- * yarn tsx --test-name-pattern='Print help|Feature get' src/test/test.ts
+ * tsx --test-name-pattern='Print help|Feature get' src/test/test.ts
  */
 
 import assert from 'node:assert'
@@ -29,7 +29,7 @@ import type {
 
 import { Shell, deleteAllChecks } from './utils.js'
 
-const apollo = 'yarn dev'
+const apollo = 'pnpm dev'
 const P = '--profile testAdmin'
 let configFile = ''
 let configFileBak = ''

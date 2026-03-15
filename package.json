@@ -3,18 +3,14 @@
   "private": true,
   "description": "Monorepo containing Apollo front and back end code",
   "type": "module",
-  "workspaces": [
-    "packages/*",
-    "packages/apollo-collaboration-server/client"
-  ],
   "scripts": {
-    "lint": "cross-env NODE_OPTIONS='--max-old-space-size=4096' yarn eslint --max-warnings 0",
-    "build:shared": "yarn workspace @apollo-annotation/shared run build",
+    "lint": "cross-env NODE_OPTIONS='--max-old-space-size=4096' eslint --max-warnings 0",
+    "build:shared": "pnpm --filter @apollo-annotation/shared run build",
     "release": "tsx scripts/makeGitTag.ts",
-    "start": "yarn workspace @apollo-annotation/collaboration-server run start",
+    "start": "pnpm --filter @apollo-annotation/collaboration-server run start",
     "start-with-demo-data": "bash scripts/start-with-demo-data.sh",
-    "test": "yarn workspaces foreach --all run test:ci",
-    "postinstall": "husky"
+    "test": "pnpm -r run test:ci",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
@@ -23,7 +19,6 @@
     "@types/semver": "^7",
     "@types/yargs": "^17.0.32",
     "@typescript-eslint/parser": "^8.25.0",
-    "@yarnpkg/types": "^4.0.0",
     "cross-env": "^7.0.3",
     "cross-spawn": "^7.0.3",
     "esbuild": "^0.27.4",
@@ -48,5 +43,12 @@
     "typescript-eslint": "^8.25.0",
     "yargs": "^17.7.2"
   },
-  "packageManager": "yarn@4.12.0"
+  "packageManager": "pnpm@10.12.1",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "esbuild",
+      "unrs-resolver"
+    ]
+  }
 }

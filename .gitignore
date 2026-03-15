@@ -103,14 +103,8 @@ dist
 # TernJS port file
 .tern-port
 
-# Yarn berry
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/sdks
-!.yarn/versions
+# pnpm
+pnpm-lock.yaml
 
 # Mac
 .DS_Store

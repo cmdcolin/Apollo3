@@ -137,8 +137,8 @@ inside the server. No client code changes are needed.
 ### Step 1: Build the Project
 
 ```bash
-yarn install
-yarn tsc -b
+pnpm install
+pnpm tsc -b
 ```
 
 ### Step 2: Run the Migration Script
@@ -189,7 +189,7 @@ DB_CONNECTION_URL=postgresql://user:pass@localhost:5432/apollo3
 ### Step 4: Start the Server
 
 ```bash
-yarn start
+pnpm start
 ```
 
 The server will automatically detect the new backend and use it.

@@ -11,16 +11,18 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
       - name: Use Node.js 24.x
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: yarn
+          cache: pnpm
       - name: Install
-        run: yarn --immutable
+        run: pnpm install --frozen-lockfile
       - name: Build website
         working-directory: packages/website
-        run: yarn build
+        run: pnpm build
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:

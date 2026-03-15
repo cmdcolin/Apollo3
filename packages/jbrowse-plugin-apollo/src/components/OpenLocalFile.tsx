@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 /* eslint-disable @typescript-eslint/no-misused-promises */
+import type { ClientDataStore } from '@apollo-annotation/common'
 import { type AbstractSessionModel, isElectron } from '@jbrowse/core/util'
 import {
   Button,
@@ -79,7 +80,8 @@ export function OpenLocalFile({ handleClose, session }: OpenLocalFileProps) {
     const fileData = await new Response(file).text()
     const assemblyId = `${assemblyName}-${file.name}-${nanoid(8)}`
     try {
-      await loadAssemblyIntoClient(assemblyId, fileData, apolloDataStore)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      await loadAssemblyIntoClient(assemblyId, fileData, apolloDataStore as unknown as ClientDataStore)
     } catch (error) {
       console.error(error)
       notify(`Error loading GFF3 ${file.name}, ${String(error)}`, 'error')

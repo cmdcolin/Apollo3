@@ -93,16 +93,16 @@ build_all() {
   cd "$REPO_ROOT"
 
   echo "Building server + dependencies (esbuild)..."
-  yarn --cwd packages/apollo-collaboration-server dev:build
+  pnpm -C packages/apollo-collaboration-server dev:build
 
   echo "Generating type declarations for shared packages..."
-  yarn tsc --build --emitDeclarationOnly \
+  pnpm tsc --build --emitDeclarationOnly \
     packages/apollo-common packages/apollo-entities \
     packages/apollo-mst packages/apollo-shared
 
   echo "Building JBrowse plugin..."
   cd "$REPO_ROOT/packages/jbrowse-plugin-apollo"
-  yarn build
+  pnpm build
 
   echo "=== Build complete ==="
 }
@@ -147,7 +147,7 @@ start_servers() {
     JBROWSE_STATIC_DIR="$SCRIPT_DIR/.jbrowse" \
     PLUGIN_LOCATION="/jbrowse/apollo-plugin.js" \
     FEATURE_TYPE_ONTOLOGY_LOCATION="/jbrowse/so-v3.1.json" \
-    GUEST_USER_ROLE=admin LOG_LEVELS=error,warn,log NODE_ENV=development yarn node dist/main.js \
+    GUEST_USER_ROLE=admin LOG_LEVELS=error,warn,log NODE_ENV=development node dist/main.js \
     >> "$LOG_FILE" 2>&1 &
   echo $! >> "$PID_FILE"
 
@@ -171,7 +171,7 @@ run_tests() {
   echo "=== Running Playwright tests ==="
   local exit_code=0
   cd "$SCRIPT_DIR"
-  yarn playwright test "$@" || exit_code=$?
+  pnpm exec playwright test "$@" || exit_code=$?
 
   echo ""
   stop_servers

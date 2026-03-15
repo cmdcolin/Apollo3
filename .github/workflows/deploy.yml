@@ -20,18 +20,21 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v4
+      - name: Install pnpm
+        if: inputs.environment == 'staging'
+        uses: pnpm/action-setup@v4
       - name: Use Node.js 24.x
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: yarn
+          cache: pnpm
       - name: Install
         if: inputs.environment == 'staging'
-        run: yarn --immutable
+        run: pnpm install --frozen-lockfile
       - name: Build plugin
         if: inputs.environment == 'staging'
         run: |
-          JB_NPM=false yarn build
+          JB_NPM=false pnpm build
           cp dist/jbrowse-plugin-apollo.umd.development.js dist/apollo.js
         working-directory: packages/jbrowse-plugin-apollo
       - name: Fetch plugin

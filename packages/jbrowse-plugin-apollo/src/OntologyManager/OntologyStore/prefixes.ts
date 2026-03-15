@@ -15,9 +15,9 @@
  */
 export function applyPrefixes(
   uri: string,
-  prefixes: Map<string | number, string>,
+  prefixes: Iterable<[string | number, string]>,
 ) {
-  for (const [prefix, uriBase] of prefixes.entries()) {
+  for (const [prefix, uriBase] of prefixes) {
     if (uri.startsWith(uriBase)) {
       return uri.replace(uriBase, String(prefix))
     }
@@ -30,9 +30,9 @@ export function applyPrefixes(
  */
 export function expandPrefixes(
   uri: string,
-  prefixes: Map<string | number, string>,
+  prefixes: Iterable<[string | number, string]>,
 ) {
-  for (const [prefix, uriBase] of prefixes.entries()) {
+  for (const [prefix, uriBase] of prefixes) {
     if (uri.startsWith(String(prefix))) {
       return uri.replace(String(prefix), uriBase)
     }

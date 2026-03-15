@@ -1,12 +1,12 @@
 # Local development
 
-You'll need `yarn` to be installed.
+You'll need `pnpm` to be installed.
 
 ## Quick start
 
 ```sh
-yarn install
-yarn start
+pnpm install
+pnpm start
 ```
 
 This builds shared packages and starts the collaboration server on

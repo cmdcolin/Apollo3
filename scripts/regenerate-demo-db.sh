@@ -2,7 +2,7 @@
 # Regenerate the pre-built demo SQLite database (demo-data/demo.sqlite).
 #
 # Run this after schema changes to keep the demo DB in sync.
-# Requires a built server (run `yarn tsc -b` etc. first).
+# Requires a built server (run `pnpm tsc -b` etc. first).
 #
 # Creates assemblies with external FASTA references:
 #   - volvox (local FASTA via static serving)
@@ -59,7 +59,7 @@ PORT=$COLLAB_PORT \
   FEATURE_TYPE_ONTOLOGY_LOCATION="/so-v3.1.json" \
   LOG_LEVELS=error,warn \
   NODE_ENV=development \
-  yarn node dist/main.js >> "$LOG_FILE" 2>&1 &
+  node dist/main.js >> "$LOG_FILE" 2>&1 &
 
 # Wait for server
 max_wait=60 waited=0

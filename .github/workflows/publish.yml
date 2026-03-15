@@ -18,22 +18,22 @@ jobs:
       - name: Check out
         uses: actions/checkout@v5
       # Setup .npmrc file to publish to npm
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
       - name: Use Node.js 24.x
         uses: actions/setup-node@v6
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
           scope: '@apollo-annotation'
-          cache: yarn
+          cache: pnpm
       - name: Install
-        run: yarn --immutable
+        run: pnpm install --frozen-lockfile
       - name: Build shared
-        run: yarn build
+        run: pnpm build
         working-directory: packages/apollo-shared
       - name: Publish
-        run:
-          yarn workspaces foreach --no-private --all npm publish
-          --tolerate-republish
+        run: pnpm -r --no-private publish --no-git-checks
   publish-docker:
     needs: [publish-npm]
     uses: ./.github/workflows/docker.yml

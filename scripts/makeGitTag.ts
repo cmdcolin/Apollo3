@@ -26,7 +26,7 @@ function exec(executable: string, args?: string[]) {
 
 const usage = `Prepare and push source code for new tag release. See code for details. Steps are:
 
-* 'yarn version' to update non-private packages to <tag>
+* 'pnpm version' to update non-private packages to <tag>
 
 * 'git add' all (and only) the package.json files from previous step
 
@@ -75,14 +75,7 @@ if (m === undefined) {
   m = `Tag release v${newVersion}`
 }
 
-exec('yarn', [
-  'workspaces',
-  'foreach',
-  '--all',
-  '--no-private',
-  'version',
-  strategy,
-])
+exec('pnpm', ['-r', '--no-private', 'exec', 'npm', 'version', strategy])
 exec('git', ['add', '--force', 'packages/**/package.json'])
 exec('git', ['commit', '--message', m])
 exec('git', ['tag', '--annotate', `v${newVersion}`, '--message', m])

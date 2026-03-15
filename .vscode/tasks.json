@@ -2,10 +2,10 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "yarn",
+      "label": "pnpm install",
       "type": "shell",
-      "command": "yarn",
-      "detail": "yarn",
+      "command": "pnpm install",
+      "detail": "pnpm install",
       "problemMatcher": [],
     },
     {
@@ -15,7 +15,7 @@
       "path": "packages/apollo-shared",
       "problemMatcher": [],
       "detail": "tsc --build --watch",
-      "dependsOn": ["yarn"],
+      "dependsOn": ["pnpm install"],
       "isBackground": true,
     },
     {
@@ -24,8 +24,8 @@
       "script": "start",
       "path": "packages/apollo-collaboration-server",
       "problemMatcher": [],
-      "detail": "yarn build:shared && yarn start:nest --watch",
-      "dependsOn": ["yarn"],
+      "detail": "pnpm build:shared && pnpm start:nest --watch",
+      "dependsOn": ["pnpm install"],
       "isBackground": true,
     },
     {
@@ -37,7 +37,7 @@
       "problemMatcher": [],
       "detail": "JB_NPM=false NODE_ENV=development rollup --config --watch",
       "isBackground": true,
-      "dependsOn": ["yarn"],
+      "dependsOn": ["pnpm install"],
       "presentation": {
         "group": "plugin-terminal",
       },
@@ -49,7 +49,7 @@
       "path": "packages/jbrowse-plugin-apollo",
       "problemMatcher": [],
       "detail": "serve --cors --listen 9000 .",
-      "dependsOn": ["yarn"],
+      "dependsOn": ["pnpm install"],
       "isBackground": true,
       "presentation": {
         "group": "plugin-terminal",
@@ -71,8 +71,8 @@
       "script": "test:cli:start",
       "path": "packages/apollo-collaboration-server",
       "problemMatcher": [],
-      "detail": "yarn build:shared && yarn start:nest --watch",
-      "dependsOn": ["yarn"],
+      "detail": "pnpm build:shared && pnpm start:nest --watch",
+      "dependsOn": ["pnpm install"],
       "isBackground": true,
     },
     {

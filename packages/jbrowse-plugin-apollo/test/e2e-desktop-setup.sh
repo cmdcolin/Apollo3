@@ -12,8 +12,8 @@ echo "  APOLLO_ROOT:  $APOLLO_ROOT"
 echo ""
 echo "--- Building Apollo plugin ---"
 cd "$APOLLO_ROOT"
-yarn build:shared
-yarn workspace @apollo-annotation/jbrowse-plugin-apollo build
+pnpm build:shared
+pnpm --filter @apollo-annotation/jbrowse-plugin-apollo build
 
 # 2. Build and package JBrowse Desktop
 echo ""

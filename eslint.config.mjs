@@ -13,8 +13,7 @@ import globals from 'globals'
 export default [
   {
     ignores: [
-      '.pnp.*',
-      '.yarn/',
+      'node_modules/',
       '**/bin/',
       '**/build/',
       '**/coverage/',

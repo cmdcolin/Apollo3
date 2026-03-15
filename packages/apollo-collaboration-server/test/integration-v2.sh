@@ -64,7 +64,7 @@ echo ""
 echo "Starting server..."
 cd "$SERVER_DIR"
 rm -f apollo-dev.sqlite
-NODE_ENV=development yarn node dist/main.js > /tmp/apollo-integration-test.log 2>&1 &
+NODE_ENV=development node dist/main.js > /tmp/apollo-integration-test.log 2>&1 &
 SERVER_PID=$!
 
 # Wait for server to be ready

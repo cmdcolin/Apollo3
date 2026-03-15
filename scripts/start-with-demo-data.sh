@@ -32,13 +32,13 @@ if [ "$NO_BUILD" = false ]; then
   echo "=== Building all packages ==="
   cd "$REPO_ROOT"
   echo "Building shared packages..."
-  yarn tsc -b
+  pnpm tsc -b
   echo "Building collaboration server..."
-  cd "$COLLAB_DIR" && yarn tsc -b
+  cd "$COLLAB_DIR" && pnpm tsc -b
   echo "Building entities..."
-  cd "$REPO_ROOT/packages/apollo-entities" && yarn tsc -b
+  cd "$REPO_ROOT/packages/apollo-entities" && pnpm tsc -b
   echo "Building JBrowse plugin..."
-  cd "$PLUGIN_DIR" && yarn build
+  cd "$PLUGIN_DIR" && pnpm build
   echo "=== Build complete ==="
 else
   echo "Skipping build (--no-build)"
@@ -88,7 +88,7 @@ ALLOW_GUEST_USER=true \
   FEATURE_TYPE_ONTOLOGY_LOCATION="/so-v3.1.json" \
   LOG_LEVELS=error,warn,log \
   NODE_ENV=development \
-  yarn node dist/main.js >> "$LOG_FILE" 2>&1 &
+  node dist/main.js >> "$LOG_FILE" 2>&1 &
 SERVER_PID=$!
 echo "$SERVER_PID" > "$REPO_ROOT/.demo-server.pid"
 
