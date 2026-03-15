@@ -7,7 +7,7 @@
 **File**: `assemblies.service.ts:updateChecks()`
 
 When updating an assembly's enabled checks, the code re-ran checks on all
-features in the assembly. But `featuresService.findByRange()` returns a
+features in the assembly. But `featuresService.findByRange()` returned a
 `[features, checkResults]` tuple. The code iterated both arrays, passing check
 result IDs to `checkFeature()` as if they were feature IDs. The check-result
 iterations silently failed (feature not found).
@@ -43,13 +43,48 @@ location update.
 **Fix**: Frontend sends proper JSON with `Content-Type: application/json`.
 Endpoint simplified to accept a single `UserLocationDto | null`.
 
-## Code Deduplication
+## Code Simplification
 
-### GFF3 export hierarchy assembly
+### API separation: features and check results
 
-**File**: `export.service.ts`
+The `GET /features/getFeatures` endpoint returned a `[features, checkResults]`
+tuple, coupling two independent concepts. This made the API confusing and led to
+the updateChecks bug above. Now features and check results are fetched via
+separate endpoints and separate `BackendDriver` methods (`getFeatures` and
+`getCheckResults`). The controller runs both queries in parallel via
+`Promise.all` for the combined endpoint.
+
+### Export service refactoring
+
+The 111-line `exportGFF3()` method was broken into focused helpers:
+`writeGFF3Header`, `writeGFF3Features`, `buildFastaStream`, `writeChunkedFasta`.
+Duplicate FASTA streaming logic (`streamFromLocalFasta`/`streamFromRemoteFasta`)
+was consolidated into a shared `streamFasta` helper.
+
+### GFF3 export deduplication
 
 The export service had its own implementation of feature hierarchy assembly
 (`buildChildrenMap` + `featureRowToSnapshot`, ~40 lines). This duplicated the
-shared `assembleFeatureTrees()` function from `apollo-common`. Replaced with the
-shared function.
+shared `assembleFeatureTrees()` function. Replaced with the shared function.
+
+### ServerDataStore construction
+
+The `buildServerDataStore` method wrapped each `filesService` method in an
+anonymous function:
+`getFileStream: (file) => this.filesService.getFileStream(file)`. Since the
+`FilesService` class already implements the `ServerDataStore.filesService`
+interface, the wrapper was unnecessary. Now passes `this.filesService` directly.
+
+### Redundant application-level deduplication
+
+`findByFeatureIds` used a Set-based dedup loop after calling
+`findRootParentsOfMany`. But the database query already uses `SELECT DISTINCT`
+in the recursive CTE — the application-level dedup was redundant. Removed in
+favor of the database doing the work.
+
+### Miscellaneous
+
+- `RefSeqsService.update()`: 12-line manual property mapping replaced with
+  spread operator (4 lines)
+- `findIndexedIdInTree` renamed to `findFeatureWithAttribute` for clarity, with
+  duplicated attribute-search loop consolidated
