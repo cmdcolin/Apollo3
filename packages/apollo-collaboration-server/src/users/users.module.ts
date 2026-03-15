@@ -1,5 +1,5 @@
 import { MikroORM, RequestContext } from '@mikro-orm/core'
-import { Logger, Module, type OnApplicationBootstrap } from '@nestjs/common'
+import { Inject, Logger, Module, type OnApplicationBootstrap } from '@nestjs/common'
 
 import { MessagesModule } from '../messages/messages.module.js'
 
@@ -16,8 +16,8 @@ export class UsersModule implements OnApplicationBootstrap {
   private readonly logger = new Logger(UsersModule.name)
 
   constructor(
-    private usersService: UsersService,
-    private orm: MikroORM,
+    @Inject(UsersService) private usersService: UsersService,
+    @Inject(MikroORM) private orm: MikroORM,
   ) {}
 
   async onApplicationBootstrap() {

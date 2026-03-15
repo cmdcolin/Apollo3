@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import type { DecodedJWT } from '@apollo-annotation/shared'
-import { Body, Controller, Get, Logger, Param, Post, Req } from '@nestjs/common'
+import { Body, Controller, Get, Inject, Logger, Param, Post, Req } from '@nestjs/common'
 import type { Request } from 'express'
 
 import { Role } from '../utils/role/role.enum.js'
@@ -12,7 +12,7 @@ import { UsersService } from './users.service.js'
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(@Inject(UsersService) private readonly usersService: UsersService) {}
   private readonly logger = new Logger(UsersController.name)
 
   @Roles(Role.None)

@@ -33,7 +33,7 @@ export class MicrosoftStrategy extends PassportStrategy(Strategy) {
   constructor(
     @Inject(forwardRef(() => AuthenticationService))
     private readonly authService: Readonly<AuthenticationService>,
-    configService: ConfigService<ConfigValues, true>,
+    @Inject(ConfigService) configService: ConfigService<ConfigValues, true>,
   ) {
     let clientID = configService.get('MICROSOFT_CLIENT_ID', { infer: true })
     if (!clientID) {

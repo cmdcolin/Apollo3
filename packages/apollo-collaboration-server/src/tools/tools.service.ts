@@ -5,7 +5,7 @@ import { type ChildProcess, spawn } from 'node:child_process'
 
 import type { DecodedJWT } from '@apollo-annotation/shared'
 import { AddFeatureChange } from '@apollo-annotation/shared'
-import { Injectable, Logger, type OnModuleDestroy } from '@nestjs/common'
+import { Inject, Injectable, Logger, type OnModuleDestroy } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
 import { ChangesService } from '../changes/changes.service.js'
@@ -28,13 +28,13 @@ interface TiberiusJob {
 @Injectable()
 export class ToolsService implements OnModuleDestroy {
   constructor(
-    private readonly toolsConfig: ToolsConfigService,
-    private readonly sequenceService: SequenceService,
-    private readonly configService: ConfigService<{
+    @Inject(ToolsConfigService) private readonly toolsConfig: ToolsConfigService,
+    @Inject(SequenceService) private readonly sequenceService: SequenceService,
+    @Inject(ConfigService) private readonly configService: ConfigService<{
       FILE_UPLOAD_FOLDER: string
     }>,
-    private readonly changesService: ChangesService,
-    private readonly db: DatabaseService,
+    @Inject(ChangesService) private readonly changesService: ChangesService,
+    @Inject(DatabaseService) private readonly db: DatabaseService,
   ) {}
 
   private readonly logger = new Logger(ToolsService.name)

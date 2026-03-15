@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 
 import {
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -13,7 +14,7 @@ import { UpdateOrganismDto } from './dto/update-organism.dto.js'
 
 @Injectable()
 export class OrganismsService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(@Inject(DatabaseService) private readonly db: DatabaseService) {}
 
   private readonly logger = new Logger(OrganismsService.name)
 

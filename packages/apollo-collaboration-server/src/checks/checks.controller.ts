@@ -1,4 +1,4 @@
-import { Controller, Get, Logger, Param, Query } from '@nestjs/common'
+import { Controller, Get, Inject, Logger, Param, Query } from '@nestjs/common'
 
 import type { FeatureRangeSearchDto } from '../entity/gff3Object.dto.js'
 import { Role } from '../utils/role/role.enum.js'
@@ -9,7 +9,7 @@ import { ChecksService } from './checks.service.js'
 @Roles(Role.ReadOnly)
 @Controller('checks')
 export class ChecksController {
-  constructor(private readonly checksService: ChecksService) {}
+  constructor(@Inject(ChecksService) private readonly checksService: ChecksService) {}
   private readonly logger = new Logger(ChecksController.name)
 
   @Get()

@@ -26,10 +26,10 @@ function collectAllIds(tree: NestedFeature): string[] {
 @Injectable()
 export class ChecksService {
   constructor(
-    private readonly refSeqsService: RefSeqsService,
+    @Inject(RefSeqsService) private readonly refSeqsService: RefSeqsService,
     @Inject(forwardRef(() => SequenceService))
     private readonly sequenceService: Readonly<SequenceService>,
-    private readonly db: DatabaseService,
+    @Inject(DatabaseService) private readonly db: DatabaseService,
   ) {}
 
   private readonly logger = new Logger(ChecksService.name)

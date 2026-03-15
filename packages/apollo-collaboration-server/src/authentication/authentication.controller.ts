@@ -4,6 +4,7 @@ import {
   Body,
   Controller,
   Get,
+  Inject,
   Logger,
   Post,
   Query,
@@ -36,7 +37,7 @@ const COOKIE_OPTIONS = {
 export class AuthenticationController {
   private readonly logger = new Logger(AuthenticationController.name)
 
-  constructor(private readonly authService: AuthenticationService) {}
+  constructor(@Inject(AuthenticationService) private readonly authService: AuthenticationService) {}
 
   @Get('setup')
   @Redirect('/')

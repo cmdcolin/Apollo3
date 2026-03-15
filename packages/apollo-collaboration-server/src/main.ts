@@ -166,6 +166,8 @@ async function bootstrap() {
   console.log(
     `Application is running on: ${await app.getUrl()}, CORS = ${cors}`,
   )
+
+  app.enableShutdownHooks()
 }
 // eslint-disable-next-line unicorn/prefer-top-level-await
 void bootstrap()

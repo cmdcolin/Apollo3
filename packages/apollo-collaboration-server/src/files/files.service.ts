@@ -9,6 +9,7 @@ import { gunzip as gunzipCb } from 'node:zlib'
 
 import { type GFF3Feature, GFFTransformer } from '@gmod/gff'
 import {
+  Inject,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -25,11 +26,11 @@ import { type FileRequest, writeFileAndCalculateHash } from './filesUtil.js'
 @Injectable()
 export class FilesService {
   constructor(
-    private readonly configService: ConfigService<
+    @Inject(ConfigService) private readonly configService: ConfigService<
       { FILE_UPLOAD_FOLDER: string },
       true
     >,
-    private readonly db: DatabaseService,
+    @Inject(DatabaseService) private readonly db: DatabaseService,
   ) {}
 
   private readonly logger = new Logger(FilesService.name)

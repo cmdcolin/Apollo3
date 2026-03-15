@@ -1,5 +1,5 @@
 import { BgzipIndexedFasta, IndexedFasta } from '@gmod/indexedfasta'
-import { Injectable, Logger } from '@nestjs/common'
+import { Inject, Injectable, Logger } from '@nestjs/common'
 import { BlobFile, RemoteFile } from 'generic-filehandle2'
 
 import { FilesService } from '../files/files.service.js'
@@ -10,8 +10,8 @@ import { GetSequenceDto } from './dto/get-sequence.dto.js'
 @Injectable()
 export class SequenceService {
   constructor(
-    private readonly filesService: FilesService,
-    private readonly db: DatabaseService,
+    @Inject(FilesService) private readonly filesService: FilesService,
+    @Inject(DatabaseService) private readonly db: DatabaseService,
   ) {}
 
   private readonly logger = new Logger(SequenceService.name)

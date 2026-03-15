@@ -5,6 +5,7 @@ import {
   Delete,
   Get,
   Head,
+  Inject,
   Logger,
   Param,
   Post,
@@ -25,7 +26,7 @@ import type { UploadedFile as UploadedApolloFile } from './filesUtil.js'
 
 @Controller('files')
 export class FilesController {
-  constructor(private readonly filesService: FilesService) {}
+  constructor(@Inject(FilesService) private readonly filesService: FilesService) {}
   private readonly logger = new Logger(FilesController.name)
 
   @Get()

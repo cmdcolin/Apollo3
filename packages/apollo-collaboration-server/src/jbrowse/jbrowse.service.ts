@@ -1,5 +1,5 @@
 import type { AssemblyRow } from '@apollo-annotation/common'
-import { Injectable, Logger } from '@nestjs/common'
+import { Inject, Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import merge from 'deepmerge'
 
@@ -11,9 +11,9 @@ import { Role } from '../utils/role/role.enum.js'
 @Injectable()
 export class JBrowseService {
   constructor(
-    private readonly assembliesService: AssembliesService,
-    private readonly refSeqsService: RefSeqsService,
-    private readonly configService: ConfigService<
+    @Inject(AssembliesService) private readonly assembliesService: AssembliesService,
+    @Inject(RefSeqsService) private readonly refSeqsService: RefSeqsService,
+    @Inject(ConfigService) private readonly configService: ConfigService<
       {
         URL: string
         NAME: string
@@ -23,7 +23,7 @@ export class JBrowseService {
       },
       true
     >,
-    private readonly db: DatabaseService,
+    @Inject(DatabaseService) private readonly db: DatabaseService,
   ) {}
 
   private readonly logger = new Logger(JBrowseService.name)

@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 
 import {
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -18,10 +19,10 @@ import { UpdateAssemblyDto } from './dto/update-assembly.dto.js'
 @Injectable()
 export class AssembliesService {
   constructor(
-    private readonly checksService: ChecksService,
-    private readonly featuresService: FeaturesService,
-    private readonly refSeqsService: RefSeqsService,
-    private readonly db: DatabaseService,
+    @Inject(ChecksService) private readonly checksService: ChecksService,
+    @Inject(FeaturesService) private readonly featuresService: FeaturesService,
+    @Inject(RefSeqsService) private readonly refSeqsService: RefSeqsService,
+    @Inject(DatabaseService) private readonly db: DatabaseService,
   ) {}
 
   private readonly logger = new Logger(AssembliesService.name)

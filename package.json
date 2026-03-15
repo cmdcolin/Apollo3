@@ -26,6 +26,7 @@
     "@yarnpkg/types": "^4.0.0",
     "cross-env": "^7.0.3",
     "cross-spawn": "^7.0.3",
+    "esbuild": "^0.27.4",
     "eslint": "9.21.0",
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import": "^2.31.0",

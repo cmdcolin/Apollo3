@@ -12,7 +12,7 @@ import {
   splitStringIntoChunks,
 } from '@apollo-annotation/shared'
 import { util as gffUtil } from '@gmod/gff'
-import { Injectable, Logger, NotFoundException } from '@nestjs/common'
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import StreamConcat from 'stream-concat'
 
@@ -62,11 +62,11 @@ function buildChildrenMap(rows: FeatureRow[]) {
 @Injectable()
 export class ExportService {
   constructor(
-    private readonly configService: ConfigService<
+    @Inject(ConfigService) private readonly configService: ConfigService<
       { FILE_UPLOAD_FOLDER: string },
       true
     >,
-    private readonly db: DatabaseService,
+    @Inject(DatabaseService) private readonly db: DatabaseService,
   ) {}
 
   private readonly logger = new Logger(ExportService.name)

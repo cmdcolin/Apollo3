@@ -10,6 +10,7 @@ import {
   makeUserSessionId,
 } from '@apollo-annotation/shared'
 import {
+  Inject,
   Injectable,
   Logger,
 } from '@nestjs/common'
@@ -25,11 +26,11 @@ import { FindChangeDto } from './dto/find-change.dto.js'
 @Injectable()
 export class ChangesService {
   constructor(
-    private readonly filesService: FilesService,
-    private readonly pluginsService: PluginsService,
-    private readonly messagesGateway: MessagesGateway,
-    private readonly db: DatabaseService,
-    private readonly checksService: ChecksService,
+    @Inject(FilesService) private readonly filesService: FilesService,
+    @Inject(PluginsService) private readonly pluginsService: PluginsService,
+    @Inject(MessagesGateway) private readonly messagesGateway: MessagesGateway,
+    @Inject(DatabaseService) private readonly db: DatabaseService,
+    @Inject(ChecksService) private readonly checksService: ChecksService,
   ) {}
 
   private buildServerDataStore(

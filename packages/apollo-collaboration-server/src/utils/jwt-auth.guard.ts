@@ -2,6 +2,7 @@
 import type { JWTPayload } from '@apollo-annotation/shared'
 import {
   type ExecutionContext,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common'
@@ -12,7 +13,7 @@ import { IS_PUBLIC_KEY } from './roles.guard.js'
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
-  constructor(private reflector: Reflector) {
+  constructor(@Inject(Reflector) private reflector: Reflector) {
     super()
   }
 

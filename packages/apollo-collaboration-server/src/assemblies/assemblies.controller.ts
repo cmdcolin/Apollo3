@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Head,
+  Inject,
   Logger,
   Param,
   Patch,
@@ -22,7 +23,7 @@ interface AssemblyDocument {
 @Roles(Role.ReadOnly)
 @Controller('assemblies')
 export class AssembliesController {
-  constructor(private readonly assembliesService: AssembliesService) {}
+  constructor(@Inject(AssembliesService) private readonly assembliesService: AssembliesService) {}
   private readonly logger = new Logger(AssembliesController.name)
 
   @Head('checks')

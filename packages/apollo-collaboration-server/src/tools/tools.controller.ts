@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  Inject,
   Logger,
   NotFoundException,
   Param,
@@ -20,7 +21,7 @@ import { ToolsService } from './tools.service.js'
 @Roles(Role.ReadOnly)
 @Controller('tools')
 export class ToolsController {
-  constructor(private readonly toolsService: ToolsService) {}
+  constructor(@Inject(ToolsService) private readonly toolsService: ToolsService) {}
 
   private readonly logger = new Logger(ToolsController.name)
 

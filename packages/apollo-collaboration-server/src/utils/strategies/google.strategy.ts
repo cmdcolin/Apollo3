@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 
-import { Injectable, Logger } from '@nestjs/common'
+import { Inject, Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { PassportStrategy } from '@nestjs/passport'
 import { HttpsProxyAgent } from 'https-proxy-agent'
@@ -23,8 +23,8 @@ export class GoogleStrategy extends PassportStrategy(Strategy) {
   private readonly logger = new Logger(GoogleStrategy.name)
 
   constructor(
-    private readonly authService: AuthenticationService,
-    configService: ConfigService<ConfigValues, true>,
+    @Inject(AuthenticationService) private readonly authService: AuthenticationService,
+    @Inject(ConfigService) configService: ConfigService<ConfigValues, true>,
   ) {
     let clientID = configService.get('GOOGLE_CLIENT_ID', { infer: true })
     if (!clientID) {

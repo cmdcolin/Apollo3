@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { execSync } from 'node:child_process'
 
-import { Injectable, Logger, type OnModuleInit } from '@nestjs/common'
+import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
 interface ToolConfig {
@@ -29,7 +29,7 @@ const defaultToolConfig: ToolConfig = {
 @Injectable()
 export class ToolsConfigService implements OnModuleInit {
   constructor(
-    private readonly configService: ConfigService<{
+    @Inject(ConfigService) private readonly configService: ConfigService<{
       APOLLO_TOOLS_CONFIG: string
     }>,
   ) {}

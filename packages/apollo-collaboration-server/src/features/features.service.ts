@@ -2,7 +2,7 @@ import {
   type FeatureRow,
   assembleFeatureTrees,
 } from '@apollo-annotation/common'
-import { Injectable, Logger, NotFoundException } from '@nestjs/common'
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common'
 
 import { ChecksService } from '../checks/checks.service.js'
 import type { FeatureRangeSearchDto } from '../entity/gff3Object.dto.js'
@@ -16,8 +16,8 @@ import type {
 @Injectable()
 export class FeaturesService {
   constructor(
-    private readonly checksService: ChecksService,
-    private readonly db: DatabaseService,
+    @Inject(ChecksService) private readonly checksService: ChecksService,
+    @Inject(DatabaseService) private readonly db: DatabaseService,
   ) {}
 
   private readonly logger = new Logger(FeaturesService.name)

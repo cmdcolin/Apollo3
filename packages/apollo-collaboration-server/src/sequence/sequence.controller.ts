@@ -1,4 +1,4 @@
-import { Controller, Get, Logger, Query } from '@nestjs/common'
+import { Controller, Get, Inject, Logger, Query } from '@nestjs/common'
 
 import { Role } from '../utils/role/role.enum.js'
 import { Roles } from '../utils/roles.guard.js'
@@ -9,7 +9,7 @@ import { SequenceService } from './sequence.service.js'
 @Roles(Role.ReadOnly)
 @Controller('sequence')
 export class SequenceController {
-  constructor(private readonly sequenceService: SequenceService) {}
+  constructor(@Inject(SequenceService) private readonly sequenceService: SequenceService) {}
 
   private readonly logger = new Logger(SequenceController.name)
 

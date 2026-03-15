@@ -6,6 +6,7 @@ import fs from 'node:fs/promises'
 import type { JWTPayload } from '@apollo-annotation/shared'
 import {
   BadRequestException,
+  Inject,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -48,9 +49,9 @@ export class AuthenticationService {
   private setupToken: string | undefined
 
   constructor(
-    private readonly usersService: UsersService,
-    private readonly jwtService: JwtService,
-    private readonly configService: ConfigService<ConfigValues, true>,
+    @Inject(UsersService) private readonly usersService: UsersService,
+    @Inject(JwtService) private readonly jwtService: JwtService,
+    @Inject(ConfigService) private readonly configService: ConfigService<ConfigValues, true>,
   ) {
     this.defaultNewUserRole = configService.get('DEFAULT_NEW_USER_ROLE', {
       infer: true,

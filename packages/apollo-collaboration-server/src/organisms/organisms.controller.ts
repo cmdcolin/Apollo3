@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Inject,
   Logger,
   Param,
   Patch,
@@ -20,7 +21,7 @@ import { OrganismsService } from './organisms.service.js'
 @Roles(Role.ReadOnly)
 @Controller('organisms')
 export class OrganismsController {
-  constructor(private readonly organismsService: OrganismsService) {}
+  constructor(@Inject(OrganismsService) private readonly organismsService: OrganismsService) {}
   private readonly logger = new Logger(OrganismsController.name)
 
   @Get('count')

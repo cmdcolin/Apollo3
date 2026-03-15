@@ -140,3 +140,6 @@ demo-data/*
 .demo-server.log
 .demo-server.pid
 
+# Claude Code worktrees
+.claude/worktrees/
+

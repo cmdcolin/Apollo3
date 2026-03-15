@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
 
-import { Injectable, Logger, NotFoundException } from '@nestjs/common'
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common'
 
 import { DatabaseService } from '../mikro-orm/database.service.js'
 
@@ -10,7 +10,7 @@ import { UpdateRefSeqDto } from './dto/update-refSeq.dto.js'
 
 @Injectable()
 export class RefSeqsService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(@Inject(DatabaseService) private readonly db: DatabaseService) {}
 
   private readonly logger = new Logger(RefSeqsService.name)
 

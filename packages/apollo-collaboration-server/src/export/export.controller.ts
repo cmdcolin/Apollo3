@@ -2,6 +2,7 @@ import {
   Controller,
   DefaultValuePipe,
   Get,
+  Inject,
   Logger,
   ParseBoolPipe,
   ParseIntPipe,
@@ -18,7 +19,7 @@ import { ExportService } from './export.service.js'
 
 @Controller('export')
 export class ExportController {
-  constructor(private readonly exportService: ExportService) {}
+  constructor(@Inject(ExportService) private readonly exportService: ExportService) {}
 
   private readonly logger = new Logger(ExportController.name)
 

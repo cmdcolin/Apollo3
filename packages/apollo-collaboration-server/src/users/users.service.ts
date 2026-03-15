@@ -6,7 +6,7 @@ import {
   type UserLocationMessage,
   makeUserSessionId,
 } from '@apollo-annotation/shared'
-import { Injectable, Logger } from '@nestjs/common'
+import { Inject, Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
 import { MessagesGateway } from '../messages/messages.gateway.js'
@@ -27,8 +27,8 @@ export class UsersService {
   private readonly users: User[]
 
   constructor(
-    private readonly messagesGateway: MessagesGateway,
-    private readonly configService: ConfigService<
+    @Inject(MessagesGateway) private readonly messagesGateway: MessagesGateway,
+    @Inject(ConfigService) private readonly configService: ConfigService<
       {
         BROADCAST_USER_LOCATION: boolean
         ALLOW_GUEST_USER: boolean
@@ -36,7 +36,7 @@ export class UsersService {
       },
       true
     >,
-    private readonly db: DatabaseService,
+    @Inject(DatabaseService) private readonly db: DatabaseService,
   ) {}
 
   private readonly logger = new Logger(UsersService.name)
