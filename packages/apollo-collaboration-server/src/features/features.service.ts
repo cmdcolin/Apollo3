@@ -101,10 +101,7 @@ export class FeaturesService {
   async findByFeatureIds(featureIds: string[], topLevel?: boolean) {
     const uniqueIds = [...new Set(featureIds)]
     if (topLevel) {
-      const roots = await this.db.feature.findRootParentsOfMany(uniqueIds)
-      return roots.filter(
-        (root, i, arr) => arr.findIndex((r) => r._id === root._id) === i,
-      )
+      return this.db.feature.findRootParentsOfMany(uniqueIds)
     }
     return this.db.feature.findByIds(uniqueIds)
   }
