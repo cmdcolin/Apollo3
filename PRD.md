@@ -192,14 +192,8 @@ The repository pattern abstracts the database layer behind interfaces in
 
 ### P2 — Simplification
 
-16. **Remove pending import status** — The `status` field on assemblies and
-    features (`-1` = pending, `0` = active) was designed to hide partially
-    imported data. With transactional imports (`em.transactional()`), partial
-    data is rolled back on failure, making the status flag redundant. Removing
-    it simplifies `findByRange`, `findAll`, and the import flow.
-
-    - **Files**: `AddAssemblyAndFeaturesFromFileChange`, `features.service.ts`,
-      `assemblies.service.ts`, entity definitions
+16. ~~**Remove pending import status**~~ — DONE. Removed `status` field from all
+    entities. Transactions provide atomicity. Kept `user` field for attribution.
 
 17. **Remove InternetAccount from Apollo plugin** — Phase 2 of the cookie-based
     auth migration. Currently the InternetAccount still exists for websocket
