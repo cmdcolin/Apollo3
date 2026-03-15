@@ -2,7 +2,7 @@ import type {
   CheckResultRepository,
   CheckResultRow,
 } from '@apollo-annotation/common'
-import { type EntityManager, type InferEntity, raw } from '@mikro-orm/core'
+import { type EntityManager, type InferEntity } from '@mikro-orm/core'
 
 import { CheckResultEntity } from '../entities/CheckResultEntity.js'
 
@@ -11,7 +11,7 @@ function toRow(entity: InferEntity<typeof CheckResultEntity>): CheckResultRow {
     _id: entity._id,
     name: entity.name,
     cause: entity.cause ?? undefined,
-    ids: entity.ids,
+    featureId: entity.featureId,
     refSeq:
       typeof entity.refSeq === 'string' ? entity.refSeq : entity.refSeq._id,
     start: entity.start,
@@ -38,7 +38,7 @@ export class MikroOrmCheckResultRepository implements CheckResultRepository {
       _id: row._id,
       name: row.name,
       cause: row.cause,
-      ids: row.ids,
+      featureId: row.featureId,
       refSeq: row.refSeq,
       start: row.start,
       end: row.end,
@@ -58,7 +58,7 @@ export class MikroOrmCheckResultRepository implements CheckResultRepository {
       _id: row._id,
       name: row.name,
       cause: row.cause ?? null,
-      ids: row.ids,
+      featureId: row.featureId,
       refSeq: row.refSeq,
       start: row.start,
       end: row.end,
@@ -70,10 +70,8 @@ export class MikroOrmCheckResultRepository implements CheckResultRepository {
   }
 
   async findByFeatureId(featureId: string) {
-    const candidates = await this.em.find(CheckResultEntity, {
-      [raw('ids')]: { $like: `%"${featureId}"%` },
-    })
-    return candidates.filter((e) => e.ids.includes(featureId)).map(toRow)
+    const entities = await this.em.find(CheckResultEntity, { featureId })
+    return entities.map(toRow)
   }
 
   async findByRefSeqIds(refSeqIds: string[]) {
@@ -91,22 +89,10 @@ export class MikroOrmCheckResultRepository implements CheckResultRepository {
   }
 
   async deleteByFeatureIdsAndName(featureIds: string[], checkName: string) {
-    const orConditions = featureIds.map((fid) => ({
-      [raw('ids')]: { $like: `%"${fid}"%` },
-    }))
-    const candidates = await this.em.find(CheckResultEntity, {
+    return this.em.nativeDelete(CheckResultEntity, {
+      featureId: { $in: featureIds },
       name: checkName,
-      $or: orConditions,
     })
-    const featureIdSet = new Set(featureIds)
-    const toDelete = candidates.filter((e) =>
-      e.ids.some((id) => featureIdSet.has(id)),
-    )
-    if (toDelete.length === 0) {
-      return 0
-    }
-    const ids = toDelete.map((e) => e._id)
-    return this.em.nativeDelete(CheckResultEntity, { _id: { $in: ids } })
   }
 
   async updateById(id: string, data: Partial<Omit<CheckResultRow, '_id'>>) {

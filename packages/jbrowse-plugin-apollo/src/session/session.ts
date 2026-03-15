@@ -180,28 +180,19 @@ export function extendSession(
             }
           }
         }
-        if (locations.length === 0) {
-          for (const internetAccount of internetAccounts) {
-            if ('baseURL' in internetAccount) {
-              internetAccount.postUserLocation([])
-            }
-          }
-          return
-        }
-
-        const allLocations: UserLocation[] = []
+        const firstLocation = locations[0]
         for (const internetAccount of internetAccounts) {
           if ('baseURL' in internetAccount) {
-            for (const location of locations) {
-              const tmpLoc: UserLocation = {
-                assemblyId: location.assemblyName,
-                refSeq: location.refName,
-                start: location.start,
-                end: location.end,
-              }
-              allLocations.push(tmpLoc)
+            if (firstLocation) {
+              internetAccount.postUserLocation({
+                assemblyId: firstLocation.assemblyName,
+                refSeq: firstLocation.refName,
+                start: firstLocation.start,
+                end: firstLocation.end,
+              })
+            } else {
+              internetAccount.postUserLocation(null)
             }
-            internetAccount.postUserLocation(allLocations)
           }
         }
       },
@@ -247,28 +238,19 @@ export function extendSession(
                   }
                 }
               }
-              if (locations.length === 0) {
-                for (const internetAccount of internetAccounts) {
-                  if ('baseURL' in internetAccount) {
-                    internetAccount.postUserLocation([])
-                  }
-                }
-                return
-              }
-
-              const allLocations: UserLocation[] = []
+              const firstLocation = locations[0]
               for (const internetAccount of internetAccounts) {
                 if ('baseURL' in internetAccount) {
-                  for (const location of locations) {
-                    const tmpLoc: UserLocation = {
-                      assemblyId: location.assemblyName,
-                      refSeq: location.refName,
-                      start: location.start,
-                      end: location.end,
-                    }
-                    allLocations.push(tmpLoc)
+                  if (firstLocation) {
+                    internetAccount.postUserLocation({
+                      assemblyId: firstLocation.assemblyName,
+                      refSeq: firstLocation.refName,
+                      start: firstLocation.start,
+                      end: firstLocation.end,
+                    })
+                  } else {
+                    internetAccount.postUserLocation(null)
                   }
-                  internetAccount.postUserLocation(allLocations)
                 }
               }
             },
@@ -491,7 +473,7 @@ export function extendSession(
       const { apolloDataStore } = node
       const { checkResults } = apolloDataStore
       for (const [, cr] of checkResults) {
-        const [feature] = cr.ids
+        const feature = cr.featureId
         if (!feature) {
           continue
         }

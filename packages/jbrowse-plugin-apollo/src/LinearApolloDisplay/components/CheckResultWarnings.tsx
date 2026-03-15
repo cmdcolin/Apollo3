@@ -61,7 +61,7 @@ export const CheckResultWarnings = observer(function CheckResultWarnings({
     return checkResults.map((checkResult) => {
       const left = Math.round(getLeftPx(display, checkResult.range, block))
 
-      const [feature] = checkResult.featureIds
+      const feature = checkResult.featureId
       if (!feature) {
         return null
       }

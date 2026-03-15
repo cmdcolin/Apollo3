@@ -2,7 +2,7 @@ export interface CheckResultRow {
   _id: string
   name: string
   cause?: string
-  ids: string[]
+  featureId: string
   refSeq: string
   start: number
   end: number

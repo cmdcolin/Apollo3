@@ -108,35 +108,32 @@ export class UsersService {
     return this.db.user.deleteByEmail(GUEST_USER_EMAIL)
   }
 
-  broadcastLocation(userLocations: UserLocationDto[], user: DecodedJWT) {
+  broadcastLocation(location: UserLocationDto | null, user: DecodedJWT) {
     const broadcast = this.configService.get('BROADCAST_USER_LOCATION', {
       infer: true,
     })
-    const channel = 'USER_LOCATION'
-
     if (!broadcast) {
       return
     }
-    const { email, username: userName } = user
+    const channel = 'USER_LOCATION'
+    const { username: userName } = user
     const userSessionId = makeUserSessionId(user)
+    const locations = location
+      ? [
+          {
+            assemblyId: location.assemblyId,
+            refSeq: location.refSeq,
+            start: Number(location.start),
+            end: Number(location.end),
+          },
+        ]
+      : []
     const msg: UserLocationMessage = {
-      locations: userLocations.map((location) => ({
-        // eslint-disable-next-line @typescript-eslint/no-misused-spread
-        ...location,
-        start: Number(location.start),
-        end: Number(location.end),
-      })),
+      locations,
       channel,
       userName,
       userSessionId,
     }
-    this.logger.debug(
-      `Broadcasting user ${JSON.stringify(
-        email,
-      )} location to channel "${channel}", the message is "${JSON.stringify(
-        msg,
-      )}"`,
-    )
     return this.messagesGateway.create(channel, msg)
   }
 

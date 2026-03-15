@@ -60,15 +60,8 @@ export class UsersController {
 
   @Roles(Role.ReadOnly)
   @Post('userLocation')
-  userLoc(@Body() userLocDto: UserLocationDto[], @Req() req: Request) {
-    const keys = Object.keys(userLocDto)
-    const userLocationArray: UserLocationDto[] = JSON.parse(
-      `[${keys.toString()}]`,
-    )
-    this.logger.debug(
-      `One user's location info: ${JSON.stringify(userLocationArray)}`,
-    )
+  userLoc(@Body() location: UserLocationDto | null, @Req() req: Request) {
     const user = req.user as DecodedJWT
-    return this.usersService.broadcastLocation(userLocationArray, user)
+    return this.usersService.broadcastLocation(location, user)
   }
 }

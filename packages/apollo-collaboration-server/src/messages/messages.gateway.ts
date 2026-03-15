@@ -9,7 +9,11 @@ import { Server } from 'socket.io'
 
 import { CreateMessageDto } from './dto/create-message.dto.js'
 
-@WebSocketGateway({ cors: { origin: '*' } })
+@WebSocketGateway({
+  cors: {
+    origin: new URL(process.env.URL ?? 'http://localhost:3999').origin,
+  },
+})
 @Injectable()
 export class MessagesGateway {
   @WebSocketServer()

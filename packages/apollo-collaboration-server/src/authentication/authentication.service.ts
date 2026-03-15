@@ -31,6 +31,7 @@ export interface RequestWithUserToken extends Request {
 }
 
 interface ConfigValues {
+  URL: string
   MICROSOFT_CLIENT_ID?: string
   MICROSOFT_CLIENT_ID_FILE?: string
   GOOGLE_CLIENT_ID?: string
@@ -113,7 +114,21 @@ export class AuthenticationService {
     const { redirect_uri } = (
       req.authInfo as { state: { redirect_uri: string } }
     ).state
-    const url = new URL(redirect_uri)
+
+    const serverOrigin = new URL(this.configService.get('URL', { infer: true }))
+      .origin
+    let url: URL
+    try {
+      url = new URL(redirect_uri)
+    } catch {
+      throw new BadRequestException('Invalid redirect_uri')
+    }
+    if (url.origin !== serverOrigin) {
+      this.logger.warn(
+        `Blocked redirect to external origin: ${url.origin} (expected ${serverOrigin})`,
+      )
+      url = new URL(serverOrigin)
+    }
     const searchParams = new URLSearchParams({ access_token: req.user.token })
     url.search = searchParams.toString()
     return { url: url.toString() }
@@ -128,9 +143,9 @@ export class AuthenticationService {
       const clientIDFile = this.configService.get('MICROSOFT_CLIENT_ID_FILE', {
         infer: true,
       })
-      microsoftClientID =
-        clientIDFile && (await fs.readFile(clientIDFile, 'utf8'))
-      microsoftClientID = clientIDFile?.trim()
+      if (clientIDFile) {
+        microsoftClientID = (await fs.readFile(clientIDFile, 'utf8')).trim()
+      }
     }
     let googleClientID = this.configService.get('GOOGLE_CLIENT_ID', {
       infer: true,
@@ -139,8 +154,9 @@ export class AuthenticationService {
       const clientIDFile = this.configService.get('GOOGLE_CLIENT_ID_FILE', {
         infer: true,
       })
-      googleClientID = clientIDFile && (await fs.readFile(clientIDFile, 'utf8'))
-      googleClientID = clientIDFile?.trim()
+      if (clientIDFile) {
+        googleClientID = (await fs.readFile(clientIDFile, 'utf8')).trim()
+      }
     }
     const allowGuestUser = this.configService.get('ALLOW_GUEST_USER', {
       infer: true,
@@ -235,7 +251,7 @@ export class AuthenticationService {
       this.consumeSetup()
       this.logger.log(`Setup complete: ${email} promoted to admin`)
     }
-    this.logger.debug(`User found: ${JSON.stringify(user)}`)
+    this.logger.debug(`User logged in: ${user.email} (role: ${user.role})`)
 
     const payload: JWTPayload = {
       username: user.username,
@@ -243,13 +259,7 @@ export class AuthenticationService {
       role: user.role,
       id: String(user._id),
     }
-    // Return token with SUCCESS status
     const returnToken = this.jwtService.sign(payload)
-    this.logger.debug(
-      `First time login successful. Apollo token: ${JSON.stringify(
-        returnToken,
-      )}`,
-    )
     return { token: returnToken }
   }
 }

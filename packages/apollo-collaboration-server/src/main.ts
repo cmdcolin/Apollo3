@@ -93,11 +93,18 @@ async function bootstrap() {
   app.use(json({ limit: '50mb' }))
   app.use(urlencoded({ extended: true, limit: '50mb' }))
 
+  const isProduction = process.env.NODE_ENV === 'production'
   app.use(
     session({
       secret: sessionSecret,
       resave: false,
       saveUninitialized: false,
+      cookie: {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000,
+      },
     }),
   )
 

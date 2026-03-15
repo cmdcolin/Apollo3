@@ -1,4 +1,4 @@
-import type { CheckResultIdsType } from '@apollo-annotation/mst'
+import type { CheckResultFeatureType } from '@apollo-annotation/mst'
 import { makeStyles } from '@jbrowse/core/util/tss-react'
 import type { Theme } from '@mui/material'
 
@@ -62,7 +62,7 @@ export interface CheckResultCluster<T> {
   count: number
   members: T[]
   range: { min: number; max: number }
-  featureIds: CheckResultIdsType
+  featureId: CheckResultFeatureType
 }
 
 export function clusterResultByMessage<
@@ -71,7 +71,7 @@ export function clusterResultByMessage<
     start: number
     end: number
     message: string
-    ids: CheckResultIdsType
+    featureId: CheckResultFeatureType
   },
 >(
   items: readonly T[],
@@ -107,7 +107,7 @@ export function clusterResultByMessage<
       const median: number =
         starts.length % 2 ? starts[mid] : (starts[mid - 1] + starts[mid]) / 2
       const clusterId = group[0]._id
-      const featureIds = group[0].ids
+      const featureId = group[0].featureId
 
       clusters.push({
         _id: clusterId,
@@ -116,7 +116,7 @@ export function clusterResultByMessage<
         count: group.length,
         members: [...group],
         range: { min: curMin, max: curMax },
-        featureIds,
+        featureId,
       })
     }
 

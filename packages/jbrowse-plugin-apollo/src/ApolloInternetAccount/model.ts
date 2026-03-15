@@ -373,13 +373,12 @@ const stateModelFactory = (configSchema: ApolloInternetAccountConfigModel) => {
       },
     }))
     .actions((self) => {
-      async function postUserLocation(userLoc: UserLocation[]) {
+      async function postUserLocation(userLoc: UserLocation | null) {
         if (!isAlive(self) || self.role === 'none') {
           return
         }
         const { baseURL, controller } = self
         const url = new URL('users/userLocation', baseURL).href
-        const userLocation = new URLSearchParams(JSON.stringify(userLoc))
 
         const apolloFetch = self.getFetcher({
           locationType: 'UriLocation',
@@ -388,7 +387,8 @@ const stateModelFactory = (configSchema: ApolloInternetAccountConfigModel) => {
         try {
           const response = await apolloFetch(url, {
             method: 'POST',
-            body: userLocation,
+            body: JSON.stringify(userLoc),
+            headers: { 'Content-Type': 'application/json' },
             signal: controller.signal,
           })
           if (!response.ok) {
@@ -400,10 +400,10 @@ const stateModelFactory = (configSchema: ApolloInternetAccountConfigModel) => {
       }
       const debounceTimeout = 300
       const debouncePostUserLocation = (
-        fn: (userLocation: UserLocation[]) => void,
+        fn: (userLocation: UserLocation | null) => void,
       ) => {
         let timeoutId: ReturnType<typeof setTimeout>
-        return (userLocation: UserLocation[]) => {
+        return (userLocation: UserLocation | null) => {
           clearTimeout(timeoutId)
           timeoutId = setTimeout(() => {
             fn(userLocation)
@@ -415,12 +415,12 @@ const stateModelFactory = (configSchema: ApolloInternetAccountConfigModel) => {
     .volatile(() => ({ roleNotificationSent: false }))
     .actions((self) => {
       function beforeUnloadListener() {
-        self.postUserLocation([])
+        self.postUserLocation(null)
       }
       function visibilityChangeListener() {
         // fires when user switches tabs, apps, goes to homescreen, etc.
         if (document.visibilityState === 'hidden') {
-          self.postUserLocation([])
+          self.postUserLocation(null)
         }
         // fires when app transitions from prerender, user returns to the app / tab.
         if (document.visibilityState === 'visible') {

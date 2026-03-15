@@ -9,7 +9,7 @@ export const CheckResultEntity = defineEntity({
     _id: p.string().primary(),
     name: p.string(),
     cause: p.string().nullable(),
-    ids: p.json<string[]>(),
+    featureId: p.string(),
     refSeq: () => p.manyToOne(RefSeqEntity).deleteRule('cascade'),
     start: p.integer(),
     end: p.integer(),
@@ -20,5 +20,6 @@ export const CheckResultEntity = defineEntity({
     { properties: ['refSeq', 'start'] },
     { properties: ['refSeq', 'end'] },
     { properties: ['name'] },
+    { properties: ['featureId'] },
   ],
 })

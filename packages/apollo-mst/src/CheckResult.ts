@@ -6,7 +6,7 @@ export const CheckResult = types.model('CheckResult', {
   _id: types.identifier,
   name: types.string,
   cause: types.string,
-  ids: types.array(types.safeReference(AnnotationFeatureModel)),
+  featureId: types.safeReference(AnnotationFeatureModel),
   refSeq: types.string,
   start: types.number,
   end: types.number,
@@ -21,4 +21,4 @@ export interface CheckResultI extends Instance<typeof CheckResult> {}
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface CheckResultSnapshot extends SnapshotIn<typeof CheckResult> {}
 
-export type CheckResultIdsType = Instance<typeof CheckResult>['ids']
+export type CheckResultFeatureType = Instance<typeof CheckResult>['featureId']

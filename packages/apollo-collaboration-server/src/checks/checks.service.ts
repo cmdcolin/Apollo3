@@ -106,7 +106,7 @@ export class ChecksService {
           _id: r._id,
           name: r.name,
           cause: r.cause,
-          ids: (r.ids ?? []).filter((id): id is string => id !== undefined),
+          featureId: r.featureId,
           refSeq: r.refSeq,
           start: r.start,
           end: r.end,

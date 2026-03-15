@@ -19,8 +19,8 @@ The repository pattern abstracts the database layer behind interfaces in
 
 ### P1 — Core Annotation Features (Apollo Classic Parity)
 
-2. **Set Translation Start** — adjusts CDS boundaries based on a
-   user-selected start codon position. Needs a position-picking UI.
+2. **Set Translation Start** — adjusts CDS boundaries based on a user-selected
+   start codon position. Needs a position-picking UI.
 
 3. **Attribute/Metadata Editing UI** — Apollo Classic has rich editors for
    dbxrefs, GO terms, gene products, and comments. Apollo3 stores attributes as
@@ -33,117 +33,89 @@ The repository pattern abstracts the database layer behind interfaces in
      `packages/jbrowse-plugin-apollo/src/components/`, extend "Edit feature
      details" dialog
 
-### P1 — Security
-
-4. **Authentication security audit** — Review the Passport + JWT cookie auth
-   implementation for:
-   - JWT secret strength and rotation
-   - Cookie security settings (HttpOnly, Secure, SameSite)
-   - CSRF protection for cookie-based auth
-   - OAuth state parameter validation
-   - Token expiration and refresh
-   - Guest user role escalation prevention
-   - **Files**: `packages/apollo-collaboration-server/src/authentication/`,
-     `packages/apollo-collaboration-server/src/utils/strategies/`
-
 ### P1 — Performance
 
-5. **Import speed** — Current: ~8s for volvox test data. Breakdown:
+4. **Import speed** — Current: ~8s for volvox test data. Breakdown:
 
 - GFF3 parsing + file I/O: ~6s (dominant)
 - DB writes: ~2s (already optimized with `insertMany` batching)
 - Transaction wrapping gives ~12% speedup on DB writes (WAL+NORMAL config)
 - **Investigation needed**: Profile GFF3 parsing to find bottlenecks.
 
-### P1 — Data Integrity
-
-6. **CheckResult JSON array denormalization** — `CheckResultEntity.ids` stores
-   feature IDs as a JSON array, queried with `LIKE '%"featureId"%'` + in-memory
-   filtering. Risk of false positives (partial ID match) and slow on large
-   tables. Longer-term: normalize into a junction table.
-   - **Files**:
-     `packages/apollo-entities/src/repositories/MikroOrmCheckResultRepository.ts`
-
 ### P2 — Simplification
 
-7. **Remove InternetAccount from Apollo plugin** — Phase 2 of the cookie-based
+5. **Remove InternetAccount from Apollo plugin** — Phase 2 of the cookie-based
    auth migration. Currently the InternetAccount still exists for websocket
    management and menu registration. Move these to simpler plugin-level code
    that reads role from config and connects websocket directly.
    - **Files**: `packages/jbrowse-plugin-apollo/src/ApolloInternetAccount/`
 
-8. **Remove chunked RefSeqChunk storage** — Apollo3 currently stores reference
+6. **Remove chunked RefSeqChunk storage** — Apollo3 currently stores reference
    sequences as chunked text blobs in the `ref_seq_chunk` table. This is
    redundant with JBrowse 2's existing sequence adapters (IndexedFastaAdapter,
    BgzipFastaAdapter, etc.) which handle indexed FASTA efficiently. The chunked
    storage adds import time (~6s for FASTA parsing), database bloat, and
    maintenance complexity (chunk size management, assembly sequence source
-   types). Instead, always refer to an external indexed FASTA file (or any
-   other JBrowse 2 sequence adapter) for sequence data.
+   types). Instead, always refer to an external indexed FASTA file (or any other
+   JBrowse 2 sequence adapter) for sequence data.
    - Remove `RefSeqChunkEntity` and `MikroOrmRefSeqChunkRepository`
    - Remove `refSeqChunk` from `DatabaseService` and `ServerDataStore`
    - Remove chunked FASTA parsing from `FromFileBaseChange`
    - Simplify `Assembly.sequenceSource` to always reference an external adapter
      config (indexed FASTA, bgzip FASTA, or other JBrowse 2 adapter)
-   - Update `SequenceService` to always read from the adapter, never from
-     chunks
+   - Update `SequenceService` to always read from the adapter, never from chunks
    - Migration script: existing chunked data → export to FASTA file + index
    - **Files**: entity definitions, `FromFileBaseChange`, `SequenceService`,
      `assemblies.service.ts`, `DatabaseService`
 
-9. **Direct flat-row GFF3 export** — The GFF3 export currently reassembles flat
+7. **Direct flat-row GFF3 export** — The GFF3 export currently reassembles flat
    database rows into nested `AnnotationFeatureSnapshot` trees, then converts
    those trees back to flat GFF3 lines via `annotationFeatureToGFF3`. GFF3 is
    inherently flat — each line is one feature with a `Parent=` attribute. A
    direct `FeatureRow → GFF3 line` conversion would skip the tree assembly step
    entirely.
+   - **Caveat**: CDS features under mRNAs require tree context for phase
+     computation via exon intersection (`getTranscriptParts`), so a fully flat
+     approach only works for non-mRNA features. A hybrid approach may be needed.
    - New `featureRowToGFF3Line()` function that maps FeatureRow fields directly
      to GFF3 tab-separated columns (seqid, source, type, start+1, end, score,
      strand, phase, attributes including Parent=)
-   - Remove `featureRowToSnapshot` and `buildChildrenMap` from export
    - Stream rows directly from DB → GFF3 lines → file, no in-memory trees
    - **Files**:
      `packages/apollo-collaboration-server/src/export/export.service.ts`, new
      utility in `packages/apollo-shared/src/GFF3/`
 
-### P2 — Database Optimization
-
-10. **Repository instance recreation** — `database.service.ts` getters create a
-    new repository instance on every access. Could cache per request scope.
-    - **Files**:
-      `packages/apollo-collaboration-server/src/mikro-orm/database.service.ts`
-
 ### P2 — Collaboration & Workflow
 
-11. **Per-assembly permissions** — Apollo Classic has user/group permissions per
-    organism. Apollo3 currently has global roles only (admin/user/readOnly).
-    Multi-assembly deployments need per-assembly access control.
-    - New `AssemblyPermission` entity: maps user → assembly → role
-    - `ValidationGuard` checks per-assembly permissions before changes
-    - Admin UI for assigning users to assemblies
-    - Fallback: global role applies when no per-assembly permission exists
-    - **Files**: new entity in `apollo-entities`, new guard logic in server, new
-      admin component in plugin
+8. **Per-assembly permissions** — Apollo Classic has user/group permissions per
+   organism. Apollo3 currently has global roles only (admin/user/readOnly).
+   Multi-assembly deployments need per-assembly access control.
+   - New `AssemblyPermission` entity: maps user → assembly → role
+   - `ValidationGuard` checks per-assembly permissions before changes
+   - Admin UI for assigning users to assemblies
+   - Fallback: global role applies when no per-assembly permission exists
+   - **Files**: new entity in `apollo-entities`, new guard logic in server, new
+     admin component in plugin
 
-12. **Feature ownership & audit display** — Apollo Classic tracks who
-    created/last edited each feature. Apollo3 stores `user` on entities but
-    doesn't expose this in the UI.
-    - Display last editor in "Edit feature details" dialog
-    - Show creation/modification timestamps
-    - Optional: highlight features by ownership in the track display
-    - **Files**: plugin "Edit feature details" components
+9. **Feature ownership & audit display** — Apollo Classic tracks who
+   created/last edited each feature. Apollo3 stores `user` on entities but
+   doesn't expose this in the UI.
+   - Display last editor in "Edit feature details" dialog
+   - Show creation/modification timestamps
+   - Optional: highlight features by ownership in the track display
+   - **Files**: plugin "Edit feature details" components
 
-13. **Canned comments/attributes** — Apollo Classic lets admins configure preset
+10. **Canned comments/attributes** — Apollo Classic lets admins configure preset
     comment templates and attribute keys/values, speeding up annotation
     significantly.
     - New `CannedElement` entity (type: comment|key|value, text, assembly?)
     - Admin UI for managing canned elements
-    - Autocomplete in attribute editing UI (integrates with item 3)
+    - Autocomplete in attribute editing UI (integrates with item 3 above)
     - **Files**: new entity, new admin component, new API endpoints
 
 ### P2 — Export/Import
 
-14. **FASTA export (CDS, protein, transcript sequences)** — Apollo Classic
+11. **FASTA export (CDS, protein, transcript sequences)** — Apollo Classic
     exports CDS sequences, protein translations, and genomic sequences. Apollo3
     only exports GFF3 + optional genomic FASTA.
     - Export types: CDS FASTA, protein FASTA, transcript FASTA
@@ -152,7 +124,7 @@ The repository pattern abstracts the database layer behind interfaces in
     - **Files**: `packages/apollo-collaboration-server/src/export/`, new
       `TranslationService`
 
-15. **Filtered/partial export** — Apollo Classic allows exporting specific
+12. **Filtered/partial export** — Apollo Classic allows exporting specific
     reference sequences. Apollo3 exports entire assemblies.
     - Filter by: reference sequence(s), feature type(s), coordinate range
     - Frontend: checkboxes/filters in "Download GFF3" dialog
@@ -160,7 +132,7 @@ The repository pattern abstracts the database layer behind interfaces in
 
 ### P2 — Search & Navigation
 
-16. **Sequence search (BLAT/BLAST integration)** — Apollo Classic has pluggable
+13. **Sequence search (BLAT/BLAST integration)** — Apollo Classic has pluggable
     BLAT/BLAST search. Annotators paste a sequence and get genomic hits.
     Essential for evidence-based annotation.
     - Pluggable `SequenceSearchProvider` interface (backend)
@@ -171,7 +143,7 @@ The repository pattern abstracts the database layer behind interfaces in
 
 ### P2 — Gene Prediction
 
-17. **Tiberius on-the-fly gene prediction** — Run
+14. **Tiberius on-the-fly gene prediction** — Run
     [Tiberius](https://github.com/Gaius-Augustus/Tiberius) on a user-selected
     genomic region to generate de novo gene predictions.
 
@@ -205,13 +177,13 @@ The repository pattern abstracts the database layer behind interfaces in
 
 ### P2 — Architecture
 
-18. **PostgreSQL E2E CI pipeline** — E2E script supports PostgreSQL and
+15. **PostgreSQL E2E CI pipeline** — E2E script supports PostgreSQL and
     `docker-compose.yml` provides a local PostgreSQL service, but no CI pipeline
     runs tests against PostgreSQL yet.
     - **Action**: Add a CI job that starts PostgreSQL via docker-compose and
       runs unit tests + E2E against it.
 
-19. **MongoDB E2E testing** — `MongoFeatureRepository` exists but has no test
+16. **MongoDB E2E testing** — `MongoFeatureRepository` exists but has no test
     coverage beyond type-checking. Unit tests run only against SQLite (and
     optionally PostgreSQL).
     - **Action**: Add a MongoDB test configuration and test the
@@ -219,14 +191,14 @@ The repository pattern abstracts the database layer behind interfaces in
 
 ### P3 — QC & Validation Checks
 
-20. **Reading frame validation check** — Verify CDS features maintain proper
+17. **Reading frame validation check** — Verify CDS features maintain proper
     reading frame across exon boundaries. Phase must be consistent with upstream
     exon lengths.
     - New check in `CheckRegistry`
     - Requires sequence context to compute expected phase per exon
     - **Files**: `packages/apollo-shared/src/Checks/`
 
-21. **Start codon presence check** — Verify CDS features begin with ATG (or
+18. **Start codon presence check** — Verify CDS features begin with ATG (or
     valid alternative start codons per translation table).
     - New check in `CheckRegistry`
     - Requires reading first 3bp of CDS sequence
@@ -235,7 +207,7 @@ The repository pattern abstracts the database layer behind interfaces in
 
 ### P3 — Cleanup
 
-22. **Remaining debug logging** — Standard `logger.debug()` calls exist
+19. **Remaining debug logging** — Standard `logger.debug()` calls exist
     throughout the server (features, changes, auth, files controllers). These
     are appropriate debug-level logging and can stay unless noisy.
 

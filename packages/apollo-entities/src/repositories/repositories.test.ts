@@ -1017,7 +1017,7 @@ describe('MikroOrmCheckResultRepository', () => {
     await repo.create({
       _id: 'cr-1',
       name: 'CDSCheck',
-      ids: ['feat-1'],
+      featureId: 'feat-1',
       refSeq: 'rs-1',
       start: 100,
       end: 500,
@@ -1026,7 +1026,7 @@ describe('MikroOrmCheckResultRepository', () => {
     await repo.create({
       _id: 'cr-2',
       name: 'CDSCheck',
-      ids: ['feat-2'],
+      featureId: 'feat-2',
       refSeq: 'rs-1',
       start: 1000,
       end: 2000,
@@ -1049,7 +1049,7 @@ describe('MikroOrmCheckResultRepository', () => {
     await repo.create({
       _id: 'cr-1',
       name: 'CDSCheck',
-      ids: ['feat-1', 'feat-2'],
+      featureId: 'feat-1',
       refSeq: 'rs-1',
       start: 100,
       end: 500,
@@ -1058,14 +1058,14 @@ describe('MikroOrmCheckResultRepository', () => {
     await repo.create({
       _id: 'cr-2',
       name: 'CDSCheck',
-      ids: ['feat-3'],
+      featureId: 'feat-3',
       refSeq: 'rs-1',
       start: 600,
       end: 800,
       ignored: false,
     })
 
-    const results = await repo.findByFeatureId('feat-2')
+    const results = await repo.findByFeatureId('feat-1')
     expect(results).toHaveLength(1)
     expect(results[0]._id).toBe('cr-1')
 
@@ -1080,7 +1080,7 @@ describe('MikroOrmCheckResultRepository', () => {
     await repo.create({
       _id: 'cr-1',
       name: 'CDSCheck',
-      ids: ['feat-1'],
+      featureId: 'feat-1',
       refSeq: 'rs-1',
       start: 100,
       end: 500,
@@ -1102,7 +1102,7 @@ describe('MikroOrmCheckResultRepository', () => {
       {
         _id: 'cr-1',
         name: 'CDSCheck',
-        ids: ['feat-1'],
+        featureId: 'feat-1',
         refSeq: 'rs-1',
         start: 100,
         end: 500,
@@ -1111,7 +1111,7 @@ describe('MikroOrmCheckResultRepository', () => {
       {
         _id: 'cr-2',
         name: 'CDSCheck',
-        ids: ['feat-2'],
+        featureId: 'feat-2',
         refSeq: 'rs-1',
         start: 600,
         end: 800,
@@ -1131,7 +1131,7 @@ describe('MikroOrmCheckResultRepository', () => {
     await repo.create({
       _id: 'cr-1',
       name: 'CDSCheck',
-      ids: ['feat-1'],
+      featureId: 'feat-1',
       refSeq: 'rs-1',
       start: 100,
       end: 500,
@@ -1140,7 +1140,7 @@ describe('MikroOrmCheckResultRepository', () => {
     await repo.create({
       _id: 'cr-2',
       name: 'CDSCheck',
-      ids: ['feat-2'],
+      featureId: 'feat-2',
       refSeq: 'rs-1',
       start: 600,
       end: 800,
@@ -1159,7 +1159,7 @@ describe('MikroOrmCheckResultRepository', () => {
     await repo.create({
       _id: 'cr-1',
       name: 'CDSCheck',
-      ids: ['feat-1'],
+      featureId: 'feat-1',
       refSeq: 'rs-1',
       start: 100,
       end: 500,
@@ -1168,7 +1168,7 @@ describe('MikroOrmCheckResultRepository', () => {
     await repo.create({
       _id: 'cr-2',
       name: 'CDSCheck',
-      ids: ['feat-2'],
+      featureId: 'feat-2',
       refSeq: 'rs-1',
       start: 600,
       end: 800,
@@ -1187,7 +1187,7 @@ describe('MikroOrmCheckResultRepository', () => {
     await repo.create({
       _id: 'cr-1',
       name: 'CDSCheck',
-      ids: ['feat-1'],
+      featureId: 'feat-1',
       refSeq: 'rs-1',
       start: 100,
       end: 500,
@@ -1196,7 +1196,7 @@ describe('MikroOrmCheckResultRepository', () => {
     await repo.create({
       _id: 'cr-2',
       name: 'CDSCheck',
-      ids: ['feat-2'],
+      featureId: 'feat-2',
       refSeq: 'rs-1',
       start: 600,
       end: 800,
@@ -1205,7 +1205,7 @@ describe('MikroOrmCheckResultRepository', () => {
     await repo.create({
       _id: 'cr-3',
       name: 'SpliceCheck',
-      ids: ['feat-1'],
+      featureId: 'feat-1',
       refSeq: 'rs-1',
       start: 100,
       end: 500,
@@ -1224,7 +1224,7 @@ describe('MikroOrmCheckResultRepository', () => {
     await repo.create({
       _id: 'cr-1',
       name: 'CDSCheck',
-      ids: ['feat-1'],
+      featureId: 'feat-1',
       refSeq: 'rs-1',
       start: 100,
       end: 500,

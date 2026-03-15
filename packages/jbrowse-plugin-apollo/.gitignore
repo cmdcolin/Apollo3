@@ -1,6 +1,15 @@
 .jbrowse/
 data/
 
+# Build output
+conf/*.mjs
+conf/*.mjs.map
+conf/*.cjs
+conf/*.cjs.map
+conf/*.js
+conf/*.js.map
+conf/*.tsbuildinfo
+
 # Playwright
 test-results/
 playwright-report/

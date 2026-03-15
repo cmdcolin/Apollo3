@@ -153,7 +153,7 @@ async function checkMRNA(
   if (!cdsLocations) {
     return checkResults
   }
-  const ids = [_id]
+  const featureId = _id
   for (const cdsLocation of cdsLocations) {
     const sequence = await getCDSSequence(cdsLocation, strand, getSequence)
     const codons = splitSequenceInCodons(sequence)
@@ -173,7 +173,7 @@ async function checkMRNA(
           _id: new ObjectID().toHexString(),
           name: CHECK_NAME,
           cause: CAUSES[CAUSES.MissingStartCodon],
-          ids,
+          featureId,
           refSeq: refSeq.toString(),
           start: cdsStart,
           end: cdsStart,
@@ -187,7 +187,7 @@ async function checkMRNA(
           _id: new ObjectID().toHexString(),
           name: CHECK_NAME,
           cause: CAUSES[CAUSES.MissingStopCodon],
-          ids,
+          featureId,
           refSeq: refSeq.toString(),
           start: cdsEnd,
           end: cdsEnd,
@@ -199,7 +199,7 @@ async function checkMRNA(
         _id: new ObjectID().toHexString(),
         name: CHECK_NAME,
         cause: CAUSES[CAUSES.MissingStopCodon],
-        ids,
+        featureId,
         refSeq: refSeq.toString(),
         start: cdsEnd,
         end: cdsEnd,
@@ -218,7 +218,7 @@ async function checkMRNA(
           _id: new ObjectID().toHexString(),
           name: CHECK_NAME,
           cause: CAUSES[CAUSES.InternalStopCodon],
-          ids,
+          featureId,
           refSeq: refSeq.toString(),
           start: codonStart,
           end: codonEnd,

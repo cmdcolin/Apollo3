@@ -59,56 +59,35 @@ function createFeatureRepository(em: EntityManager, dbType: string) {
 export class DatabaseService {
   private readonly dbType: string
 
+  // Cached repository instances. Safe to reuse because the injected EM uses
+  // AsyncLocalStorage (via RequestContext middleware) for per-request isolation.
+  readonly assembly: AssemblyRepository
+  readonly organism: OrganismRepository
+  readonly feature: FeatureRepository
+  readonly refSeq: RefSeqRepository
+  readonly refSeqChunk: RefSeqChunkRepository
+  readonly user: UserRepository
+  readonly file: FileRepository
+  readonly check: CheckResultRepository
+  readonly counter: CounterRepository
+  readonly checkConfig: CheckRepository
+  readonly jbrowseConfig: JBrowseConfigRepository
+  readonly changeLog: ChangeRepository
+
   constructor(@Inject(EntityManager) private readonly em: EntityManager) {
     this.dbType = process.env.DB_BACKEND ?? 'sqlite'
-  }
-
-  get assembly(): AssemblyRepository {
-    return new MikroOrmAssemblyRepository(this.em)
-  }
-
-  get organism(): OrganismRepository {
-    return new MikroOrmOrganismRepository(this.em)
-  }
-
-  get feature(): FeatureRepository {
-    return createFeatureRepository(this.em, this.dbType)
-  }
-
-  get refSeq(): RefSeqRepository {
-    return new MikroOrmRefSeqRepository(this.em)
-  }
-
-  get refSeqChunk(): RefSeqChunkRepository {
-    return new MikroOrmRefSeqChunkRepository(this.em)
-  }
-
-  get user(): UserRepository {
-    return new MikroOrmUserRepository(this.em)
-  }
-
-  get file(): FileRepository {
-    return new MikroOrmFileRepository(this.em)
-  }
-
-  get check(): CheckResultRepository {
-    return new MikroOrmCheckResultRepository(this.em)
-  }
-
-  get counter(): CounterRepository {
-    return new MikroOrmCounterRepository(this.em)
-  }
-
-  get checkConfig(): CheckRepository {
-    return new MikroOrmCheckRepository(this.em)
-  }
-
-  get jbrowseConfig(): JBrowseConfigRepository {
-    return new MikroOrmJBrowseConfigRepository(this.em)
-  }
-
-  get changeLog(): ChangeRepository {
-    return new MikroOrmChangeRepository(this.em)
+    this.assembly = new MikroOrmAssemblyRepository(em)
+    this.organism = new MikroOrmOrganismRepository(em)
+    this.feature = createFeatureRepository(em, this.dbType)
+    this.refSeq = new MikroOrmRefSeqRepository(em)
+    this.refSeqChunk = new MikroOrmRefSeqChunkRepository(em)
+    this.user = new MikroOrmUserRepository(em)
+    this.file = new MikroOrmFileRepository(em)
+    this.check = new MikroOrmCheckResultRepository(em)
+    this.counter = new MikroOrmCounterRepository(em)
+    this.checkConfig = new MikroOrmCheckRepository(em)
+    this.jbrowseConfig = new MikroOrmJBrowseConfigRepository(em)
+    this.changeLog = new MikroOrmChangeRepository(em)
   }
 
   // Runs a callback inside a database transaction. All repositories in the

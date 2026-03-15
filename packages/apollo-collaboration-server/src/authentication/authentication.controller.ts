@@ -25,9 +25,12 @@ import {
   type RequestWithUserToken,
 } from './authentication.service.js'
 
+const isProduction = process.env.NODE_ENV === 'production'
+
 const COOKIE_OPTIONS = {
   httpOnly: true,
   sameSite: 'lax' as const,
+  secure: isProduction,
   path: '/',
   maxAge: 24 * 60 * 60 * 1000,
 }
