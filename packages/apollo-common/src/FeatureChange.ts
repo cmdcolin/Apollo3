@@ -5,8 +5,7 @@ import {
 } from './AssemblySpecificChange.js'
 import type { ChangeOptions } from './Change.js'
 
-export interface SerializedFeatureChange
-  extends SerializedAssemblySpecificChange {
+export interface SerializedFeatureChange extends SerializedAssemblySpecificChange {
   /** The IDs of features that were changed in this operation */
   changedIds: string[]
 }

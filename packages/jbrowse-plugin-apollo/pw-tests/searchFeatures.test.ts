@@ -104,7 +104,10 @@ test.describe('volvox.fasta.gff3 searches', () => {
     await selectAssemblyToView(page, 'volvox.fasta.gff3', 'ctgA:1..10000')
     await searchFeatures(page, 'hga', 3)
 
-    const row = page.locator('td').filter({ hasText: 'ctgA:1,000..2,000' }).locator('..')
+    const row = page
+      .locator('td')
+      .filter({ hasText: 'ctgA:1,000..2,000' })
+      .locator('..')
     await row.getByRole('button', { name: /^Go$/i }).click()
     await page.waitForResponse(
       (resp) =>

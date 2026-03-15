@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
- 
+
 import { randomBytes } from 'node:crypto'
 import fs from 'node:fs/promises'
 
@@ -51,7 +51,8 @@ export class AuthenticationService {
   constructor(
     @Inject(UsersService) private readonly usersService: UsersService,
     @Inject(JwtService) private readonly jwtService: JwtService,
-    @Inject(ConfigService) private readonly configService: ConfigService<ConfigValues, true>,
+    @Inject(ConfigService)
+    private readonly configService: ConfigService<ConfigValues, true>,
   ) {
     this.defaultNewUserRole = configService.get('DEFAULT_NEW_USER_ROLE', {
       infer: true,

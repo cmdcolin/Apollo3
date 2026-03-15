@@ -9,7 +9,9 @@ import { RefSeqsService } from './refSeqs.service.js'
 @Roles(Role.ReadOnly)
 @Controller('refSeqs')
 export class RefSeqsController {
-  constructor(@Inject(RefSeqsService) private readonly refSeqsService: RefSeqsService) {}
+  constructor(
+    @Inject(RefSeqsService) private readonly refSeqsService: RefSeqsService,
+  ) {}
 
   private readonly logger = new Logger(RefSeqsController.name)
 

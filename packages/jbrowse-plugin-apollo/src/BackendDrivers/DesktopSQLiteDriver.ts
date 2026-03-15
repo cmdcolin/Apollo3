@@ -1,4 +1,3 @@
- 
 /* eslint-disable @typescript-eslint/consistent-type-imports */
 import {
   type AssemblySpecificChange,
@@ -19,7 +18,7 @@ import {
 import { getConf } from '@jbrowse/core/configuration'
 import { type Region, getSession } from '@jbrowse/core/util'
 // MikroORM is loaded dynamically via require() in Electron environments
- 
+
 type MikroORM = import('@mikro-orm/core').MikroORM
 import ObjectID from 'bson-objectid'
 
@@ -375,9 +374,7 @@ export class DesktopSQLiteDriver extends BackendDriver {
     return new ValidationResultSet()
   }
 
-   
   private patchRefSeqIds(change: Change, refNameMap: Map<string, string>) {
-     
     const c = change as unknown as Record<string, unknown>
     if ('changes' in c && Array.isArray(c.changes)) {
       for (const sub of c.changes) {

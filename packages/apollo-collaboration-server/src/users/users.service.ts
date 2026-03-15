@@ -28,7 +28,8 @@ export class UsersService {
 
   constructor(
     @Inject(MessagesGateway) private readonly messagesGateway: MessagesGateway,
-    @Inject(ConfigService) private readonly configService: ConfigService<
+    @Inject(ConfigService)
+    private readonly configService: ConfigService<
       {
         BROADCAST_USER_LOCATION: boolean
         ALLOW_GUEST_USER: boolean

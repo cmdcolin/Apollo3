@@ -1,3 +1,4 @@
+packages/jbrowse-plugin-apollo/.jbrowse/
 .yarnrc.yml
 .yarn/
 packages/apollo-cli/test_data/invalid.yml

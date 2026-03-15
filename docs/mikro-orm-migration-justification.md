@@ -153,12 +153,12 @@ database — runs in a single Node.js process. A NestJS application with SQLite
 typically consumes 80–150 MB of RAM at idle, well within the capacity of the
 smallest cloud instances available:
 
-| Instance type | RAM | Monthly cost | Can run Apollo 3? |
-|---|---|---|---|
-| AWS t4g.nano | 512 MB | ~$3/month | Yes (SQLite) |
-| AWS t4g.micro | 1 GB | ~$6/month | Yes (SQLite, comfortable headroom) |
-| AWS t4g.small | 2 GB | ~$15/month | Yes (SQLite or PostgreSQL) |
-| MongoDB Atlas (minimum) | — | ~$50–60/month | MongoDB only |
+| Instance type           | RAM    | Monthly cost  | Can run Apollo 3?                  |
+| ----------------------- | ------ | ------------- | ---------------------------------- |
+| AWS t4g.nano            | 512 MB | ~$3/month     | Yes (SQLite)                       |
+| AWS t4g.micro           | 1 GB   | ~$6/month     | Yes (SQLite, comfortable headroom) |
+| AWS t4g.small           | 2 GB   | ~$15/month    | Yes (SQLite or PostgreSQL)         |
+| MongoDB Atlas (minimum) | —      | ~$50–60/month | MongoDB only                       |
 
 This means a research group can run a fully functional Apollo 3 instance on a
 $3–6/month nano or micro instance — an order of magnitude cheaper than the
@@ -180,10 +180,10 @@ deployment patterns where infrastructure costs approach zero when idle:
   for Lambda. MikroORM v7 reduced its core to zero runtime dependencies,
   improving cold start times. Today, Lambda works for read-only use cases
   (serving annotation data to a public JBrowse instance without collaborative
-  editing). Full collaborative support on Lambda is blocked by one thing:
-  Apollo 3 uses WebSockets (Socket.IO) for real-time change broadcast, and
-  Lambda does not support persistent connections. A realistic path to full
-  Lambda support is replacing Socket.IO with **Server-Sent Events (SSE)**:
+  editing). Full collaborative support on Lambda is blocked by one thing: Apollo
+  3 uses WebSockets (Socket.IO) for real-time change broadcast, and Lambda does
+  not support persistent connections. A realistic path to full Lambda support is
+  replacing Socket.IO with **Server-Sent Events (SSE)**:
   - Client-to-server edits already travel as plain HTTP POST requests, which
     Lambda handles natively
   - Server-to-client change notifications (the only thing WebSockets are used
@@ -199,9 +199,9 @@ deployment patterns where infrastructure costs approach zero when idle:
 
 MikroORM's architecture is well suited for resource-constrained environments:
 the `@mikro-orm/core` package has zero runtime dependencies as of v7, and the
-ORM initializes once at startup with fast per-request forking via
-`em.fork()` — forking creates lightweight class instances with shared resources,
-adding negligible overhead per request.
+ORM initializes once at startup with fast per-request forking via `em.fork()` —
+forking creates lightweight class instances with shared resources, adding
+negligible overhead per request.
 
 For detailed deployment scenarios and configuration, see
 [Technical Details — Deployment Simplification](./mikro-orm-technical-details.md#deployment-simplification).
@@ -233,13 +233,13 @@ relational foundation, but were difficult or impossible with the document model:
 These are areas where the relational model is currently harder than MongoDB's
 nested documents. Each has a clear, bounded fix.
 
-| Area                                 | What is currently harder                                                                                                               | Mitigation                                                                                     |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Area                                 | What is currently harder                                                                                                   | Mitigation                                                                                           |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | Loading a full gene tree             | With nested documents, one query returns the entire gene. With flat rows, loading all descendants requires recursive CTEs. | Recursive CTEs already batch this efficiently; denormalization (`root_id`) only if proven bottleneck |
-| Deleting a gene and all its children | ~~Currently walks the tree and deletes one feature at a time~~ **Fixed**                                                               | `ON DELETE CASCADE` on the parent foreign key — the database handles it in one operation       |
-| Deleting an assembly                 | ~~Related records must be deleted in a specific order~~ **Fixed**                                                                      | Cascade delete rules implemented — the database handles ordering automatically                 |
-| Full-text search                     | Currently uses basic pattern matching (`LIKE`), weaker than MongoDB's text index                                                       | Replace with SQLite FTS5 or PostgreSQL `tsvector` — both are mature, built-in full-text search |
-| Some bulk operations                 | ~~Export and search issue one database query per item in a loop~~ **Fixed**                                                            | Batched queries with `IN` filters now used throughout                                          |
+| Deleting a gene and all its children | ~~Currently walks the tree and deletes one feature at a time~~ **Fixed**                                                   | `ON DELETE CASCADE` on the parent foreign key — the database handles it in one operation             |
+| Deleting an assembly                 | ~~Related records must be deleted in a specific order~~ **Fixed**                                                          | Cascade delete rules implemented — the database handles ordering automatically                       |
+| Full-text search                     | Currently uses basic pattern matching (`LIKE`), weaker than MongoDB's text index                                           | Replace with SQLite FTS5 or PostgreSQL `tsvector` — both are mature, built-in full-text search       |
+| Some bulk operations                 | ~~Export and search issue one database query per item in a loop~~ **Fixed**                                                | Batched queries with `IN` filters now used throughout                                                |
 
 See [Technical Details](./mikro-orm-technical-details.md) for full analysis of
 each tradeoff with worked examples.
@@ -383,8 +383,8 @@ executes inside a transactional unit of work with automatic rollback on failure.
 MongoDB is still supported as a backend option via `DB_BACKEND=mongo`. A
 dedicated `MongoFeatureRepository` handles tree traversal using iterative BFS
 (since recursive CTEs are SQL-only). All other repository operations use
-MikroORM's generic API, which works with MongoDB natively. A migration script
-is available for converting existing MongoDB data to the new schema.
+MikroORM's generic API, which works with MongoDB natively. A migration script is
+available for converting existing MongoDB data to the new schema.
 
 ---
 
@@ -402,9 +402,9 @@ is available for converting existing MongoDB data to the new schema.
   or early deployments can migrate their data without starting over.
 - **Data portability**: Annotation data can be inspected, exported, or backed up
   with standard SQL tools — no specialized tooling required.
-- **Multi-database support**: A single codebase supports SQLite, PostgreSQL,
-  and MongoDB. The `DB_BACKEND` environment variable selects the backend, and
-  a repository factory pattern ensures the correct implementation is used.
+- **Multi-database support**: A single codebase supports SQLite, PostgreSQL, and
+  MongoDB. The `DB_BACKEND` environment variable selects the backend, and a
+  repository factory pattern ensures the correct implementation is used.
 - **Local PostgreSQL testing**: A `docker-compose.yml` provides a PostgreSQL
   service for local development and testing.
 - **Test coverage**: The existing end-to-end test suite (Cypress) runs against

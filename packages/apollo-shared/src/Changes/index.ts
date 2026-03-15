@@ -15,11 +15,13 @@ import { MergeExonsChange } from './MergeExonsChange.js'
 import { SetCdsBoundsChange } from './SetCdsBoundsChange.js'
 import { MergeTranscriptsChange } from './MergeTranscriptsChange.js'
 import { SplitExonChange } from './SplitExonChange.js'
+import { SplitTranscriptChange } from './SplitTranscriptChange.js'
 import { StrandChange } from './StrandChange.js'
 import { TypeChange } from './TypeChange.js'
 import { UndoMergeExonsChange } from './UndoMergeExonsChange.js'
 import { UndoMergeTranscriptsChange } from './UndoMergeTranscriptsChange.js'
 import { UndoSplitExonChange } from './UndoSplitExonChange.js'
+import { UndoSplitTranscriptChange } from './UndoSplitTranscriptChange.js'
 import { UserChange } from './UserChange.js'
 
 export const changes = {
@@ -37,9 +39,11 @@ export const changes = {
   MergeExonsChange,
   SetCdsBoundsChange,
   SplitExonChange,
+  SplitTranscriptChange,
   MergeTranscriptsChange,
   UndoMergeExonsChange,
   UndoSplitExonChange,
+  UndoSplitTranscriptChange,
   UndoMergeTranscriptsChange,
   StrandChange,
   TypeChange,
@@ -62,9 +66,11 @@ export * from './LocationStartChange.js'
 export * from './MergeExonsChange.js'
 export * from './SetCdsBoundsChange.js'
 export * from './SplitExonChange.js'
+export * from './SplitTranscriptChange.js'
 export * from './MergeTranscriptsChange.js'
 export * from './UndoMergeExonsChange.js'
 export * from './UndoSplitExonChange.js'
+export * from './UndoSplitTranscriptChange.js'
 export * from './UndoMergeTranscriptsChange.js'
 export * from './StrandChange.js'
 export * from './TypeChange.js'

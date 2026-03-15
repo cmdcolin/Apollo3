@@ -159,15 +159,15 @@ async function checkMRNA(
     const codons = splitSequenceInCodons(sequence)
     const cdsEnd =
       strand === -1
-        ? cdsLocation.at(0)?.min ?? min
-        : cdsLocation.at(-1)?.max ?? max
+        ? (cdsLocation.at(0)?.min ?? min)
+        : (cdsLocation.at(-1)?.max ?? max)
     if (sequence.length % 3 === 0) {
       const start_codon = codons.at(0)
       if (start_codon && !(start_codon.toUpperCase() in START_CODONS)) {
         let cdsStart =
           strand === -1
-            ? cdsLocation.at(-1)?.max ?? max
-            : cdsLocation.at(0)?.min ?? min
+            ? (cdsLocation.at(-1)?.max ?? max)
+            : (cdsLocation.at(0)?.min ?? min)
         cdsStart = strand === -1 ? cdsStart - 3 : cdsStart
         checkResults.push({
           _id: new ObjectID().toHexString(),

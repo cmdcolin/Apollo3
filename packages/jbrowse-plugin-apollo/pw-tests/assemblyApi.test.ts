@@ -30,7 +30,11 @@ test('Upload and create assembly via API', async () => {
   const configRes = await fetch(`${API_BASE}/jbrowse/config.json`, {
     headers: { Authorization: `Bearer ${token}`, Connection: 'close' },
   })
-  const config = await configRes.json() as { assemblies: { name: string; displayName: string }[] }
-  console.log(`Assemblies in config: ${JSON.stringify(config.assemblies?.map(a => a.displayName))}`)
+  const config = (await configRes.json()) as {
+    assemblies: { name: string; displayName: string }[]
+  }
+  console.log(
+    `Assemblies in config: ${JSON.stringify(config.assemblies?.map((a) => a.displayName))}`,
+  )
   expect(config.assemblies.length).toBeGreaterThan(0)
 })

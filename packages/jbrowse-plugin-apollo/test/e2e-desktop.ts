@@ -428,32 +428,6 @@ async function testCreateAnnotationAndExportGFF3(d: WebDriver) {
     region: 'ctgA:1000-5000',
   })
 
-  console.log('    Setting up PnP module resolution...')
-  const pnpSetupPath = resolve(__dirname, '.pnp-setup.cjs').replace(/\\/g, '/')
-  const resolveResult = await d.executeScript(`
-    try {
-      globalThis.require('${pnpSetupPath}');
-
-      var Module = globalThis.require('module');
-      var pnpResolve = Module._resolveFilename;
-      var pluginPkg = '${resolve(APOLLO_ROOT, 'packages/jbrowse-plugin-apollo/package.json').replace(/\\/g, '/')}';
-      var fakeParent = new Module(pluginPkg);
-      fakeParent.filename = pluginPkg;
-      fakeParent.paths = Module._nodeModulePaths('${resolve(APOLLO_ROOT, 'packages/jbrowse-plugin-apollo').replace(/\\/g, '/')}');
-      Module._resolveFilename = function(request, parent, isMain, options) {
-        try {
-          return pnpResolve.call(this, request, parent, isMain, options);
-        } catch(e) {
-          return pnpResolve.call(this, request, fakeParent, isMain, options);
-        }
-      };
-      return 'ok';
-    } catch(e) {
-      return 'error: ' + e.message;
-    }
-  `)
-  console.log(`    PnP setup: ${resolveResult}`)
-
   // Rubber band drag to create a selection
   const rubberbandArea = await d.wait(
     until.elementLocated(By.css('[data-testid="rubberband_controls"]')),

@@ -11,8 +11,7 @@ import {
 } from '@apollo-annotation/common'
 import { getSession } from '@jbrowse/core/util'
 
-export interface SerializedAssemblyAliasesChange
-  extends SerializedAssemblySpecificChange {
+export interface SerializedAssemblyAliasesChange extends SerializedAssemblySpecificChange {
   typeName: 'AddAssemblyAliasesChange'
   aliases: string[]
 }

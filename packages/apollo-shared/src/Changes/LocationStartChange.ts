@@ -1,4 +1,3 @@
- 
 /* eslint-disable @typescript-eslint/require-await */
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import {
@@ -20,11 +19,9 @@ interface LocationStartChangeDetails {
 }
 
 interface SerializedLocationStartChangeSingle
-  extends SerializedLocationStartChangeBase,
-    LocationStartChangeDetails {}
+  extends SerializedLocationStartChangeBase, LocationStartChangeDetails {}
 
-interface SerializedLocationStartChangeMultiple
-  extends SerializedLocationStartChangeBase {
+interface SerializedLocationStartChangeMultiple extends SerializedLocationStartChangeBase {
   changes: LocationStartChangeDetails[]
 }
 
@@ -55,7 +52,9 @@ export class LocationStartChange extends FeatureChange {
     const { changes, logger } = this
     for (const change of changes) {
       const { featureId, oldStart, newStart } = change
-      logger.debug?.(`featureId=${featureId}, oldStart=${oldStart}, newStart=${newStart}`)
+      logger.debug?.(
+        `featureId=${featureId}, oldStart=${oldStart}, newStart=${newStart}`,
+      )
       const row = await featureRepository.findById(featureId)
       if (!row) {
         const errMsg = `Feature not found: ${featureId}`

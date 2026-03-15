@@ -5,7 +5,12 @@ import { type ChildProcess, spawn } from 'node:child_process'
 
 import type { DecodedJWT } from '@apollo-annotation/shared'
 import { AddFeatureChange } from '@apollo-annotation/shared'
-import { Inject, Injectable, Logger, type OnModuleDestroy } from '@nestjs/common'
+import {
+  Inject,
+  Injectable,
+  Logger,
+  type OnModuleDestroy,
+} from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
 import { ChangesService } from '../changes/changes.service.js'
@@ -28,9 +33,11 @@ interface TiberiusJob {
 @Injectable()
 export class ToolsService implements OnModuleDestroy {
   constructor(
-    @Inject(ToolsConfigService) private readonly toolsConfig: ToolsConfigService,
+    @Inject(ToolsConfigService)
+    private readonly toolsConfig: ToolsConfigService,
     @Inject(SequenceService) private readonly sequenceService: SequenceService,
-    @Inject(ConfigService) private readonly configService: ConfigService<{
+    @Inject(ConfigService)
+    private readonly configService: ConfigService<{
       FILE_UPLOAD_FOLDER: string
     }>,
     @Inject(ChangesService) private readonly changesService: ChangesService,
@@ -144,19 +151,17 @@ export class ToolsService implements OnModuleDestroy {
     child.on('close', (code) => {
       clearTimeout(timeout)
       if (code === 0 && existsSync(outputPath)) {
-        void this.handleTiberiusOutput(
-          jobId,
-          outputPath,
-          params,
-          jobDir,
-        ).catch((err: unknown) => {
-          job.status = 'failed'
-          job.message = `Failed to import results: ${err}`
-          this.logger.error(`Tiberius job ${jobId} import failed: ${err}`)
-        })
+        void this.handleTiberiusOutput(jobId, outputPath, params, jobDir).catch(
+          (err: unknown) => {
+            job.status = 'failed'
+            job.message = `Failed to import results: ${err}`
+            this.logger.error(`Tiberius job ${jobId} import failed: ${err}`)
+          },
+        )
       } else {
         job.status = 'failed'
-        job.message = stderr.slice(0, 1000) || `Tiberius exited with code ${code}`
+        job.message =
+          stderr.slice(0, 1000) || `Tiberius exited with code ${code}`
         this.logger.error(`Tiberius job ${jobId} failed: ${job.message}`)
         this.cleanupJobDir(jobDir)
       }
@@ -166,16 +171,18 @@ export class ToolsService implements OnModuleDestroy {
   }
 
   private buildTiberiusArgs(
-    config: { singularity: boolean; executable: string; script?: string; model?: string },
+    config: {
+      singularity: boolean
+      executable: string
+      script?: string
+      model?: string
+    },
     inputPath: string,
     outputPath: string,
     jobDir: string,
   ) {
     if (config.singularity) {
-      const args = [
-        'exec',
-        '--bind', `${jobDir}:${jobDir}`,
-      ]
+      const args = ['exec', '--bind', `${jobDir}:${jobDir}`]
       if (config.script) {
         args.push(config.script)
       }
@@ -200,7 +207,12 @@ export class ToolsService implements OnModuleDestroy {
   private async handleTiberiusOutput(
     jobId: string,
     outputPath: string,
-    params: { assembly: string; refSeqId: string; start: number; user: DecodedJWT },
+    params: {
+      assembly: string
+      refSeqId: string
+      start: number
+      user: DecodedJWT
+    },
     jobDir: string,
   ) {
     const { readFileSync } = await import('node:fs')

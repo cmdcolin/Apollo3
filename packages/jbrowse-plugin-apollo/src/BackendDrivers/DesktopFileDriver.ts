@@ -101,9 +101,9 @@ export class DesktopFileDriver extends BackendDriver {
         | undefined
       return Boolean(
         sequenceMetadata &&
-          sequenceMetadata.apollo &&
-          !sequenceMetadata.internetAccountConfigId &&
-          sequenceMetadata.file,
+        sequenceMetadata.apollo &&
+        !sequenceMetadata.internetAccountConfigId &&
+        sequenceMetadata.file,
       )
     })
   }

@@ -27,16 +27,16 @@ test.afterEach(async ({ page }) => {
 async function setupDeleteFeatureTest(page: import('@playwright/test').Page) {
   await addAssemblyFromGff(page, 'deleteFeature.gff3', GFF_PATH)
   await selectAssemblyToView(page, 'deleteFeature.gff3', 'chr2:1..250')
-  await annotationTrackAppearance(
-    page,
-    'Show both graphical and table display',
-  )
+  await annotationTrackAppearance(page, 'Show both graphical and table display')
   // Wait for features to load in the table
   await expect(page.getByText('Id=gene02')).toBeVisible({ timeout: 30_000 })
   console.log('[setup] Features loaded in table')
 }
 
-async function deleteFeatureByName(page: import('@playwright/test').Page, featureName: string) {
+async function deleteFeatureByName(
+  page: import('@playwright/test').Page,
+  featureName: string,
+) {
   const featureEl = page.getByText(featureName)
   await featureEl.click({ button: 'right', force: true })
   await page.getByText('Delete feature', { exact: false }).click()
@@ -122,16 +122,10 @@ test('Delete and resize', async ({ page }) => {
   await deleteFeatureByName(page, 'Id=exon_region1')
   await refreshTableEditor(page)
   await expect(
-    page
-      .getByText('Id=exon08')
-      .locator('..')
-      .locator('input[value="160"]'),
+    page.getByText('Id=exon08').locator('..').locator('input[value="160"]'),
   ).toBeVisible()
   await expect(
-    page
-      .getByText('Id=exon08')
-      .locator('..')
-      .locator('input[value="190"]'),
+    page.getByText('Id=exon08').locator('..').locator('input[value="190"]'),
   ).toBeVisible()
 
   await deleteFeatureByName(page, 'Id=cds1')
@@ -140,26 +134,17 @@ test('Delete and resize', async ({ page }) => {
     page.getByText('Id=mrna02').locator('..').locator('input[value="50"]'),
   ).toBeVisible()
   await expect(
-    page
-      .getByText('Id=mrna02')
-      .locator('..')
-      .locator('input[value="115"]'),
+    page.getByText('Id=mrna02').locator('..').locator('input[value="115"]'),
   ).toBeVisible()
 
   await deleteFeatureByName(page, 'Id=exon02')
   await deleteFeatureByName(page, 'Id=exon10')
   await refreshTableEditor(page)
   await expect(
-    page
-      .getByText('Id=mrna02')
-      .locator('..')
-      .locator('input[value="105"]'),
+    page.getByText('Id=mrna02').locator('..').locator('input[value="105"]'),
   ).toBeVisible()
   await expect(
-    page
-      .getByText('Id=mrna02')
-      .locator('..')
-      .locator('input[value="115"]'),
+    page.getByText('Id=mrna02').locator('..').locator('input[value="115"]'),
   ).toBeVisible()
 })
 

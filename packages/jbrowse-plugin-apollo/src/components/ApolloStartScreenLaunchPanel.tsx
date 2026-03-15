@@ -1,8 +1,6 @@
- 
 import type PluginManager from '@jbrowse/core/PluginManager'
 import { Button } from '@mui/material'
 import React, { useEffect, useState } from 'react'
-
 
 import { NewApolloProjectDialog } from './NewApolloProjectDialog'
 

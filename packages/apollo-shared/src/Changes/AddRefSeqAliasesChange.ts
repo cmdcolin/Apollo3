@@ -16,8 +16,7 @@ export interface SerializedRefSeqAliases {
   aliases: string[]
 }
 
-export interface SerializedRefSeqAliasesChange
-  extends SerializedAssemblySpecificChange {
+export interface SerializedRefSeqAliasesChange extends SerializedAssemblySpecificChange {
   typeName: 'AddRefSeqAliasesChange'
   refSeqAliases: SerializedRefSeqAliases[]
 }

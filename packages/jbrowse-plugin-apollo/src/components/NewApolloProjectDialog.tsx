@@ -13,7 +13,6 @@ import {
 } from '@mui/material'
 import React, { useState } from 'react'
 
-
 const blank = { uri: '' } as FileLocation
 
 function isBlank(location: FileLocation) {
@@ -33,7 +32,7 @@ function getLocalPath(location: FileLocation) {
 function deriveDbPath(fastaLocation: FileLocation) {
   const fastaPath = getLocalPath(fastaLocation)
   if (fastaPath) {
-    return `${fastaPath.replace(/\.(fa|fasta|fna)(\.gz)?$/i, '')  }.apollo.sqlite`
+    return `${fastaPath.replace(/\.(fa|fasta|fna)(\.gz)?$/i, '')}.apollo.sqlite`
   }
   return ''
 }
@@ -77,7 +76,7 @@ export function NewApolloProjectDialog({
       if (fastaPath) {
         setFaiLocation({
           locationType: 'LocalPathLocation',
-          localPath: `${fastaPath  }.fai`,
+          localPath: `${fastaPath}.fai`,
         } as FileLocation)
       }
     }

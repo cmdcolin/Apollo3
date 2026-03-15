@@ -23,7 +23,8 @@ export class GoogleStrategy extends PassportStrategy(Strategy) {
   private readonly logger = new Logger(GoogleStrategy.name)
 
   constructor(
-    @Inject(AuthenticationService) private readonly authService: AuthenticationService,
+    @Inject(AuthenticationService)
+    private readonly authService: AuthenticationService,
     @Inject(ConfigService) configService: ConfigService<ConfigValues, true>,
   ) {
     let clientID = configService.get('GOOGLE_CLIENT_ID', { infer: true })

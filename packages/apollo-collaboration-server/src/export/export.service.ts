@@ -62,7 +62,8 @@ function buildChildrenMap(rows: FeatureRow[]) {
 @Injectable()
 export class ExportService {
   constructor(
-    @Inject(ConfigService) private readonly configService: ConfigService<
+    @Inject(ConfigService)
+    private readonly configService: ConfigService<
       { FILE_UPLOAD_FOLDER: string },
       true
     >,
@@ -116,8 +117,7 @@ export class ExportService {
         continue
       }
       const rootIds = rootFeatures.map((r) => r._id)
-      const descendants =
-        await this.db.feature.findDescendantsOfMany(rootIds)
+      const descendants = await this.db.feature.findDescendantsOfMany(rootIds)
       const childrenMap = buildChildrenMap([...rootFeatures, ...descendants])
       for (const root of rootFeatures) {
         const snapshot = featureRowToSnapshot(root, childrenMap)

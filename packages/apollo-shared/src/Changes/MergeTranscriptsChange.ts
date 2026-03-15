@@ -33,11 +33,9 @@ export interface MergeTranscriptsChangeDetails {
 }
 
 interface SerializedMergeTranscriptsChangeSingle
-  extends SerializedMergeTranscriptsChangeBase,
-    MergeTranscriptsChangeDetails {}
+  extends SerializedMergeTranscriptsChangeBase, MergeTranscriptsChangeDetails {}
 
-interface SerializedMergeTranscriptsChangeMultiple
-  extends SerializedMergeTranscriptsChangeBase {
+interface SerializedMergeTranscriptsChangeMultiple extends SerializedMergeTranscriptsChangeBase {
   changes: MergeTranscriptsChangeDetails[]
 }
 
@@ -300,10 +298,18 @@ export class MergeTranscriptsChange extends FeatureChange {
         )
       ) {
         mrgChild!.setMin(
-          Math.min(secondFeatureChild.min, mrgChild!.min, firstFeatureChild.min),
+          Math.min(
+            secondFeatureChild.min,
+            mrgChild!.min,
+            firstFeatureChild.min,
+          ),
         )
         mrgChild!.setMax(
-          Math.max(secondFeatureChild.max, mrgChild!.max, firstFeatureChild.max),
+          Math.max(
+            secondFeatureChild.max,
+            mrgChild!.max,
+            firstFeatureChild.max,
+          ),
         )
 
         const mergedWithAttributes =
@@ -315,12 +321,12 @@ export class MergeTranscriptsChange extends FeatureChange {
         )
         if (toDelete) {
           const snap = getSnapshot<AnnotationFeatureSnapshot>(firstFeatureChild)
-          mergedWithAttributes.push(
-            stringifyAttributes(snap.attributes),
-          )
+          mergedWithAttributes.push(stringifyAttributes(snap.attributes))
           firstTranscript.deleteChild(firstFeatureChild._id)
         }
-        mrgChild!.setAttribute('merged_with', [...new Set(mergedWithAttributes)])
+        mrgChild!.setAttribute('merged_with', [
+          ...new Set(mergedWithAttributes),
+        ])
         merged = true
       }
     }

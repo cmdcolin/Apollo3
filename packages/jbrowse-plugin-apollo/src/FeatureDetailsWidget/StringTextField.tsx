@@ -4,11 +4,10 @@ import { TextField, type TextFieldProps } from '@mui/material'
 import { observer } from 'mobx-react'
 import React, { useEffect, useState } from 'react'
 
-interface StringTextFieldProps
-  extends Omit<
-    TextFieldProps,
-    'type' | 'onChange' | 'onKeyDown' | 'onBlur' | 'ref'
-  > {
+interface StringTextFieldProps extends Omit<
+  TextFieldProps,
+  'type' | 'onChange' | 'onKeyDown' | 'onBlur' | 'ref'
+> {
   onChangeCommitted(newValue: string): void
   value: unknown
 }

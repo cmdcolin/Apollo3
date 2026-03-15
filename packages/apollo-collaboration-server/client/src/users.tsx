@@ -42,8 +42,14 @@ function UsersPage() {
   return (
     <AdminNav current="users">
       <Container>
-        <Typography variant="h4" gutterBottom>Users</Typography>
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        <Typography variant="h4" gutterBottom>
+          Users
+        </Typography>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           Total: {users.length}
         </Typography>
@@ -70,7 +76,11 @@ function UsersPage() {
               ))}
               {users.length === 0 && !error && (
                 <TableRow>
-                  <TableCell colSpan={4} align="center" sx={{ color: 'text.secondary' }}>
+                  <TableCell
+                    colSpan={4}
+                    align="center"
+                    sx={{ color: 'text.secondary' }}
+                  >
                     No users found
                   </TableCell>
                 </TableRow>

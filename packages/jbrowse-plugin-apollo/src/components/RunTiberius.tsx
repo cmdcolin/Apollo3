@@ -23,7 +23,11 @@ interface RunTiberiusProps {
 
 type JobStatus = 'idle' | 'starting' | 'running' | 'completed' | 'failed'
 
-export function RunTiberius({ handleClose, region, session }: RunTiberiusProps) {
+export function RunTiberius({
+  handleClose,
+  region,
+  session,
+}: RunTiberiusProps) {
   const [status, setStatus] = useState<JobStatus>('idle')
   const [jobId, setJobId] = useState<string>()
   const [message, setMessage] = useState('')
@@ -32,7 +36,8 @@ export function RunTiberius({ handleClose, region, session }: RunTiberiusProps) 
   const [maxRegionSize, setMaxRegionSize] = useState<number>()
 
   const regionSize = region.end - region.start
-  const regionTooLarge = maxRegionSize !== undefined && regionSize > maxRegionSize
+  const regionTooLarge =
+    maxRegionSize !== undefined && regionSize > maxRegionSize
 
   useEffect(() => {
     const backendDriver = session.apolloDataStore.getBackendDriver(

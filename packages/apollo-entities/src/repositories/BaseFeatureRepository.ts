@@ -4,10 +4,40 @@ import type { EntityManager, InferEntity } from '@mikro-orm/core'
 import { FeatureEntity } from '../entities/FeatureEntity.js'
 
 export const STOP_WORDS = new Set([
-  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', 'for', 'if', 'in',
-  'into', 'is', 'it', 'no', 'not', 'of', 'on', 'or', 'such', 'that', 'the',
-  'their', 'then', 'there', 'these', 'they', 'this', 'to', 'was', 'will',
-  'with', 'both',
+  'a',
+  'an',
+  'and',
+  'are',
+  'as',
+  'at',
+  'be',
+  'but',
+  'by',
+  'for',
+  'if',
+  'in',
+  'into',
+  'is',
+  'it',
+  'no',
+  'not',
+  'of',
+  'on',
+  'or',
+  'such',
+  'that',
+  'the',
+  'their',
+  'then',
+  'there',
+  'these',
+  'they',
+  'this',
+  'to',
+  'was',
+  'will',
+  'with',
+  'both',
 ])
 
 export function tokenize(text: string) {
@@ -44,7 +74,9 @@ export function matchesPhrase(textTokens: string[], queryTokens: string[]) {
   return false
 }
 
-export function entityToRow(entity: InferEntity<typeof FeatureEntity>): FeatureRow {
+export function entityToRow(
+  entity: InferEntity<typeof FeatureEntity>,
+): FeatureRow {
   return {
     _id: entity._id,
     parentId: entity.parent?._id ?? undefined,
@@ -219,7 +251,10 @@ export abstract class BaseFeatureRepository implements FeatureRepository {
   abstract findDescendantsOfMany(rootIds: string[]): Promise<FeatureRow[]>
   abstract deleteDescendants(id: string): Promise<number>
   abstract searchText(refSeqIds: string[], query: string): Promise<FeatureRow[]>
-  abstract findByIndexedId(id: string, refSeqIds?: string[]): Promise<FeatureRow[]>
+  abstract findByIndexedId(
+    id: string,
+    refSeqIds?: string[],
+  ): Promise<FeatureRow[]>
   abstract findRootParent(id: string): Promise<FeatureRow | undefined>
   abstract findRootParentsOfMany(ids: string[]): Promise<FeatureRow[]>
 }

@@ -81,7 +81,11 @@ export function OpenLocalFile({ handleClose, session }: OpenLocalFileProps) {
     const assemblyId = `${assemblyName}-${file.name}-${nanoid(8)}`
     try {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      await loadAssemblyIntoClient(assemblyId, fileData, apolloDataStore as unknown as ClientDataStore)
+      await loadAssemblyIntoClient(
+        assemblyId,
+        fileData,
+        apolloDataStore as unknown as ClientDataStore,
+      )
     } catch (error) {
       console.error(error)
       notify(`Error loading GFF3 ${file.name}, ${String(error)}`, 'error')

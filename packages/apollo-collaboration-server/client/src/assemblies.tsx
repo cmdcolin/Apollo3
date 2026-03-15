@@ -43,8 +43,14 @@ function AssembliesPage() {
   return (
     <Nav current="assemblies">
       <Container>
-        <Typography variant="h4" gutterBottom>Assemblies</Typography>
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        <Typography variant="h4" gutterBottom>
+          Assemblies
+        </Typography>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           Total: {assemblies.length}
         </Typography>
@@ -67,7 +73,9 @@ function AssembliesPage() {
                   <TableCell>{a.description ?? ''}</TableCell>
                   <TableCell>{a.organism ?? ''}</TableCell>
                   <TableCell>
-                    <Link href={`/jbrowse/?assembly=${encodeURIComponent(a.name)}`}>
+                    <Link
+                      href={`/jbrowse/?assembly=${encodeURIComponent(a.name)}`}
+                    >
                       Open in JBrowse
                     </Link>
                   </TableCell>
@@ -75,7 +83,11 @@ function AssembliesPage() {
               ))}
               {assemblies.length === 0 && !error && (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ color: 'text.secondary' }}>
+                  <TableCell
+                    colSpan={5}
+                    align="center"
+                    sx={{ color: 'text.secondary' }}
+                  >
                     No assemblies found
                   </TableCell>
                 </TableRow>

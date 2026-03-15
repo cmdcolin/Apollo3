@@ -92,17 +92,17 @@ workspace packages in parallel in ~3s.
   `experimentalDecorators` syntax natively, but does NOT support
   `emitDecoratorMetadata`. If a new NestJS service or controller is added, it
   **must** include explicit `@Inject()` on all constructor parameters. Omitting
-  `@Inject()` will cause a runtime DI error (not a build error), so this is
-  easy to miss. A linter rule to enforce explicit `@Inject()` would be a good
+  `@Inject()` will cause a runtime DI error (not a build error), so this is easy
+  to miss. A linter rule to enforce explicit `@Inject()` would be a good
   addition.
 
 **Build time comparison:**
 
-| Scenario | Before | After |
-| --- | --- | --- |
-| Clean build (all packages) | ~28s | ~3s |
-| Incremental (no changes) | ~28s (no caching — `rimraf dist` on every start) | ~3s |
-| Server startup (NestJS init) | ~6s | ~6s (unchanged) |
+| Scenario                     | Before                                           | After           |
+| ---------------------------- | ------------------------------------------------ | --------------- |
+| Clean build (all packages)   | ~28s                                             | ~3s             |
+| Incremental (no changes)     | ~28s (no caching — `rimraf dist` on every start) | ~3s             |
+| Server startup (NestJS init) | ~6s                                              | ~6s (unchanged) |
 
 ## Outstanding Issues (Priority Order)
 
@@ -123,7 +123,6 @@ workspace packages in parallel in ~3s.
 2. ~~**Demo dev instance with sample data**~~ — **Done.** Pre-built SQLite
    database (`demo-data/demo.sqlite`, 256KB) with two assemblies configured
    using external FASTA references (no sequence/features stored in DB):
-
    - **volvox** — bgzip FASTA served locally from `test_data/`
    - **hg38** — remote bgzip FASTA from `jbrowse.org`
 
@@ -136,7 +135,6 @@ workspace packages in parallel in ~3s.
 
 2. **Set Translation Start / Set Longest ORF** — Apollo Classic's most-used
    curation operations.
-
    - ~~Set Longest ORF~~ — **Done.** `SetCdsBoundsChange` atomically updates CDS
      min/max. `SetLongestOrf` dialog scans all three reading frames of the
      spliced exon sequence, finds the longest ATG→stop ORF, and submits the
@@ -144,21 +142,17 @@ workspace packages in parallel in ~3s.
    - **TODO: Set Translation Start** — adjusts CDS boundaries based on a
      user-selected start codon position. Needs a position-picking UI.
 
-3. **Split Transcript** — Apollo Classic supports splitting a transcript into
-   two independent transcripts. Apollo3 has `MergeTranscriptsChange` but no
-   inverse split operation.
-
-   - New `SplitTranscriptChange`: given a transcript and a split point, creates
-     two new transcripts partitioning the child exons/CDSs
-   - Exons spanning the split point should be assigned to whichever side
-     contains the majority, or duplicated and trimmed
-   - Frontend: right-click menu on transcript features
-   - **Files**: `packages/apollo-shared/src/Changes/`, plugin context menu
+3. ~~**Split Transcript**~~ — **Done.** `SplitTranscriptChange` splits a
+   transcript at a user-selected exon boundary. Dialog shows all possible split
+   points between adjacent exons. Children are partitioned by midpoint (exons,
+   CDS, etc. to the left/right of the split point go to the respective new
+   transcript). Parent gene bounds are updated. Full undo support via
+   `UndoSplitTranscriptChange`. Available in context menu on transcript features
+   in both the linear display and tabular editor.
 
 4. **Attribute/Metadata Editing UI** — Apollo Classic has rich editors for
    dbxrefs, GO terms, gene products, and comments. Apollo3 stores attributes as
    generic key-value pairs but has no dedicated editing UI.
-
    - Database cross-references (e.g., UniProt, NCBI Gene) with autocomplete
    - GO term annotation with evidence codes (EXP, IDA, ISS, etc.)
    - Gene product names
@@ -231,7 +225,6 @@ workspace packages in parallel in ~3s.
     `LockMode.PESSIMISTIC_WRITE` to the counter read (`SELECT ... FOR UPDATE` in
     PostgreSQL). Prevents two concurrent transactions from reading the same
     value. No-op on SQLite (writes are engine-serialized).
-
     - **Files**:
       `packages/apollo-entities/src/repositories/MikroOrmCounterRepository.ts`
 
@@ -256,7 +249,6 @@ workspace packages in parallel in ~3s.
     auth migration. Currently the InternetAccount still exists for websocket
     management and menu registration. Move these to simpler plugin-level code
     that reads role from config and connects websocket directly.
-
     - **Files**: `packages/jbrowse-plugin-apollo/src/ApolloInternetAccount/`
 
 18. **Remove chunked RefSeqChunk storage** — Apollo3 currently stores reference
@@ -267,7 +259,6 @@ workspace packages in parallel in ~3s.
     maintenance complexity (chunk size management, assembly sequence source
     types). Instead, always refer to an external indexed FASTA file (or any
     other JBrowse 2 sequence adapter) for sequence data.
-
     - Remove `RefSeqChunkEntity` and `MikroOrmRefSeqChunkRepository`
     - Remove `refSeqChunk` from `DatabaseService` and `ServerDataStore`
     - Remove chunked FASTA parsing from `FromFileBaseChange`
@@ -313,7 +304,6 @@ top-level resolution, replacing per-ID loops.
 19. **Per-assembly permissions** — Apollo Classic has user/group permissions per
     organism. Apollo3 currently has global roles only (admin/user/readOnly).
     Multi-assembly deployments need per-assembly access control.
-
     - New `AssemblyPermission` entity: maps user → assembly → role
     - `ValidationGuard` checks per-assembly permissions before changes
     - Admin UI for assigning users to assemblies
@@ -324,7 +314,6 @@ top-level resolution, replacing per-ID loops.
 20. **Feature ownership & audit display** — Apollo Classic tracks who
     created/last edited each feature. Apollo3 stores `user` on entities but
     doesn't expose this in the UI.
-
     - Display last editor in "Edit feature details" dialog
     - Show creation/modification timestamps
     - Optional: highlight features by ownership in the track display
@@ -343,7 +332,6 @@ top-level resolution, replacing per-ID loops.
 13. **FASTA export (CDS, protein, transcript sequences)** — Apollo Classic
     exports CDS sequences, protein translations, and genomic sequences. Apollo3
     only exports GFF3 + optional genomic FASTA.
-
     - Export types: CDS FASTA, protein FASTA, transcript FASTA
     - Protein export requires codon translation using configurable translation
       tables (NCBI tables, default table 1)
@@ -376,31 +364,30 @@ top-level resolution, replacing per-ID loops.
     that takes genomic DNA in FASTA format and outputs gene models in GTF.
 
     **Completed (Phase 1–4)**:
-
     - [x] Config file system (`apollo-tools.json`) with auto-detection of
-      `tiberius.py` and `singularity` on PATH. Configurable via
-      `APOLLO_TOOLS_CONFIG` env var.
+          `tiberius.py` and `singularity` on PATH. Configurable via
+          `APOLLO_TOOLS_CONFIG` env var.
     - [x] `ToolsConfigModule` + `ToolsConfigService` — loads config, exposes
-      `getToolConfig()`, `isToolAvailable()`, `isSingularityAvailable()`
+          `getToolConfig()`, `isToolAvailable()`, `isSingularityAvailable()`
     - [x] `ToolsModule` with three endpoints:
-      - `GET /tools/tiberius/available` (ReadOnly) — availability + maxRegionSize
+      - `GET /tools/tiberius/available` (ReadOnly) — availability +
+        maxRegionSize
       - `POST /tools/tiberius/run` (User) — starts background job, returns 202
       - `GET /tools/tiberius/status/:jobId` (ReadOnly) — poll for status
     - [x] `ToolsService` — full job lifecycle: region validation, sequence
-      fetch, temp FASTA, process spawn (with Singularity bind-mount support),
-      GTF parsing, feature import via `AddFeatureChange`, temp cleanup, timeout
-      handling, process cleanup on shutdown
+          fetch, temp FASTA, process spawn (with Singularity bind-mount
+          support), GTF parsing, feature import via `AddFeatureChange`, temp
+          cleanup, timeout handling, process cleanup on shutdown
     - [x] `parseGtf()` — pure function converting Tiberius GTF to
-      `AnnotationFeatureSnapshot[]` with coordinate offset (GTF 1-based
-      relative → absolute 0-based) and SO type mapping
+          `AnnotationFeatureSnapshot[]` with coordinate offset (GTF 1-based
+          relative → absolute 0-based) and SO type mapping
     - [x] `RunTiberius` dialog — rubber-band menu item ("Run Tiberius gene
-      prediction"), shows region info, max size warning, progress spinner,
-      polls status every 3s, completion/error display
+          prediction"), shows region info, max size warning, progress spinner,
+          polls status every 3s, completion/error display
     - [x] `CollaborationServerDriver` — `checkTiberiusAvailable()`,
-      `runTiberius()`, `getTiberiusStatus()` methods
+          `runTiberius()`, `getTiberiusStatus()` methods
 
     **Files (implemented)**:
-
     - `packages/apollo-collaboration-server/src/config/tools-config.service.ts`
     - `packages/apollo-collaboration-server/src/config/tools-config.module.ts`
     - `packages/apollo-collaboration-server/src/tools/tools.module.ts`
@@ -410,23 +397,22 @@ top-level resolution, replacing per-ID loops.
     - `packages/jbrowse-plugin-apollo/src/components/RunTiberius.tsx`
 
     **TODO — Remaining work**:
-
     - **Accept/reject workflow**: Currently predictions are auto-imported as
       annotation features on completion. Instead, display them in a preview
       layer and let the user accept/reject individual predictions before
       importing. Requires a results panel UI and a separate display mode for
       unconfirmed predictions.
-    - **RNA-seq evidence mode**: If BAM/CRAM alignment tracks are visible,
-      offer to include them as evidence for Tiberius. Extract the corresponding
-      BAM slice for the selected region and pass to Tiberius's evidence
-      pipeline. The 'Save track data' SAM export code in `jbrowse-components`
-      may be reusable here.
+    - **RNA-seq evidence mode**: If BAM/CRAM alignment tracks are visible, offer
+      to include them as evidence for Tiberius. Extract the corresponding BAM
+      slice for the selected region and pass to Tiberius's evidence pipeline.
+      The 'Save track data' SAM export code in `jbrowse-components` may be
+      reusable here.
     - **Docker backend support**: Currently only Singularity and bare-process
       execution are supported. Add Docker as a backend option.
-    - **GPU configuration**: Add `gpu: true/false` to tool config. Pass
-      `--nv` flag to Singularity or `--gpus all` to Docker when enabled.
-    - **Job queue / rate limiting**: Currently no limit on concurrent jobs.
-      Add a configurable max-concurrent-jobs setting to prevent GPU contention.
+    - **GPU configuration**: Add `gpu: true/false` to tool config. Pass `--nv`
+      flag to Singularity or `--gpus all` to Docker when enabled.
+    - **Job queue / rate limiting**: Currently no limit on concurrent jobs. Add
+      a configurable max-concurrent-jobs setting to prevent GPU contention.
     - **Per-assembly model config**: Allow different Tiberius models per
       assembly (e.g., different species models).
     - **Job persistence**: Jobs are in-memory and lost on server restart. Could
@@ -435,15 +421,14 @@ top-level resolution, replacing per-ID loops.
       GTF output) and verifies the full UI flow: rubber-band → dialog → run →
       features appear.
     - **GTF parser unit tests**: The parser works (verified manually) but the
-      server's jest config has PnP issues. Either fix ts-jest PnP resolution
-      or move the parser to `apollo-shared` where tests can run.
+      server's jest config has PnP issues. Either fix ts-jest PnP resolution or
+      move the parser to `apollo-shared` where tests can run.
 
 ### P2 — Architecture
 
 16. **PostgreSQL E2E CI pipeline** — E2E script supports PostgreSQL and
     `docker-compose.yml` provides a local PostgreSQL service, but no CI pipeline
     runs tests against PostgreSQL yet.
-
     - **Action**: Add a CI job that starts PostgreSQL via docker-compose and
       runs unit tests + E2E against it.
 
@@ -458,7 +443,6 @@ top-level resolution, replacing per-ID loops.
 18. **Reading frame validation check** — Verify CDS features maintain proper
     reading frame across exon boundaries. Phase must be consistent with upstream
     exon lengths.
-
     - New check in `CheckRegistry`
     - Requires sequence context to compute expected phase per exon
     - **Files**: `packages/apollo-shared/src/Checks/`

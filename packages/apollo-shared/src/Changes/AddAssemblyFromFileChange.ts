@@ -1,8 +1,3 @@
- 
- 
- 
- 
- 
 import type {
   ChangeOptions,
   ClientDataStore,
@@ -17,8 +12,7 @@ import { BlobFile, RemoteFile } from 'generic-filehandle2'
 
 import { FromFileBaseChange } from './FromFileBaseChange.js'
 
-export interface SerializedAddAssemblyFromFileChangeBase
-  extends SerializedAssemblySpecificChange {
+export interface SerializedAddAssemblyFromFileChangeBase extends SerializedAssemblySpecificChange {
   typeName: 'AddAssemblyFromFileChange'
 }
 
@@ -28,11 +22,11 @@ export interface AddAssemblyFromFileChangeDetails {
 }
 
 export interface SerializedAddAssemblyFromFileChangeSingle
-  extends SerializedAddAssemblyFromFileChangeBase,
+  extends
+    SerializedAddAssemblyFromFileChangeBase,
     AddAssemblyFromFileChangeDetails {}
 
-export interface SerializedAddAssemblyFromFileChangeMultiple
-  extends SerializedAddAssemblyFromFileChangeBase {
+export interface SerializedAddAssemblyFromFileChangeMultiple extends SerializedAddAssemblyFromFileChangeBase {
   changes: AddAssemblyFromFileChangeDetails[]
 }
 

@@ -4,17 +4,10 @@ import { TextField, type TextFieldProps } from '@mui/material'
 import { observer } from 'mobx-react'
 import React, { useEffect, useState } from 'react'
 
-interface NumberTextFieldProps
-  extends Omit<
-    TextFieldProps,
-    | 'type'
-    | 'onChange'
-    | 'onKeyDown'
-    | 'onBlur'
-    | 'ref'
-    | 'error'
-    | 'helperText'
-  > {
+interface NumberTextFieldProps extends Omit<
+  TextFieldProps,
+  'type' | 'onChange' | 'onKeyDown' | 'onBlur' | 'ref' | 'error' | 'helperText'
+> {
   onChangeCommitted(newValue: number): Promise<boolean>
   value: unknown
 }

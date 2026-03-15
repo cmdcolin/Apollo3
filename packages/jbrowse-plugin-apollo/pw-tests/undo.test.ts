@@ -28,10 +28,7 @@ test.afterEach(async ({ page }) => {
 async function setupUndoTest(page: import('@playwright/test').Page) {
   await addAssemblyFromGff(page, ASSEMBLY, GFF_PATH)
   await selectAssemblyToView(page, ASSEMBLY, 'ctgA:1..200')
-  await annotationTrackAppearance(
-    page,
-    'Show both graphical and table display',
-  )
+  await annotationTrackAppearance(page, 'Show both graphical and table display')
 }
 
 async function editCds1EndValue(

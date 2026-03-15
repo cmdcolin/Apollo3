@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import { createReadStream } from 'node:fs'
-import { readFile , unlink } from 'node:fs/promises'
+import { readFile, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { Readable } from 'node:stream'
 import { ReadableStream, TransformStream } from 'node:stream/web'
@@ -26,7 +26,8 @@ import { type FileRequest, writeFileAndCalculateHash } from './filesUtil.js'
 @Injectable()
 export class FilesService {
   constructor(
-    @Inject(ConfigService) private readonly configService: ConfigService<
+    @Inject(ConfigService)
+    private readonly configService: ConfigService<
       { FILE_UPLOAD_FOLDER: string },
       true
     >,

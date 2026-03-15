@@ -27,11 +27,9 @@ export interface UndoSplitExonChangeDetails {
 }
 
 interface SerializedUndoSplitExonChangeSingle
-  extends SerializedUndoSplitExonChangeBase,
-    UndoSplitExonChangeDetails {}
+  extends SerializedUndoSplitExonChangeBase, UndoSplitExonChangeDetails {}
 
-interface SerializedUndoSplitExonChangeMultiple
-  extends SerializedUndoSplitExonChangeBase {
+interface SerializedUndoSplitExonChangeMultiple extends SerializedUndoSplitExonChangeBase {
   changes: UndoSplitExonChangeDetails[]
 }
 

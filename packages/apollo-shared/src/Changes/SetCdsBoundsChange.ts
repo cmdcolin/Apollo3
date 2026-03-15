@@ -21,11 +21,9 @@ interface SetCdsBoundsChangeDetails {
 }
 
 interface SerializedSetCdsBoundsChangeSingle
-  extends SerializedSetCdsBoundsChangeBase,
-    SetCdsBoundsChangeDetails {}
+  extends SerializedSetCdsBoundsChangeBase, SetCdsBoundsChangeDetails {}
 
-interface SerializedSetCdsBoundsChangeMultiple
-  extends SerializedSetCdsBoundsChangeBase {
+interface SerializedSetCdsBoundsChangeMultiple extends SerializedSetCdsBoundsChangeBase {
   changes: SetCdsBoundsChangeDetails[]
 }
 

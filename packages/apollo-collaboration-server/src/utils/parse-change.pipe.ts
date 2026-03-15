@@ -8,9 +8,10 @@ import {
 } from '@nestjs/common'
 
 @Injectable()
-export class ParseChangePipe
-  implements PipeTransform<SerializedChange, Change>
-{
+export class ParseChangePipe implements PipeTransform<
+  SerializedChange,
+  Change
+> {
   private readonly logger = new Logger(ParseChangePipe.name)
 
   transform(value: SerializedChange, _metadata: ArgumentMetadata): Change {

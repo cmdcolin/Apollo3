@@ -6,16 +6,16 @@ import type { EntityManager, InferEntity } from '@mikro-orm/core'
 
 import { JBrowseConfigEntity } from '../entities/JBrowseConfigEntity.js'
 
-function toRow(entity: InferEntity<typeof JBrowseConfigEntity>): JBrowseConfigRow {
+function toRow(
+  entity: InferEntity<typeof JBrowseConfigEntity>,
+): JBrowseConfigRow {
   return {
     _id: entity._id,
     config: entity.config,
   }
 }
 
-export class MikroOrmJBrowseConfigRepository
-  implements JBrowseConfigRepository
-{
+export class MikroOrmJBrowseConfigRepository implements JBrowseConfigRepository {
   constructor(private readonly em: EntityManager) {}
 
   async findOne() {

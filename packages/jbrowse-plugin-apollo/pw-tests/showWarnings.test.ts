@@ -29,16 +29,15 @@ test.afterEach(async ({ page }) => {
 test('Show warnings after editing and after fixing', async ({ page }) => {
   await addAssemblyFromGff(page, 'stopcodon.gff3', GFF_PATH)
   await selectAssemblyToView(page, 'stopcodon.gff3', 'gene07')
-  await annotationTrackAppearance(
-    page,
-    'Show both graphical and table display',
-  )
+  await annotationTrackAppearance(page, 'Show both graphical and table display')
 
   // Edit feature details to trigger warnings
   await page.getByText('cds07').click({ button: 'right' })
   await page.getByText('Edit feature details').click()
 
-  const basicInfo = page.locator('div[data-testid="basic_information"]').locator('..')
+  const basicInfo = page
+    .locator('div[data-testid="basic_information"]')
+    .locator('..')
 
   // Change start from 16 to 4
   const startInput = basicInfo.locator('input[value="16"]')
@@ -53,14 +52,12 @@ test('Show warnings after editing and after fixing', async ({ page }) => {
   await expect(basicInfo.locator('input[value="24"]')).not.toBeDisabled()
 
   // Zoom out to see error icons
-  await page
-    .locator('button[data-testid="zoom_out"]')
-    .click()
+  await page.locator('button[data-testid="zoom_out"]').click()
 
   // Should show 3 error icons
-  await expect(
-    page.locator('[data-testid^="ErrorIcon-"]'),
-  ).toHaveCount(3, { timeout: 15_000 })
+  await expect(page.locator('[data-testid^="ErrorIcon-"]')).toHaveCount(3, {
+    timeout: 15_000,
+  })
 
   // Hover to see tooltip
   await page.locator('[data-testid="ErrorIcon-24"]').hover()
@@ -76,9 +73,9 @@ test('Show warnings after editing and after fixing', async ({ page }) => {
   await page.reload()
 
   // Should now show only 2 error icons (internal stop codon remains)
-  await expect(
-    page.locator('[data-testid^="ErrorIcon-"]'),
-  ).toHaveCount(2, { timeout: 10_000 })
+  await expect(page.locator('[data-testid^="ErrorIcon-"]')).toHaveCount(2, {
+    timeout: 10_000,
+  })
 })
 
 test('Register and unregister checks', async ({ page }) => {
@@ -92,7 +89,9 @@ test('Register and unregister checks', async ({ page }) => {
   // Unregister all checks
   await selectFromApolloMenu(page, ['Admin', 'Manage Checks'])
   const manageChecksDialog = page.getByText('Manage Checks').locator('..')
-  const checkboxes = manageChecksDialog.locator('tbody > tr input[type="checkbox"]')
+  const checkboxes = manageChecksDialog.locator(
+    'tbody > tr input[type="checkbox"]',
+  )
   const count = await checkboxes.count()
   for (let i = 0; i < count; i++) {
     const checkbox = checkboxes.nth(i)
@@ -125,9 +124,9 @@ test('Register and unregister checks', async ({ page }) => {
   await checksResponse
 
   await page.locator('button[data-testid="zoom_out"]').click()
-  await expect(
-    page.locator('[data-testid="ErrorIcon-6"]'),
-  ).toHaveCount(1, { timeout: 10_000 })
+  await expect(page.locator('[data-testid="ErrorIcon-6"]')).toHaveCount(1, {
+    timeout: 10_000,
+  })
 })
 
 test('Warnings are properly stacked', async ({ page }) => {
@@ -135,9 +134,9 @@ test('Warnings are properly stacked', async ({ page }) => {
   await selectAssemblyToView(page, 'stopcodon.gff3', 'gene09')
 
   await page.locator('button[data-testid="zoom_out"]').click()
-  await expect(
-    page.locator('[data-testid^="ErrorIcon-"]'),
-  ).toHaveCount(3, { timeout: 15_000 })
+  await expect(page.locator('[data-testid^="ErrorIcon-"]')).toHaveCount(3, {
+    timeout: 15_000,
+  })
 
   const iconPos1 = await page
     .locator('[data-testid="ErrorIcon-6"]')

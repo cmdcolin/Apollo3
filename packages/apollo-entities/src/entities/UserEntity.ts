@@ -16,6 +16,9 @@ export const UserEntity = defineEntity({
     email: p.string().unique(),
     role: p.enum(() => UserRole),
     createdAt: p.datetime().nullable(),
-    updatedAt: p.datetime().nullable().onUpdate(() => new Date()),
+    updatedAt: p
+      .datetime()
+      .nullable()
+      .onUpdate(() => new Date()),
   },
 })

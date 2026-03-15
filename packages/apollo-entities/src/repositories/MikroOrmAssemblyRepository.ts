@@ -3,9 +3,7 @@ import type { EntityManager, InferEntity } from '@mikro-orm/core'
 
 import { AssemblyEntity } from '../entities/AssemblyEntity.js'
 
-function organismId(
-  val: InferEntity<typeof AssemblyEntity>['organism'],
-) {
+function organismId(val: InferEntity<typeof AssemblyEntity>['organism']) {
   if (!val) {
     return undefined
   }

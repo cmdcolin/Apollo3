@@ -9,7 +9,9 @@ import { SequenceService } from './sequence.service.js'
 @Roles(Role.ReadOnly)
 @Controller('sequence')
 export class SequenceController {
-  constructor(@Inject(SequenceService) private readonly sequenceService: SequenceService) {}
+  constructor(
+    @Inject(SequenceService) private readonly sequenceService: SequenceService,
+  ) {}
 
   private readonly logger = new Logger(SequenceController.name)
 

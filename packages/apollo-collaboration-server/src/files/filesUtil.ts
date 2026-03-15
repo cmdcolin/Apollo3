@@ -48,8 +48,7 @@ export async function writeFileAndCalculateHash(
   logger.debug(`Received ${data.length} bytes for "${originalname}"`)
 
   const checksum = createHash('md5').update(data).digest('hex')
-  const compressed =
-    contentEncoding === 'gzip' ? data : gzipSync(data)
+  const compressed = contentEncoding === 'gzip' ? data : gzipSync(data)
 
   const uploadedFileName = path.join(fileUploadFolder, checksum)
   await writeFile(uploadedFileName, compressed)

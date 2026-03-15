@@ -330,7 +330,9 @@ function draw(
       let prevCDSTop = 0
       let prevCDSEndPx = 0
       let counter = 1
-      for (const cds of cdsRow.sort((a: TranscriptPartCoding, b: TranscriptPartCoding) => a.max - b.max)) {
+      for (const cds of cdsRow.sort(
+        (a: TranscriptPartCoding, b: TranscriptPartCoding) => a.max - b.max,
+      )) {
         if (
           (selectedFeature &&
             isSelected &&

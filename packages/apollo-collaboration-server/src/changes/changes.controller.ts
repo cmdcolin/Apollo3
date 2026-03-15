@@ -1,7 +1,16 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import { Change } from '@apollo-annotation/common'
 import type { DecodedJWT } from '@apollo-annotation/shared'
-import { Body, Controller, Get, Inject, Logger, Post, Query, Req } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Logger,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common'
 import type { Request } from 'express'
 
 import { ParseChangePipe } from '../utils/parse-change.pipe.js'
@@ -14,7 +23,9 @@ import { FindChangeDto } from './dto/find-change.dto.js'
 @Roles(Role.ReadOnly)
 @Controller('changes')
 export class ChangesController {
-  constructor(@Inject(ChangesService) private readonly changesService: ChangesService) {}
+  constructor(
+    @Inject(ChangesService) private readonly changesService: ChangesService,
+  ) {}
   private readonly logger = new Logger(ChangesController.name)
 
   @Post()

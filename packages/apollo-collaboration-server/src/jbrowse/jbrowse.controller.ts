@@ -12,7 +12,9 @@ export interface RequestWithUser extends Request {
 
 @Controller()
 export class JBrowseController {
-  constructor(@Inject(JBrowseService) private readonly jbrowseService: JBrowseService) {}
+  constructor(
+    @Inject(JBrowseService) private readonly jbrowseService: JBrowseService,
+  ) {}
   private readonly logger = new Logger(JBrowseController.name)
 
   @Public()

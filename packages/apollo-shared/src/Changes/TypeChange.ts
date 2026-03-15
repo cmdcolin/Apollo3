@@ -1,4 +1,3 @@
- 
 /* eslint-disable @typescript-eslint/require-await */
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import {
@@ -20,8 +19,7 @@ interface TypeChangeDetails {
 }
 
 interface SerializedTypeChangeSingle
-  extends SerializedTypeChangeBase,
-    TypeChangeDetails {}
+  extends SerializedTypeChangeBase, TypeChangeDetails {}
 
 interface SerializedTypeChangeMultiple extends SerializedTypeChangeBase {
   changes: TypeChangeDetails[]

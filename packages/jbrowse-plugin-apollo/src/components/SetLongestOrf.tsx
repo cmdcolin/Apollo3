@@ -99,9 +99,8 @@ export function SetLongestOrf({
   sourceFeature,
 }: SetLongestOrfProps) {
   const strand = sourceFeature.strand ?? 1
-  const currentAssembly = session.apolloDataStore.assemblies.get(
-    sourceAssemblyId,
-  )
+  const currentAssembly =
+    session.apolloDataStore.assemblies.get(sourceAssemblyId)
   const refData = currentAssembly?.getByRefName(refName)
 
   const exons = useMemo(() => {
@@ -208,11 +207,7 @@ export function SetLongestOrf({
         <Button variant="outlined" onClick={handleClose}>
           Cancel
         </Button>
-        <Button
-          variant="contained"
-          disabled={!canApply}
-          onClick={handleSubmit}
-        >
+        <Button variant="contained" disabled={!canApply} onClick={handleSubmit}>
           Apply
         </Button>
       </DialogActions>

@@ -69,11 +69,13 @@ export const ApolloFeatureDetailsWidgetModel = types
 // eslint disables because of
 // https://mobx-state-tree.js.org/tips/typescript#using-a-mst-type-at-design-time
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ApolloFeatureDetailsWidget
-  extends Instance<typeof ApolloFeatureDetailsWidgetModel> {}
+export interface ApolloFeatureDetailsWidget extends Instance<
+  typeof ApolloFeatureDetailsWidgetModel
+> {}
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ApolloFeatureDetailsWidgetSnapshot
-  extends SnapshotIn<typeof ApolloFeatureDetailsWidgetModel> {}
+export interface ApolloFeatureDetailsWidgetSnapshot extends SnapshotIn<
+  typeof ApolloFeatureDetailsWidgetModel
+> {}
 
 export const ApolloTranscriptDetailsModel = types
   .model('ApolloTranscriptDetails', {
@@ -128,8 +130,10 @@ export const ApolloTranscriptDetailsModel = types
 // eslint disables because of
 // https://mobx-state-tree.js.org/tips/typescript#using-a-mst-type-at-design-time
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ApolloTranscriptDetailsWidget
-  extends Instance<typeof ApolloTranscriptDetailsModel> {}
+export interface ApolloTranscriptDetailsWidget extends Instance<
+  typeof ApolloTranscriptDetailsModel
+> {}
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ApolloTranscriptDetailsWidgetSnapshot
-  extends SnapshotIn<typeof ApolloTranscriptDetailsModel> {}
+export interface ApolloTranscriptDetailsWidgetSnapshot extends SnapshotIn<
+  typeof ApolloTranscriptDetailsModel
+> {}

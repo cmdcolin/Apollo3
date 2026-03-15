@@ -10,6 +10,9 @@ export const CheckEntity = defineEntity({
     isDefault: p.boolean().nullable(),
     version: p.integer().nullable(),
     createdAt: p.datetime().nullable(),
-    updatedAt: p.datetime().nullable().onUpdate(() => new Date()),
+    updatedAt: p
+      .datetime()
+      .nullable()
+      .onUpdate(() => new Date()),
   },
 })

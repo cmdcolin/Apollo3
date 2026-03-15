@@ -22,11 +22,9 @@ export interface UndoMergeExonsChangeDetails {
 }
 
 interface SerializedUndoMergeExonsChangeSingle
-  extends SerializedUndoMergeExonsChangeBase,
-    UndoMergeExonsChangeDetails {}
+  extends SerializedUndoMergeExonsChangeBase, UndoMergeExonsChangeDetails {}
 
-interface SerializedUndoMergeExonsChangeMultiple
-  extends SerializedUndoMergeExonsChangeBase {
+interface SerializedUndoMergeExonsChangeMultiple extends SerializedUndoMergeExonsChangeBase {
   changes: UndoMergeExonsChangeDetails[]
 }
 

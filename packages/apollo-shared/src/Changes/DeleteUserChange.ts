@@ -1,4 +1,3 @@
- 
 import {
   Change,
   type ChangeOptions,
@@ -16,11 +15,9 @@ export interface SerializedDeleteUserChangeBase extends SerializedChange {
 export interface DeleteUserChangeDetails {}
 
 interface SerializedDeleteUserChangeSingle
-  extends SerializedDeleteUserChangeBase,
-    DeleteUserChangeDetails {}
+  extends SerializedDeleteUserChangeBase, DeleteUserChangeDetails {}
 
-interface SerializedDeleteUserChangeMultiple
-  extends SerializedDeleteUserChangeBase {
+interface SerializedDeleteUserChangeMultiple extends SerializedDeleteUserChangeBase {
   changes: DeleteUserChangeDetails[]
 }
 

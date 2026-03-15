@@ -3,11 +3,7 @@ import { describe, it } from 'node:test'
 
 import { assert } from 'chai'
 
-import {
-  buildExonMappings,
-  findLongestOrf,
-  splicedToGenomic,
-} from './orf.js'
+import { buildExonMappings, findLongestOrf, splicedToGenomic } from './orf.js'
 
 function assertOrf(
   sequence: string,

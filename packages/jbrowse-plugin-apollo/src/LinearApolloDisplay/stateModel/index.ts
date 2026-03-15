@@ -21,5 +21,4 @@ export type LinearApolloDisplayStateModel = ReturnType<typeof stateModelFactory>
 // eslint disable because of
 // https://mobx-state-tree.js.org/tips/typescript#using-a-mst-type-at-design-time
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface LinearApolloDisplay
-  extends Instance<LinearApolloDisplayStateModel> {}
+export interface LinearApolloDisplay extends Instance<LinearApolloDisplayStateModel> {}

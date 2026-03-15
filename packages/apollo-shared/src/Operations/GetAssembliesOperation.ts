@@ -1,4 +1,3 @@
- 
 import {
   Operation,
   type SerializedOperation,

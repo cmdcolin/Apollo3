@@ -9,7 +9,9 @@ import { ChecksService } from './checks.service.js'
 @Roles(Role.ReadOnly)
 @Controller('checks')
 export class ChecksController {
-  constructor(@Inject(ChecksService) private readonly checksService: ChecksService) {}
+  constructor(
+    @Inject(ChecksService) private readonly checksService: ChecksService,
+  ) {}
   private readonly logger = new Logger(ChecksController.name)
 
   @Get()

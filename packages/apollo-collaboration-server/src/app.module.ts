@@ -122,16 +122,14 @@ const validationSchema = Joi.object({
       envFilePath: nodeEnv === 'production' ? '.env' : '.development.env',
       validationSchema,
     }),
-    ServeStaticModule.forRoot(
-      {
-        rootPath: path.join(
-          path.dirname(fileURLToPath(import.meta.url)),
-          'pages',
-        ),
-        serveRoot: '/',
-        serveStaticOptions: { fallthrough: true },
-      },
-    ),
+    ServeStaticModule.forRoot({
+      rootPath: path.join(
+        path.dirname(fileURLToPath(import.meta.url)),
+        'pages',
+      ),
+      serveRoot: '/',
+      serveStaticOptions: { fallthrough: true },
+    }),
     HealthModule,
     MessagesModule,
     ApolloMikroOrmModule.forRoot(),

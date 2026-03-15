@@ -9,11 +9,7 @@ import {
   type DecodedJWT,
   makeUserSessionId,
 } from '@apollo-annotation/shared'
-import {
-  Inject,
-  Injectable,
-  Logger,
-} from '@nestjs/common'
+import { Inject, Injectable, Logger } from '@nestjs/common'
 
 import { ChecksService } from '../checks/checks.service.js'
 import { FilesService } from '../files/files.service.js'
@@ -81,14 +77,15 @@ export class ChangesService {
 
     const startTime = Date.now()
     const sequence = await this.db.transactional(async (scope) => {
-      const seq =
-        await scope.counter.getNextSequenceValue('changeCounter')
+      const seq = await scope.counter.getNextSequenceValue('changeCounter')
       const uniqUserId = `${user.email}-${seq}`
       const backend = this.buildServerDataStore(scope, uniqUserId)
       await change.execute(backend)
       return seq
     })
-    this.logger.log(`Change executed in ${Date.now() - startTime}ms: ${change.typeName}`)
+    this.logger.log(
+      `Change executed in ${Date.now() - startTime}ms: ${change.typeName}`,
+    )
 
     const changeDoc = await this.db.changeLog.create({
       assembly: isAssemblySpecificChange(change) ? change.assembly : undefined,

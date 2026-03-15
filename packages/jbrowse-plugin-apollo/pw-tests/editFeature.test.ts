@@ -27,10 +27,7 @@ test('Edit feature via table editor', async ({ page }) => {
   const gffPath = path.resolve(__dirname, `../test_data/${assemblyName}`)
   await addAssemblyFromGff(page, assemblyName, gffPath)
   await selectAssemblyToView(page, assemblyName, 'ctgA:9400..9600')
-  await annotationTrackAppearance(
-    page,
-    'Show both graphical and table display',
-  )
+  await annotationTrackAppearance(page, 'Show both graphical and table display')
 
   const tbody = page.locator('tbody')
   await expect(tbody).toBeVisible({ timeout: 10_000 })
@@ -62,7 +59,9 @@ test('Edit feature via table editor', async ({ page }) => {
   await page.reload()
   const reloadedTbody = page.locator('tbody')
   await expect(reloadedTbody).toBeVisible({ timeout: 10_000 })
-  await expect(reloadedTbody.locator('input[type="text"][value="CDS"]')).toBeVisible()
+  await expect(
+    reloadedTbody.locator('input[type="text"][value="CDS"]'),
+  ).toBeVisible()
   await expect(reloadedTbody.getByText('9432')).toBeVisible()
   await expect(reloadedTbody.getByText('9567')).toBeVisible()
 })
@@ -71,10 +70,7 @@ test('Can delete feature', async ({ page }) => {
   const gffPath = path.resolve(__dirname, '../test_data/onegene.fasta.gff3')
   await addAssemblyFromGff(page, 'onegene.fasta.gff3', gffPath)
   await selectAssemblyToView(page, 'onegene.fasta.gff3', 'gx1')
-  await annotationTrackAppearance(
-    page,
-    'Show both graphical and table display',
-  )
+  await annotationTrackAppearance(page, 'Show both graphical and table display')
 
   const tbody = page.locator('tbody')
   await expect(tbody.getByText('=CDS1')).toBeVisible({ timeout: 10_000 })
@@ -98,10 +94,7 @@ test('Suggest only valid SO terms from dropdown', async ({ page }) => {
   const gffPath = path.resolve(__dirname, '../test_data/onegene.fasta.gff3')
   await addAssemblyFromGff(page, 'onegene.fasta.gff3', gffPath)
   await selectAssemblyToView(page, 'onegene.fasta.gff3', 'gx1')
-  await annotationTrackAppearance(
-    page,
-    'Show both graphical and table display',
-  )
+  await annotationTrackAppearance(page, 'Show both graphical and table display')
 
   const cdsInput = page.locator('input[type="text"][value="CDS"]')
   await expect(cdsInput).toBeVisible({ timeout: 60_000 })

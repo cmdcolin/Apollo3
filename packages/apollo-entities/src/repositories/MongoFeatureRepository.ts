@@ -49,9 +49,13 @@ export class MongoFeatureRepository extends BaseFeatureRepository {
     const allIds: string[] = []
     let currentParentIds = [id]
     while (currentParentIds.length > 0) {
-      const children = await this.em.find(FeatureEntity, {
-        parent: { $in: currentParentIds },
-      }, { fields: ['_id'] })
+      const children = await this.em.find(
+        FeatureEntity,
+        {
+          parent: { $in: currentParentIds },
+        },
+        { fields: ['_id'] },
+      )
       if (children.length === 0) {
         break
       }

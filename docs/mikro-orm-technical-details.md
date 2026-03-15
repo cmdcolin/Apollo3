@@ -105,15 +105,15 @@ Deletion complexity and the proposed fixes (`ON DELETE CASCADE` and a `root_id`
 column) are covered in the worked example above.
 
 **Why this is already solvable without denormalization:** Recursive CTEs
-(already implemented) load the full tree in a single query per root. The
-current implementation uses `findDescendantsOfMany` which batches all roots
-into one CTE query. For typical viewport loads this is efficient.
+(already implemented) load the full tree in a single query per root. The current
+implementation uses `findDescendantsOfMany` which batches all roots into one CTE
+query. For typical viewport loads this is efficient.
 
-A `root_id` column has been proposed as an optimization, but it denormalizes
-the data and introduces a maintenance burden (must be kept in sync on
-reparenting). **This should only be pursued if profiling proves that tree
-loading is a real bottleneck in production.** The current recursive CTE
-approach is correct and performant for typical workloads.
+A `root_id` column has been proposed as an optimization, but it denormalizes the
+data and introduces a maintenance burden (must be kept in sync on reparenting).
+**This should only be pursued if profiling proves that tree loading is a real
+bottleneck in production.** The current recursive CTE approach is correct and
+performant for typical workloads.
 
 Range queries happen on viewport navigation; single-feature edits happen
 continuously. The read path can be optimized incrementally if needed.
@@ -153,17 +153,17 @@ any architectural changes.
 
 ### Summary of tradeoffs
 
-| Operation                           | Relational is harder?            | Status    | Fix                                  |
-| ----------------------------------- | -------------------------------- | --------- | ------------------------------------ |
+| Operation                           | Relational is harder?            | Status     | Fix                                                                    |
+| ----------------------------------- | -------------------------------- | ---------- | ---------------------------------------------------------------------- |
 | Loading a full gene tree            | Yes — multiple queries currently | Acceptable | Recursive CTEs already batch this; `root_id` only if proven bottleneck |
-| Deleting a gene and all descendants | No — cascade handles it          | **Fixed** | `ON DELETE CASCADE` on parent FK     |
-| Assembly deletion ordering          | No — cascade handles it          | **Fixed** | Cascade delete on all FKs            |
-| Bulk queries (search, export)       | No — batched queries now         | **Fixed** | Batched `IN` filters throughout      |
-| Full-text annotation search         | Currently weaker                 | Fixable   | SQLite FTS5 / PostgreSQL tsvector    |
-| Editing a single feature            | No — this is faster now          | —         | —                                    |
-| Finding a feature by ID             | No — this is faster now          | —         | —                                    |
-| Large imports                       | No — this is better now          | —         | —                                    |
-| Concurrent edits                    | No — this is safe now            | —         | —                                    |
+| Deleting a gene and all descendants | No — cascade handles it          | **Fixed**  | `ON DELETE CASCADE` on parent FK                                       |
+| Assembly deletion ordering          | No — cascade handles it          | **Fixed**  | Cascade delete on all FKs                                              |
+| Bulk queries (search, export)       | No — batched queries now         | **Fixed**  | Batched `IN` filters throughout                                        |
+| Full-text annotation search         | Currently weaker                 | Fixable    | SQLite FTS5 / PostgreSQL tsvector                                      |
+| Editing a single feature            | No — this is faster now          | —          | —                                                                      |
+| Finding a feature by ID             | No — this is faster now          | —          | —                                                                      |
+| Large imports                       | No — this is better now          | —          | —                                                                      |
+| Concurrent edits                    | No — this is safe now            | —          | —                                                                      |
 
 Most items previously marked "Fixable" have been implemented. The remaining
 items (gene tree loading, full-text search) have clear, bounded solutions.
@@ -226,10 +226,10 @@ features in memory, eliminating all per-match database queries.
 
 **1. (Deferred) Add `root_id` column to `FeatureEntity`**
 
-This would enable single-query gene tree loading but denormalizes the data —
-the `root_id` value must be kept in sync whenever a feature is reparented.
-Recursive CTEs already handle tree loading efficiently. **Only pursue this if
-profiling proves tree loading is a bottleneck in production.**
+This would enable single-query gene tree loading but denormalizes the data — the
+`root_id` value must be kept in sync whenever a feature is reparented. Recursive
+CTEs already handle tree loading efficiently. **Only pursue this if profiling
+proves tree loading is a bottleneck in production.**
 
 **2. Normalize the `CheckResultEntity.ids` field**
 
@@ -452,25 +452,24 @@ individual researchers and large collaborative groups alike.
 The repository pattern includes a factory mechanism that selects the correct
 implementation based on the `DB_BACKEND` environment variable:
 
-| `DB_BACKEND` | Feature Repository | Tree Traversal Strategy |
-|-------------|-------------------|------------------------|
-| `sqlite` (default) | `MikroOrmFeatureRepository` | Recursive CTEs (raw SQL) |
-| `postgresql` | `MikroOrmFeatureRepository` | Recursive CTEs (raw SQL) |
-| `mongo` | `MongoFeatureRepository` | Iterative BFS via generic EntityManager |
+| `DB_BACKEND`       | Feature Repository          | Tree Traversal Strategy                 |
+| ------------------ | --------------------------- | --------------------------------------- |
+| `sqlite` (default) | `MikroOrmFeatureRepository` | Recursive CTEs (raw SQL)                |
+| `postgresql`       | `MikroOrmFeatureRepository` | Recursive CTEs (raw SQL)                |
+| `mongo`            | `MongoFeatureRepository`    | Iterative BFS via generic EntityManager |
 
 All other repositories (Assembly, RefSeq, User, Check, etc.) use the same
-`MikroOrm*Repository` implementations regardless of backend — they rely only
-on MikroORM's generic `EntityManager` API, which works with all supported
-drivers.
+`MikroOrm*Repository` implementations regardless of backend — they rely only on
+MikroORM's generic `EntityManager` API, which works with all supported drivers.
 
 The factory is implemented in `DatabaseService.feature` and
-`DatabaseService.transactional()`, which call `createFeatureRepository(em, dbType)`
-to select the appropriate implementation.
+`DatabaseService.transactional()`, which call
+`createFeatureRepository(em, dbType)` to select the appropriate implementation.
 
 ### Local PostgreSQL development
 
-A `docker-compose.yml` in the repository root provides a PostgreSQL service
-for local development and testing:
+A `docker-compose.yml` in the repository root provides a PostgreSQL service for
+local development and testing:
 
 ```bash
 # Start PostgreSQL

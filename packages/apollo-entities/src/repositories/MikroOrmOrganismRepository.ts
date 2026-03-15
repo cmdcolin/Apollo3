@@ -41,10 +41,14 @@ export class MikroOrmOrganismRepository implements OrganismRepository {
   }
 
   async findAll(opts?: PaginationOptions) {
-    const entities = await this.em.find(OrganismEntity, {}, {
-      offset: opts?.offset,
-      limit: opts?.limit,
-    })
+    const entities = await this.em.find(
+      OrganismEntity,
+      {},
+      {
+        offset: opts?.offset,
+        limit: opts?.limit,
+      },
+    )
     return entities.map(toRow)
   }
 

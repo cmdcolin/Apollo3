@@ -4,7 +4,6 @@
 // through bracket notation on `globalThis`, we bypass rollup's static
 // analysis and get the real Node.js require provided by Electron.
 
- 
 type GlobalWithRequire = typeof globalThis & { require?: NodeRequire }
 
 export function getElectronRequire() {

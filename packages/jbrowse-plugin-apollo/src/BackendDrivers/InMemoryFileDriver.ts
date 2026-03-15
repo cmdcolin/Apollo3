@@ -75,9 +75,9 @@ export class InMemoryFileDriver extends BackendDriver {
         | undefined
       return Boolean(
         sequenceMetadata &&
-          sequenceMetadata.apollo &&
-          !sequenceMetadata.file &&
-          !sequenceMetadata.internetAccountConfigId,
+        sequenceMetadata.apollo &&
+        !sequenceMetadata.file &&
+        !sequenceMetadata.internetAccountConfigId,
       )
     })
   }

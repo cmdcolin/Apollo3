@@ -1235,7 +1235,9 @@ describe('MikroOrmCheckResultRepository', () => {
     expect(updated).toBeDefined()
     expect(updated!.ignored).toBe(true)
 
-    expect(await repo.updateById('nonexistent', { ignored: true })).toBeUndefined()
+    expect(
+      await repo.updateById('nonexistent', { ignored: true }),
+    ).toBeUndefined()
   })
 })
 

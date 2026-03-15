@@ -36,7 +36,9 @@ function RecentChangesPage() {
     try {
       setError(undefined)
       setChanges(
-        await fetchJson<ChangeRow[]>(`/changes/recent?limit=${pageSize}&page=${page}`),
+        await fetchJson<ChangeRow[]>(
+          `/changes/recent?limit=${pageSize}&page=${page}`,
+        ),
       )
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -50,8 +52,14 @@ function RecentChangesPage() {
   return (
     <Nav current="changes">
       <Container>
-        <Typography variant="h4" gutterBottom>Recent Changes</Typography>
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        <Typography variant="h4" gutterBottom>
+          Recent Changes
+        </Typography>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           Showing {changes.length} changes (page {page})
         </Typography>
@@ -88,7 +96,11 @@ function RecentChangesPage() {
               })}
               {changes.length === 0 && !error && (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ color: 'text.secondary' }}>
+                  <TableCell
+                    colSpan={6}
+                    align="center"
+                    sx={{ color: 'text.secondary' }}
+                  >
                     No changes found
                   </TableCell>
                 </TableRow>
@@ -97,11 +109,19 @@ function RecentChangesPage() {
           </Table>
         </TableContainer>
         <Box sx={{ display: 'flex', gap: 1, mt: 2, alignItems: 'center' }}>
-          <Button size="small" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+          <Button
+            size="small"
+            disabled={page <= 1}
+            onClick={() => setPage(page - 1)}
+          >
             Previous
           </Button>
           <Typography variant="body2">Page {page}</Typography>
-          <Button size="small" disabled={changes.length < pageSize} onClick={() => setPage(page + 1)}>
+          <Button
+            size="small"
+            disabled={changes.length < pageSize}
+            onClick={() => setPage(page + 1)}
+          >
             Next
           </Button>
         </Box>

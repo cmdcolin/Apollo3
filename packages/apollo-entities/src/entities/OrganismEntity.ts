@@ -11,7 +11,10 @@ export const OrganismEntity = defineEntity({
     commonName: p.string().nullable(),
     description: p.string().nullable(),
     user: p.string().nullable(),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
+    createdAt: p
+      .datetime()
+      .nullable()
+      .onCreate(() => new Date()),
     updatedAt: p
       .datetime()
       .nullable()

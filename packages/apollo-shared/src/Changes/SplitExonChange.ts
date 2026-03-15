@@ -27,11 +27,9 @@ export interface SplitExonChangeDetails {
 }
 
 interface SerializedSplitExonChangeSingle
-  extends SerializedSplitExonChangeBase,
-    SplitExonChangeDetails {}
+  extends SerializedSplitExonChangeBase, SplitExonChangeDetails {}
 
-interface SerializedSplitExonChangeMultiple
-  extends SerializedSplitExonChangeBase {
+interface SerializedSplitExonChangeMultiple extends SerializedSplitExonChangeBase {
   changes: SplitExonChangeDetails[]
 }
 

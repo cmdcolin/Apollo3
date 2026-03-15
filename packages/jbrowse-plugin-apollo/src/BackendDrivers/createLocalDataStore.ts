@@ -1,4 +1,3 @@
- 
 /* eslint-disable @typescript-eslint/consistent-type-imports */
 import type { ServerDataStore } from '@apollo-annotation/common'
 

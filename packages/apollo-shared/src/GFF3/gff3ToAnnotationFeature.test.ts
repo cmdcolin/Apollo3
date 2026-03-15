@@ -12,8 +12,10 @@ import { readAnnotationFeatureSnapshot, testCases } from './testUtil.js'
 
 use(chaiExclude)
 
-interface AnnotationFeatureSnapshotWithChildrenArray
-  extends Omit<AnnotationFeatureSnapshot, 'children'> {
+interface AnnotationFeatureSnapshotWithChildrenArray extends Omit<
+  AnnotationFeatureSnapshot,
+  'children'
+> {
   children?: AnnotationFeatureSnapshotWithChildrenArray[]
 }
 

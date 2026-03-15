@@ -26,8 +26,8 @@ pnpm -C packages/jbrowse-plugin-apollo build
 
 The dev build uses esbuild instead of tsc. Because esbuild does not support
 `emitDecoratorMetadata`, all NestJS constructor parameters **must** have
-explicit `@Inject()` decorators. Omitting `@Inject()` causes a runtime DI
-error (not a build error). Example:
+explicit `@Inject()` decorators. Omitting `@Inject()` causes a runtime DI error
+(not a build error). Example:
 
 ```typescript
 constructor(
@@ -95,17 +95,17 @@ migration; others may prefer PostgreSQL for production deployments. This means:
 
 - Repository implementations use the generic `EntityManager` from
   `@mikro-orm/core`, **not** driver-specific types like `SqlEntityManager`
-- The `@mikro-orm/mongodb` and `@mikro-orm/postgresql` packages must remain
-  as dependencies
+- The `@mikro-orm/mongodb` and `@mikro-orm/postgresql` packages must remain as
+  dependencies
 - Do **not** delete the MongoDB migration script
   (`packages/apollo-collaboration-server/scripts/migrate-mongo-to-mikroorm.ts`)
   — existing users need it to migrate from MongoDB
 - Raw SQL (recursive CTEs) is acceptable where necessary for performance, but
-  must be commented, benchmarked, and ideally have a fallback path for
-  non-SQL drivers
+  must be commented, benchmarked, and ideally have a fallback path for non-SQL
+  drivers
 - `MongoFeatureRepository` provides the MongoDB fallback for tree traversal
-  (iterative BFS instead of recursive CTEs); `DatabaseService` selects the
-  right implementation based on `DB_BACKEND`
+  (iterative BFS instead of recursive CTEs); `DatabaseService` selects the right
+  implementation based on `DB_BACKEND`
 - Local PostgreSQL testing: `docker compose up -d` then set
   `DB_BACKEND=postgresql DB_CONNECTION_URL=postgresql://apollo:apollo@localhost:5432/apollo`
 

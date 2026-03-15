@@ -31,10 +31,10 @@ start script also builds shared packages automatically before starting.
   needed with a single process.
 - **concurrently**: was used in the plugin package for the old multi-server E2E
   setup; replaced by `scripts/e2e-servers.sh`.
-- **serve**: was used to serve static files from the plugin directory; the NestJS
-  server now handles this.
-- **justfile**: the `just` command runner recipes only wrapped `yarn install` and
-  `yarn start`, adding no value over calling yarn directly.
+- **serve**: was used to serve static files from the plugin directory; the
+  NestJS server now handles this.
+- **justfile**: the `just` command runner recipes only wrapped `yarn install`
+  and `yarn start`, adding no value over calling yarn directly.
 
 ### MongoDB to PostgreSQL in dev container
 

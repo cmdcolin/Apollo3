@@ -56,8 +56,14 @@ function OrganismsPage() {
   return (
     <Nav current="organisms">
       <Container>
-        <Typography variant="h4" gutterBottom>Organisms</Typography>
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        <Typography variant="h4" gutterBottom>
+          Organisms
+        </Typography>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           Total: {total} | Page {page} of {totalPages}
         </Typography>
@@ -86,7 +92,11 @@ function OrganismsPage() {
               ))}
               {organisms.length === 0 && !error && (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ color: 'text.secondary' }}>
+                  <TableCell
+                    colSpan={6}
+                    align="center"
+                    sx={{ color: 'text.secondary' }}
+                  >
                     No organisms found
                   </TableCell>
                 </TableRow>
@@ -95,11 +105,21 @@ function OrganismsPage() {
           </Table>
         </TableContainer>
         <Box sx={{ display: 'flex', gap: 1, mt: 2, alignItems: 'center' }}>
-          <Button size="small" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+          <Button
+            size="small"
+            disabled={page <= 1}
+            onClick={() => setPage(page - 1)}
+          >
             Previous
           </Button>
-          <Typography variant="body2">Page {page} of {totalPages}</Typography>
-          <Button size="small" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+          <Typography variant="body2">
+            Page {page} of {totalPages}
+          </Typography>
+          <Button
+            size="small"
+            disabled={page >= totalPages}
+            onClick={() => setPage(page + 1)}
+          >
             Next
           </Button>
         </Box>

@@ -29,7 +29,8 @@ const defaultToolConfig: ToolConfig = {
 @Injectable()
 export class ToolsConfigService implements OnModuleInit {
   constructor(
-    @Inject(ConfigService) private readonly configService: ConfigService<{
+    @Inject(ConfigService)
+    private readonly configService: ConfigService<{
       APOLLO_TOOLS_CONFIG: string
     }>,
   ) {}

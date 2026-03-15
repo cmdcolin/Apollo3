@@ -95,7 +95,9 @@ export function annotationFeatureToGFF3(
   return locations.map((location) => ({
     start: Number(location.start) + 1,
     end: Number(location.end),
-    seq_id: refSeqNames ? refSeqNames[feature.refSeq] ?? null : feature.refSeq,
+    seq_id: refSeqNames
+      ? (refSeqNames[feature.refSeq] ?? null)
+      : feature.refSeq,
     source,
     type: feature.type,
     score,

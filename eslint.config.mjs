@@ -38,7 +38,7 @@ export default [
     },
     settings: { react: { version: 'detect' } },
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    plugins: { tsdoc: pluginTSDoc, import: pluginImport },
+    plugins: { tsdoc: pluginTSDoc },
     rules: {
       // eslint built-in rules (override recommended)
       curly: 'warn',

@@ -29,7 +29,9 @@ function extractFromCookieOrHeader(req: Request) {
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   private readonly logger = new Logger(JwtStrategy.name)
-  constructor(@Inject(ConfigService) configService: ConfigService<JWTSecretConfig, true>) {
+  constructor(
+    @Inject(ConfigService) configService: ConfigService<JWTSecretConfig, true>,
+  ) {
     let jwtSecret = configService.get('JWT_SECRET', { infer: true })
     if (!jwtSecret) {
       // We can use non-null assertion since joi already checks this for us

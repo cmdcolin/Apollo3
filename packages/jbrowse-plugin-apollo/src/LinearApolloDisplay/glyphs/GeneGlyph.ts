@@ -18,6 +18,7 @@ import {
   MergeTranscripts,
   SetLongestOrf,
   SplitExon,
+  SplitTranscript,
 } from '../../components'
 import { DuplicateTranscript } from '../../components/DuplicateTranscript'
 import {
@@ -963,6 +964,30 @@ function getContextMenuItems(
               ;(session as unknown as AbstractSessionModel).queueDialog(
                 (doneCallback) => [
                   MergeTranscripts,
+                  {
+                    session,
+                    handleClose: () => {
+                      doneCallback()
+                    },
+                    changeManager,
+                    sourceFeature: feature,
+                    sourceAssemblyId: currentAssemblyId,
+                    selectedFeature,
+                    setSelectedFeature: (feature?: AnnotationFeature) => {
+                      display.setSelectedFeature(feature)
+                    },
+                  },
+                ],
+              )
+            },
+          },
+          {
+            label: 'Split transcript',
+            disabled: !admin,
+            onClick: () => {
+              ;(session as unknown as AbstractSessionModel).queueDialog(
+                (doneCallback) => [
+                  SplitTranscript,
                   {
                     session,
                     handleClose: () => {

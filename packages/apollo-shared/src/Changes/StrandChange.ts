@@ -1,4 +1,3 @@
- 
 /* eslint-disable @typescript-eslint/require-await */
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import {
@@ -20,8 +19,7 @@ interface StrandChangeDetails {
 }
 
 interface SerializedStrandChangeSingle
-  extends SerializedStrandChangeBase,
-    StrandChangeDetails {}
+  extends SerializedStrandChangeBase, StrandChangeDetails {}
 
 interface SerializedStrandChangeMultiple extends SerializedStrandChangeBase {
   changes: StrandChangeDetails[]

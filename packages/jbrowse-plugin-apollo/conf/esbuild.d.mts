@@ -1,2 +1,2 @@
-export {};
+export {}
 //# sourceMappingURL=esbuild.d.mts.map

@@ -1,4 +1,3 @@
- 
 /* eslint-disable @typescript-eslint/require-await */
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import {
@@ -22,11 +21,9 @@ export interface DeleteFeatureChangeDetails {
 }
 
 interface SerializedDeleteFeatureChangeSingle
-  extends SerializedDeleteFeatureChangeBase,
-    DeleteFeatureChangeDetails {}
+  extends SerializedDeleteFeatureChangeBase, DeleteFeatureChangeDetails {}
 
-interface SerializedDeleteFeatureChangeMultiple
-  extends SerializedDeleteFeatureChangeBase {
+interface SerializedDeleteFeatureChangeMultiple extends SerializedDeleteFeatureChangeBase {
   changes: DeleteFeatureChangeDetails[]
 }
 

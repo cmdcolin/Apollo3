@@ -11,9 +11,11 @@ import { Role } from '../utils/role/role.enum.js'
 @Injectable()
 export class JBrowseService {
   constructor(
-    @Inject(AssembliesService) private readonly assembliesService: AssembliesService,
+    @Inject(AssembliesService)
+    private readonly assembliesService: AssembliesService,
     @Inject(RefSeqsService) private readonly refSeqsService: RefSeqsService,
-    @Inject(ConfigService) private readonly configService: ConfigService<
+    @Inject(ConfigService)
+    private readonly configService: ConfigService<
       {
         URL: string
         NAME: string

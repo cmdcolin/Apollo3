@@ -12,8 +12,7 @@ import type { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
 import { flattenFeatureSnapshot } from './AddFeatureChange.js'
 import { MergeTranscriptsChange } from './MergeTranscriptsChange.js'
 
-interface SerializedUndoMergeTranscriptsChangeBase
-  extends SerializedFeatureChange {
+interface SerializedUndoMergeTranscriptsChangeBase extends SerializedFeatureChange {
   typeName: 'UndoMergeTranscriptsChange'
 }
 
@@ -23,11 +22,11 @@ export interface UndoMergeTranscriptsChangeDetails {
 }
 
 interface SerializedUndoMergeTranscriptsChangeSingle
-  extends SerializedUndoMergeTranscriptsChangeBase,
+  extends
+    SerializedUndoMergeTranscriptsChangeBase,
     UndoMergeTranscriptsChangeDetails {}
 
-interface SerializedUndoMergeTranscriptsChangeMultiple
-  extends SerializedUndoMergeTranscriptsChangeBase {
+interface SerializedUndoMergeTranscriptsChangeMultiple extends SerializedUndoMergeTranscriptsChangeBase {
   changes: UndoMergeTranscriptsChangeDetails[]
 }
 

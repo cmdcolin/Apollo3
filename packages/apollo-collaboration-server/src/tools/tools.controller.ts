@@ -21,7 +21,9 @@ import { ToolsService } from './tools.service.js'
 @Roles(Role.ReadOnly)
 @Controller('tools')
 export class ToolsController {
-  constructor(@Inject(ToolsService) private readonly toolsService: ToolsService) {}
+  constructor(
+    @Inject(ToolsService) private readonly toolsService: ToolsService,
+  ) {}
 
   private readonly logger = new Logger(ToolsController.name)
 
@@ -34,7 +36,8 @@ export class ToolsController {
   @Roles(Role.User)
   @HttpCode(202)
   async runTiberius(
-    @Body() body: { assembly: string; refSeqId: string; start: number; end: number },
+    @Body()
+    body: { assembly: string; refSeqId: string; start: number; end: number },
     @Req() request: Request,
   ) {
     const { user } = request as unknown as { user: DecodedJWT }

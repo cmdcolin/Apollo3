@@ -1,4 +1,3 @@
- 
 /* eslint-disable @typescript-eslint/require-await */
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import {
@@ -20,11 +19,9 @@ export interface LocationEndChangeDetails {
 }
 
 interface SerializedLocationEndChangeSingle
-  extends SerializedLocationEndChangeBase,
-    LocationEndChangeDetails {}
+  extends SerializedLocationEndChangeBase, LocationEndChangeDetails {}
 
-interface SerializedLocationEndChangeMultiple
-  extends SerializedLocationEndChangeBase {
+interface SerializedLocationEndChangeMultiple extends SerializedLocationEndChangeBase {
   changes: LocationEndChangeDetails[]
 }
 

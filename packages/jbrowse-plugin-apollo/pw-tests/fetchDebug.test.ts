@@ -9,7 +9,9 @@ const API_BASE = 'http://127.0.0.1:3999'
 
 async function timedFetch(label: string, url: string, init?: RequestInit) {
   const start = Date.now()
-  console.log(`[${label}] Starting ${init?.method ?? 'GET'} ${url.replace(API_BASE, '')}...`)
+  console.log(
+    `[${label}] Starting ${init?.method ?? 'GET'} ${url.replace(API_BASE, '')}...`,
+  )
   const controller = new AbortController()
   const timeout = setTimeout(() => {
     console.log(`[${label}] TIMEOUT after ${Date.now() - start}ms — aborting`)
@@ -20,7 +22,9 @@ async function timedFetch(label: string, url: string, init?: RequestInit) {
     clearTimeout(timeout)
     const body = await res.text()
     const elapsed = Date.now() - start
-    console.log(`[${label}] OK in ${elapsed}ms, status=${res.status}, body=${body.slice(0, 100)}`)
+    console.log(
+      `[${label}] OK in ${elapsed}ms, status=${res.status}, body=${body.slice(0, 100)}`,
+    )
     return { status: res.status, body: JSON.parse(body) }
   } catch (e) {
     clearTimeout(timeout)
@@ -32,22 +36,32 @@ async function timedFetch(label: string, url: string, init?: RequestInit) {
 
 test('Reproduce fetch hang with upload + assembly flow', async () => {
   // Step 1: Get token
-  const { body: tokenData } = await timedFetch('1-token', `${API_BASE}/auth/guest`)
+  const { body: tokenData } = await timedFetch(
+    '1-token',
+    `${API_BASE}/auth/guest`,
+  )
   const token = (tokenData as { token: string }).token
 
   // Step 2: Upload file
   const fileContent = readFileSync(GFF_PATH)
   const formData = new FormData()
   formData.append('file', new Blob([fileContent]), 'deleteFeature.gff3')
-  const { body: uploadData } = await timedFetch('2-upload', `${API_BASE}/files?type=text/x-gff3`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body: formData,
-  })
+  const { body: uploadData } = await timedFetch(
+    '2-upload',
+    `${API_BASE}/files?type=text/x-gff3`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    },
+  )
   const fileId = (uploadData as { _id: string })._id
 
   // Step 3: Get token again
-  const { body: tokenData2 } = await timedFetch('3-token', `${API_BASE}/auth/guest`)
+  const { body: tokenData2 } = await timedFetch(
+    '3-token',
+    `${API_BASE}/auth/guest`,
+  )
   const token2 = (tokenData2 as { token: string }).token
 
   // Step 4: Create assembly
@@ -71,14 +85,23 @@ test('Reproduce fetch hang with upload + assembly flow', async () => {
 
   // Step 6: List assemblies
   await timedFetch('6-list', `${API_BASE}/assemblies`, {
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
   })
 
   // Step 7: Delete assembly
   await timedFetch('7-delete', `${API_BASE}/changes`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ typeName: 'DeleteAssemblyChange', assembly: assemblyId }),
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      typeName: 'DeleteAssemblyChange',
+      assembly: assemblyId,
+    }),
   })
 
   console.log('All steps completed!')

@@ -1,4 +1,3 @@
- 
 /* eslint-disable @typescript-eslint/require-await */
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import {
@@ -20,11 +19,9 @@ export interface FeatureAttributeChangeDetails {
 }
 
 interface SerializedFeatureAttributeChangeSingle
-  extends SerializedFeatureAttributeChangeBase,
-    FeatureAttributeChangeDetails {}
+  extends SerializedFeatureAttributeChangeBase, FeatureAttributeChangeDetails {}
 
-interface SerializedFeatureAttributeChangeMultiple
-  extends SerializedFeatureAttributeChangeBase {
+interface SerializedFeatureAttributeChangeMultiple extends SerializedFeatureAttributeChangeBase {
   changes: FeatureAttributeChangeDetails[]
 }
 

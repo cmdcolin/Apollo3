@@ -41,8 +41,10 @@ const MIKRO_ORM_PORT = 3999
 const MAIN_PORT = 4999
 const ITERATIONS = 3
 
-const GENCODE_GFF3_URL = 'https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.chr_patch_hapl_scaff.annotation.gff3.gz'
-const GENCODE_FASTA_URL = 'https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/GRCh38.p14.genome.fa.gz'
+const GENCODE_GFF3_URL =
+  'https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.chr_patch_hapl_scaff.annotation.gff3.gz'
+const GENCODE_FASTA_URL =
+  'https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/GRCh38.p14.genome.fa.gz'
 
 const args = new Set(process.argv.slice(2))
 const compareMode = args.has('--compare')
@@ -99,7 +101,11 @@ function downloadData() {
   const chr22Gff = path.join(DATA_DIR, 'gencode.v49.chr22.gff3')
   const fastaGz = path.join(DATA_DIR, 'GRCh38.p14.genome.fa.gz')
 
-  if (!fs.existsSync(gffGz) && !fs.existsSync(gff) && !fs.existsSync(chr22Gff)) {
+  if (
+    !fs.existsSync(gffGz) &&
+    !fs.existsSync(gff) &&
+    !fs.existsSync(chr22Gff)
+  ) {
     console.log('Downloading GENCODE v49 GFF3 (124MB)...')
     shell(`curl -L -o ${gffGz} '${GENCODE_GFF3_URL}'`)
   }
@@ -116,7 +122,10 @@ function downloadData() {
     console.log(`chr22 subset: ${lineCount} lines`)
   }
 
-  if (!fs.existsSync(fastaGz) && !fs.existsSync(path.join(DATA_DIR, 'GRCh38.chr22.fa'))) {
+  if (
+    !fs.existsSync(fastaGz) &&
+    !fs.existsSync(path.join(DATA_DIR, 'GRCh38.chr22.fa'))
+  ) {
     console.log('Downloading GRCh38 FASTA (900MB)...')
     console.log('(This is large. For quick testing, use --synthetic instead)')
     shell(`curl -L -o ${fastaGz} '${GENCODE_FASTA_URL}'`)
@@ -134,7 +143,10 @@ function generateSyntheticData() {
   fs.mkdirSync(DATA_DIR, { recursive: true })
   console.log('Generating synthetic dataset (1000 genes, ~5000 features)...')
 
-  const lines: string[] = ['##gff-version 3', '##sequence-region ctgA 1 5000000']
+  const lines: string[] = [
+    '##gff-version 3',
+    '##sequence-region ctgA 1 5000000',
+  ]
   const fastaLines: string[] = ['>ctgA']
   const seqLen = 5_000_000
   for (let i = 0; i < seqLen; i += 80) {
@@ -145,12 +157,18 @@ function generateSyntheticData() {
   for (let g = 0; g < 1000; g++) {
     const gs = pos
     const ge = pos + 3000
-    lines.push(`ctgA\t.\tgene\t${gs}\t${ge}\t.\t+\t.\tID=gene_${g};Name=gene_${g}`, `ctgA\t.\tmRNA\t${gs}\t${ge}\t.\t+\t.\tID=mRNA_${g};Parent=gene_${g};Name=mRNA_${g}`, `ctgA\t.\texon\t${gs}\t${gs + 500}\t.\t+\t.\tID=exon_${g}_1;Parent=mRNA_${g}`, `ctgA\t.\texon\t${gs + 1500}\t${gs + 2000}\t.\t+\t.\tID=exon_${g}_2;Parent=mRNA_${g}`, `ctgA\t.\tCDS\t${gs + 50}\t${ge - 50}\t.\t+\t0\tID=CDS_${g};Parent=mRNA_${g}`)
+    lines.push(
+      `ctgA\t.\tgene\t${gs}\t${ge}\t.\t+\t.\tID=gene_${g};Name=gene_${g}`,
+      `ctgA\t.\tmRNA\t${gs}\t${ge}\t.\t+\t.\tID=mRNA_${g};Parent=gene_${g};Name=mRNA_${g}`,
+      `ctgA\t.\texon\t${gs}\t${gs + 500}\t.\t+\t.\tID=exon_${g}_1;Parent=mRNA_${g}`,
+      `ctgA\t.\texon\t${gs + 1500}\t${gs + 2000}\t.\t+\t.\tID=exon_${g}_2;Parent=mRNA_${g}`,
+      `ctgA\t.\tCDS\t${gs + 50}\t${ge - 50}\t.\t+\t0\tID=CDS_${g};Parent=mRNA_${g}`,
+    )
     pos = ge + 500
   }
 
   lines.push('###', '##FASTA', ...fastaLines)
-  fs.writeFileSync(outputPath, `${lines.join('\n')  }\n`)
+  fs.writeFileSync(outputPath, `${lines.join('\n')}\n`)
   console.log(`Generated ${outputPath}`)
   return outputPath
 }
@@ -176,7 +194,11 @@ function waitForServer(port: number, maxWaitMs = 60_000) {
   throw new Error(`Server on port ${port} did not start within ${maxWaitMs}ms`)
 }
 
-function startServer(repoDir: string, port: number, useMongo: boolean): ChildProcess {
+function startServer(
+  repoDir: string,
+  port: number,
+  useMongo: boolean,
+): ChildProcess {
   const serverDir = path.join(repoDir, 'packages/apollo-collaboration-server')
   const dbFile = path.join(serverDir, `benchmark-${port}.sqlite`)
   if (fs.existsSync(dbFile)) {
@@ -184,7 +206,7 @@ function startServer(repoDir: string, port: number, useMongo: boolean): ChildPro
   }
 
   const env: Record<string, string> = {
-    ...process.env as Record<string, string>,
+    ...(process.env as Record<string, string>),
     PORT: String(port),
     ALLOW_ROOT_USER: 'true',
     ROOT_USER_PASSWORD: 'pass',
@@ -200,9 +222,12 @@ function startServer(repoDir: string, port: number, useMongo: boolean): ChildPro
   }
 
   if (useMongo) {
-    env.MONGODB_URI = 'mongodb://localhost:27017/apolloBenchmarkDb?directConnection=true'
+    env.MONGODB_URI =
+      'mongodb://localhost:27017/apolloBenchmarkDb?directConnection=true'
     try {
-      shell("docker exec apollo-mongo-bench mongosh --quiet --eval \"use apolloBenchmarkDb\" --eval \"db.dropDatabase()\"")
+      shell(
+        'docker exec apollo-mongo-bench mongosh --quiet --eval "use apolloBenchmarkDb" --eval "db.dropDatabase()"',
+      )
     } catch {
       // docker container might not be named this
     }
@@ -243,7 +268,10 @@ function killServer(child: ChildProcess) {
 function configureProfile(profileName: string, port: number, cliDir?: string) {
   const apollo = 'pnpm dev'
   const dir = cliDir ?? CLI_DIR
-  shell(`${apollo} config --profile ${profileName} address http://localhost:${port}`, dir)
+  shell(
+    `${apollo} config --profile ${profileName} address http://localhost:${port}`,
+    dir,
+  )
   shell(`${apollo} config --profile ${profileName} accessType root`, dir)
   shell(`${apollo} config --profile ${profileName} rootPassword pass`, dir)
   shell(`${apollo} login --profile ${profileName} -f`, dir)
@@ -258,7 +286,12 @@ interface BenchmarkResult {
   iterations: number
 }
 
-function runBenchmarks(profile: string, gffFile: string, label: string, cliDir?: string): BenchmarkResult[] {
+function runBenchmarks(
+  profile: string,
+  gffFile: string,
+  label: string,
+  cliDir?: string,
+): BenchmarkResult[] {
   const results: BenchmarkResult[] = []
   const effectiveCliDir = cliDir ?? CLI_DIR
   const apollo = 'pnpm dev'
@@ -273,7 +306,9 @@ function runBenchmarks(profile: string, gffFile: string, label: string, cliDir?:
     return performance.now() - start
   }
 
-  console.log(`\n  [${label}] Starting benchmarks with ${ITERATIONS} iterations each...`)
+  console.log(
+    `\n  [${label}] Starting benchmarks with ${ITERATIONS} iterations each...`,
+  )
 
   function cleanup() {
     try {
@@ -292,11 +327,18 @@ function runBenchmarks(profile: string, gffFile: string, label: string, cliDir?:
   const importTimes: number[] = []
   for (let i = 0; i < ITERATIONS; i++) {
     cleanup()
-    const ms = cliShellTimed(`${apollo} assembly add-from-gff ${gffFile} -a bench_asm -f ${P}`)
+    const ms = cliShellTimed(
+      `${apollo} assembly add-from-gff ${gffFile} -a bench_asm -f ${P}`,
+    )
     importTimes.push(ms)
     process.stdout.write(`    iteration ${i + 1}: ${formatMs(ms)}\n`)
   }
-  results.push({ scenario: 'Assembly import', medianMs: median(importTimes), p95Ms: p95(importTimes), iterations: ITERATIONS })
+  results.push({
+    scenario: 'Assembly import',
+    medianMs: median(importTimes),
+    p95Ms: p95(importTimes),
+    iterations: ITERATIONS,
+  })
 
   // Ensure assembly exists for remaining tests
   cleanup()
@@ -306,21 +348,35 @@ function runBenchmarks(profile: string, gffFile: string, label: string, cliDir?:
   console.log(`  [${label}] Feature get...`)
   const getTimes: number[] = []
   for (let i = 0; i < ITERATIONS; i++) {
-    const ms = cliShellTimed(`${apollo} feature get -a bench_asm ${P} > /dev/null`)
+    const ms = cliShellTimed(
+      `${apollo} feature get -a bench_asm ${P} > /dev/null`,
+    )
     getTimes.push(ms)
     process.stdout.write(`    iteration ${i + 1}: ${formatMs(ms)}\n`)
   }
-  results.push({ scenario: 'Feature get (all)', medianMs: median(getTimes), p95Ms: p95(getTimes), iterations: ITERATIONS })
+  results.push({
+    scenario: 'Feature get (all)',
+    medianMs: median(getTimes),
+    p95Ms: p95(getTimes),
+    iterations: ITERATIONS,
+  })
 
   // 3: Feature search
   console.log(`  [${label}] Feature search...`)
   const searchTimes: number[] = []
   for (let i = 0; i < ITERATIONS; i++) {
-    const ms = cliShellTimed(`${apollo} feature search -a bench_asm -t mRNA ${P} > /dev/null`)
+    const ms = cliShellTimed(
+      `${apollo} feature search -a bench_asm -t mRNA ${P} > /dev/null`,
+    )
     searchTimes.push(ms)
     process.stdout.write(`    iteration ${i + 1}: ${formatMs(ms)}\n`)
   }
-  results.push({ scenario: 'Feature search', medianMs: median(searchTimes), p95Ms: p95(searchTimes), iterations: ITERATIONS })
+  results.push({
+    scenario: 'Feature search',
+    medianMs: median(searchTimes),
+    p95Ms: p95(searchTimes),
+    iterations: ITERATIONS,
+  })
 
   // 4: GFF3 export
   console.log(`  [${label}] GFF3 export...`)
@@ -330,7 +386,12 @@ function runBenchmarks(profile: string, gffFile: string, label: string, cliDir?:
     exportTimes.push(ms)
     process.stdout.write(`    iteration ${i + 1}: ${formatMs(ms)}\n`)
   }
-  results.push({ scenario: 'GFF3 export', medianMs: median(exportTimes), p95Ms: p95(exportTimes), iterations: ITERATIONS })
+  results.push({
+    scenario: 'GFF3 export',
+    medianMs: median(exportTimes),
+    p95Ms: p95(exportTimes),
+    iterations: ITERATIONS,
+  })
 
   // 5: Assembly delete (with cascade)
   console.log(`  [${label}] Assembly delete...`)
@@ -341,7 +402,12 @@ function runBenchmarks(profile: string, gffFile: string, label: string, cliDir?:
     deleteTimes.push(ms)
     process.stdout.write(`    iteration ${i + 1}: ${formatMs(ms)}\n`)
   }
-  results.push({ scenario: 'Assembly delete', medianMs: median(deleteTimes), p95Ms: p95(deleteTimes), iterations: ITERATIONS })
+  results.push({
+    scenario: 'Assembly delete',
+    medianMs: median(deleteTimes),
+    p95Ms: p95(deleteTimes),
+    iterations: ITERATIONS,
+  })
 
   cleanup()
   return results
@@ -349,7 +415,11 @@ function runBenchmarks(profile: string, gffFile: string, label: string, cliDir?:
 
 // --- Reporting ---
 
-function buildMarkdownTable(mikroResults: BenchmarkResult[], mainResults: BenchmarkResult[] | null, datasetName: string) {
+function buildMarkdownTable(
+  mikroResults: BenchmarkResult[],
+  mainResults: BenchmarkResult[] | null,
+  datasetName: string,
+) {
   let md = `# Apollo3 Performance Benchmark Results\n\n`
   md += `- **Date**: ${new Date().toISOString().split('T')[0]}\n`
   md += `- **Dataset**: ${datasetName}\n`
@@ -358,13 +428,18 @@ function buildMarkdownTable(mikroResults: BenchmarkResult[], mainResults: Benchm
   md += `- **Platform**: ${os.platform()} ${os.arch()}\n\n`
 
   if (mainResults) {
-    md += '| Scenario | MikroORM/SQLite (median) | MikroORM/SQLite (p95) | MongoDB (median) | MongoDB (p95) | Speedup |\n'
-    md += '|----------|------------------------|----------------------|-----------------|--------------|--------|\n'
+    md +=
+      '| Scenario | MikroORM/SQLite (median) | MikroORM/SQLite (p95) | MongoDB (median) | MongoDB (p95) | Speedup |\n'
+    md +=
+      '|----------|------------------------|----------------------|-----------------|--------------|--------|\n'
     for (const [i, mikroResult] of mikroResults.entries()) {
       const m = mikroResult
       const o = mainResults[i]
       const speedup = o.medianMs / m.medianMs
-      const speedupStr = speedup >= 1 ? `${speedup.toFixed(1)}x faster` : `${(1 / speedup).toFixed(1)}x slower`
+      const speedupStr =
+        speedup >= 1
+          ? `${speedup.toFixed(1)}x faster`
+          : `${(1 / speedup).toFixed(1)}x slower`
       md += `| ${m.scenario} | ${formatMs(m.medianMs)} | ${formatMs(m.p95Ms)} | ${formatMs(o.medianMs)} | ${formatMs(o.p95Ms)} | ${speedupStr} |\n`
     }
   } else {
@@ -378,7 +453,9 @@ function buildMarkdownTable(mikroResults: BenchmarkResult[], mainResults: Benchm
   md += '\n## Reproduction\n\n'
   md += '```bash\n'
   md += 'cd packages/apollo-cli\n'
-  md += mainResults ? 'tsx src/test/benchmark.ts --compare\n' : 'tsx src/test/benchmark.ts\n';
+  md += mainResults
+    ? 'tsx src/test/benchmark.ts --compare\n'
+    : 'tsx src/test/benchmark.ts\n'
   md += '```\n'
 
   return md
@@ -399,7 +476,9 @@ async function main() {
   } else if (skipDownload) {
     const chr22 = path.join(DATA_DIR, 'gencode.v49.chr22.gff3')
     if (!fs.existsSync(chr22)) {
-      console.error(`Expected ${chr22} but --skip-download was set. Run without --skip-download first.`)
+      console.error(
+        `Expected ${chr22} but --skip-download was set. Run without --skip-download first.`,
+      )
       process.exit(1)
     }
     gffFile = chr22
@@ -416,7 +495,10 @@ async function main() {
   console.log('Building MikroORM branch server...')
   shell('pnpm tsc -b', MIKRO_ORM_DIR)
   shell('pnpm build:shared', MIKRO_ORM_DIR)
-  shell('pnpm build', path.join(MIKRO_ORM_DIR, 'packages/apollo-collaboration-server'))
+  shell(
+    'pnpm build',
+    path.join(MIKRO_ORM_DIR, 'packages/apollo-collaboration-server'),
+  )
 
   // Start MikroORM server
   console.log('Starting MikroORM server on port 3999...')
@@ -430,7 +512,12 @@ async function main() {
   console.log('MikroORM server ready.')
 
   configureProfile('benchMikro', MIKRO_ORM_PORT, CLI_DIR)
-  const mikroResults = runBenchmarks('benchMikro', gffFile, 'MikroORM/SQLite', CLI_DIR)
+  const mikroResults = runBenchmarks(
+    'benchMikro',
+    gffFile,
+    'MikroORM/SQLite',
+    CLI_DIR,
+  )
   killServer(mikroServer)
 
   // Optionally run main branch comparison
@@ -438,7 +525,9 @@ async function main() {
   if (compareMode) {
     if (!fs.existsSync(MAIN_DIR)) {
       console.log(`\nCloning main branch to ${MAIN_DIR}...`)
-      shell(`git clone ${MIKRO_ORM_DIR} ${MAIN_DIR} --branch main --single-branch`)
+      shell(
+        `git clone ${MIKRO_ORM_DIR} ${MAIN_DIR} --branch main --single-branch`,
+      )
       shell('pnpm install', MAIN_DIR)
     }
 
@@ -446,7 +535,10 @@ async function main() {
     try {
       shell('pnpm tsc -b', MAIN_DIR)
       shell('pnpm build:shared', MAIN_DIR)
-      shell('pnpm build', path.join(MAIN_DIR, 'packages/apollo-collaboration-server'))
+      shell(
+        'pnpm build',
+        path.join(MAIN_DIR, 'packages/apollo-collaboration-server'),
+      )
     } catch (error) {
       console.warn(`Main branch build failed: ${error}`)
       console.warn('Skipping MongoDB comparison.')
@@ -472,7 +564,7 @@ async function main() {
 
   // Report
   const md = buildMarkdownTable(mikroResults, mainResults, datasetName)
-  console.log(`\n${  md}`)
+  console.log(`\n${md}`)
 
   const resultsFile = path.join(MIKRO_ORM_DIR, 'docs/benchmark-results.md')
   fs.writeFileSync(resultsFile, md)
@@ -482,7 +574,15 @@ async function main() {
 main().catch((error) => {
   console.error('Benchmark failed:', error)
   // Try to kill any stray servers
-  try { shell(`lsof -ti:${MIKRO_ORM_PORT} | xargs kill -9 2>/dev/null || true`) } catch { /* */ }
-  try { shell(`lsof -ti:${MAIN_PORT} | xargs kill -9 2>/dev/null || true`) } catch { /* */ }
+  try {
+    shell(`lsof -ti:${MIKRO_ORM_PORT} | xargs kill -9 2>/dev/null || true`)
+  } catch {
+    /* */
+  }
+  try {
+    shell(`lsof -ti:${MAIN_PORT} | xargs kill -9 2>/dev/null || true`)
+  } catch {
+    /* */
+  }
   process.exit(1)
 })

@@ -1,6 +1,3 @@
- 
- 
- 
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import {
   type ChangeOptions,
@@ -25,11 +22,9 @@ export interface AddFeatureChangeDetails {
 }
 
 interface SerializedAddFeatureChangeSingle
-  extends SerializedAddFeatureChangeBase,
-    AddFeatureChangeDetails {}
+  extends SerializedAddFeatureChangeBase, AddFeatureChangeDetails {}
 
-interface SerializedAddFeatureChangeMultiple
-  extends SerializedAddFeatureChangeBase {
+interface SerializedAddFeatureChangeMultiple extends SerializedAddFeatureChangeBase {
   changes: AddFeatureChangeDetails[]
 }
 

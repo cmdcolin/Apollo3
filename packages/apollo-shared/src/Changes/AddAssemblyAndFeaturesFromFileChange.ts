@@ -1,9 +1,3 @@
- 
- 
- 
- 
- 
-
 import type {
   ChangeOptions,
   ClientDataStore,
@@ -13,8 +7,7 @@ import type {
 
 import { FromFileBaseChange } from './FromFileBaseChange.js'
 
-export interface SerializedAddAssemblyAndFeaturesFromFileChangeBase
-  extends SerializedAssemblySpecificChange {
+export interface SerializedAddAssemblyAndFeaturesFromFileChangeBase extends SerializedAssemblySpecificChange {
   typeName: 'AddAssemblyAndFeaturesFromFileChange'
 }
 
@@ -25,11 +18,11 @@ export interface AddAssemblyAndFeaturesFromFileChangeDetails {
 }
 
 export interface SerializedAddAssemblyAndFeaturesFromFileChangeSingle
-  extends SerializedAddAssemblyAndFeaturesFromFileChangeBase,
+  extends
+    SerializedAddAssemblyAndFeaturesFromFileChangeBase,
     AddAssemblyAndFeaturesFromFileChangeDetails {}
 
-export interface SerializedAddAssemblyAndFeaturesFromFileChangeMultiple
-  extends SerializedAddAssemblyAndFeaturesFromFileChangeBase {
+export interface SerializedAddAssemblyAndFeaturesFromFileChangeMultiple extends SerializedAddAssemblyAndFeaturesFromFileChangeBase {
   changes: AddAssemblyAndFeaturesFromFileChangeDetails[]
 }
 

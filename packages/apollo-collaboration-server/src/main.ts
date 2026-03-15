@@ -19,7 +19,7 @@ import { MikroORM, RequestContext } from '@mikro-orm/core'
 import type { LogLevel } from '@nestjs/common'
 import { HttpAdapterHost, NestFactory } from '@nestjs/core'
 import cookieParser from 'cookie-parser'
-import express, { type Request, type Response , json, urlencoded } from 'express'
+import express, { type Request, type Response, json, urlencoded } from 'express'
 import session from 'express-session'
 
 import { AppModule } from './app.module.js'
@@ -109,16 +109,13 @@ async function bootstrap() {
     // eslint-disable-next-line no-console
     console.log(`Serving JBrowse static files from: ${staticDir}`)
     const staticMiddleware = express.static(staticDir)
-    app.use(
-      '/jbrowse',
-      (req: Request, res: Response, next: () => void) => {
-        if (req.path === '/config.json') {
-          next()
-          return
-        }
-        staticMiddleware(req, res, next)
-      },
-    )
+    app.use('/jbrowse', (req: Request, res: Response, next: () => void) => {
+      if (req.path === '/config.json') {
+        next()
+        return
+      }
+      staticMiddleware(req, res, next)
+    })
   }
 
   const server = await app.listen(PORT, '0.0.0.0')
@@ -150,9 +147,8 @@ async function bootstrap() {
 
   // Generate setup token if no admin exists
   await RequestContext.create(orm.em, async () => {
-    const { AuthenticationService } = await import(
-      './authentication/authentication.service.js'
-    )
+    const { AuthenticationService } =
+      await import('./authentication/authentication.service.js')
     const authService = app.get(AuthenticationService)
     const setupToken = await authService.generateSetupTokenIfNeeded()
     if (setupToken) {

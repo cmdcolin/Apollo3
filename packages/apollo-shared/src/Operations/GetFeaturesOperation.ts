@@ -1,4 +1,3 @@
- 
 import {
   Operation,
   type OperationOptions,
@@ -46,7 +45,8 @@ export class GetFeaturesOperation extends Operation {
       return []
     }
     const rootIds = rootRows.map((r) => r._id)
-    const allDescendants = await featureRepository.findDescendantsOfMany(rootIds)
+    const allDescendants =
+      await featureRepository.findDescendantsOfMany(rootIds)
     const allRows = [...rootRows, ...allDescendants]
     return assembleFeatureTrees(allRows)
   }

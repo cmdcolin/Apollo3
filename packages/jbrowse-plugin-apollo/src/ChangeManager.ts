@@ -132,7 +132,7 @@ export class ChangeManager {
       const backendDriver = isAssemblySpecificChange(change)
         ? // for assembly-specific change, fall back in case it's an
           // add-assembly change, since that won't exist in the driver yet
-          getBackendDriver(change.assembly) ?? collaborationServerDriver
+          (getBackendDriver(change.assembly) ?? collaborationServerDriver)
         : collaborationServerDriver
       let backendResult: ValidationResultSet
       try {

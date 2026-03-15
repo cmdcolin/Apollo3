@@ -439,14 +439,15 @@ export type Children = IMSTMap<typeof AnnotationFeatureModel> | undefined
 // eslint disables because of
 // https://mobx-state-tree.js.org/tips/typescript#using-a-mst-type-at-design-time
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface AnnotationFeatureRaw
-  extends Instance<typeof AnnotationFeatureModel> {}
+interface AnnotationFeatureRaw extends Instance<
+  typeof AnnotationFeatureModel
+> {}
 export interface AnnotationFeature extends AnnotationFeatureRaw {}
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface AnnotationFeatureSnapshotRaw
-  extends SnapshotIn<typeof AnnotationFeatureModel> {}
-export interface AnnotationFeatureSnapshot
-  extends AnnotationFeatureSnapshotRaw {
+interface AnnotationFeatureSnapshotRaw extends SnapshotIn<
+  typeof AnnotationFeatureModel
+> {}
+export interface AnnotationFeatureSnapshot extends AnnotationFeatureSnapshotRaw {
   /** Child features of this feature */
   children?: Record<string, AnnotationFeatureSnapshot>
 }

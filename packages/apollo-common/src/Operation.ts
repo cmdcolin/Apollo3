@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-confusing-void-expression */
- 
- 
+
 import type { GFF3Feature } from '@gmod/gff'
 import type { LoggerService } from '@nestjs/common'
 import type { GenericFilehandle } from 'generic-filehandle2'

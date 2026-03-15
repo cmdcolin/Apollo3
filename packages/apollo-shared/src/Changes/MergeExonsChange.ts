@@ -26,11 +26,9 @@ export interface MergeExonsChangeDetails {
 }
 
 interface SerializedMergeExonsChangeSingle
-  extends SerializedMergeExonsChangeBase,
-    MergeExonsChangeDetails {}
+  extends SerializedMergeExonsChangeBase, MergeExonsChangeDetails {}
 
-interface SerializedMergeExonsChangeMultiple
-  extends SerializedMergeExonsChangeBase {
+interface SerializedMergeExonsChangeMultiple extends SerializedMergeExonsChangeBase {
   changes: MergeExonsChangeDetails[]
 }
 

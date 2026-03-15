@@ -112,7 +112,8 @@ export class MikroOrmFeatureRepository extends BaseFeatureRepository {
     // Use SQL LIKE to pre-filter candidates, then precise phrase matching in JS
     const refSeqPh = placeholders(refSeqIds.length)
     const likeConditions = queryTokens.map(
-      () => `(LOWER(type) || ' ' || COALESCE(LOWER(CAST(attributes AS TEXT)), '')) LIKE ?`,
+      () =>
+        `(LOWER(type) || ' ' || COALESCE(LOWER(CAST(attributes AS TEXT)), '')) LIKE ?`,
     )
     const likeParams = queryTokens.map((t) => `%${t}%`)
 
@@ -152,7 +153,9 @@ export class MikroOrmFeatureRepository extends BaseFeatureRepository {
   // Raw SQL required: LIKE on JSON attributes column for substring matching,
   // then recursive CTE to walk from matches up to root parents
   async findByIndexedId(id: string, refSeqIds?: string[]) {
-    const escapedId = id.replaceAll('%', String.raw`\%`).replaceAll('_', String.raw`\_`)
+    const escapedId = id
+      .replaceAll('%', String.raw`\%`)
+      .replaceAll('_', String.raw`\_`)
     const likePattern = `%"${escapedId}"%`
 
     let matchSql = `SELECT _id FROM feature WHERE CAST(attributes AS TEXT) LIKE ?`

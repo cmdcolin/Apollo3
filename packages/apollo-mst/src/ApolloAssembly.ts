@@ -42,5 +42,6 @@ export const ApolloAssembly = types
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface ApolloAssemblyI extends Instance<typeof ApolloAssembly> {}
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ApolloAssemblySnapshot
-  extends SnapshotIn<typeof ApolloAssembly> {}
+export interface ApolloAssemblySnapshot extends SnapshotIn<
+  typeof ApolloAssembly
+> {}

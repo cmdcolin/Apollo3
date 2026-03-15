@@ -1,4 +1,3 @@
- 
 import {
   Change,
   type ChangeOptions,
@@ -17,8 +16,7 @@ export interface UserChangeDetails {
 }
 
 export interface SerializedUserChangeSingle
-  extends SerializedUserChangeBase,
-    UserChangeDetails {}
+  extends SerializedUserChangeBase, UserChangeDetails {}
 
 export interface SerializedUserChangeMultiple extends SerializedUserChangeBase {
   changes: UserChangeDetails[]

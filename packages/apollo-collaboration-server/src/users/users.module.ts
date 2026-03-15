@@ -1,5 +1,10 @@
 import { MikroORM, RequestContext } from '@mikro-orm/core'
-import { Inject, Logger, Module, type OnApplicationBootstrap } from '@nestjs/common'
+import {
+  Inject,
+  Logger,
+  Module,
+  type OnApplicationBootstrap,
+} from '@nestjs/common'
 
 import { MessagesModule } from '../messages/messages.module.js'
 

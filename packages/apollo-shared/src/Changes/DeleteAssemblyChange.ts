@@ -1,6 +1,3 @@
- 
- 
- 
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
@@ -11,8 +8,7 @@ import {
 } from '@apollo-annotation/common'
 import { getSession } from '@jbrowse/core/util'
 
-export interface SerializedDeleteAssemblyChange
-  extends SerializedAssemblySpecificChange {
+export interface SerializedDeleteAssemblyChange extends SerializedAssemblySpecificChange {
   typeName: 'DeleteAssemblyChange'
 }
 export class DeleteAssemblyChange extends AssemblySpecificChange {

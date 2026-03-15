@@ -51,8 +51,28 @@ function parseGtfLine(line: string): GtfRecord | undefined {
   if (fields.length < 9) {
     return undefined
   }
-  const [seqname, source, feature, startStr, endStr, score, strand, frame, attrStr] = fields
-  if (!seqname || !source || !feature || !startStr || !endStr || !score || !strand || !frame || !attrStr) {
+  const [
+    seqname,
+    source,
+    feature,
+    startStr,
+    endStr,
+    score,
+    strand,
+    frame,
+    attrStr,
+  ] = fields
+  if (
+    !seqname ||
+    !source ||
+    !feature ||
+    !startStr ||
+    !endStr ||
+    !score ||
+    !strand ||
+    !frame ||
+    !attrStr
+  ) {
     return undefined
   }
   return {
@@ -94,7 +114,10 @@ export function parseGtf(
 
   const genes = new Map<
     string,
-    { record: GtfRecord; transcripts: Map<string, { record: GtfRecord; children: GtfRecord[] }> }
+    {
+      record: GtfRecord
+      transcripts: Map<string, { record: GtfRecord; children: GtfRecord[] }>
+    }
   >()
 
   for (const record of records) {
@@ -120,10 +143,7 @@ export function parseGtf(
     }
     const gene = genes.get(geneId)!
 
-    if (
-      record.feature === 'transcript' ||
-      record.feature === 'mRNA'
-    ) {
+    if (record.feature === 'transcript' || record.feature === 'mRNA') {
       if (transcriptId && !gene.transcripts.has(transcriptId)) {
         gene.transcripts.set(transcriptId, { record, children: [] })
       }
@@ -180,7 +200,11 @@ export function parseGtf(
         strand,
       } as AnnotationFeatureSnapshot
       if (Object.keys(childSnapshots).length > 0) {
-        ;(txSnapshot as AnnotationFeatureSnapshot & { children: Record<string, AnnotationFeatureSnapshot> }).children = childSnapshots
+        ;(
+          txSnapshot as AnnotationFeatureSnapshot & {
+            children: Record<string, AnnotationFeatureSnapshot>
+          }
+        ).children = childSnapshots
       }
       transcriptSnapshots[txId] = txSnapshot
     }
@@ -195,7 +219,11 @@ export function parseGtf(
       attributes: { gff_id: [geneId] },
     } as AnnotationFeatureSnapshot
     if (Object.keys(transcriptSnapshots).length > 0) {
-      ;(geneSnapshot as AnnotationFeatureSnapshot & { children: Record<string, AnnotationFeatureSnapshot> }).children = transcriptSnapshots
+      ;(
+        geneSnapshot as AnnotationFeatureSnapshot & {
+          children: Record<string, AnnotationFeatureSnapshot>
+        }
+      ).children = transcriptSnapshots
     }
     features.push(geneSnapshot)
   }

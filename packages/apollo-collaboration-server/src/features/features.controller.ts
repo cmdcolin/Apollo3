@@ -26,7 +26,9 @@ import { FeaturesService } from './features.service.js'
 @Roles(Role.ReadOnly)
 @Controller('features')
 export class FeaturesController {
-  constructor(@Inject(FeaturesService) private readonly featuresService: FeaturesService) {}
+  constructor(
+    @Inject(FeaturesService) private readonly featuresService: FeaturesService,
+  ) {}
   private readonly logger = new Logger(FeaturesController.name)
 
   /**

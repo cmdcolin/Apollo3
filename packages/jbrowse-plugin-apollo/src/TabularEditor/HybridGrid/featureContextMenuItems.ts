@@ -15,6 +15,7 @@ import {
   MergeExons,
   MergeTranscripts,
   SplitExon,
+  SplitTranscript,
 } from '../../components'
 import type { ApolloSessionModel } from '../../session'
 import { getApolloInternetAccount } from '../../util'
@@ -173,6 +174,28 @@ export function featureContextMenuItems(
           ;(session as unknown as AbstractSessionModel).queueDialog(
             (doneCallback) => [
               SplitExon,
+              {
+                session,
+                handleClose: () => {
+                  doneCallback()
+                },
+                changeManager,
+                sourceFeature: feature,
+                sourceAssemblyId: currentAssemblyId,
+                selectedFeature,
+                setSelectedFeature,
+              },
+            ],
+          )
+        },
+      },
+      {
+        label: 'Split transcript',
+        disabled: !admin,
+        onClick: () => {
+          ;(session as unknown as AbstractSessionModel).queueDialog(
+            (doneCallback) => [
+              SplitTranscript,
               {
                 session,
                 handleClose: () => {
