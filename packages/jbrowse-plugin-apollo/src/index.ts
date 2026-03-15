@@ -31,6 +31,7 @@ import {
 } from '@jbrowse/core/util'
 import type { LinearGenomeViewStateModel } from '@jbrowse/plugin-linear-genome-view'
 import AddIcon from '@mui/icons-material/Add'
+import BiotechIcon from '@mui/icons-material/Biotech'
 import { alpha } from '@mui/material'
 import React from 'react'
 
@@ -63,6 +64,7 @@ import {
   stateModelFactory as LinearApolloSixFrameDisplayStateModelFactory,
 } from './LinearApolloSixFrameDisplay'
 import { AddFeature } from './components'
+import { RunTiberius } from './components/RunTiberius'
 import { ApolloStartScreenLaunchPanel } from './components/ApolloStartScreenLaunchPanel'
 import ApolloPluginConfigurationSchema from './config'
 import {
@@ -262,6 +264,32 @@ export default class ApolloPlugin extends Plugin {
                             region: selectedRegions[0],
                             changeManager:
                               session.apolloDataStore.changeManager,
+                          },
+                        ],
+                      )
+                    },
+                  },
+                  {
+                    label: 'Run Tiberius gene prediction',
+                    icon: BiotechIcon,
+                    onClick: () => {
+                      const session = getSession(
+                        self,
+                      ) as unknown as ApolloSessionModel
+                      const { leftOffset, rightOffset } = self
+                      const selectedRegions = self.getSelectedRegions(
+                        leftOffset,
+                        rightOffset,
+                      )
+                      ;(session as unknown as AbstractSessionModel).queueDialog(
+                        (doneCallback) => [
+                          RunTiberius,
+                          {
+                            session,
+                            handleClose: () => {
+                              doneCallback()
+                            },
+                            region: selectedRegions[0],
                           },
                         ],
                       )

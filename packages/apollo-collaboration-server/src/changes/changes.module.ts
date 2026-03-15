@@ -11,5 +11,6 @@ import { ChangesService } from './changes.service.js'
   controllers: [ChangesController],
   providers: [ChangesService],
   imports: [FilesModule, MessagesModule, ChecksModule],
+  exports: [ChangesService],
 })
 export class ChangesModule {}

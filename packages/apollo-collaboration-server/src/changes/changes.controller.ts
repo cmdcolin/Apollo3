@@ -6,19 +6,19 @@ import type { Request } from 'express'
 
 import { ParseChangePipe } from '../utils/parse-change.pipe.js'
 import { Role } from '../utils/role/role.enum.js'
-import { Validations } from '../utils/validation/validatation.decorator.js'
+import { Roles } from '../utils/roles.guard.js'
 
 import { ChangesService } from './changes.service.js'
 import { FindChangeDto } from './dto/find-change.dto.js'
 
-@Validations(Role.ReadOnly)
+@Roles(Role.ReadOnly)
 @Controller('changes')
 export class ChangesController {
   constructor(private readonly changesService: ChangesService) {}
   private readonly logger = new Logger(ChangesController.name)
 
   @Post()
-  @Validations(Role.User)
+  @Roles(Role.User)
   async create(@Body(ParseChangePipe) change: Change, @Req() request: Request) {
     const { user } = request as unknown as { user: DecodedJWT }
     if (!user) {

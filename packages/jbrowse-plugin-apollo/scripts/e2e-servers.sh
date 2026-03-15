@@ -148,8 +148,8 @@ start_servers() {
   cd "$REPO_ROOT/packages/apollo-collaboration-server" || exit 1
   DB_BACKEND="${DB_BACKEND:-sqlite}" DB_CONNECTION_URL="${DB_CONNECTION_URL:-apollo-dev.sqlite}" \
     JBROWSE_STATIC_DIR="$SCRIPT_DIR/.jbrowse" \
-    PLUGIN_LOCATION="/apollo-plugin.js" \
-    FEATURE_TYPE_ONTOLOGY_LOCATION="/so-v3.1.json" \
+    PLUGIN_LOCATION="/jbrowse/apollo-plugin.js" \
+    FEATURE_TYPE_ONTOLOGY_LOCATION="/jbrowse/so-v3.1.json" \
     GUEST_USER_ROLE=admin LOG_LEVELS=error,warn,log NODE_ENV=development yarn node dist/main.js \
     >> "$LOG_FILE" 2>&1 &
   echo $! >> "$PID_FILE"

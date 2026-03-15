@@ -1,12 +1,12 @@
 import { Controller, Get, Logger, Param, Query } from '@nestjs/common'
 
 import { Role } from '../utils/role/role.enum.js'
-import { Validations } from '../utils/validation/validatation.decorator.js'
+import { Roles } from '../utils/roles.guard.js'
 
 import { FindRefSeqDto } from './dto/find-refSeq.dto.js'
 import { RefSeqsService } from './refSeqs.service.js'
 
-@Validations(Role.ReadOnly)
+@Roles(Role.ReadOnly)
 @Controller('refSeqs')
 export class RefSeqsController {
   constructor(private readonly refSeqsService: RefSeqsService) {}

@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common'
 
 import { Role } from '../utils/role/role.enum.js'
-import { Validations } from '../utils/validation/validatation.decorator.js'
+import { Roles } from '../utils/roles.guard.js'
 
 import { AssembliesService } from './assemblies.service.js'
 
@@ -19,7 +19,7 @@ interface AssemblyDocument {
   checks: string[]
 }
 
-@Validations(Role.ReadOnly)
+@Roles(Role.ReadOnly)
 @Controller('assemblies')
 export class AssembliesController {
   constructor(private readonly assembliesService: AssembliesService) {}
@@ -49,7 +49,7 @@ export class AssembliesController {
   }
 
   @Patch(':id/organism')
-  @Validations(Role.Admin)
+  @Roles(Role.Admin)
   updateOrganism(
     @Param('id') id: string,
     @Body() body: { organism: string | null },

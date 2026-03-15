@@ -3,14 +3,12 @@ import type { JWTPayload } from '@apollo-annotation/shared'
 import {
   type ExecutionContext,
   Injectable,
-  SetMetadata,
   UnauthorizedException,
 } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 import { AuthGuard } from '@nestjs/passport'
 
-export const IS_PUBLIC_KEY = 'isPublic'
-export const Public = () => SetMetadata(IS_PUBLIC_KEY, true)
+import { IS_PUBLIC_KEY } from './roles.guard.js'
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
@@ -34,7 +32,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         [context.getHandler(), context.getClass()],
       )
       if (isPublic) {
-        return { role: 'none' }
+        return null
       }
       throw new UnauthorizedException()
     }

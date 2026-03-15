@@ -5,7 +5,7 @@ import { Body, Controller, Get, Logger, Param, Post, Req } from '@nestjs/common'
 import type { Request } from 'express'
 
 import { Role } from '../utils/role/role.enum.js'
-import { Validations } from '../utils/validation/validatation.decorator.js'
+import { Roles } from '../utils/roles.guard.js'
 
 import { UserLocationDto } from './dto/create-user.dto.js'
 import { UsersService } from './users.service.js'
@@ -15,7 +15,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
   private readonly logger = new Logger(UsersController.name)
 
-  @Validations(Role.None)
+  @Roles(Role.None)
   @Get('me')
   getMe(@Req() req: Request) {
     const { user } = req as unknown as { user: DecodedJWT }
@@ -35,7 +35,7 @@ export class UsersController {
    * User who is calling this endpoint does not have any role yet and therefore there can not be 'Role' -validation
    * @returns The oldest (in terms of creation date) admin email address.
    */
-  @Validations(Role.None)
+  @Roles(Role.None)
   @Get('admin')
   findAdmin() {
     return this.usersService.findByRole(Role.Admin)
@@ -46,7 +46,7 @@ export class UsersController {
    * @param userLocation - user's location information
    * @returns
    */
-  @Validations(Role.ReadOnly)
+  @Roles(Role.ReadOnly)
   @Get('locations')
   usersLocations(@Req() req: Request) {
     const { user } = req as unknown as { user: DecodedJWT }
@@ -69,7 +69,7 @@ export class UsersController {
    * @param userLocDto - user's location information
    * @returns
    */
-  @Validations(Role.ReadOnly)
+  @Roles(Role.ReadOnly)
   @Post('userLocation')
   userLoc(@Body() userLocDto: UserLocationDto[], @Req() req: Request) {
     const keys = Object.keys(userLocDto)

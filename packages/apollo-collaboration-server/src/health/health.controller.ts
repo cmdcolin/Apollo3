@@ -1,7 +1,7 @@
 import { Controller, Get } from '@nestjs/common'
 import { HealthCheck, HealthCheckService } from '@nestjs/terminus'
 
-import { Public } from '../utils/jwt-auth.guard.js'
+import { Public } from '../utils/roles.guard.js'
 
 @Controller('health')
 export class HealthController {

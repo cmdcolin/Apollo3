@@ -9,9 +9,9 @@
     "build": "yarn build:shared && rimraf dist && yarn tsc -b && yarn workspace @apollo-annotation/web-ui build",
     "build:client": "yarn workspace @apollo-annotation/web-ui build",
     "e2e:start": "GUEST_USER_ROLE=admin LOG_LEVELS=error,warn yarn start:no-watch",
-    "start": "yarn build:shared && yarn tsc -b && NODE_ENV=development yarn node --watch-path dist dist/main.js",
-    "start:debug": "yarn build:shared && yarn tsc -b && NODE_ENV=development yarn node --inspect --watch-path dist dist/main.js",
-    "start:no-watch": "yarn build:shared && yarn tsc -b && NODE_ENV=development yarn node dist/main.js",
+    "start": "echo '[start] Building (tsc -b)...' && yarn tsc -b && echo '[start] Starting server...' && NODE_ENV=development yarn node --watch-path dist dist/main.js",
+    "start:debug": "echo '[start] Building (tsc -b)...' && yarn tsc -b && echo '[start] Starting server...' && NODE_ENV=development yarn node --inspect --watch-path dist dist/main.js",
+    "start:no-watch": "echo '[start] Building (tsc -b)...' && yarn tsc -b && echo '[start] Starting server...' && NODE_ENV=development yarn node dist/main.js",
     "start:prod": "NODE_ENV=production node dist/main.js",
     "test": "jest",
     "test:cli:start": "ALLOW_ROOT_USER=true ROOT_USER_PASSWORD=pass LOG_LEVELS=error,warn yarn start",
@@ -92,6 +92,8 @@
     "@nestjs/cli": "^10.1.10",
     "@nestjs/schematics": "^10.0.1",
     "@nestjs/testing": "^10.1.0",
+    "@swc/cli": "^0.8.0",
+    "@swc/core": "^1.15.18",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^4.17.13",
     "@types/express-session": "^1",
@@ -109,7 +111,7 @@
     "rimraf": "^3.0.2",
     "ts-jest": "^29.4.6",
     "ts-node": "^10.3.0",
-    "typescript": "^5.5.3"
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=14"

@@ -11,9 +11,8 @@ import {
 } from '@nestjs/common'
 import type { Response as ExpressResponse } from 'express'
 
-import { Public } from '../utils/jwt-auth.guard.js'
 import { Role } from '../utils/role/role.enum.js'
-import { Validations } from '../utils/validation/validatation.decorator.js'
+import { Public, Roles } from '../utils/roles.guard.js'
 
 import { ExportService } from './export.service.js'
 
@@ -28,7 +27,7 @@ export class ExportController {
    * @param request -
    * @returns The ID of an export that will be valid for 5 minutes
    */
-  @Validations(Role.ReadOnly)
+  @Roles(Role.ReadOnly)
   @Get('getID')
   async getExportID(@Query() request: { assembly: string }) {
     const exportDoc = await this.exportService.getExportID(request.assembly)

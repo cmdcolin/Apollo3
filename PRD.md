@@ -315,72 +315,68 @@ top-level resolution, replacing per-ID loops.
     end-to-end deep learning gene predictor (CNN + biLSTM + differentiable HMM)
     that takes genomic DNA in FASTA format and outputs gene models in GTF.
 
-    **Core workflow**:
+    **Completed (Phase 1–4)**:
 
-    - User selects a genomic region in JBrowse (right-click menu or dedicated
-      dialog)
-    - Apollo extracts the FASTA sequence for that region from the assembly's
-      sequence adapter
-    - Server submits the sequence to Tiberius (containerized via Docker or
-      Singularity)
-    - Predicted gene models (GTF) are parsed and displayed as a results track
-    - User can accept/reject individual predictions, importing accepted ones as
-      Apollo annotation features
+    - [x] Config file system (`apollo-tools.json`) with auto-detection of
+      `tiberius.py` and `singularity` on PATH. Configurable via
+      `APOLLO_TOOLS_CONFIG` env var.
+    - [x] `ToolsConfigModule` + `ToolsConfigService` — loads config, exposes
+      `getToolConfig()`, `isToolAvailable()`, `isSingularityAvailable()`
+    - [x] `ToolsModule` with three endpoints:
+      - `GET /tools/tiberius/available` (ReadOnly) — availability + maxRegionSize
+      - `POST /tools/tiberius/run` (User) — starts background job, returns 202
+      - `GET /tools/tiberius/status/:jobId` (ReadOnly) — poll for status
+    - [x] `ToolsService` — full job lifecycle: region validation, sequence
+      fetch, temp FASTA, process spawn (with Singularity bind-mount support),
+      GTF parsing, feature import via `AddFeatureChange`, temp cleanup, timeout
+      handling, process cleanup on shutdown
+    - [x] `parseGtf()` — pure function converting Tiberius GTF to
+      `AnnotationFeatureSnapshot[]` with coordinate offset (GTF 1-based
+      relative → absolute 0-based) and SO type mapping
+    - [x] `RunTiberius` dialog — rubber-band menu item ("Run Tiberius gene
+      prediction"), shows region info, max size warning, progress spinner,
+      polls status every 3s, completion/error display
+    - [x] `CollaborationServerDriver` — `checkTiberiusAvailable()`,
+      `runTiberius()`, `getTiberiusStatus()` methods
 
-    **RNA-seq evidence mode** (optional):
+    **Files (implemented)**:
 
-    - If RNA-seq alignment tracks (BAM/CRAM) are visible in the current JBrowse
-      session, offer to include them as evidence for Tiberius
-    - Extract the corresponding BAM slice for the selected region
-    - Pass to Tiberius's evidence pipeline for evidence-informed predictions
-    - UI indicates which predictions are supported by RNA-seq evidence
+    - `packages/apollo-collaboration-server/src/config/tools-config.service.ts`
+    - `packages/apollo-collaboration-server/src/config/tools-config.module.ts`
+    - `packages/apollo-collaboration-server/src/tools/tools.module.ts`
+    - `packages/apollo-collaboration-server/src/tools/tools.controller.ts`
+    - `packages/apollo-collaboration-server/src/tools/tools.service.ts`
+    - `packages/apollo-collaboration-server/src/tools/gtf-parser.ts`
+    - `packages/jbrowse-plugin-apollo/src/components/RunTiberius.tsx`
 
-    **Configuration**:
+    **TODO — Remaining work**:
 
-    - `TIBERIUS_BACKEND`: `docker` | `singularity` | `remote` (URL to a Tiberius
-      API service)
-    - `TIBERIUS_MODEL`: pre-trained model config (e.g.,
-      `mammalia_softmasking_v2`) — configurable per assembly
-    - `TIBERIUS_GPU`: enable/disable GPU acceleration
-    - `TIBERIUS_MAX_REGION`: maximum region size to prevent runaway jobs
-      (default: 5 Mb)
-
-    **Implementation considerations**:
-
-    - Tiberius requires GPU (8 GB+ VRAM) for reasonable performance; CPU
-      fallback is slow. Document hardware requirements clearly.
-    - Jobs should be async — submit and poll for results, with progress
-      indication in the UI
-    - Results stored as a separate track/layer (not committed as annotations
-      until user explicitly accepts)
-    - Rate limiting / queue to prevent concurrent heavy GPU jobs
-
-    **Backend**:
-
-    - New `GenePredictionModule` in the collaboration server
-    - `GenePredictionService`: manages job submission, status polling, result
-      parsing
-    - GTF→GFF3 conversion for importing accepted predictions as Apollo features
-    - Endpoint: `POST /gene-prediction/run`, `GET /gene-prediction/status/:id`,
-      `GET /gene-prediction/results/:id`
-
-    **Frontend**:
-
-    - Context menu item: "Run gene prediction on region…"
-    - Dialog: region coordinates (pre-filled from selection), model selection,
-      optional RNA-seq track picker
-    - Results panel: list of predicted genes with accept/reject actions
-    - Track display: predicted features rendered distinctly from curated
-      annotations
-
-    **Files**:
-
-    - New: `packages/apollo-collaboration-server/src/gene-prediction/` (module,
-      service, controller)
-    - New: `packages/jbrowse-plugin-apollo/src/components/GenePrediction/`
-      (dialog, results panel)
-    - Modified: plugin context menu registration, JBrowse config for prediction
-      results track
+    - **Accept/reject workflow**: Currently predictions are auto-imported as
+      annotation features on completion. Instead, display them in a preview
+      layer and let the user accept/reject individual predictions before
+      importing. Requires a results panel UI and a separate display mode for
+      unconfirmed predictions.
+    - **RNA-seq evidence mode**: If BAM/CRAM alignment tracks are visible,
+      offer to include them as evidence for Tiberius. Extract the corresponding
+      BAM slice for the selected region and pass to Tiberius's evidence
+      pipeline. The 'Save track data' SAM export code in `jbrowse-components`
+      may be reusable here.
+    - **Docker backend support**: Currently only Singularity and bare-process
+      execution are supported. Add Docker as a backend option.
+    - **GPU configuration**: Add `gpu: true/false` to tool config. Pass
+      `--nv` flag to Singularity or `--gpus all` to Docker when enabled.
+    - **Job queue / rate limiting**: Currently no limit on concurrent jobs.
+      Add a configurable max-concurrent-jobs setting to prevent GPU contention.
+    - **Per-assembly model config**: Allow different Tiberius models per
+      assembly (e.g., different species models).
+    - **Job persistence**: Jobs are in-memory and lost on server restart. Could
+      store job records in the database for durability and history.
+    - **E2E test**: Add a Playwright test that mocks Tiberius execution (stub
+      GTF output) and verifies the full UI flow: rubber-band → dialog → run →
+      features appear.
+    - **GTF parser unit tests**: The parser works (verified manually) but the
+      server's jest config has PnP issues. Either fix ts-jest PnP resolution
+      or move the parser to `apollo-shared` where tests can run.
 
 ### P2 — Architecture
 

@@ -11,13 +11,13 @@ import {
 } from '@nestjs/common'
 
 import { Role } from '../utils/role/role.enum.js'
-import { Validations } from '../utils/validation/validatation.decorator.js'
+import { Roles } from '../utils/roles.guard.js'
 
 import { CreateOrganismDto } from './dto/create-organism.dto.js'
 import { UpdateOrganismDto } from './dto/update-organism.dto.js'
 import { OrganismsService } from './organisms.service.js'
 
-@Validations(Role.ReadOnly)
+@Roles(Role.ReadOnly)
 @Controller('organisms')
 export class OrganismsController {
   constructor(private readonly organismsService: OrganismsService) {}
@@ -30,7 +30,7 @@ export class OrganismsController {
   }
 
   @Post()
-  @Validations(Role.Admin)
+  @Roles(Role.Admin)
   create(@Body() dto: CreateOrganismDto) {
     return this.organismsService.create(dto)
   }
@@ -51,13 +51,13 @@ export class OrganismsController {
   }
 
   @Patch(':id')
-  @Validations(Role.Admin)
+  @Roles(Role.Admin)
   update(@Param('id') id: string, @Body() dto: UpdateOrganismDto) {
     return this.organismsService.update(id, dto)
   }
 
   @Delete(':id')
-  @Validations(Role.Admin)
+  @Roles(Role.Admin)
   remove(@Param('id') id: string) {
     return this.organismsService.remove(id)
   }

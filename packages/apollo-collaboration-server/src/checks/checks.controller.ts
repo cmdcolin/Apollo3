@@ -2,11 +2,11 @@ import { Controller, Get, Logger, Param, Query } from '@nestjs/common'
 
 import type { FeatureRangeSearchDto } from '../entity/gff3Object.dto.js'
 import { Role } from '../utils/role/role.enum.js'
-import { Validations } from '../utils/validation/validatation.decorator.js'
+import { Roles } from '../utils/roles.guard.js'
 
 import { ChecksService } from './checks.service.js'
 
-@Validations(Role.ReadOnly)
+@Roles(Role.ReadOnly)
 @Controller('checks')
 export class ChecksController {
   constructor(private readonly checksService: ChecksService) {}

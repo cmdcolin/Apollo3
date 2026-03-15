@@ -22,9 +22,10 @@ import { ApolloMikroOrmModule } from './mikro-orm/mikro-orm.module.js'
 import { PluginsModule } from './plugins/plugins.module.js'
 import { RefSeqsModule } from './refSeqs/refSeqs.module.js'
 import { SequenceModule } from './sequence/sequence.module.js'
+import { ToolsModule } from './tools/tools.module.js'
 import { UsersModule } from './users/users.module.js'
 import { JwtAuthGuard } from './utils/jwt-auth.guard.js'
-import { ValidationGuard } from './utils/validation/validation.guards.js'
+import { RolesGuard } from './utils/roles.guard.js'
 
 const nodeEnv = process.env.NODE_ENV ?? 'production'
 
@@ -104,6 +105,7 @@ const validationSchema = Joi.object({
   DB_CONNECTION_URL: Joi.string(),
   OAUTH_HTTP_PROXY: Joi.string(),
   JBROWSE_STATIC_DIR: Joi.string(),
+  APOLLO_TOOLS_CONFIG: Joi.string(),
 })
   .oxor('GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_ID_FILE')
   .oxor('GOOGLE_CLIENT_SECRET', 'GOOGLE_CLIENT_SECRET_FILE')
@@ -145,11 +147,12 @@ const validationSchema = Joi.object({
     JBrowseModule,
     ExportModule,
     ChangesModule,
+    ToolsModule,
     AuthenticationModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
-    { provide: APP_GUARD, useClass: ValidationGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
   ],
 })
 export class AppModule {}

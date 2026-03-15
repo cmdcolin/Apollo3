@@ -8,12 +8,10 @@ import {
   type ChangeMessage,
   type DecodedJWT,
   makeUserSessionId,
-  validationRegistry,
 } from '@apollo-annotation/shared'
 import {
   Injectable,
   Logger,
-  UnprocessableEntityException,
 } from '@nestjs/common'
 
 import { ChecksService } from '../checks/checks.service.js'
@@ -65,15 +63,6 @@ export class ChangesService {
 
   async create(change: BaseChange, user: DecodedJWT) {
     this.logger.log(`Change request: ${change.typeName} from ${user.email}`)
-
-    const validationResult = await validationRegistry.backendPreValidate(change)
-    if (!validationResult.ok) {
-      const errorMessage = validationResult.resultsMessages
-      this.logger.error(`Pre-validation failed: ${errorMessage}`)
-      throw new UnprocessableEntityException(
-        `Error in backend pre-validation: ${errorMessage}`,
-      )
-    }
 
     const refNames: string[] = []
     if (isFeatureChange(change)) {

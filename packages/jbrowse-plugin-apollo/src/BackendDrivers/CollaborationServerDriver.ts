@@ -400,6 +400,78 @@ export class CollaborationServerDriver extends BackendDriver {
     }))
   }
 
+  async checkTiberiusAvailable() {
+    const internetAccount = this.getAnyInternetAccount()
+    const { baseURL } = internetAccount
+    const url = new URL('tools/tiberius/available', baseURL)
+    const response = await this.fetch(internetAccount, url.toString())
+    if (!response.ok) {
+      return { available: false, singularity: false }
+    }
+    return response.json() as Promise<{
+      available: boolean
+      singularity: boolean
+      maxRegionSize?: number
+    }>
+  }
+
+  async runTiberius(params: {
+    assembly: string
+    refSeqId: string
+    start: number
+    end: number
+  }) {
+    const internetAccount = this.clientStore.getInternetAccount(
+      params.assembly,
+    ) as ApolloInternetAccount
+    const { baseURL } = internetAccount
+    const url = new URL('tools/tiberius/run', baseURL)
+    const response = await this.fetch(internetAccount, url.toString(), {
+      method: 'POST',
+      body: JSON.stringify(params),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    if (!response.ok) {
+      const errorMessage = await createFetchErrorMessage(
+        response,
+        'runTiberius failed',
+      )
+      throw new Error(errorMessage)
+    }
+    return response.json() as Promise<{ jobId: string }>
+  }
+
+  async getTiberiusStatus(jobId: string) {
+    const internetAccount = this.getAnyInternetAccount()
+    const { baseURL } = internetAccount
+    const url = new URL(`tools/tiberius/status/${jobId}`, baseURL)
+    const response = await this.fetch(internetAccount, url.toString())
+    if (!response.ok) {
+      const errorMessage = await createFetchErrorMessage(
+        response,
+        'getTiberiusStatus failed',
+      )
+      throw new Error(errorMessage)
+    }
+    return response.json() as Promise<{
+      jobId: string
+      status: string
+      message?: string
+      featureIds?: string[]
+    }>
+  }
+
+  private getAnyInternetAccount() {
+    const assemblies = this.getAssemblies()
+    if (assemblies.length === 0) {
+      throw new Error('No Apollo assemblies found')
+    }
+    const assemblyName = assemblies[0].name
+    return this.clientStore.getInternetAccount(
+      assemblyName,
+    ) as ApolloInternetAccount
+  }
+
   getAssemblies(internetAccountId?: string) {
     const { assemblyManager } = getSession(this.clientStore)
     return assemblyManager.assemblies.filter((assembly) => {

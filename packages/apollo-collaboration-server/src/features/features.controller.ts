@@ -14,7 +14,7 @@ import type {
   FeatureRangeSearchDto,
 } from '../entity/gff3Object.dto.js'
 import { Role } from '../utils/role/role.enum.js'
-import { Validations } from '../utils/validation/validatation.decorator.js'
+import { Roles } from '../utils/roles.guard.js'
 
 import type {
   FeatureCountRequest,
@@ -22,7 +22,7 @@ import type {
 } from './dto/feature.dto.js'
 import { FeaturesService } from './features.service.js'
 
-@Validations(Role.ReadOnly)
+@Roles(Role.ReadOnly)
 @Controller('features')
 export class FeaturesController {
   constructor(private readonly featuresService: FeaturesService) {}

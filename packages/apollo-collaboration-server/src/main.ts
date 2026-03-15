@@ -25,7 +25,6 @@ import session from 'express-session'
 import { AppModule } from './app.module.js'
 import { GlobalExceptionsFilter } from './global-exceptions.filter.js'
 import { DatabaseService } from './mikro-orm/database.service.js'
-import { AuthorizationValidation } from './utils/validation/AuthorizationValidation.js'
 
 async function bootstrap() {
   const {
@@ -71,7 +70,6 @@ async function bootstrap() {
   checkRegistry.registerCheck(transcriptCheck.name, transcriptCheck)
 
   validationRegistry.registerValidation(new CoreValidation())
-  validationRegistry.registerValidation(new AuthorizationValidation())
 
   const cors = convertToBoolean(CORS)
 
