@@ -7,7 +7,6 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import { AddFeaturesFromFileChange } from '@apollo-annotation/shared'
 import type { Assembly } from '@jbrowse/core/assemblyManager/assembly'
-import { getConf } from '@jbrowse/core/configuration'
 import {
   Button,
   DialogActions,
@@ -22,13 +21,10 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 import LinearProgress from '@mui/material/LinearProgress'
 import React, { useEffect, useState } from 'react'
 
-import type {
-  ApolloInternetAccount,
-  CollaborationServerDriver,
-} from '../BackendDrivers'
+import type { CollaborationServerDriver } from '../BackendDrivers'
 import type { ChangeManager } from '../ChangeManager'
 import type { ApolloSessionModel } from '../session'
-import { createFetchErrorMessage } from '../util'
+import { apolloFetch, createFetchErrorMessage, getBaseURL } from '../util'
 
 import { Dialog } from './Dialog'
 
@@ -43,23 +39,18 @@ export function ImportFeatures({
   handleClose,
   session,
 }: ImportFeaturesProps) {
-  const { apolloDataStore } = session
-
   const [file, setFile] = useState<File>()
   const [selectedAssembly, setSelectedAssembly] = useState<Assembly>()
   const [errorMessage, setErrorMessage] = useState('')
   const [submitted, setSubmitted] = useState(false)
-  // default is -1, submit button should be disabled until count is set
   const [featuresCount, setFeaturesCount] = useState<number | undefined>()
   const [deleteFeatures, setDeleteFeatures] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const { collaborationServerDriver, getInternetAccount } = apolloDataStore as {
+  const baseURL = getBaseURL(session)
+
+  const { collaborationServerDriver } = session.apolloDataStore as {
     collaborationServerDriver: CollaborationServerDriver
-    getInternetAccount(
-      assemblyName?: string,
-      internetAccountId?: string,
-    ): ApolloInternetAccount
   }
   const assemblies = collaborationServerDriver.getAssemblies()
 
@@ -73,38 +64,19 @@ export function ImportFeatures({
     setDeleteFeatures(e.target.checked)
   }
 
-  // fetch and set features count for selected assembly
   useEffect(() => {
     if (!selectedAssembly) {
       return
     }
     const updateFeaturesCount = async () => {
-      // TODO: this code will not work for running on desktop
-      const { internetAccountConfigId } = getConf(selectedAssembly, [
-        'sequence',
-        'metadata',
-      ]) as { internetAccountConfigId?: string }
-      const apolloInternetAccount = getInternetAccount(
-        selectedAssembly.name,
-        internetAccountConfigId,
-      )
-      if (!apolloInternetAccount) {
-        throw new Error('No Apollo internet account found')
-      }
-
-      const { baseURL } = apolloInternetAccount
       const uri = new URL('features/count', baseURL)
       const searchParams = new URLSearchParams({
         assemblyId: selectedAssembly.name,
       })
       uri.search = searchParams.toString()
-      const fetch = apolloInternetAccount.getFetcher({
-        locationType: 'UriLocation',
-        uri: uri.toString(),
-      })
 
       setLoading(true)
-      const response = await fetch(uri.toString(), { method: 'GET' })
+      const response = await apolloFetch(uri.toString(), { method: 'GET' })
 
       if (response.ok) {
         const countObj = (await response.json()) as { count: number }
@@ -120,7 +92,7 @@ export function ImportFeatures({
       console.error(error)
       setErrorMessage(error.message ?? error)
     })
-  }, [getInternetAccount, session, selectedAssembly])
+  }, [baseURL, session, selectedAssembly])
 
   function handleChangeFile(e: React.ChangeEvent<HTMLInputElement>) {
     setSubmitted(false)
@@ -136,7 +108,6 @@ export function ImportFeatures({
     setLoading(true)
     setSubmitted(true)
 
-    // let fileChecksum = ''
     let fileId = ''
 
     if (!file) {
@@ -149,17 +120,6 @@ export function ImportFeatures({
       return
     }
 
-    const { internetAccountConfigId } = getConf(selectedAssembly, [
-      'sequence',
-      'metadata',
-    ]) as { internetAccountConfigId?: string }
-    const apolloInternetAccount = getInternetAccount(
-      selectedAssembly.name,
-      internetAccountConfigId,
-    )
-    const { baseURL } = apolloInternetAccount
-
-    // First upload file
     const url = new URL('files', baseURL)
     url.searchParams.set('type', 'text/x-gff3')
     const uri = url.href
@@ -167,10 +127,6 @@ export function ImportFeatures({
     formData.append('file', file)
     formData.append('fileName', file.name)
     formData.append('type', 'text/x-gff3')
-    const apolloFetchFile = apolloInternetAccount.getFetcher({
-      locationType: 'UriLocation',
-      uri,
-    })
 
     handleClose()
 
@@ -194,28 +150,24 @@ export function ImportFeatures({
 
     jobsManager.runJob(job)
 
-    if (apolloFetchFile) {
-      const { signal } = controller
-      const response = await apolloFetchFile(uri, {
-        method: 'POST',
-        body: formData,
-        signal,
-      })
-      if (!response.ok) {
-        const newErrorMessage = await createFetchErrorMessage(
-          response,
-          'Error when inserting new features (while uploading file)',
-        )
-        jobsManager.abortJob(job.name, newErrorMessage)
-        setErrorMessage(newErrorMessage)
-        return
-      }
-      const result = await response.json()
-      // fileChecksum = result.checksum
-      fileId = result._id
+    const { signal } = controller
+    const response = await apolloFetch(uri, {
+      method: 'POST',
+      body: formData,
+      signal,
+    })
+    if (!response.ok) {
+      const newErrorMessage = await createFetchErrorMessage(
+        response,
+        'Error when inserting new features (while uploading file)',
+      )
+      jobsManager.abortJob(job.name, newErrorMessage)
+      setErrorMessage(newErrorMessage)
+      return
     }
+    const result = await response.json()
+    fileId = result._id
 
-    // Add features
     const change = new AddFeaturesFromFileChange({
       typeName: 'AddFeaturesFromFileChange',
       assembly: selectedAssembly.name,

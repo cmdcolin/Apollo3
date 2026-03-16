@@ -3,10 +3,6 @@ import { Box, DialogContent, DialogContentText } from '@mui/material'
 import { DataGrid, type GridColDef, type GridRowModel } from '@mui/x-data-grid'
 import React from 'react'
 
-import type {
-  ApolloInternetAccount,
-  CollaborationServerDriver,
-} from '../BackendDrivers'
 import type { ChangeManager } from '../ChangeManager'
 import type { ApolloSessionModel } from '../session'
 
@@ -45,13 +41,7 @@ export function AddAssemblyAliases({
   session,
 }: AddAssemblyAliasProps) {
   const { apolloDataStore } = session
-  const { collaborationServerDriver } = apolloDataStore as {
-    collaborationServerDriver: CollaborationServerDriver
-    getInternetAccount(
-      assemblyName?: string,
-      internetAccountId?: string,
-    ): ApolloInternetAccount
-  }
+  const { collaborationServerDriver } = apolloDataStore
   const assemblies = collaborationServerDriver.getAssemblies()
 
   const rows: AssemblyAlias[] = assemblies.map((assembly) => {

@@ -3,7 +3,7 @@ import { Controller, Get, Inject, Logger, Query } from '@nestjs/common'
 import { Role } from '../utils/role/role.enum.js'
 import { Roles } from '../utils/roles.guard.js'
 
-import { GetSequenceDto } from './dto/get-sequence.dto.js'
+import type { GetSequenceDto } from './dto/get-sequence.dto.js'
 import { SequenceService } from './sequence.service.js'
 
 @Roles(Role.ReadOnly)

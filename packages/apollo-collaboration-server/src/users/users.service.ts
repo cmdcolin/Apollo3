@@ -5,9 +5,9 @@ import { ConfigService } from '@nestjs/config'
 
 import { DatabaseService } from '../mikro-orm/database.service.js'
 import { GUEST_USER_EMAIL, GUEST_USER_NAME } from '../utils/constants.js'
-import { Role } from '../utils/role/role.enum.js'
+import type { Role } from '../utils/role/role.enum.js'
 
-import { CreateUserDto } from './dto/create-user.dto.js'
+import type { CreateUserDto } from './dto/create-user.dto.js'
 
 @Injectable()
 export class UsersService {

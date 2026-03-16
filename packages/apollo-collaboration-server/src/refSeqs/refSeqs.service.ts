@@ -4,9 +4,9 @@ import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common'
 
 import { DatabaseService } from '../mikro-orm/database.service.js'
 
-import { CreateRefSeqDto } from './dto/create-refSeq.dto.js'
-import { FindRefSeqDto } from './dto/find-refSeq.dto.js'
-import { UpdateRefSeqDto } from './dto/update-refSeq.dto.js'
+import type { CreateRefSeqDto } from './dto/create-refSeq.dto.js'
+import type { FindRefSeqDto } from './dto/find-refSeq.dto.js'
+import type { UpdateRefSeqDto } from './dto/update-refSeq.dto.js'
 
 @Injectable()
 export class RefSeqsService {
@@ -44,9 +44,9 @@ export class RefSeqsService {
     return this.db.refSeq.updateById(id, {
       ...updateRefSeqDto,
       length:
-        updateRefSeqDto.length !== undefined
-          ? Number(updateRefSeqDto.length)
-          : undefined,
+        updateRefSeqDto.length === undefined
+          ? undefined
+          : Number(updateRefSeqDto.length),
     })
   }
 

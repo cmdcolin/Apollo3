@@ -4,8 +4,8 @@ import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common'
 
 import { DatabaseService } from '../mikro-orm/database.service.js'
 
-import { CreateOrganismDto } from './dto/create-organism.dto.js'
-import { UpdateOrganismDto } from './dto/update-organism.dto.js'
+import type { CreateOrganismDto } from './dto/create-organism.dto.js'
+import type { UpdateOrganismDto } from './dto/update-organism.dto.js'
 
 @Injectable()
 export class OrganismsService {

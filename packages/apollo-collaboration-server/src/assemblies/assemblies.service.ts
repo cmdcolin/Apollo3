@@ -13,8 +13,8 @@ import { FeaturesService } from '../features/features.service.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
 import { RefSeqsService } from '../refSeqs/refSeqs.service.js'
 
-import { CreateAssemblyDto } from './dto/create-assembly.dto.js'
-import { UpdateAssemblyDto } from './dto/update-assembly.dto.js'
+import type { CreateAssemblyDto } from './dto/create-assembly.dto.js'
+import type { UpdateAssemblyDto } from './dto/update-assembly.dto.js'
 
 @Injectable()
 export class AssembliesService {

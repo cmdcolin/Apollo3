@@ -1,5 +1,5 @@
 import {
-  Change as BaseChange,
+  type Change as BaseChange,
   type ServerDataStore,
   isAssemblySpecificChange,
   isFeatureChange,
@@ -18,7 +18,7 @@ import { MessagesGateway } from '../messages/messages.gateway.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
 import { PluginsService } from '../plugins/plugins.service.js'
 
-import { FindChangeDto } from './dto/find-change.dto.js'
+import type { FindChangeDto } from './dto/find-change.dto.js'
 
 @Injectable()
 export class ChangesService {

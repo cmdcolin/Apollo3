@@ -35,7 +35,7 @@ function parseAttributes(attrString: string) {
       continue
     }
     const match = /^(\S+)\s+"?([^"]*)"?$/.exec(trimmed)
-    if (match && match[1] && match[2] !== undefined) {
+    if (match?.[1] && match[2] !== undefined) {
       attrs[match[1]] = match[2]
     }
   }

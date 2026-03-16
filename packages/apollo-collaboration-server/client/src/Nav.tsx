@@ -1,19 +1,19 @@
-import { useEffect, useRef, useState } from 'react'
 import { createJBrowseTheme } from '@jbrowse/core/ui/theme'
-import { ThemeProvider } from '@mui/material/styles'
-import CssBaseline from '@mui/material/CssBaseline'
 import AppBar from '@mui/material/AppBar'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
+import CssBaseline from '@mui/material/CssBaseline'
+import ListItemText from '@mui/material/ListItemText'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
-import ListItemText from '@mui/material/ListItemText'
 import Toolbar from '@mui/material/Toolbar'
 import Typography from '@mui/material/Typography'
+import { ThemeProvider } from '@mui/material/styles'
+import { useEffect, useRef, useState } from 'react'
 
-import { fetchJson } from './fetchUtil.js'
 import logoUrl from './apollo_logo.svg'
+import { fetchJson } from './fetchUtil.js'
 
 const theme = createJBrowseTheme({
   palette: {
@@ -94,14 +94,18 @@ function NavBar({ current, user }: { current: Page; user?: UserInfo }) {
           ref={anchorRef}
           color="inherit"
           size="small"
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            setOpen(true)
+          }}
         >
           File
         </Button>
         <Menu
           anchorEl={anchorRef.current}
           open={open}
-          onClose={() => setOpen(false)}
+          onClose={() => {
+            setOpen(false)
+          }}
         >
           {visibleItems.map((item) => (
             <MenuItem

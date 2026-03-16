@@ -154,20 +154,7 @@ export async function loginAsGuest(page: Page) {
     },
   ])
 
-  // Also set the InternetAccount sessionStorage token so the plugin connects
-  // its websocket. The key format is "${internetAccountId}-token".
-  // The internetAccountId comes from the server config: "${NAME}-apolloInternetAccount"
-  const internetAccountId = 'Demo Server-apolloInternetAccount'
-  await page.goto('/jbrowse/')
-  await page.evaluate(
-    ([id, t]) => {
-      sessionStorage.setItem(`${id}-token`, t)
-    },
-    [internetAccountId, token],
-  )
-
-  // Reload so JBrowse initializes with both the cookie and the sessionStorage token
-  console.log('[login] Navigating with auth cookie + sessionStorage token...')
+  console.log('[login] Navigating with auth cookie...')
   await page.goto('/jbrowse/')
 
   await expect(page.getByRole('button', { name: 'Apollo' })).toBeEnabled({
@@ -230,29 +217,6 @@ export async function addAssemblyFromGff(
     timeout: 15_000,
   })
 
-  // Verify the session token is present for data fetching
-  const hasToken = await page.evaluate((id) => {
-    const key = `${id}-token`
-    const token = sessionStorage.getItem(key)
-    console.log(`[sessionStorage] key="${key}" present=${!!token}`)
-    return !!token
-  }, 'Demo Server-apolloInternetAccount')
-  if (!hasToken) {
-    console.log(
-      '[addAssembly] WARNING: sessionStorage token missing, re-injecting',
-    )
-    const token = await getGuestToken()
-    await page.evaluate(
-      ([id, t]) => {
-        sessionStorage.setItem(`${id}-token`, t)
-      },
-      ['Demo Server-apolloInternetAccount', token],
-    )
-    await page.goto('/jbrowse/')
-    await expect(page.getByRole('button', { name: 'Apollo' })).toBeEnabled({
-      timeout: 15_000,
-    })
-  }
   console.log('[addAssembly] App ready')
 
   if (launch) {

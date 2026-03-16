@@ -5,7 +5,7 @@ import { AssemblyEntity } from '../entities/AssemblyEntity.js'
 
 function organismId(val: InferEntity<typeof AssemblyEntity>['organism']) {
   if (!val) {
-    return undefined
+    return
   }
   if (typeof val === 'string') {
     return val

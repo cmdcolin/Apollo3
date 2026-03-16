@@ -1,4 +1,4 @@
-import { Change } from '@apollo-annotation/common'
+import type { Change } from '@apollo-annotation/common'
 import type { DecodedJWT } from '@apollo-annotation/shared'
 import {
   Body,
@@ -17,7 +17,7 @@ import { Role } from '../utils/role/role.enum.js'
 import { Roles } from '../utils/roles.guard.js'
 
 import { ChangesService } from './changes.service.js'
-import { FindChangeDto } from './dto/find-change.dto.js'
+import type { FindChangeDto } from './dto/find-change.dto.js'
 
 @Roles(Role.ReadOnly)
 @Controller('changes')

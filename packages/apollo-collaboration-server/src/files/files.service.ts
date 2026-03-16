@@ -3,7 +3,7 @@ import { createReadStream } from 'node:fs'
 import { readFile, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { Readable } from 'node:stream'
-import { ReadableStream, TransformStream } from 'node:stream/web'
+import { type ReadableStream, TransformStream } from 'node:stream/web'
 import { promisify } from 'node:util'
 import { gunzip as gunzipCb } from 'node:zlib'
 
@@ -20,7 +20,7 @@ import { LocalFile } from 'generic-filehandle2'
 
 import { DatabaseService } from '../mikro-orm/database.service.js'
 
-import { CreateFileDto } from './dto/create-file.dto.js'
+import type { CreateFileDto } from './dto/create-file.dto.js'
 import { type FileRequest, writeFileAndCalculateHash } from './filesUtil.js'
 
 @Injectable()

@@ -15,6 +15,21 @@ const ApolloPluginConfigurationSchema = ConfigurationSchema('ApolloPlugin', {
     type: 'boolean',
     defaultValue: false,
   },
+  baseURL: {
+    description: 'Location of Apollo collaboration server',
+    type: 'string',
+    defaultValue: '',
+  },
+  role: {
+    description: 'User role returned by server',
+    type: 'string',
+    defaultValue: '',
+  },
+  userId: {
+    description: 'User ID returned by server',
+    type: 'string',
+    defaultValue: '',
+  },
   geneBackgroundColor: {
     description: 'Color for feature background',
     type: 'string',

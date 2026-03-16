@@ -19,20 +19,13 @@ import {
 } from '@jbrowse/core/util'
 import { getParentRenderProps } from '@jbrowse/core/util/tracks'
 // import type LinearGenomeViewPlugin from '@jbrowse/plugin-linear-genome-view'
-import {
-  addDisposer,
-  cast,
-  getRoot,
-  getSnapshot,
-  types,
-} from '@jbrowse/mobx-state-tree'
+import { addDisposer, cast, getSnapshot, types } from '@jbrowse/mobx-state-tree'
 import type { LinearGenomeViewModel } from '@jbrowse/plugin-linear-genome-view'
 import { autorun } from 'mobx'
 
-import type { ApolloInternetAccountModel } from '../../ApolloInternetAccount/model'
 import { FilterFeatures } from '../../components/FilterFeatures'
 import type { ApolloSessionModel, HoveredFeature } from '../../session'
-import type { ApolloRootModel } from '../../types'
+import { getRole } from '../../util'
 import { EditZoomThresholdDialog } from '../../util/displayUtils'
 
 const minDisplayHeight = 20
@@ -123,23 +116,9 @@ export function baseModelFactory(
       },
     }))
     .views((self) => ({
-      get apolloInternetAccount() {
-        const [region] = self.regions
-        const { internetAccounts } = getRoot<ApolloRootModel>(self)
-        const { assemblyName } = region
-        const { assemblyManager } =
-          self.session as unknown as AbstractSessionModel
-        const assembly = assemblyManager.get(assemblyName)
-        if (!assembly) {
-          throw new Error(`No assembly found with name ${assemblyName}`)
-        }
-        const { internetAccountConfigId } = getConf(assembly, [
-          'sequence',
-          'metadata',
-        ]) as { internetAccountConfigId: string }
-        return internetAccounts.find(
-          (ia) => getConf(ia, 'internetAccountId') === internetAccountConfigId,
-        ) as ApolloInternetAccountModel | undefined
+      get role() {
+        const session = self.session as unknown as ApolloSessionModel
+        return getRole(session)
       },
       get changeManager() {
         return (self.session as unknown as ApolloSessionModel).apolloDataStore

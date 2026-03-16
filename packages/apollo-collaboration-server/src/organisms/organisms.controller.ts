@@ -14,8 +14,8 @@ import {
 import { Role } from '../utils/role/role.enum.js'
 import { Roles } from '../utils/roles.guard.js'
 
-import { CreateOrganismDto } from './dto/create-organism.dto.js'
-import { UpdateOrganismDto } from './dto/update-organism.dto.js'
+import type { CreateOrganismDto } from './dto/create-organism.dto.js'
+import type { UpdateOrganismDto } from './dto/update-organism.dto.js'
 import { OrganismsService } from './organisms.service.js'
 
 @Roles(Role.ReadOnly)

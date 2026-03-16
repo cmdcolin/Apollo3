@@ -14,7 +14,6 @@ import type PluginManager from '@jbrowse/core/PluginManager'
 import { ConfigurationSchema } from '@jbrowse/core/configuration'
 import {
   DisplayType,
-  InternetAccountType,
   type PluggableElementType,
   TrackType,
   type ViewType,
@@ -37,10 +36,6 @@ import React from 'react'
 
 import { version } from '../package.json'
 
-import {
-  configSchema as apolloInternetAccountConfigSchema,
-  modelFactory as apolloInternetAccountModelFactory,
-} from './ApolloInternetAccount'
 import { installApolloRefNameAliasAdapter } from './ApolloRefNameAliasAdapter'
 import { installApolloSequenceAdapter } from './ApolloSequenceAdapter'
 import { installApolloTextSearchAdapter } from './ApolloTextSearchAdapter'
@@ -64,8 +59,8 @@ import {
   stateModelFactory as LinearApolloSixFrameDisplayStateModelFactory,
 } from './LinearApolloSixFrameDisplay'
 import { AddFeature } from './components'
-import { RunTiberius } from './components/RunTiberius'
 import { ApolloStartScreenLaunchPanel } from './components/ApolloStartScreenLaunchPanel'
+import { RunTiberius } from './components/RunTiberius'
 import ApolloPluginConfigurationSchema from './config'
 import {
   annotationFromJBrowseFeature,
@@ -163,16 +158,6 @@ export default class ApolloPlugin extends Plugin {
           pluginManager,
           'ApolloTrack',
           configSchema,
-        ),
-      })
-    })
-
-    pluginManager.addInternetAccountType(() => {
-      return new InternetAccountType({
-        name: 'ApolloInternetAccount',
-        configSchema: apolloInternetAccountConfigSchema,
-        stateModel: apolloInternetAccountModelFactory(
-          apolloInternetAccountConfigSchema,
         ),
       })
     })

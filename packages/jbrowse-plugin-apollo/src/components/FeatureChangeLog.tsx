@@ -4,10 +4,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import type { AnnotationFeature } from '@apollo-annotation/mst'
 import { changeRegistry } from '@apollo-annotation/common'
+import type { AnnotationFeature } from '@apollo-annotation/mst'
 import { makeStyles } from '@jbrowse/core/util/tss-react'
-import { getRoot } from '@jbrowse/mobx-state-tree'
 import {
   Button,
   DialogActions,
@@ -23,10 +22,8 @@ import {
 } from '@mui/x-data-grid'
 import React, { useEffect, useState } from 'react'
 
-import type { ApolloInternetAccountModel } from '../ApolloInternetAccount/model'
 import type { ApolloSessionModel } from '../session'
-import type { ApolloRootModel } from '../types'
-import { createFetchErrorMessage } from '../util'
+import { apolloFetch, createFetchErrorMessage, getBaseURL } from '../util'
 
 import { Dialog } from './Dialog'
 
@@ -71,14 +68,7 @@ export function FeatureChangeLog({
   handleClose,
   session,
 }: FeatureChangeLogProps) {
-  const { internetAccounts } = getRoot<ApolloRootModel>(session)
-  const apolloInternetAccount = internetAccounts.find(
-    (ia) => ia.type === 'ApolloInternetAccount',
-  ) as ApolloInternetAccountModel | undefined
-  if (!apolloInternetAccount) {
-    throw new Error('No Apollo internet account found')
-  }
-  const { baseURL } = apolloInternetAccount
+  const baseURL = getBaseURL(session)
   const { classes } = useStyles()
   const [errorMessage, setErrorMessage] = useState<string>()
   const [displayGridData, setDisplayGridData] = useState<GridRowsProp[]>([])
@@ -121,34 +111,27 @@ export function FeatureChangeLog({
 
   useEffect(() => {
     async function fetchChanges() {
-      // Pass the root feature ID; the server walks descendants to find all changes
       const url = new URL('changes', baseURL)
       url.searchParams.set('featureId', rootFeature._id)
       const uri = url.toString()
-      const apolloFetch = apolloInternetAccount?.getFetcher({
-        locationType: 'UriLocation',
-        uri,
+      const response = await apolloFetch(uri, {
+        headers: new Headers({ 'Content-Type': 'application/json' }),
       })
-      if (apolloFetch) {
-        const response = await apolloFetch(uri, {
-          headers: new Headers({ 'Content-Type': 'application/json' }),
-        })
-        if (!response.ok) {
-          const newErrorMessage = await createFetchErrorMessage(
-            response,
-            'Error when retrieving feature history',
-          )
-          setErrorMessage(newErrorMessage)
-          return
-        }
-        const data = await response.json()
-        setDisplayGridData(data)
+      if (!response.ok) {
+        const newErrorMessage = await createFetchErrorMessage(
+          response,
+          'Error when retrieving feature history',
+        )
+        setErrorMessage(newErrorMessage)
+        return
       }
+      const data = await response.json()
+      setDisplayGridData(data)
     }
     fetchChanges().catch((error) => {
       setErrorMessage(String(error))
     })
-  }, [apolloInternetAccount, baseURL, rootFeature])
+  }, [baseURL, rootFeature])
 
   const title = isRoot
     ? `Feature history: ${feature.type} ${featureName}`
@@ -164,8 +147,12 @@ export function FeatureChangeLog({
     >
       <Typography className={classes.featureInfo}>
         Showing all changes to {rootFeature.type} <strong>{rootName}</strong>{' '}
-        and its children ({feature.type === rootFeature.type ? '' : `including ${feature.type} ${featureName} and other subfeatures`})
-        &nbsp;&mdash; {rootFeature.min + 1}..{rootFeature.max} on {rootFeature.refSeq}
+        and its children (
+        {feature.type === rootFeature.type
+          ? ''
+          : `including ${feature.type} ${featureName} and other subfeatures`}
+        ) &nbsp;&mdash; {rootFeature.min + 1}..{rootFeature.max} on{' '}
+        {rootFeature.refSeq}
       </Typography>
       <DialogContent>
         <DataGrid

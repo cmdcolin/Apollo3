@@ -30,12 +30,8 @@ export class JBrowseService {
 
   private readonly logger = new Logger(JBrowseService.name)
 
-  get internetAccountId() {
-    const name = this.configService.get('NAME', { infer: true })
-    return `${name}-apolloInternetAccount`
-  }
-
-  getConfiguration(role?: Role) {
+  getConfiguration(role?: Role, userId?: string) {
+    const url = this.configService.get('URL', { infer: true })
     const feature_type_ontology_location =
       this.configService.get('FEATURE_TYPE_ONTOLOGY_LOCATION', {
         infer: true,
@@ -66,7 +62,7 @@ export class JBrowseService {
           ],
         },
       },
-      ApolloPlugin: { hasRole: false },
+      ApolloPlugin: { hasRole: false, baseURL: url },
     }
     if (!role) {
       return configuration
@@ -76,6 +72,9 @@ export class JBrowseService {
         ...configuration,
         ApolloPlugin: {
           hasRole: true,
+          baseURL: url,
+          role: 'none',
+          userId,
         },
       }
     }
@@ -83,6 +82,9 @@ export class JBrowseService {
       ...configuration,
       ApolloPlugin: {
         hasRole: true,
+        baseURL: url,
+        role,
+        userId,
         ontologies: [
           {
             name: 'Sequence Ontology',
@@ -103,24 +105,6 @@ export class JBrowseService {
       {
         name: 'Apollo',
         url: pluginLocation,
-      },
-    ]
-  }
-
-  getInternetAccounts() {
-    const url = this.configService.get('URL', { infer: true })
-    const name = this.configService.get('NAME', { infer: true })
-    const description =
-      this.configService.get('DESCRIPTION', { infer: true }) ?? ''
-    const urlObj = new URL(url)
-    return [
-      {
-        type: 'ApolloInternetAccount',
-        internetAccountId: this.internetAccountId,
-        name,
-        description,
-        domains: [urlObj.host],
-        baseURL: url,
       },
     ]
   }
@@ -164,7 +148,6 @@ export class JBrowseService {
           ],
           metadata: {
             apollo: true,
-            internetAccountConfigId: this.internetAccountId,
           },
         },
         refNameAliases: {
@@ -224,22 +207,20 @@ export class JBrowseService {
     return row?.config
   }
 
-  async getConfig(role?: Role) {
+  async getConfig(role?: Role, userId?: string) {
     if (!role || role === Role.None) {
       return {
-        configuration: this.getConfiguration(role),
+        configuration: this.getConfiguration(role, userId),
         plugins: this.getPlugins(),
-        internetAccounts: this.getInternetAccounts(),
       }
     }
     const storedConfig = await this.getJBrowseConfig()
     const generatedConfig = {
-      configuration: this.getConfiguration(role),
+      configuration: this.getConfiguration(role, userId),
       assemblies: await this.getAssemblies(),
       tracks: await this.getTracks(),
       aggregateTextSearchAdapters: await this.getAggregateTextSearchAdapters(),
       plugins: this.getPlugins(),
-      internetAccounts: this.getInternetAccounts(),
       defaultSession: this.getDefaultSession(),
     }
     if (!storedConfig) {

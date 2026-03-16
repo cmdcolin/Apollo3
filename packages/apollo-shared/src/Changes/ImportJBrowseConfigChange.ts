@@ -58,17 +58,13 @@ export function filterJBrowseConfig(config: JBrowseConfig): JBrowseConfig {
       (a) => a.sequence.adapter.type !== 'ApolloSequenceAdapter',
     )
   }
-  if (configuration?.ApolloPlugin?.hasRole) {
-    const { hasRole, ...apolloPluginRest } = configuration.ApolloPlugin
+  if (configuration?.ApolloPlugin) {
+    const { baseURL, hasRole, role, userId, ...apolloPluginRest } =
+      configuration.ApolloPlugin
     filteredConfig.configuration = {
       ...configuration,
       ApolloPlugin: apolloPluginRest,
     }
-  }
-  if (internetAccounts) {
-    filteredConfig.internetAccounts = internetAccounts.filter(
-      (i) => i.type !== 'ApolloInternetAccount',
-    )
   }
   if (plugins) {
     filteredConfig.plugins = plugins.filter((p) => p.name !== 'Apollo')

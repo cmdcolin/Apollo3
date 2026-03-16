@@ -80,7 +80,6 @@ export function OpenLocalFile({ handleClose, session }: OpenLocalFileProps) {
     const fileData = await new Response(file).text()
     const assemblyId = `${assemblyName}-${file.name}-${nanoid(8)}`
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       await loadAssemblyIntoClient(
         assemblyId,
         fileData,

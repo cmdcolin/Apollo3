@@ -3,7 +3,7 @@ import { Controller, Get, Inject, Logger, Param, Query } from '@nestjs/common'
 import { Role } from '../utils/role/role.enum.js'
 import { Roles } from '../utils/roles.guard.js'
 
-import { FindRefSeqDto } from './dto/find-refSeq.dto.js'
+import type { FindRefSeqDto } from './dto/find-refSeq.dto.js'
 import { RefSeqsService } from './refSeqs.service.js'
 
 @Roles(Role.ReadOnly)

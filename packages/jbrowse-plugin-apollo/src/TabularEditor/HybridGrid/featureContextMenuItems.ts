@@ -19,7 +19,7 @@ import {
   SplitTranscript,
 } from '../../components'
 import type { ApolloSessionModel } from '../../session'
-import { getApolloInternetAccount } from '../../util'
+import { getRole } from '../../util'
 
 export function featureContextMenuItems(
   feature: AnnotationFeature | undefined,
@@ -32,10 +32,9 @@ export function featureContextMenuItems(
   filteredTranscripts: string[],
   updateFilteredTranscripts: (forms: string[]) => void,
 ) {
-  const internetAccount = getApolloInternetAccount(session)
-  const role = internetAccount ? internetAccount.role : 'admin'
+  const role = getRole(session) ?? 'admin'
   const admin = role === 'admin'
-  const readOnly = !(role && ['admin', 'user'].includes(role))
+  const readOnly = !['admin', 'user'].includes(role)
   const menuItems: MenuItem[] = []
   if (feature) {
     const featureID = feature.attributes.get('gff_id')?.toString()
@@ -76,7 +75,6 @@ export function featureContextMenuItems(
                 changeManager,
                 sourceFeature: feature,
                 sourceAssemblyId,
-                internetAccount,
               },
             ],
           )

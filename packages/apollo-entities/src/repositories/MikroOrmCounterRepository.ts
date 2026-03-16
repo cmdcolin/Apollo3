@@ -1,5 +1,5 @@
 import type { CounterRepository } from '@apollo-annotation/common'
-import { LockMode, type EntityManager, type InferEntity } from '@mikro-orm/core'
+import { type EntityManager, type InferEntity, LockMode } from '@mikro-orm/core'
 
 import { CounterEntity } from '../entities/CounterEntity.js'
 

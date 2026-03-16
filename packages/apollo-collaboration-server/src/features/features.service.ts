@@ -95,7 +95,7 @@ export class FeaturesService {
         }
       }
     }
-    return undefined
+    return
   }
 
   async findByFeatureIds(featureIds: string[], topLevel?: boolean) {

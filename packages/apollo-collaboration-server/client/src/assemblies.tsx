@@ -1,16 +1,16 @@
-import { createRoot } from 'react-dom/client'
-import { useCallback, useEffect, useState } from 'react'
 import Alert from '@mui/material/Alert'
 import Container from '@mui/material/Container'
 import Link from '@mui/material/Link'
+import Paper from '@mui/material/Paper'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
 import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
-import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
+import { useCallback, useEffect, useState } from 'react'
+import { createRoot } from 'react-dom/client'
 
 import { Nav } from './Nav.js'
 import { fetchJson } from './fetchUtil.js'
@@ -31,8 +31,8 @@ function AssembliesPage() {
     try {
       setError(undefined)
       setAssemblies(await fetchJson<Assembly[]>('/assemblies'))
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : String(error_))
     }
   }, [])
 
@@ -100,7 +100,7 @@ function AssembliesPage() {
   )
 }
 
-const root = document.getElementById('root')
+const root = document.querySelector('#root')
 if (root) {
   createRoot(root).render(<AssembliesPage />)
 }

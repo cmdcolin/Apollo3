@@ -837,7 +837,7 @@ function getContextMenuItems(
   mousePosition: MousePositionWithFeature,
 ): MenuItem[] {
   const {
-    apolloInternetAccount: internetAccount,
+    role: displayRole,
     hoveredFeature,
     changeManager,
     regions,
@@ -847,7 +847,7 @@ function getContextMenuItems(
   const [region] = regions
   const currentAssemblyId = display.getAssemblyId(region.assemblyName)
   const menuItems: MenuItem[] = []
-  const role = internetAccount ? internetAccount.role : 'admin'
+  const role = displayRole ?? 'admin'
   const admin = role === 'admin'
   if (!hoveredFeature) {
     return menuItems
@@ -1028,28 +1028,28 @@ function getContextMenuItems(
               )
             },
           },
-        )
-        contextMenuItemsForFeature.push({
-          label: 'Set longest ORF',
-          disabled: !admin,
-          onClick: () => {
-            ;(session as unknown as AbstractSessionModel).queueDialog(
-              (doneCallback) => [
-                SetLongestOrf,
-                {
-                  session,
-                  handleClose: () => {
-                    doneCallback()
+          {
+            label: 'Set longest ORF',
+            disabled: !admin,
+            onClick: () => {
+              ;(session as unknown as AbstractSessionModel).queueDialog(
+                (doneCallback) => [
+                  SetLongestOrf,
+                  {
+                    session,
+                    handleClose: () => {
+                      doneCallback()
+                    },
+                    changeManager,
+                    sourceFeature: feature,
+                    sourceAssemblyId: currentAssemblyId,
+                    refName: region.refName,
                   },
-                  changeManager,
-                  sourceFeature: feature,
-                  sourceAssemblyId: currentAssemblyId,
-                  refName: region.refName,
-                },
-              ],
-            )
+                ],
+              )
+            },
           },
-        })
+        )
         if (isSessionModelWithWidgets(session)) {
           contextMenuItemsForFeature.splice(1, 0, {
             label: 'Open transcript editor',

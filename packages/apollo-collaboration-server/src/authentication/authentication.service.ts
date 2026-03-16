@@ -16,7 +16,7 @@ import { JwtService } from '@nestjs/jwt'
 import type { Request } from 'express'
 import type { Profile as GoogleProfile } from 'passport-google-oauth20'
 
-import { CreateUserDto } from '../users/dto/create-user.dto.js'
+import type { CreateUserDto } from '../users/dto/create-user.dto.js'
 import { UsersService } from '../users/users.service.js'
 import {
   GUEST_USER_EMAIL,

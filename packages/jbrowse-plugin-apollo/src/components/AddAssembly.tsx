@@ -10,7 +10,6 @@ import {
 import { readConfObject } from '@jbrowse/core/configuration'
 import type { AbstractSessionModel } from '@jbrowse/core/util'
 import { makeStyles } from '@jbrowse/core/util/tss-react'
-import { getRoot } from '@jbrowse/mobx-state-tree'
 import InfoIcon from '@mui/icons-material/Info'
 import LinkIcon from '@mui/icons-material/Link'
 import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked'
@@ -41,11 +40,9 @@ import {
 import ObjectID from 'bson-objectid'
 import React, { useState } from 'react'
 
-import type { ApolloInternetAccountModel } from '../ApolloInternetAccount/model'
 import type { ChangeManager } from '../ChangeManager'
 import type { ApolloSessionModel } from '../session'
-import type { ApolloRootModel } from '../types'
-import { createFetchErrorMessage } from '../util'
+import { apolloFetch, createFetchErrorMessage, getBaseURL } from '../util'
 
 import { Dialog } from './Dialog'
 
@@ -123,14 +120,8 @@ export function AddAssembly({
   session,
 }: AddAssemblyProps) {
   const { classes } = useStyles()
-  const { internetAccounts } = getRoot<ApolloRootModel>(session)
+  const baseURL = getBaseURL(session)
   const { notify } = session as unknown as AbstractSessionModel
-  const apolloInternetAccounts = internetAccounts.filter(
-    (ia) => ia.type === 'ApolloInternetAccount',
-  ) as ApolloInternetAccountModel[]
-  if (apolloInternetAccounts.length === 0) {
-    throw new Error('No Apollo internet account found')
-  }
   const [assemblyName, setAssemblyName] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [validAsm, setValidAsm] = useState(false)
@@ -169,7 +160,6 @@ export function AddAssembly({
     const { jobsManager } = session
     const controller = new AbortController()
 
-    const [{ baseURL, getFetcher }] = apolloInternetAccounts
     const url = new URL('files', baseURL)
 
     url.searchParams.set('type', fileType)
@@ -189,10 +179,6 @@ export function AddAssembly({
     }
     formData.append('file', file, filename)
     formData.append('type', fileType)
-    const apolloFetchFile = getFetcher({
-      locationType: 'UriLocation',
-      uri,
-    })
     const job = {
       name: `UploadAssemblyFile for ${assemblyName}`,
       statusMessage: 'Pre-validating',
@@ -211,7 +197,7 @@ export function AddAssembly({
     jobsManager.update(job.name, `Uploading ${file.name}, this may take awhile`)
     const { signal } = controller
 
-    const response = await apolloFetchFile(uri, {
+    const response = await apolloFetch(uri, {
       method: 'POST',
       body: formData,
       signal,
@@ -229,7 +215,6 @@ export function AddAssembly({
     const fileId = result._id as string
     jobsManager.done(job)
     return fileId
-    throw new Error('Failed to fetch')
   }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -306,9 +291,7 @@ export function AddAssembly({
       }
     }
 
-    const [{ internetAccountId }] = apolloInternetAccounts
     await changeManager.submit(change, {
-      internetAccountId,
       updateJobsManager: true,
     })
     setSubmitted(false)

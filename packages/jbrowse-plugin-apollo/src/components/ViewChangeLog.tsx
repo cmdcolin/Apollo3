@@ -7,7 +7,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import { changeRegistry } from '@apollo-annotation/common'
 import { makeStyles } from '@jbrowse/core/util/tss-react'
-import { getRoot } from '@jbrowse/mobx-state-tree'
 import {
   Button,
   DialogActions,
@@ -25,14 +24,8 @@ import {
 } from '@mui/x-data-grid'
 import React, { useEffect, useState } from 'react'
 
-import type { ApolloInternetAccountModel } from '../ApolloInternetAccount/model'
-import type {
-  ApolloInternetAccount,
-  CollaborationServerDriver,
-} from '../BackendDrivers'
 import type { ApolloSessionModel } from '../session'
-import type { ApolloRootModel } from '../types'
-import { createFetchErrorMessage } from '../util'
+import { apolloFetch, createFetchErrorMessage, getBaseURL } from '../util'
 
 import { Dialog } from './Dialog'
 
@@ -52,25 +45,12 @@ const useStyles = makeStyles()((theme) => ({
 }))
 
 export function ViewChangeLog({ handleClose, session }: ViewChangeLogProps) {
-  const { internetAccounts } = getRoot<ApolloRootModel>(session)
-  const apolloInternetAccount = internetAccounts.find(
-    (ia) => ia.type === 'ApolloInternetAccount',
-  ) as ApolloInternetAccountModel | undefined
-  if (!apolloInternetAccount) {
-    throw new Error('No Apollo internet account found')
-  }
-  const { baseURL } = apolloInternetAccount
+  const baseURL = getBaseURL(session)
   const { classes } = useStyles()
   const [errorMessage, setErrorMessage] = useState<string>()
   const [displayGridData, setDisplayGridData] = useState<GridRowsProp[]>([])
 
-  const { collaborationServerDriver } = session.apolloDataStore as {
-    collaborationServerDriver: CollaborationServerDriver
-    getInternetAccount(
-      assemblyName?: string,
-      internetAccountId?: string,
-    ): ApolloInternetAccount
-  }
+  const { collaborationServerDriver } = session.apolloDataStore
   const assemblies = collaborationServerDriver.getAssemblies()
   const [selectedAssembly, setSelectedAssembly] = useState(assemblies.at(0))
 
@@ -119,30 +99,24 @@ export function ViewChangeLog({ handleClose, session }: ViewChangeLogProps) {
       })
       url.search = searchParams.toString()
       const uri = url.toString()
-      const apolloFetch = apolloInternetAccount?.getFetcher({
-        locationType: 'UriLocation',
-        uri,
+      const response = await apolloFetch(uri, {
+        headers: new Headers({ 'Content-Type': 'application/json' }),
       })
-      if (apolloFetch) {
-        const response = await apolloFetch(uri, {
-          headers: new Headers({ 'Content-Type': 'application/json' }),
-        })
-        if (!response.ok) {
-          const newErrorMessage = await createFetchErrorMessage(
-            response,
-            'Error when retrieving changes',
-          )
-          setErrorMessage(newErrorMessage)
-          return
-        }
-        const data = await response.json()
-        setDisplayGridData(data)
+      if (!response.ok) {
+        const newErrorMessage = await createFetchErrorMessage(
+          response,
+          'Error when retrieving changes',
+        )
+        setErrorMessage(newErrorMessage)
+        return
       }
+      const data = await response.json()
+      setDisplayGridData(data)
     }
     getGridData().catch((error) => {
       setErrorMessage(String(error))
     })
-  }, [apolloInternetAccount, baseURL, selectedAssembly])
+  }, [baseURL, selectedAssembly])
 
   function handleChangeAssembly(e: SelectChangeEvent) {
     const newAssembly = assemblies.find((asm) => asm.name === e.target.value)

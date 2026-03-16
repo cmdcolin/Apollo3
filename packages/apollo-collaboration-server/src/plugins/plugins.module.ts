@@ -4,9 +4,9 @@ import fsPromises from 'node:fs/promises'
 import path from 'node:path'
 import { Writable } from 'node:stream'
 
-import {
+import type {
   ApolloPlugin,
-  type ApolloPluginConstructor,
+  ApolloPluginConstructor,
 } from '@apollo-annotation/common'
 import {
   type DynamicModule,

@@ -107,7 +107,7 @@ export function clusterResultByMessage<
       const median: number =
         starts.length % 2 ? starts[mid] : (starts[mid - 1] + starts[mid]) / 2
       const clusterId = group[0]._id
-      const featureId = group[0].featureId
+      const { featureId } = group[0]
 
       clusters.push({
         _id: clusterId,

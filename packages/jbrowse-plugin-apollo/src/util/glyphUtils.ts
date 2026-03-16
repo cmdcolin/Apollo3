@@ -243,7 +243,7 @@ export function isSelectedFeature(
   feature: AnnotationFeature,
   selectedFeature: AnnotationFeature | undefined,
 ) {
-  return Boolean(selectedFeature && feature._id === selectedFeature._id)
+  return Boolean(feature._id === selectedFeature?._id)
 }
 
 export function containsSelectedFeature(
@@ -285,14 +285,14 @@ export function getContextMenuItemsForFeature(
   sourceFeature: AnnotationFeature,
 ): MenuItem[] {
   const {
-    apolloInternetAccount: internetAccount,
+    role: displayRole,
     changeManager,
     regions,
     selectedFeature,
     session,
   } = display
   const menuItems: MenuItem[] = []
-  const role = internetAccount ? internetAccount.role : 'admin'
+  const role = displayRole ?? 'admin'
   const admin = role === 'admin'
   const readOnly = !(role && ['admin', 'user'].includes(role))
   const [region] = regions
@@ -318,7 +318,6 @@ export function getContextMenuItemsForFeature(
               changeManager,
               sourceFeature,
               sourceAssemblyId,
-              internetAccount,
             },
           ],
         )

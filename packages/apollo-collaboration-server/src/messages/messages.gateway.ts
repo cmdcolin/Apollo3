@@ -5,9 +5,9 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets'
-import { Server } from 'socket.io'
+import type { Server } from 'socket.io'
 
-import { CreateMessageDto } from './dto/create-message.dto.js'
+import type { CreateMessageDto } from './dto/create-message.dto.js'
 
 @WebSocketGateway({
   cors: {

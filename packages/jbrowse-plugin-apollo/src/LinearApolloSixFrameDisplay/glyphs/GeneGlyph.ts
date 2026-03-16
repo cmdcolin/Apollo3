@@ -849,7 +849,7 @@ function getContextMenuItems(
   mousePosition: MousePositionWithFeature,
 ): MenuItem[] {
   const {
-    apolloInternetAccount: internetAccount,
+    role: displayRole,
     hoveredFeature,
     changeManager,
     filteredTranscripts,
@@ -860,7 +860,7 @@ function getContextMenuItems(
   const [region] = regions
   const currentAssemblyId = display.getAssemblyId(region.assemblyName)
   const menuItems: MenuItem[] = []
-  const role = internetAccount ? internetAccount.role : 'admin'
+  const role = displayRole ?? 'admin'
   const admin = role === 'admin'
   if (!hoveredFeature) {
     return menuItems

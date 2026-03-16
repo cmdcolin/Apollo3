@@ -1,15 +1,15 @@
-import { createRoot } from 'react-dom/client'
-import { useCallback, useEffect, useState } from 'react'
 import Alert from '@mui/material/Alert'
 import Container from '@mui/material/Container'
+import Paper from '@mui/material/Paper'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
 import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
-import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
+import { useCallback, useEffect, useState } from 'react'
+import { createRoot } from 'react-dom/client'
 
 import { AdminNav } from './Nav.js'
 import { fetchJson } from './fetchUtil.js'
@@ -30,8 +30,8 @@ function UsersPage() {
     try {
       setError(undefined)
       setUsers(await fetchJson<User[]>('/users'))
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : String(error_))
     }
   }, [])
 
@@ -93,7 +93,7 @@ function UsersPage() {
   )
 }
 
-const root = document.getElementById('root')
+const root = document.querySelector('#root')
 if (root) {
   createRoot(root).render(<UsersPage />)
 }

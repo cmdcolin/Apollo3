@@ -68,10 +68,8 @@ export class AddFeatureChange extends FeatureChange {
       const { addedFeature, copyFeature, parentFeatureId } = change
       const rows = flattenFeatureSnapshot(addedFeature, addedFeature.refSeq)
 
-      if (parentFeatureId) {
-        if (rows.length > 0) {
-          rows[0].parentId = parentFeatureId
-        }
+      if (parentFeatureId && rows.length > 0) {
+        rows[0].parentId = parentFeatureId
       }
       await backend.featureRepository.createMany(rows)
     }

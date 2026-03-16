@@ -5,7 +5,7 @@ import { BlobFile, RemoteFile } from 'generic-filehandle2'
 import { FilesService } from '../files/files.service.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
 
-import { GetSequenceDto } from './dto/get-sequence.dto.js'
+import type { GetSequenceDto } from './dto/get-sequence.dto.js'
 
 @Injectable()
 export class SequenceService {

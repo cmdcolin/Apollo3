@@ -35,7 +35,6 @@ import {
 import { autorun } from 'mobx'
 
 import {
-  type ApolloInternetAccount,
   type BackendDriver,
   CollaborationServerDriver,
   DesktopFileDriver,
@@ -63,10 +62,6 @@ export function clientDataStoreFactory(
       ontologyManager: types.optional(OntologyManagerType, {}),
     })
     .views((self) => ({
-      get internetAccounts() {
-        return getRoot<ApolloRootModel>(self).internetAccounts
-      },
-
       get pluginConfiguration() {
         return getRoot<ApolloRootModel>(self).jbrowse.configuration
           .ApolloPlugin as Instance<typeof ApolloPluginConfigurationSchema>
@@ -97,7 +92,6 @@ export function clientDataStoreFactory(
         const { assemblyManager } = session
         let apolloAssembly = self.assemblies.get(assemblyId)
         if (!apolloAssembly) {
-          // maybe it's a valid assembly that we haven't loaded yet
           const assembly = assemblyManager.get(assemblyId)
           if (!assembly) {
             throw new Error(
@@ -108,7 +102,6 @@ export function clientDataStoreFactory(
         }
         let ref = apolloAssembly.refSeqs.get(feature.refSeq)
         if (!ref) {
-          // maybe it's a valid refName that we haven't loaded yet
           const assembly = assemblyManager.get(assemblyId)
           if (!assembly) {
             throw new Error(
@@ -178,9 +171,6 @@ export function clientDataStoreFactory(
         addDisposer(
           self,
           autorun(() => {
-            // Merge in the ontologies from our plugin configuration.
-            // Ontologies of a given name that are already in the session
-            // take precedence over the ontologies in the configuration.
             const { ontologyManager, pluginConfiguration } = self
             const configuredOntologies =
               pluginConfiguration.ontologies as AnyConfigurationModel[]
@@ -235,8 +225,6 @@ export function clientDataStoreFactory(
                 })
               }
             }
-            // TODO: add in any configured ontology prefixes that we don't already
-            // have in the session (or hardcoded in the model)
           }),
         )
       },
@@ -253,11 +241,11 @@ export function clientDataStoreFactory(
           return
         }
         const metadata = getConf(assembly, ['sequence', 'metadata']) as {
-          internetAccountConfigId?: string
+          apollo?: boolean
           file?: string
           sqliteDb?: string
         }
-        const { file, internetAccountConfigId, sqliteDb } = metadata
+        const { apollo, file, sqliteDb } = metadata
         console.warn(
           `[apollo-debug] getBackendDriver: metadata=${JSON.stringify(metadata)}, isElectron=${isElectron}`,
         )
@@ -267,39 +255,10 @@ export function clientDataStoreFactory(
         if (isElectron && file) {
           return self.desktopFileDriver
         }
-        if (internetAccountConfigId) {
+        if (apollo) {
           return self.collaborationServerDriver
         }
         return self.inMemoryFileDriver
-      },
-      getInternetAccount(assemblyName?: string, internetAccountId?: string) {
-        if (!(assemblyName ?? internetAccountId)) {
-          throw new Error(
-            'Must provide either assemblyName or internetAccountId',
-          )
-        }
-        let configId = internetAccountId
-        if (assemblyName && !configId) {
-          const { assemblyManager } = getSession(self)
-          const assembly = assemblyManager.get(assemblyName)
-          if (!assembly) {
-            throw new Error(`No assembly found with name ${assemblyName}`)
-          }
-          ;({ internetAccountConfigId: configId } = getConf(assembly, [
-            'sequence',
-            'metadata',
-          ]) as { internetAccountConfigId: string })
-        }
-        const { internetAccounts } = self
-        const internetAccount = internetAccounts.find(
-          (ia) => ia.internetAccountId === configId,
-        ) as ApolloInternetAccount | undefined
-        if (!internetAccount) {
-          throw new Error(
-            `No InternetAccount found with config id ${internetAccountId}`,
-          )
-        }
-        return internetAccount
       },
     }))
     .actions((self) => ({

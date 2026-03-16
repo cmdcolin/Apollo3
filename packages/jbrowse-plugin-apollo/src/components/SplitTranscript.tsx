@@ -162,9 +162,9 @@ export function SplitTranscript({
                 <RadioGroup
                   name="split-point-group"
                   value={
-                    selectedSplitIdx !== undefined
-                      ? String(selectedSplitIdx)
-                      : ''
+                    selectedSplitIdx === undefined
+                      ? ''
+                      : String(selectedSplitIdx)
                   }
                   onChange={handleChange}
                 >

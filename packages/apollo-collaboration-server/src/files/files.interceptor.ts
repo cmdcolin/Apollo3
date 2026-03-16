@@ -4,9 +4,9 @@ import {
   Injectable,
   type NestInterceptor,
 } from '@nestjs/common'
-import { Observable } from 'rxjs'
+import type { Observable } from 'rxjs'
 
-import { FilesService } from './files.service.js'
+import type { FilesService } from './files.service.js'
 import type { FileRequest } from './filesUtil.js'
 
 @Injectable()

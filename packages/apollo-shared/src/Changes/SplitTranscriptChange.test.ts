@@ -1,12 +1,14 @@
-import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
 
 import type { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
 
 import { SplitTranscriptChange } from './SplitTranscriptChange.js'
 import { UndoSplitTranscriptChange } from './UndoSplitTranscriptChange.js'
 
-function makeChange(overrides: Partial<AnnotationFeatureSnapshot> = {}): SplitTranscriptChange {
+function makeChange(
+  overrides: Partial<AnnotationFeatureSnapshot> = {},
+): SplitTranscriptChange {
   const transcript: AnnotationFeatureSnapshot = {
     _id: 'tx-1',
     refSeq: 'rs-1',
@@ -37,12 +39,29 @@ describe('SplitTranscriptChange.makeSplitTranscripts', () => {
       min: 10,
       max: 100,
       children: {
-        'exon-1': { _id: 'exon-1', refSeq: 'rs-1', type: 'exon', min: 10, max: 40 },
-        'exon-2': { _id: 'exon-2', refSeq: 'rs-1', type: 'exon', min: 60, max: 100 },
+        'exon-1': {
+          _id: 'exon-1',
+          refSeq: 'rs-1',
+          type: 'exon',
+          min: 10,
+          max: 40,
+        },
+        'exon-2': {
+          _id: 'exon-2',
+          refSeq: 'rs-1',
+          type: 'exon',
+          min: 60,
+          max: 100,
+        },
       },
     }
 
-    const [left, right] = change.makeSplitTranscripts(transcript, 50, 'tx-left', 'tx-right')
+    const [left, right] = change.makeSplitTranscripts(
+      transcript,
+      50,
+      'tx-left',
+      'tx-right',
+    )
 
     assert.equal(left._id, 'tx-left')
     assert.equal(right._id, 'tx-right')
@@ -70,11 +89,22 @@ describe('SplitTranscriptChange.makeSplitTranscripts', () => {
       max: 100,
       // All children to the left — right side gets no children
       children: {
-        'exon-1': { _id: 'exon-1', refSeq: 'rs-1', type: 'exon', min: 10, max: 40 },
+        'exon-1': {
+          _id: 'exon-1',
+          refSeq: 'rs-1',
+          type: 'exon',
+          min: 10,
+          max: 40,
+        },
       },
     }
 
-    const [left, right] = change.makeSplitTranscripts(transcript, 50, 'tx-left', 'tx-right')
+    const [left, right] = change.makeSplitTranscripts(
+      transcript,
+      50,
+      'tx-left',
+      'tx-right',
+    )
 
     assert.equal(left.min, 10)
     assert.equal(left.max, 40)
@@ -94,7 +124,12 @@ describe('SplitTranscriptChange.makeSplitTranscripts', () => {
       max: 100,
     }
 
-    const [left, right] = change.makeSplitTranscripts(transcript, 50, 'tx-left', 'tx-right')
+    const [left, right] = change.makeSplitTranscripts(
+      transcript,
+      50,
+      'tx-left',
+      'tx-right',
+    )
 
     assert.equal(left.min, 10)
     assert.equal(left.max, 50)
@@ -114,7 +149,12 @@ describe('SplitTranscriptChange.makeSplitTranscripts', () => {
       max: 100,
     }
 
-    const [left, right] = change.makeSplitTranscripts(transcript, 50, 'tx-left', 'tx-right')
+    const [left, right] = change.makeSplitTranscripts(
+      transcript,
+      50,
+      'tx-left',
+      'tx-right',
+    )
 
     assert.equal(left._id, 'tx-left')
     assert.equal(right._id, 'tx-right')
@@ -128,10 +168,19 @@ describe('SplitTranscriptChange.makeSplitTranscripts', () => {
       type: 'mRNA',
       min: 10,
       max: 100,
-      attributes: { gff_id: ['tx-1'], gff_name: ['myTranscript'], note: ['some note'] },
+      attributes: {
+        gff_id: ['tx-1'],
+        gff_name: ['myTranscript'],
+        note: ['some note'],
+      },
     }
 
-    const [left, right] = change.makeSplitTranscripts(transcript, 50, 'tx-left', 'tx-right')
+    const [left, right] = change.makeSplitTranscripts(
+      transcript,
+      50,
+      'tx-left',
+      'tx-right',
+    )
 
     assert.equal(left.attributes?.gff_id, undefined)
     assert.equal(left.attributes?.gff_name, undefined)
@@ -153,7 +202,12 @@ describe('SplitTranscriptChange.makeSplitTranscripts', () => {
       strand: 1,
     }
 
-    const [left, right] = change.makeSplitTranscripts(transcript, 50, 'tx-left', 'tx-right')
+    const [left, right] = change.makeSplitTranscripts(
+      transcript,
+      50,
+      'tx-left',
+      'tx-right',
+    )
 
     assert.equal(left.type, 'mRNA')
     assert.equal(left.strand, 1)
@@ -171,12 +225,29 @@ describe('SplitTranscriptChange.makeSplitTranscripts', () => {
       min: 0,
       max: 200,
       children: {
-        'exon-at': { _id: 'exon-at', refSeq: 'rs-1', type: 'exon', min: 40, max: 60 }, // midpoint=50 (at split)
-        'exon-right': { _id: 'exon-right', refSeq: 'rs-1', type: 'exon', min: 80, max: 120 }, // midpoint=100 (right)
+        'exon-at': {
+          _id: 'exon-at',
+          refSeq: 'rs-1',
+          type: 'exon',
+          min: 40,
+          max: 60,
+        }, // midpoint=50 (at split)
+        'exon-right': {
+          _id: 'exon-right',
+          refSeq: 'rs-1',
+          type: 'exon',
+          min: 80,
+          max: 120,
+        }, // midpoint=100 (right)
       },
     }
 
-    const [left, right] = change.makeSplitTranscripts(transcript, 50, 'tx-left', 'tx-right')
+    const [left, right] = change.makeSplitTranscripts(
+      transcript,
+      50,
+      'tx-left',
+      'tx-right',
+    )
 
     // midpoint 50 <= 50 → goes left
     assert.ok(left.children?.['exon-at'])
@@ -253,8 +324,20 @@ describe('UndoSplitTranscriptChange.getInverse', () => {
       min: 10,
       max: 100,
       children: {
-        'exon-1': { _id: 'exon-1', refSeq: 'rs-1', type: 'exon', min: 10, max: 40 },
-        'exon-2': { _id: 'exon-2', refSeq: 'rs-1', type: 'exon', min: 60, max: 100 },
+        'exon-1': {
+          _id: 'exon-1',
+          refSeq: 'rs-1',
+          type: 'exon',
+          min: 10,
+          max: 40,
+        },
+        'exon-2': {
+          _id: 'exon-2',
+          refSeq: 'rs-1',
+          type: 'exon',
+          min: 60,
+          max: 100,
+        },
       },
     }
     const undoChange = new UndoSplitTranscriptChange({

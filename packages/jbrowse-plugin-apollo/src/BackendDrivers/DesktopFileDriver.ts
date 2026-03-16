@@ -99,13 +99,10 @@ export class DesktopFileDriver extends BackendDriver {
     const { assemblyManager } = getSession(this.clientStore)
     return assemblyManager.assemblies.filter((assembly) => {
       const sequenceMetadata = getConf(assembly, ['sequence', 'metadata']) as
-        | { apollo: boolean; internetAccountConfigId?: string; file?: string }
+        | { apollo?: boolean; file?: string }
         | undefined
       return Boolean(
-        sequenceMetadata &&
-        sequenceMetadata.apollo &&
-        !sequenceMetadata.internetAccountConfigId &&
-        sequenceMetadata.file,
+        sequenceMetadata && !sequenceMetadata.apollo && sequenceMetadata.file,
       )
     })
   }

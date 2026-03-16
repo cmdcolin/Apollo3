@@ -4,7 +4,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import { getRoot } from '@jbrowse/mobx-state-tree'
 import {
   Button,
   DialogActions,
@@ -22,10 +21,8 @@ import {
 } from '@mui/x-data-grid'
 import React, { useEffect, useState } from 'react'
 
-import type { ApolloInternetAccountModel } from '../ApolloInternetAccount/model'
 import type { ApolloSessionModel } from '../session'
-import type { ApolloRootModel } from '../types'
-import { createFetchErrorMessage } from '../util'
+import { apolloFetch, createFetchErrorMessage, getBaseURL } from '../util'
 
 import { Dialog } from './Dialog'
 
@@ -38,15 +35,8 @@ export function ViewCheckResults({
   handleClose,
   session,
 }: ViewCheckResultsProps) {
-  const { internetAccounts } = getRoot<ApolloRootModel>(session)
+  const baseURL = getBaseURL(session)
   const { collaborationServerDriver } = session.apolloDataStore
-  const apolloInternetAccount = internetAccounts.find(
-    (ia) => ia.type === 'ApolloInternetAccount',
-  ) as ApolloInternetAccountModel | undefined
-  if (!apolloInternetAccount) {
-    throw new Error('No Apollo internet account found')
-  }
-  const { baseURL } = apolloInternetAccount
   const [errorMessage, setErrorMessage] = useState<string>()
   const [displayGridData, setDisplayGridData] = useState<GridRowsProp[]>([])
 
@@ -75,30 +65,24 @@ export function ViewCheckResults({
       const searchParams = new URLSearchParams({ assembly: assemblyId })
       url.search = searchParams.toString()
       const uri = url.toString()
-      const apolloFetch = apolloInternetAccount?.getFetcher({
-        locationType: 'UriLocation',
-        uri,
+      const response = await apolloFetch(uri, {
+        headers: new Headers({ 'Content-Type': 'application/json' }),
       })
-      if (apolloFetch) {
-        const response = await apolloFetch(uri, {
-          headers: new Headers({ 'Content-Type': 'application/json' }),
-        })
-        if (!response.ok) {
-          const newErrorMessage = await createFetchErrorMessage(
-            response,
-            'Error when retrieving checks',
-          )
-          setErrorMessage(newErrorMessage)
-          return
-        }
-        const data = await response.json()
-        setDisplayGridData(data)
+      if (!response.ok) {
+        const newErrorMessage = await createFetchErrorMessage(
+          response,
+          'Error when retrieving checks',
+        )
+        setErrorMessage(newErrorMessage)
+        return
       }
+      const data = await response.json()
+      setDisplayGridData(data)
     }
     getGridData().catch((error) => {
       setErrorMessage(String(error))
     })
-  }, [selectedAssembly, apolloInternetAccount, baseURL])
+  }, [selectedAssembly, baseURL])
 
   function handleChangeAssembly(e: SelectChangeEvent) {
     const newAssembly = assemblies.find((asm) => asm.name === e.target.value)

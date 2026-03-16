@@ -139,7 +139,7 @@ export class UndoSplitTranscriptChange extends FeatureChange {
     const { assembly, changedIds, changes, logger } = this
     const inverseChangedIds = [...changedIds].reverse()
     const inverseChanges = [...changes].reverse().map((change) => {
-      const children = change.transcriptToRestore.children
+      const { children } = change.transcriptToRestore
       if (!children) {
         throw new Error('Transcript has no children to determine split point')
       }

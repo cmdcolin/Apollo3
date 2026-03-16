@@ -16,8 +16,8 @@ import {
 import type { Response } from 'express'
 
 import { GoogleAuthGuard } from '../utils/google.guard.js'
-import { Public } from '../utils/roles.guard.js'
 import { MicrosoftAuthGuard } from '../utils/microsoft.guard.js'
+import { Public } from '../utils/roles.guard.js'
 import { AUTH_COOKIE_NAME } from '../utils/strategies/jwt.strategy.js'
 
 import {

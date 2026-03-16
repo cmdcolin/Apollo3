@@ -44,11 +44,14 @@ The repository pattern abstracts the database layer behind interfaces in
 
 ### P2 — Simplification
 
-5. **Remove InternetAccount from Apollo plugin** — Phase 2 of the cookie-based
-   auth migration. Currently the InternetAccount still exists for websocket
-   management and menu registration. Move these to simpler plugin-level code
-   that reads role from config and connects websocket directly.
-   - **Files**: `packages/jbrowse-plugin-apollo/src/ApolloInternetAccount/`
+5. ~~**Remove InternetAccount from Apollo plugin**~~ **DONE** — Removed the
+   `ApolloInternetAccount` abstraction entirely. The server now includes
+   `baseURL`, `role`, and `userId` in the ApolloPlugin configuration returned by
+   `config.json`. WebSocket connection and change sequence tracking moved to the
+   session model. All API calls use plain `fetch` with
+   `credentials: 'same-origin'` (cookie auth). Components read `baseURL`,
+   `role`, and `userId` from the plugin config via utility functions.
+   Multi-account selection UI removed (single server per deployment).
 
 6. **Remove chunked RefSeqChunk storage** — Apollo3 currently stores reference
    sequences as chunked text blobs in the `ref_seq_chunk` table. This is

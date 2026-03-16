@@ -1,13 +1,10 @@
-import { createRoot } from 'react-dom/client'
-import { useEffect, useState } from 'react'
 import { createJBrowseTheme } from '@jbrowse/core/ui/theme'
-import { ThemeProvider } from '@mui/material/styles'
-import CssBaseline from '@mui/material/CssBaseline'
 import Alert from '@mui/material/Alert'
 import AppBar from '@mui/material/AppBar'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Container from '@mui/material/Container'
+import CssBaseline from '@mui/material/CssBaseline'
 import Divider from '@mui/material/Divider'
 import List from '@mui/material/List'
 import ListItemButton from '@mui/material/ListItemButton'
@@ -15,6 +12,9 @@ import ListItemText from '@mui/material/ListItemText'
 import Paper from '@mui/material/Paper'
 import Toolbar from '@mui/material/Toolbar'
 import Typography from '@mui/material/Typography'
+import { ThemeProvider } from '@mui/material/styles'
+import { useEffect, useState } from 'react'
+import { createRoot } from 'react-dom/client'
 
 import logoUrl from './apollo_logo.svg'
 
@@ -47,8 +47,8 @@ function useCurrentUser() {
         setUser(data)
         setChecked(true)
       })
-      .catch((e) => {
-        console.error('Failed to fetch current user:', e)
+      .catch((error) => {
+        console.error('Failed to fetch current user:', error)
         setChecked(true)
       })
   }, [])
@@ -63,7 +63,9 @@ function useLoginTypes() {
     fetch('/auth/types')
       .then((r) => r.json())
       .then(setTypes)
-      .catch((e) => console.error('Failed to fetch login types:', e))
+      .catch((error) => {
+        console.error('Failed to fetch login types:', error)
+      })
   }, [])
 
   return types
@@ -135,7 +137,7 @@ function Header({ user }: { user?: CurrentUser | null }) {
 
 function LoginSection() {
   const types = useLoginTypes()
-  const currentUrl = window.location.href
+  const currentUrl = globalThis.location.href
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -236,12 +238,14 @@ function IndexPage() {
           Collaborative genome annotation editor
         </Typography>
         <Paper variant="outlined" sx={{ p: 3 }}>
-          {!user ? (
-            <LoginSection />
-          ) : isPendingApproval ? (
-            <PendingApproval user={user} />
+          {user ? (
+            isPendingApproval ? (
+              <PendingApproval user={user} />
+            ) : (
+              <LoggedInContent user={user} />
+            )
           ) : (
-            <LoggedInContent user={user} />
+            <LoginSection />
           )}
         </Paper>
       </Container>
@@ -249,7 +253,7 @@ function IndexPage() {
   )
 }
 
-const root = document.getElementById('root')
+const root = document.querySelector('#root')
 if (root) {
   createRoot(root).render(<IndexPage />)
 }

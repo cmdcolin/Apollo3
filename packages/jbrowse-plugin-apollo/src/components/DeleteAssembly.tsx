@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import { DeleteAssemblyChange } from '@apollo-annotation/shared'
-import { getRoot } from '@jbrowse/mobx-state-tree'
 import {
   Button,
   Checkbox,
@@ -16,14 +15,9 @@ import {
 } from '@mui/material'
 import React, { useState } from 'react'
 
-import type { ApolloInternetAccountModel } from '../ApolloInternetAccount/model'
-import type {
-  ApolloInternetAccount,
-  CollaborationServerDriver,
-} from '../BackendDrivers'
+import type { CollaborationServerDriver } from '../BackendDrivers'
 import type { ChangeManager } from '../ChangeManager'
 import type { ApolloSessionModel } from '../session'
-import type { ApolloRootModel } from '../types'
 
 import { Dialog } from './Dialog'
 
@@ -38,43 +32,16 @@ export function DeleteAssembly({
   handleClose,
   session,
 }: DeleteAssemblyProps) {
-  const { internetAccounts } = getRoot<ApolloRootModel>(session)
   const [errorMessage, setErrorMessage] = useState('')
   const [confirmDelete, setconfirmDelete] = useState(false)
   const [submitted, setSubmitted] = useState(false)
-  const apolloInternetAccounts = internetAccounts.filter(
-    (ia) => ia.type === 'ApolloInternetAccount',
-  ) as ApolloInternetAccountModel[]
-  if (apolloInternetAccounts.length === 0) {
-    throw new Error('No Apollo internet account found')
-  }
-  const [selectedInternetAccount, setSelectedInternetAccount] = useState(
-    apolloInternetAccounts[0],
-  )
 
   const { collaborationServerDriver } = session.apolloDataStore as {
     collaborationServerDriver: CollaborationServerDriver
-    getInternetAccount(
-      assemblyName?: string,
-      internetAccountId?: string,
-    ): ApolloInternetAccount
   }
 
   const assemblies = collaborationServerDriver.getAssemblies()
   const [selectedAssembly, setSelectedAssembly] = useState(assemblies.at(0))
-
-  function handleChangeInternetAccount(e: SelectChangeEvent) {
-    setSubmitted(false)
-    const newlySelectedInternetAccount = apolloInternetAccounts.find(
-      (ia) => ia.internetAccountId === e.target.value,
-    )
-    if (!newlySelectedInternetAccount) {
-      throw new Error(
-        `Could not find internetAccount with ID "${e.target.value}"`,
-      )
-    }
-    setSelectedInternetAccount(newlySelectedInternetAccount)
-  }
 
   function handleChangeAssembly(e: SelectChangeEvent) {
     const newAssembly = assemblies.find((asm) => asm.name === e.target.value)
@@ -93,9 +60,7 @@ export function DeleteAssembly({
       typeName: 'DeleteAssemblyChange',
       assembly: selectedAssembly.name,
     })
-    await changeManager.submit(change, {
-      internetAccountId: selectedInternetAccount.internetAccountId,
-    })
+    await changeManager.submit(change)
     handleClose()
     event.preventDefault()
   }
@@ -110,22 +75,6 @@ export function DeleteAssembly({
     >
       <form onSubmit={onSubmit}>
         <DialogContent style={{ display: 'flex', flexDirection: 'column' }}>
-          {apolloInternetAccounts.length > 1 ? (
-            <>
-              <DialogContentText>Select account</DialogContentText>
-              <Select
-                value={selectedInternetAccount.internetAccountId}
-                onChange={handleChangeInternetAccount}
-                disabled={submitted && !errorMessage}
-              >
-                {internetAccounts.map((option) => (
-                  <MenuItem key={option.id} value={option.internetAccountId}>
-                    {option.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </>
-          ) : null}
           <DialogContentText>Select assembly</DialogContentText>
           <Select
             labelId="label"

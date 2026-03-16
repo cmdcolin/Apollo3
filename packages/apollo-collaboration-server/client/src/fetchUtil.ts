@@ -1,7 +1,7 @@
 export async function fetchJson<T>(url: string): Promise<T> {
   const res = await fetch(url)
   if (res.status === 401) {
-    window.location.href = '/'
+    globalThis.location.href = '/'
     throw new Error('Not authenticated')
   }
   if (!res.ok) {

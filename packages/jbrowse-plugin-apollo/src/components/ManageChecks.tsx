@@ -2,7 +2,6 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import type { AbstractSessionModel } from '@jbrowse/core/util'
-import { getRoot } from '@jbrowse/mobx-state-tree'
 import {
   Button,
   Checkbox,
@@ -22,14 +21,8 @@ import {
 } from '@mui/material'
 import React, { useEffect, useState } from 'react'
 
-import type { ApolloInternetAccountModel } from '../ApolloInternetAccount/model'
-import type {
-  ApolloInternetAccount,
-  CollaborationServerDriver,
-} from '../BackendDrivers'
 import type { ApolloSessionModel } from '../session'
-import type { ApolloRootModel } from '../types'
-import { createFetchErrorMessage } from '../util'
+import { apolloFetch, createFetchErrorMessage, getBaseURL } from '../util'
 
 import { Dialog } from './Dialog'
 
@@ -50,37 +43,19 @@ interface CheckDocument {
 }
 
 export function ManageChecks({ handleClose, session }: ManageChecksProps) {
-  const { internetAccounts } = getRoot<ApolloRootModel>(session)
+  const baseURL = getBaseURL(session)
   const [errorMessage, setErrorMessage] = useState('')
-  const [submitted, setSubmitted] = useState(false)
-  const apolloInternetAccounts = internetAccounts.filter(
-    (ia) => ia.type === 'ApolloInternetAccount',
-  ) as ApolloInternetAccountModel[]
-  if (apolloInternetAccounts.length === 0) {
-    throw new Error('No Apollo internet account found')
-  }
-  const [selectedInternetAccount, setSelectedInternetAccount] = useState(
-    apolloInternetAccounts[0],
-  )
   const [checks, setChecks] = useState<CheckDocument[]>([])
   const [selectedChecks, setSelectedChecks] = useState<string[]>([])
 
-  const { collaborationServerDriver } = session.apolloDataStore as {
-    collaborationServerDriver: CollaborationServerDriver
-    getInternetAccount(
-      assemblyName?: string,
-      internetAccountId?: string,
-    ): ApolloInternetAccount
-  }
+  const { collaborationServerDriver } = session.apolloDataStore
 
   const assemblies = collaborationServerDriver.getAssemblies()
   const [selectedAssembly, setSelectedAssembly] = useState(assemblies.at(0))
 
   useEffect(() => {
     async function getChecks() {
-      const { baseURL, getFetcher } = selectedInternetAccount
       const uri = new URL('checks/types', baseURL).href
-      const apolloFetch = getFetcher({ locationType: 'UriLocation', uri })
       const response = await apolloFetch(uri, { method: 'GET' })
       if (!response.ok) {
         const newErrorMessage = await createFetchErrorMessage(
@@ -96,16 +71,14 @@ export function ManageChecks({ handleClose, session }: ManageChecksProps) {
     getChecks().catch((error) => {
       setErrorMessage(String(error))
     })
-  }, [selectedInternetAccount])
+  }, [baseURL])
 
   useEffect(() => {
     async function getChecks() {
       if (!selectedAssembly) {
         return
       }
-      const { baseURL, getFetcher } = selectedInternetAccount
       const uri = new URL(`assemblies/${selectedAssembly.name}`, baseURL).href
-      const apolloFetch = getFetcher({ locationType: 'UriLocation', uri })
       const response = await apolloFetch(uri, { method: 'GET' })
       if (!response.ok) {
         const newErrorMessage = await createFetchErrorMessage(
@@ -121,7 +94,7 @@ export function ManageChecks({ handleClose, session }: ManageChecksProps) {
     getChecks().catch((error) => {
       setErrorMessage(String(error))
     })
-  }, [selectedAssembly, selectedInternetAccount])
+  }, [selectedAssembly, baseURL])
 
   function handleChangeAssembly(e: SelectChangeEvent) {
     const newAssembly = assemblies.find((asm) => asm.name === e.target.value)
@@ -135,12 +108,7 @@ export function ManageChecks({ handleClose, session }: ManageChecksProps) {
       return
     }
     const { notify } = session as unknown as AbstractSessionModel
-    const { baseURL, getFetcher } = selectedInternetAccount
     const uri = new URL('assemblies/checks', baseURL).href
-    const apolloFetch = getFetcher({
-      locationType: 'UriLocation',
-      uri,
-    })
     const response = await apolloFetch(uri, {
       method: 'POST',
       body: JSON.stringify({
@@ -184,19 +152,6 @@ export function ManageChecks({ handleClose, session }: ManageChecksProps) {
     }
   }
 
-  function handleChangeInternetAccount(e: SelectChangeEvent) {
-    setSubmitted(false)
-    const newlySelectedInternetAccount = apolloInternetAccounts.find(
-      (ia) => ia.internetAccountId === e.target.value,
-    )
-    if (!newlySelectedInternetAccount) {
-      throw new Error(
-        `Could not find internetAccount with ID "${e.target.value}"`,
-      )
-    }
-    setSelectedInternetAccount(newlySelectedInternetAccount)
-  }
-
   return (
     <Dialog
       open
@@ -206,22 +161,6 @@ export function ManageChecks({ handleClose, session }: ManageChecksProps) {
     >
       <form onSubmit={onSubmit}>
         <DialogContent>
-          {apolloInternetAccounts.length > 1 ? (
-            <>
-              <DialogContentText>Select account</DialogContentText>
-              <Select
-                value={selectedInternetAccount.internetAccountId}
-                onChange={handleChangeInternetAccount}
-                disabled={submitted && !errorMessage}
-              >
-                {internetAccounts.map((option) => (
-                  <MenuItem key={option.id} value={option.internetAccountId}>
-                    {option.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </>
-          ) : null}
           <DialogContentText>Select assembly</DialogContentText>
           <Select
             style={{ width: 300 }}

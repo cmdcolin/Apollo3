@@ -1,10 +1,9 @@
-import { randomUUID } from 'node:crypto'
-import { existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
-import { join } from 'node:path'
 import { type ChildProcess, spawn } from 'node:child_process'
+import { randomUUID } from 'node:crypto'
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 
-import type { DecodedJWT } from '@apollo-annotation/shared'
-import { AddFeatureChange } from '@apollo-annotation/shared'
+import { AddFeatureChange, type DecodedJWT } from '@apollo-annotation/shared'
 import {
   Inject,
   Injectable,
@@ -15,8 +14,8 @@ import { ConfigService } from '@nestjs/config'
 
 import { ChangesService } from '../changes/changes.service.js'
 import { ToolsConfigService } from '../config/tools-config.service.js'
-import { SequenceService } from '../sequence/sequence.service.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
+import { SequenceService } from '../sequence/sequence.service.js'
 
 import { parseGtf } from './gtf-parser.js'
 
@@ -66,7 +65,7 @@ export class ToolsService implements OnModuleDestroy {
   getJobStatus(jobId: string) {
     const job = this.jobs.get(jobId)
     if (!job) {
-      return undefined
+      return
     }
     return {
       jobId: job.jobId,
@@ -152,10 +151,10 @@ export class ToolsService implements OnModuleDestroy {
       clearTimeout(timeout)
       if (code === 0 && existsSync(outputPath)) {
         void this.handleTiberiusOutput(jobId, outputPath, params, jobDir).catch(
-          (err: unknown) => {
+          (error: unknown) => {
             job.status = 'failed'
-            job.message = `Failed to import results: ${err}`
-            this.logger.error(`Tiberius job ${jobId} import failed: ${err}`)
+            job.message = `Failed to import results: ${error}`
+            this.logger.error(`Tiberius job ${jobId} import failed: ${error}`)
           },
         )
       } else {
@@ -252,8 +251,8 @@ export class ToolsService implements OnModuleDestroy {
   private cleanupJobDir(jobDir: string) {
     try {
       rmSync(jobDir, { recursive: true, force: true })
-    } catch (err) {
-      this.logger.warn(`Failed to clean up job dir ${jobDir}: ${err}`)
+    } catch (error) {
+      this.logger.warn(`Failed to clean up job dir ${jobDir}: ${error}`)
     }
   }
 }

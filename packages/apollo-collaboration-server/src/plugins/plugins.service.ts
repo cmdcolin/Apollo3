@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-import { ApolloPlugin } from '@apollo-annotation/common'
+import type { ApolloPlugin } from '@apollo-annotation/common'
 import { Inject, Injectable, Logger } from '@nestjs/common'
 
 import { APOLLO_PLUGINS } from './plugins.constants.js'

@@ -1,5 +1,3 @@
-import tseslint from 'typescript-eslint'
-
 import js from '@eslint/js'
 import pluginImport from 'eslint-plugin-import'
 import pluginJSXA11y from 'eslint-plugin-jsx-a11y'
@@ -8,6 +6,7 @@ import pluginReactHooks from 'eslint-plugin-react-hooks'
 import pluginTSDoc from 'eslint-plugin-tsdoc'
 import pluginUnicorn from 'eslint-plugin-unicorn'
 import globals from 'globals'
+import tseslint from 'typescript-eslint'
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
@@ -24,7 +23,7 @@ export default [
   },
   js.configs.recommended,
   pluginUnicorn.configs.recommended,
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
   pluginImport.flatConfigs.typescript,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
@@ -37,7 +36,7 @@ export default [
       parserOptions: { projectService: true },
     },
     settings: { react: { version: 'detect' } },
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
     plugins: { tsdoc: pluginTSDoc },
     rules: {
       // eslint built-in rules (override recommended)
@@ -112,7 +111,7 @@ export default [
       'packages/website/src/**/*.{jsx,tsx}',
     ],
     plugins: { 'react-hooks': pluginReactHooks },
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
     rules: { ...pluginReactHooks.configs.recommended.rules },
   },
   // Don't enforce tsdoc syntax in JS files

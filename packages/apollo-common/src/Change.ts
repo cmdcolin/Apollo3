@@ -8,7 +8,7 @@ import type {
   CheckResultI,
   CheckResultSnapshot,
 } from '@apollo-annotation/mst'
-import type { AppRootModel, Region } from '@jbrowse/core/util'
+import type { Region } from '@jbrowse/core/util'
 
 import { changeRegistry } from './ChangeTypeRegistry.js'
 import {
@@ -22,11 +22,6 @@ export interface ClientDataStore {
   typeName: 'Client'
   assemblies: Map<string | number, ApolloAssemblyI>
   checkResults: Map<string | number, CheckResultI>
-  internetAccounts: AppRootModel['internetAccounts']
-  getInternetAccount(
-    assemblyName?: string,
-    internetAccountId?: string,
-  ): AppRootModel['internetAccounts'][0]
   loadFeatures(regions: Region[]): Promise<void>
   loadRefSeq(regions: Region[]): void
   getFeature(featureId: string): AnnotationFeature | undefined

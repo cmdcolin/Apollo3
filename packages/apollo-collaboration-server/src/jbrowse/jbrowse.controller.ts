@@ -1,7 +1,7 @@
 import { Controller, Get, Inject, Logger, Req } from '@nestjs/common'
 import type { Request } from 'express'
 
-import { Role } from '../utils/role/role.enum.js'
+import type { Role } from '../utils/role/role.enum.js'
 import { Public } from '../utils/roles.guard.js'
 
 import { JBrowseService } from './jbrowse.service.js'
@@ -31,9 +31,10 @@ export class JBrowseController {
   private configResponse(request: RequestWithUser) {
     const { user } = request
     const role = user?.id ? user.role : undefined
+    const userId = user?.id
     this.logger.debug(
       `config.json requested: user.id=${user?.id}, user.role=${user?.role}, passing role=${role}`,
     )
-    return this.jbrowseService.getConfig(role)
+    return this.jbrowseService.getConfig(role, userId)
   }
 }

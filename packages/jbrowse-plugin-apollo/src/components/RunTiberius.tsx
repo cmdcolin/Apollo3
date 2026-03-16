@@ -173,7 +173,7 @@ export function RunTiberius({
       <DialogActions>
         {status === 'idle' ? (
           <>
-            {/* eslint-disable-next-line @typescript-eslint/no-misused-promises */}
+            {}
             <Button
               variant="contained"
               onClick={handleRun}

@@ -2,7 +2,7 @@ import type {
   CheckResultRepository,
   CheckResultRow,
 } from '@apollo-annotation/common'
-import { type EntityManager, type InferEntity } from '@mikro-orm/core'
+import type { EntityManager, InferEntity } from '@mikro-orm/core'
 
 import { CheckResultEntity } from '../entities/CheckResultEntity.js'
 
