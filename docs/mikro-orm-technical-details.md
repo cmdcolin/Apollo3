@@ -8,7 +8,7 @@ When an annotator moves an exon boundary outward, up to three rows may change:
 the exon, the transcript (if exon extends beyond it), and the gene.
 
 - **MongoDB**: Scan `allIds` → load entire gene document (all 50 exons to change
-  1) → walk nested structure → modify one field → write everything back
+  1. → walk nested structure → modify one field → write everything back
 - **Relational**: Three targeted single-row updates. Nothing else read or
   written. No risk of overwriting a concurrent edit to a different exon.
 
@@ -27,8 +27,8 @@ The most common read: "get all features overlapping this viewport."
   (2) load all descendants via recursive CTE.
 
 `findDescendantsOfMany` already batches all roots into one CTE query. A
-`root_id` denormalization column has been proposed but introduces a sync
-burden — **defer unless profiling proves this is a bottleneck**.
+`root_id` denormalization column has been proposed but introduces a sync burden
+— **defer unless profiling proves this is a bottleneck**.
 
 ### Text search
 
@@ -38,17 +38,17 @@ architectural changes.
 
 ### Tradeoff summary
 
-| Operation | Status | Notes |
-|-----------|--------|-------|
-| Gene tree loading | Acceptable | Recursive CTEs batch efficiently |
-| Gene/assembly deletion | **Fixed** | `ON DELETE CASCADE` on all FKs |
-| Bulk queries (search, export) | **Fixed** | Batched `IN` filters |
-| N+1 query patterns | **Fixed** | Level-batched BFS, in-memory parent maps |
-| Feature counting | **Fixed** | `em.count()` instead of load-all |
-| Full-text search | Fixable | FTS5 / tsvector |
-| Single-feature edits | Faster | One row vs full document |
-| Concurrent edits | Safer | Separate rows, no contention |
-| Large imports | Better | Streaming, transactions, no size limit |
+| Operation                     | Status     | Notes                                    |
+| ----------------------------- | ---------- | ---------------------------------------- |
+| Gene tree loading             | Acceptable | Recursive CTEs batch efficiently         |
+| Gene/assembly deletion        | **Fixed**  | `ON DELETE CASCADE` on all FKs           |
+| Bulk queries (search, export) | **Fixed**  | Batched `IN` filters                     |
+| N+1 query patterns            | **Fixed**  | Level-batched BFS, in-memory parent maps |
+| Feature counting              | **Fixed**  | `em.count()` instead of load-all         |
+| Full-text search              | Fixable    | FTS5 / tsvector                          |
+| Single-feature edits          | Faster     | One row vs full document                 |
+| Concurrent edits              | Safer      | Separate rows, no contention             |
+| Large imports                 | Better     | Streaming, transactions, no size limit   |
 
 ## Schema Assessment
 
@@ -72,8 +72,8 @@ architectural changes.
 
 ### Remaining improvements
 
-- **(Deferred) `root_id` column** — single-query tree loading, but requires
-  sync on reparent. Only if profiling justifies it.
+- **(Deferred) `root_id` column** — single-query tree loading, but requires sync
+  on reparent. Only if profiling justifies it.
 
 ### Schema relationships
 
@@ -103,11 +103,11 @@ for auditability.
 
 ## Multi-Database Repository Factory
 
-| `DB_BACKEND` | Feature Repository | Tree Strategy |
-|--------------|-------------------|---------------|
-| `sqlite` (default) | `MikroOrmFeatureRepository` | Recursive CTEs |
-| `postgresql` | `MikroOrmFeatureRepository` | Recursive CTEs |
-| `mongo` | `MongoFeatureRepository` | Iterative BFS via generic EntityManager |
+| `DB_BACKEND`       | Feature Repository          | Tree Strategy                           |
+| ------------------ | --------------------------- | --------------------------------------- |
+| `sqlite` (default) | `MikroOrmFeatureRepository` | Recursive CTEs                          |
+| `postgresql`       | `MikroOrmFeatureRepository` | Recursive CTEs                          |
+| `mongo`            | `MongoFeatureRepository`    | Iterative BFS via generic EntityManager |
 
 All other repositories use `MikroOrm*Repository` implementations with the
 generic `EntityManager` API (works with any driver).

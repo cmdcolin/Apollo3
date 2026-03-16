@@ -384,20 +384,21 @@ per-request EM isolation.
 ### P3 — JBrowse Integration
 
 21. **JBrowse launcher page** — Currently, "Open in JBrowse" links use
-    `?config=` with a URL-encoded config path (`/jbrowse/?config=%2Fjbrowse%2F
-    config.json%3Fassemblies%3Dabc123`) which is functional but ugly. A
-    dedicated launcher page (`/jbrowse-open/?assemblies=abc123`) would provide a
-    cleaner entry point that reads query params, configures the JBrowse session
-    (e.g. sets `window.__jbrowseConfigPath`), and loads JBrowse — either inline
-    or via iframe. This would also allow adding pre-load UI (assembly name
-    display, loading indicator) and could support deep-linking to specific
-    coordinates (`?loc=chr1:1000-2000`).
+    `?config=` with a URL-encoded config path
+    (`/jbrowse/?config=%2Fjbrowse%2F config.json%3Fassemblies%3Dabc123`) which
+    is functional but ugly. A dedicated launcher page
+    (`/jbrowse-open/?assemblies=abc123`) would provide a cleaner entry point
+    that reads query params, configures the JBrowse session (e.g. sets
+    `window.__jbrowseConfigPath`), and loads JBrowse — either inline or via
+    iframe. This would also allow adding pre-load UI (assembly name display,
+    loading indicator) and could support deep-linking to specific coordinates
+    (`?loc=chr1:1000-2000`).
 
     **Note**: Discuss implementation approach before pursuing — there are
     trade-offs between iframe isolation (simpler but limited integration),
-    inline loading (better UX but tighter coupling to JBrowse internals), and
-    a simple redirect (minimal code but no pre-load UI). The current
-    `?config=` approach works and this is a UX polish item, not a blocker.
+    inline loading (better UX but tighter coupling to JBrowse internals), and a
+    simple redirect (minimal code but no pre-load UI). The current `?config=`
+    approach works and this is a UX polish item, not a blocker.
 
 ## More changes to add
 

@@ -4,13 +4,13 @@
 
 ## Results
 
-| Operation | origin/main | Proposed | Speedup |
-|-----------|--------|-------|---------|
-| Assembly import (5000 features) | 60s | 8.06s | **7.5x** |
-| Feature get (all) | 74s | 3.65s | **20x** |
-| Feature search | 4.5s | 3.41s | 1.3x |
-| GFF3 export | 6.3s | 3.86s | 1.6x |
-| Assembly delete | 5.0s | 3.46s | 1.4x |
+| Operation                       | origin/main | Proposed | Speedup  |
+| ------------------------------- | ----------- | -------- | -------- |
+| Assembly import (5000 features) | 60s         | 8.06s    | **7.5x** |
+| Feature get (all)               | 74s         | 3.65s    | **20x**  |
+| Feature search                  | 4.5s        | 3.41s    | 1.3x     |
+| GFF3 export                     | 6.3s        | 3.86s    | 1.6x     |
+| Assembly delete                 | 5.0s        | 3.46s    | 1.4x     |
 
 Remaining ~3-4s baseline is CLI startup + HTTP overhead, not DB operations.
 
@@ -41,8 +41,8 @@ trees: hundreds of queries → 1.
 On origin/main, `GET /features/getFeatures` re-runs all quality checks on every
 root feature in the response. For 1000 genes, each pan/zoom triggers: 1000x
 findById + 1000x findDescendants + 1000x assembleFeatureTrees + check config
-lookups + delete/rerun/save checks. All redundant — results are already persisted
-from the last edit.
+lookups + delete/rerun/save checks. All redundant — results are already
+persisted from the last edit.
 
 Fix: checks run after mutations only. GET returns pre-computed results.
 

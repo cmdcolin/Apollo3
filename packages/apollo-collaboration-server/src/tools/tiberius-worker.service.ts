@@ -1,5 +1,11 @@
 import { type ChildProcess, spawn } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { join } from 'node:path'
 import { randomBytes } from 'node:crypto'
 
@@ -39,15 +45,19 @@ export class TiberiusWorkerService implements OnModuleInit, OnModuleDestroy {
       URL: string
     }>,
   ) {
-    this.maxConcurrent = Number(
-      process.env.TIBERIUS_MAX_CONCURRENT_JOBS ?? '1',
-    )
+    this.maxConcurrent = Number(process.env.TIBERIUS_MAX_CONCURRENT_JOBS ?? '1')
     this.jobTimeoutMs =
       Number(process.env.TIBERIUS_JOB_TIMEOUT_MINUTES ?? '60') * 60_000
     this.failedRetentionMs =
-      Number(process.env[`${RETENTION_ENV_PREFIX}_FAILED_RETENTION_DAYS`] ?? DEFAULT_FAILED_RETENTION_DAYS) * 86_400_000
+      Number(
+        process.env[`${RETENTION_ENV_PREFIX}_FAILED_RETENTION_DAYS`] ??
+          DEFAULT_FAILED_RETENTION_DAYS,
+      ) * 86_400_000
     this.completedRetentionMs =
-      Number(process.env[`${RETENTION_ENV_PREFIX}_COMPLETED_RETENTION_DAYS`] ?? DEFAULT_COMPLETED_RETENTION_DAYS) * 86_400_000
+      Number(
+        process.env[`${RETENTION_ENV_PREFIX}_COMPLETED_RETENTION_DAYS`] ??
+          DEFAULT_COMPLETED_RETENTION_DAYS,
+      ) * 86_400_000
   }
 
   private readonly logger = new Logger(TiberiusWorkerService.name)
@@ -131,7 +141,9 @@ export class TiberiusWorkerService implements OnModuleInit, OnModuleDestroy {
         'cancelled',
       ])
       if (deleted.length > 0) {
-        this.logger.log(`Cleaned up ${deleted.length} failed/cancelled Tiberius jobs`)
+        this.logger.log(
+          `Cleaned up ${deleted.length} failed/cancelled Tiberius jobs`,
+        )
         for (const job of deleted) {
           this.cleanupJobDir(job._id)
         }
@@ -141,17 +153,22 @@ export class TiberiusWorkerService implements OnModuleInit, OnModuleDestroy {
     // Optionally clean up completed jobs (disabled by default, set TIBERIUS_COMPLETED_RETENTION_DAYS to enable)
     if (this.completedRetentionMs > 0) {
       const completedCutoff = new Date(Date.now() - this.completedRetentionMs)
-      const deleted = await this.db.tiberiusJob.deleteOlderThan(completedCutoff, [
-        'ready',
-      ])
+      const deleted = await this.db.tiberiusJob.deleteOlderThan(
+        completedCutoff,
+        ['ready'],
+      )
       if (deleted.length > 0) {
-        this.logger.log(`Cleaned up ${deleted.length} old completed Tiberius jobs`)
+        this.logger.log(
+          `Cleaned up ${deleted.length} old completed Tiberius jobs`,
+        )
         for (const job of deleted) {
           this.cleanupJobDir(job._id)
           if (job.trackConfigId) {
-            await this.db.trackConfig.deleteById(job.trackConfigId).catch(() => {
-              // track may already be deleted
-            })
+            await this.db.trackConfig
+              .deleteById(job.trackConfigId)
+              .catch(() => {
+                // track may already be deleted
+              })
           }
         }
       }
@@ -184,7 +201,16 @@ export class TiberiusWorkerService implements OnModuleInit, OnModuleDestroy {
 
   private async runJob(
     jobId: string,
-    job: { assemblyId: string; refSeqId: string; refSeqName: string; start: number; end: number; modelCfg?: string; useSingularity: boolean; createdBy?: string },
+    job: {
+      assemblyId: string
+      refSeqId: string
+      refSeqName: string
+      start: number
+      end: number
+      modelCfg?: string
+      useSingularity: boolean
+      createdBy?: string
+    },
   ) {
     try {
       await RequestContext.create(this.orm.em, async () => {
@@ -269,7 +295,9 @@ export class TiberiusWorkerService implements OnModuleInit, OnModuleDestroy {
           trackConfigId,
         })
 
-        this.logger.log(`Tiberius job ${jobId} completed, track ${trackId} created`)
+        this.logger.log(
+          `Tiberius job ${jobId} completed, track ${trackId} created`,
+        )
 
         // Clean up intermediate files, keep predictions.gtf
         try {

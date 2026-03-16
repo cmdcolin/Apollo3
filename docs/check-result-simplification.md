@@ -2,8 +2,8 @@
 
 ## Change
 
-Replaces `ids: string[]` JSON array on `CheckResultEntity` with a single
-indexed `featureId: string` column.
+Replaces `ids: string[]` JSON array on `CheckResultEntity` with a single indexed
+`featureId: string` column.
 
 ## Why
 
@@ -18,12 +18,12 @@ query+filter pattern, and prevents indexing.
 
 ## Impact
 
-| Aspect | Current (origin/main) | Proposed |
-|--------|--------|-------|
-| Query | `LIKE '%"id"%'` + in-memory filter (full table scan) | Indexed `WHERE featureId = ?` (O(log n)) |
-| Entity | `ids: p.json<string[]>()` | `featureId: p.string()` + index |
-| MST | `types.array(types.safeReference(...))` | `types.safeReference(...)` |
-| Repository | 121 lines, 17-line two-stage delete | 96 lines, 3-line direct delete |
+| Aspect     | Current (origin/main)                                | Proposed                                 |
+| ---------- | ---------------------------------------------------- | ---------------------------------------- |
+| Query      | `LIKE '%"id"%'` + in-memory filter (full table scan) | Indexed `WHERE featureId = ?` (O(log n)) |
+| Entity     | `ids: p.json<string[]>()`                            | `featureId: p.string()` + index          |
+| MST        | `types.array(types.safeReference(...))`              | `types.safeReference(...)`               |
+| Repository | 121 lines, 17-line two-stage delete                  | 96 lines, 3-line direct delete           |
 
 ## Also Done: Repository Instance Caching
 

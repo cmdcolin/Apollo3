@@ -73,9 +73,7 @@ function parsePsl(pslText: string) {
 export class BlatRunner implements AnalysisRunner {
   readonly tool = 'blat'
 
-  constructor(
-    @Inject(DatabaseService) private readonly db: DatabaseService,
-  ) {}
+  constructor(@Inject(DatabaseService) private readonly db: DatabaseService) {}
 
   private readonly logger = new Logger(BlatRunner.name)
 

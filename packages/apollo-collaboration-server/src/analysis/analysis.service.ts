@@ -1,11 +1,6 @@
 import { randomBytes } from 'node:crypto'
 
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  Logger,
-} from '@nestjs/common'
+import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common'
 
 import { DatabaseService } from '../mikro-orm/database.service.js'
 
@@ -99,9 +94,7 @@ export class AnalysisService {
 
     const assembly = await this.db.assembly.findById(params.assemblyId)
     if (!assembly) {
-      throw new BadRequestException(
-        `Assembly "${params.assemblyId}" not found`,
-      )
+      throw new BadRequestException(`Assembly "${params.assemblyId}" not found`)
     }
 
     const dbName = `${assembly.name}-${params.tool}-${randomBytes(4).toString('hex')}`
@@ -116,7 +109,13 @@ export class AnalysisService {
       createdBy: params.createdBy,
     })
 
-    void this.buildDbAsync(_id, runner.buildDb.bind(runner), params.assemblyId, dbName, params.params)
+    void this.buildDbAsync(
+      _id,
+      runner.buildDb.bind(runner),
+      params.assemblyId,
+      dbName,
+      params.params,
+    )
 
     return row
   }

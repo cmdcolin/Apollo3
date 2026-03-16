@@ -25,8 +25,8 @@ features collection:
 
 ```
 
-One record per gene. Every edit loads and saves the whole document. `allIds` must
-be manually synced. 16MB document size limit.
+One record per gene. Every edit loads and saves the whole document. `allIds`
+must be manually synced. 16MB document size limit.
 
 ### Relational: flat rows with parent references
 
@@ -48,14 +48,14 @@ limit. `ON DELETE CASCADE` on parent FK handles child cleanup.
 
 ### Practical comparison
 
-| Scenario | MongoDB | Relational |
-|----------|---------|------------|
-| Edit one exon | Load entire gene, modify, write back | Update one row |
-| Two users edit different exons | Second save may overwrite first user's changes | No conflict — separate rows |
-| Look up feature by ID | Scan `allIds` arrays | Primary key lookup |
-| Delete a gene | One delete (whole doc) | One delete (CASCADE removes children) |
-| Large gene (thousands of exons) | May hit 16MB limit | No limit |
-| Add/remove child | Update parent's `allIds` + save | Insert/delete one row |
+| Scenario                        | MongoDB                                        | Relational                            |
+| ------------------------------- | ---------------------------------------------- | ------------------------------------- |
+| Edit one exon                   | Load entire gene, modify, write back           | Update one row                        |
+| Two users edit different exons  | Second save may overwrite first user's changes | No conflict — separate rows           |
+| Look up feature by ID           | Scan `allIds` arrays                           | Primary key lookup                    |
+| Delete a gene                   | One delete (whole doc)                         | One delete (CASCADE removes children) |
+| Large gene (thousands of exons) | May hit 16MB limit                             | No limit                              |
+| Add/remove child                | Update parent's `allIds` + save                | Insert/delete one row                 |
 
 ## Relationship Enforcement
 
@@ -86,13 +86,13 @@ features, chunks, check results, and exports automatically.
 On origin/main, `GET /features/getFeatures` calls `checksService.checkFeature()`
 on every feature in the returned range. For each feature and each enabled check,
 this deletes all existing check results from the database, re-executes the check
-logic (which may involve sequence lookups), and inserts the newly computed results
-back. There is a timestamp guard that skips checks whose definition has not
-changed since the feature was last modified, but in practice most checks still
-run. For a viewport containing 1000 genes, every pan or zoom triggers thousands
-of DELETE + compute + INSERT cycles. This change moves check execution to the
-mutation pipeline so checks run only after edits, and `GET` returns pre-computed
-results. Result: **20x speedup** (74s → 3.65s for 1000 genes).
+logic (which may involve sequence lookups), and inserts the newly computed
+results back. There is a timestamp guard that skips checks whose definition has
+not changed since the feature was last modified, but in practice most checks
+still run. For a viewport containing 1000 genes, every pan or zoom triggers
+thousands of DELETE + compute + INSERT cycles. This change moves check execution
+to the mutation pipeline so checks run only after edits, and `GET` returns
+pre-computed results. Result: **20x speedup** (74s → 3.65s for 1000 genes).
 
 ### Code citations (origin/main)
 

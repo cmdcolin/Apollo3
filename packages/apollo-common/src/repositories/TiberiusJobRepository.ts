@@ -27,9 +27,6 @@ export interface TiberiusJobRepository {
   findPending(limit: number): Promise<TiberiusJobRow[]>
   countByStatus(status: string): Promise<number>
   findRunningOlderThan(cutoff: Date): Promise<TiberiusJobRow[]>
-  deleteOlderThan(
-    cutoff: Date,
-    statuses: string[],
-  ): Promise<TiberiusJobRow[]>
+  deleteOlderThan(cutoff: Date, statuses: string[]): Promise<TiberiusJobRow[]>
   resetOrphanedRunning(): Promise<number>
 }

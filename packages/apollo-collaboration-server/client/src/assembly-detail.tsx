@@ -175,9 +175,7 @@ function PermissionsSection({
 
   const usernameMap = new Map(allUsers.map((u) => [u._id, u.username]))
   const usersWithoutPermission = allUsers.filter(
-    (u) =>
-      u.role !== 'admin' &&
-      !permissions.some((p) => p.user === u._id),
+    (u) => u.role !== 'admin' && !permissions.some((p) => p.user === u._id),
   )
 
   return (
@@ -188,7 +186,9 @@ function PermissionsSection({
           <Select
             value={visibility}
             onChange={(e) => {
-              void handleVisibilityChange(e.target.value as 'public' | 'private')
+              void handleVisibilityChange(
+                e.target.value as 'public' | 'private',
+              )
             }}
           >
             <MenuItem value="public">Public</MenuItem>
@@ -234,7 +234,11 @@ function PermissionsSection({
             ))}
             {permissions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={3} align="center" sx={{ color: 'text.secondary' }}>
+                <TableCell
+                  colSpan={3}
+                  align="center"
+                  sx={{ color: 'text.secondary' }}
+                >
                   {visibility === 'public'
                     ? 'Public — all users have read access'
                     : 'No per-user permissions set'}
@@ -252,13 +256,14 @@ function PermissionsSection({
             sx={{ minWidth: 250 }}
             options={usersWithoutPermission}
             getOptionLabel={(u) => u.username}
-            value={usersWithoutPermission.find((u) => u._id === selectedUserId) ?? null}
+            value={
+              usersWithoutPermission.find((u) => u._id === selectedUserId) ??
+              null
+            }
             onChange={(_event, newValue) => {
               setSelectedUserId(newValue?._id ?? '')
             }}
-            renderInput={(params) => (
-              <TextField {...params} label="User" />
-            )}
+            renderInput={(params) => <TextField {...params} label="User" />}
           />
           <FormControl size="small" sx={{ minWidth: 120 }}>
             <InputLabel>Role</InputLabel>
@@ -306,12 +311,14 @@ function AssemblyDetailPage() {
     }
     try {
       setError(undefined)
-      const [assemblyData, refSeqData, trackData, userData] = await Promise.all([
-        fetchJson<Assembly>(`/assemblies/${assemblyId}`),
-        fetchJson<RefSeq[]>(`/refSeqs?assembly=${assemblyId}`),
-        fetchJson<TrackConfig[]>(`/tracks?assembly=${assemblyId}`),
-        fetchJson<User>('/users/me').catch(() => undefined),
-      ])
+      const [assemblyData, refSeqData, trackData, userData] = await Promise.all(
+        [
+          fetchJson<Assembly>(`/assemblies/${assemblyId}`),
+          fetchJson<RefSeq[]>(`/refSeqs?assembly=${assemblyId}`),
+          fetchJson<TrackConfig[]>(`/tracks?assembly=${assemblyId}`),
+          fetchJson<User>('/users/me').catch(() => undefined),
+        ],
+      )
       setAssembly(assemblyData)
       setRefSeqs(refSeqData)
       setTracks(trackData)

@@ -162,8 +162,12 @@ function JobsPage() {
                     />
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                      {job.refSeqName}:{job.start.toLocaleString()}-{job.end.toLocaleString()}
+                    <Typography
+                      variant="body2"
+                      sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
+                    >
+                      {job.refSeqName}:{job.start.toLocaleString()}-
+                      {job.end.toLocaleString()}
                     </Typography>
                   </TableCell>
                   <TableCell>{job.modelCfg ?? ''}</TableCell>
@@ -173,7 +177,12 @@ function JobsPage() {
                       <Typography
                         variant="body2"
                         color="error"
-                        sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        sx={{
+                          maxWidth: 300,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
                         title={job.error}
                       >
                         {job.error}
@@ -197,7 +206,11 @@ function JobsPage() {
               ))}
               {tiberiusJobs.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ color: 'text.secondary' }}>
+                  <TableCell
+                    colSpan={6}
+                    align="center"
+                    sx={{ color: 'text.secondary' }}
+                  >
                     No Tiberius jobs
                   </TableCell>
                 </TableRow>
@@ -240,7 +253,12 @@ function JobsPage() {
                       <Typography
                         variant="body2"
                         color="error"
-                        sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        sx={{
+                          maxWidth: 300,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
                         title={job.error}
                       >
                         {job.error}
@@ -264,7 +282,11 @@ function JobsPage() {
               ))}
               {blastJobs.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ color: 'text.secondary' }}>
+                  <TableCell
+                    colSpan={6}
+                    align="center"
+                    sx={{ color: 'text.secondary' }}
+                  >
                     No sequence search jobs
                   </TableCell>
                 </TableRow>

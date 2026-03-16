@@ -16,6 +16,18 @@ it could be seen as disruptive. Despite this, my hope is that this change will
 expand functionality, improve user experience, improve developer velocity, and
 help expand Apollo3 deployment options going forward.
 
+Some context on how this came about: the original goal was desktop/Electron
+support, which I tried to accomplish by targeting SQLite — to avoid limiting
+desktop users to in-memory-only annotation. Initially, SQLite via MikroORM was
+added as a separate backend alongside MongoDB. However, maintaining two parallel
+backends roughly doubled the testing and maintenance burden, and the two code
+paths kept diverging. At a fork in the road, the decision was made to commit
+fully and make MikroORM the primary system replacing MongoDB, rather than
+keeping both indefinitely. This turned the desktop effort into a larger
+refactoring, but it made the SQLite story complete — one data layer that works
+across desktop, development, and production — rather than a second-class backend
+that would always lag behind.
+
 **Database migration (MongoDB to MikroORM).** On origin/main, we use MongoDB to
 serve Apollo 3. In the MongoDB data model, an entire gene is packed into a
 single MongoDB document. Now each feature and subfeature is given its own
@@ -24,8 +36,9 @@ operations go from 30+ lines of nested-document tree navigation down to a few
 targeted row updates. It also means the database itself enforces data
 relationships via foreign keys and cascade deletes, rather than relying on
 application code to keep things consistent (e.g. the manually maintained
-`allIds` arrays on every gene). See _From MongoDB to Relational Databases_ for
-the full rationale and tradeoff analysis.
+`allIds` arrays on every gene). See
+[From MongoDB to Relational Databases](#from-mongodb-to-relational-databases)
+for the full rationale and tradeoff analysis.
 
 **Simplified developer setup.** On origin/main, the dev container configures a
 MongoDB replica set (required because MongoDB transactions only work with
@@ -72,14 +85,19 @@ had. This adds an indexed `geneId` column to the change log and a Recent Changes
 UI page with per-gene lookup.
 
 **Performance.** 7-20x speedups across import, query, gff3 export, etc. The
-largest win (20x) came from quality checks that were re-running on every
-pan/zoom even when nothing had changed.
+largest win (20x) came from discovering that on origin/main, every
+`GET /features/getFeatures` call deletes and re-computes all quality check
+results for every feature in the viewport — even when nothing has changed. Code
+citations from origin/main proving this are included in
+[Performance Fix Discovered During Migration](#performance-fix-discovered-during-migration)
+and [Performance Optimization Report](#performance-optimization-report).
 
 **Security.** Fixed 7 pre-existing vulnerabilities including an open redirect
 for OAuth token theft, missing cookie security flags, and a WebSocket CORS
-wildcard. Also significantly simplified the auth setup by not using
-InternetAccounts and instead leverages just 'normal' auth workflows using
-cookies and JWT.
+wildcard. Code citations from origin/main are included in
+[Authentication & Security Audit](#authentication--security-audit). Also
+significantly simplified the auth setup by not using InternetAccounts and
+instead using standard cookie and JWT workflows.
 
 **Bug fixes.** Found and fixed 3 pre-existing bugs on origin/main: check results
 being iterated as features, a refSeq delete that deleted the wrong scope, and a

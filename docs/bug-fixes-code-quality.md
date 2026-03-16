@@ -11,9 +11,9 @@ only). Check results fetched separately via `GET /checks/range`.
 
 ### 2. RefSeqsService.remove() deletes wrong scope (dead code)
 
-On origin/main, this looks up one refSeq by ID, then calls
-`deleteByAssembly()` which deletes ALL refSeqs for the assembly. **Fix**:
-Simplified to accept `assemblyId` directly.
+On origin/main, this looks up one refSeq by ID, then calls `deleteByAssembly()`
+which deletes ALL refSeqs for the assembly. **Fix**: Simplified to accept
+`assemblyId` directly.
 
 ### 3. User location endpoint encoding bug
 
@@ -27,18 +27,20 @@ regions to single primary region (users view one region at a time).
 ### Developer setup
 
 On origin/main, development requires 4 parallel processes (shared watch + NestJS
-+ plugin dev server + sibling jbrowse-components clone via justfile). This change
-reduces it to a single NestJS server on port 3999. Removes `npm-run-all`,
-`concurrently`, `serve`, justfile. Setup becomes `pnpm install && pnpm start`.
+
+- plugin dev server + sibling jbrowse-components clone via justfile). This
+  change reduces it to a single NestJS server on port 3999. Removes
+  `npm-run-all`, `concurrently`, `serve`, justfile. Setup becomes
+  `pnpm install && pnpm start`.
 
 ### WebSocket channels
 
 On origin/main, WebSocket uses per-refSeq channels
 (`${assemblyId}-${refSeqName}`). This change consolidates to a single `COMMON`
 channel. Removes 12 lines of DB queries per change (feature→refSeq→name
-lookups), `ensureAssemblySocket()` (25 lines),
-`haveDataForChange()` (12 lines). Safe because annotation edit volume is
-human-speed. Channel name constants extracted to shared `Messages.ts`.
+lookups), `ensureAssemblySocket()` (25 lines), `haveDataForChange()` (12 lines).
+Safe because annotation edit volume is human-speed. Channel name constants
+extracted to shared `Messages.ts`.
 
 ### InternetAccount removal
 
@@ -49,12 +51,12 @@ everything. WebSocket and change tracking move to session model. `baseURL`,
 
 ## Code Simplification
 
-| Change | Current | Proposed |
-|--------|---------|----------|
-| API separation | `getFeatures` returns `[features, checkResults]` tuple | Separate endpoints, parallel fetch |
-| Export service | 111-line monolith | Focused helpers (`writeGFF3Header`, `writeGFF3Features`, etc.) |
-| GFF3 export | Duplicate hierarchy assembly (~40 lines) | Shared `assembleFeatureTrees()` |
-| ServerDataStore | Anonymous function wrappers around `filesService` methods | Direct `filesService` reference |
-| findByFeatureIds | Set-based dedup after `SELECT DISTINCT` | DB handles it |
-| RefSeqsService.update | 12-line manual property mapping | Spread operator (4 lines) |
-| Dev Container | MongoDB extension + `mongosh` + port 27017 | PostgreSQL + port 5432 |
+| Change                | Current                                                   | Proposed                                                       |
+| --------------------- | --------------------------------------------------------- | -------------------------------------------------------------- |
+| API separation        | `getFeatures` returns `[features, checkResults]` tuple    | Separate endpoints, parallel fetch                             |
+| Export service        | 111-line monolith                                         | Focused helpers (`writeGFF3Header`, `writeGFF3Features`, etc.) |
+| GFF3 export           | Duplicate hierarchy assembly (~40 lines)                  | Shared `assembleFeatureTrees()`                                |
+| ServerDataStore       | Anonymous function wrappers around `filesService` methods | Direct `filesService` reference                                |
+| findByFeatureIds      | Set-based dedup after `SELECT DISTINCT`                   | DB handles it                                                  |
+| RefSeqsService.update | 12-line manual property mapping                           | Spread operator (4 lines)                                      |
+| Dev Container         | MongoDB extension + `mongosh` + port 27017                | PostgreSQL + port 5432                                         |

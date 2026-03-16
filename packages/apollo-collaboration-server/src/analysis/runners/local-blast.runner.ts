@@ -14,9 +14,7 @@ const DB_DIR = process.env.BLAST_DB_DIR ?? './blast-dbs'
 export class LocalBlastRunner implements AnalysisRunner {
   readonly tool = 'local-blast'
 
-  constructor(
-    @Inject(DatabaseService) private readonly db: DatabaseService,
-  ) {}
+  constructor(@Inject(DatabaseService) private readonly db: DatabaseService) {}
 
   private readonly logger = new Logger(LocalBlastRunner.name)
 
@@ -53,11 +51,16 @@ export class LocalBlastRunner implements AnalysisRunner {
       const { stdout } = await runCommand(
         program,
         [
-          '-query', tmpQuery,
-          '-db', analysisDb.dbPath,
-          '-outfmt', '15',
-          '-evalue', '1e-5',
-          '-max_target_seqs', '50',
+          '-query',
+          tmpQuery,
+          '-db',
+          analysisDb.dbPath,
+          '-outfmt',
+          '15',
+          '-evalue',
+          '1e-5',
+          '-max_target_seqs',
+          '50',
         ],
         context.signal,
       )
@@ -87,13 +90,14 @@ export class LocalBlastRunner implements AnalysisRunner {
     )
     await extractAssemblyFasta(context.assemblyId, fastaPath, context.db)
 
-    this.logger.log(
-      `Running makeblastdb: dbtype=${dbType} out=${dbPath}`,
-    )
+    this.logger.log(`Running makeblastdb: dbtype=${dbType} out=${dbPath}`)
     const { stderr } = await runCommand('makeblastdb', [
-      '-in', fastaPath,
-      '-dbtype', dbType,
-      '-out', dbPath,
+      '-in',
+      fastaPath,
+      '-dbtype',
+      dbType,
+      '-out',
+      dbPath,
       '-parse_seqids',
     ])
     if (stderr) {

@@ -1,11 +1,6 @@
 import { randomBytes } from 'node:crypto'
 
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  Logger,
-} from '@nestjs/common'
+import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common'
 
 import { ToolsConfigService } from '../config/tools-config.service.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'

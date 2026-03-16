@@ -202,11 +202,7 @@ function useAnalysisSearch(): SearchState {
   const [error, setError] = useState<string>()
 
   const submit = useCallback(
-    (
-      eng: string,
-      jobParams: Record<string, unknown>,
-      assemblyId?: string,
-    ) => {
+    (eng: string, jobParams: Record<string, unknown>, assemblyId?: string) => {
       setSubmitting(true)
       setError(undefined)
       setResults(undefined)
@@ -244,10 +240,7 @@ function useAnalysisSearch(): SearchState {
             setResults(current.results)
             return
           }
-          if (
-            current.status === 'failed' ||
-            current.status === 'cancelled'
-          ) {
+          if (current.status === 'failed' || current.status === 'cancelled') {
             throw new Error(current.error ?? `Job ${current.status}`)
           }
         }
@@ -429,9 +422,11 @@ const TOOL_LABELS: Record<string, string> = {
 }
 
 const TOOL_DESCRIPTIONS: Record<string, string> = {
-  'local-blast': 'Search nucleotide or protein sequences against local assembly databases using BLAST.',
+  'local-blast':
+    'Search nucleotide or protein sequences against local assembly databases using BLAST.',
   blat: 'Fast genome alignment using UCSC BLAT. Best for high-identity same-species queries.',
-  miniprot: 'Align protein sequences to a genome to find gene models, including intron-exon structure.',
+  miniprot:
+    'Align protein sequences to a genome to find gene models, including intron-exon structure.',
 }
 
 function LocalToolSearchTab({
@@ -467,8 +462,8 @@ function LocalToolSearchTab({
 
       {dbs.length === 0 ? (
         <Alert severity="info" sx={{ mb: 2 }}>
-          No {TOOL_LABELS[tool] ?? tool} databases configured. An admin
-          can build databases from assemblies in the admin panel below.
+          No {TOOL_LABELS[tool] ?? tool} databases configured. An admin can
+          build databases from assemblies in the admin panel below.
         </Alert>
       ) : (
         <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
@@ -494,7 +489,8 @@ function LocalToolSearchTab({
                     : ''
                   return (
                     <MenuItem key={db._id} value={db._id}>
-                      {db.name}{extra} &mdash; {asmName}
+                      {db.name}
+                      {extra} &mdash; {asmName}
                     </MenuItem>
                   )
                 })}
@@ -537,11 +533,7 @@ function LocalToolSearchTab({
                 if (selectedDbConfig.params.program) {
                   params.program = selectedDbConfig.params.program
                 }
-                search.submit(
-                  tool,
-                  params,
-                  selectedDbConfig.assemblyIds[0],
-                )
+                search.submit(tool, params, selectedDbConfig.assemblyIds[0])
               }
             }}
           >
@@ -680,9 +672,7 @@ function NcbiSearchTab({
 
         <Button
           variant="contained"
-          disabled={
-            blast.submitting || query.trim().length === 0 || !canSubmit
-          }
+          disabled={blast.submitting || query.trim().length === 0 || !canSubmit}
           onClick={() => {
             blast.submit('ncbi-blast', { program, database, query })
           }}
@@ -774,7 +764,13 @@ interface GeneModel {
   exonCount: number
 }
 
-function MiniprotResultsTable({ geneModels, gff3 }: { geneModels: GeneModel[]; gff3: string }) {
+function MiniprotResultsTable({
+  geneModels,
+  gff3,
+}: {
+  geneModels: GeneModel[]
+  gff3: string
+}) {
   return (
     <>
       <Paper variant="outlined" sx={{ mb: 3 }}>
@@ -798,7 +794,9 @@ function MiniprotResultsTable({ geneModels, gff3 }: { geneModels: GeneModel[]; g
               {geneModels.map((gm, i) => (
                 <TableRow key={i} hover>
                   <TableCell>{i + 1}</TableCell>
-                  <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                  <TableCell
+                    sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
+                  >
                     {gm.seqName}
                   </TableCell>
                   <TableCell>{gm.strand}</TableCell>
@@ -890,9 +888,7 @@ function SearchResults({ search }: { search: SearchState }) {
 
       {results && tool === 'miniprot' ? (
         <MiniprotResultsTable
-          geneModels={
-            (results as { geneModels: GeneModel[] }).geneModels ?? []
-          }
+          geneModels={(results as { geneModels: GeneModel[] }).geneModels ?? []}
           gff3={String((results as { gff3: string }).gff3 ?? '')}
         />
       ) : null}
@@ -1051,10 +1047,7 @@ function SequenceSearchPage() {
             }}
           >
             {tabTools.map((t) => (
-              <Tab
-                key={t}
-                label={TOOL_LABELS[t] ?? t}
-              />
+              <Tab key={t} label={TOOL_LABELS[t] ?? t} />
             ))}
           </Tabs>
         </Box>
@@ -1176,7 +1169,9 @@ function AdminDatabasePanel({
   const handleDelete = useCallback(
     async (id: string) => {
       try {
-        const res = await fetch(`/analysis/databases/${id}`, { method: 'DELETE' })
+        const res = await fetch(`/analysis/databases/${id}`, {
+          method: 'DELETE',
+        })
         if (!res.ok) {
           const text = await res.text()
           throw new Error(`${res.status}: ${text}`)
@@ -1225,9 +1220,7 @@ function AdminDatabasePanel({
                     <Chip
                       label={db.tool}
                       size="small"
-                      color={
-                        db.tool === 'local-blast' ? 'primary' : 'default'
-                      }
+                      color={db.tool === 'local-blast' ? 'primary' : 'default'}
                     />
                   </TableCell>
                   <TableCell>{String(db.params.program ?? '')}</TableCell>
@@ -1246,11 +1239,7 @@ function AdminDatabasePanel({
                   </TableCell>
                   <TableCell>
                     {db.assemblyIds.map((id) => (
-                      <AssemblyChip
-                        key={id}
-                        id={id}
-                        assemblies={assemblies}
-                      />
+                      <AssemblyChip key={id} id={id} assemblies={assemblies} />
                     ))}
                   </TableCell>
                   <TableCell>
@@ -1323,30 +1312,28 @@ function AdminDatabasePanel({
             </Select>
           </FormControl>
           {buildTool === 'local-blast' ? (
-          <FormControl size="small" sx={{ minWidth: 240 }}>
-            <InputLabel>Program</InputLabel>
-            <Select
-              value={buildProgram}
-              label="Program"
-              onChange={(e) => {
-                setBuildProgram(e.target.value)
-              }}
-            >
-              {BLAST_PROGRAMS.map((p) => (
-                <MenuItem key={p.value} value={p.value}>
-                  {p.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+            <FormControl size="small" sx={{ minWidth: 240 }}>
+              <InputLabel>Program</InputLabel>
+              <Select
+                value={buildProgram}
+                label="Program"
+                onChange={(e) => {
+                  setBuildProgram(e.target.value)
+                }}
+              >
+                {BLAST_PROGRAMS.map((p) => (
+                  <MenuItem key={p.value} value={p.value}>
+                    {p.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           ) : null}
         </Box>
         <Button
           variant="contained"
           size="small"
-          disabled={
-            building || buildName.trim().length === 0 || !buildAssembly
-          }
+          disabled={building || buildName.trim().length === 0 || !buildAssembly}
           onClick={() => {
             void handleBuildLocal()
           }}

@@ -56,11 +56,7 @@ export class MikroOrmAnalysisDbRepository implements AnalysisDbRepository {
   }
 
   async findByTool(tool: string) {
-    const entities = await this.em.find(
-      AnalysisDbEntity,
-      { tool },
-      POPULATE,
-    )
+    const entities = await this.em.find(AnalysisDbEntity, { tool }, POPULATE)
     return entities.map((e) => toRow(e))
   }
 

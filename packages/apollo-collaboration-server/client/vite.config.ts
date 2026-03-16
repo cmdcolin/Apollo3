@@ -62,7 +62,10 @@ export default defineConfig({
           'ui/assembly-detail/index.html',
         ),
         'ui/changes/index': resolve(__dirname, 'ui/changes/index.html'),
-        'ui/sequence-search/index': resolve(__dirname, 'ui/sequence-search/index.html'),
+        'ui/sequence-search/index': resolve(
+          __dirname,
+          'ui/sequence-search/index.html',
+        ),
         'admin/users/index': resolve(__dirname, 'admin/users/index.html'),
         'admin/jobs/index': resolve(__dirname, 'admin/jobs/index.html'),
         'error/index': resolve(__dirname, 'error/index.html'),

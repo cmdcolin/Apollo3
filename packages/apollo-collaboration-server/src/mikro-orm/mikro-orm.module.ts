@@ -36,9 +36,7 @@ export class ApolloMikroOrmModule {
                   'SQLite foreign keys enabled, WAL mode set, busy_timeout=5000ms',
                 )
               } else {
-                this.logger.log(
-                  'SQLite in-memory mode, foreign keys enabled',
-                )
+                this.logger.log('SQLite in-memory mode, foreign keys enabled')
               }
             }
             this.logger.log('MikroORM initialized, updating schema...')

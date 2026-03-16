@@ -18,25 +18,26 @@ redundant:
 
 ## What Moved Where
 
-| Concern | Current (origin/main) | Proposed |
-|---------|--------|-------|
-| WebSocket management | `ApolloInternetAccount/model.ts` | Session model (`session.ts`) |
-| Change sequence tracking | `ApolloInternetAccount/model.ts` | Session model |
-| `baseURL`, `role`, `userId` | JWT token decode + `internetAccounts` config | `ApolloPlugin` config in `config.json` |
-| API calls | `internetAccount.getFetcher()` | `apolloFetch()` with `credentials: 'same-origin'` |
-| Multi-account UI | ~200 lines across 6 components | Deleted |
+| Concern                     | Current (origin/main)                        | Proposed                                          |
+| --------------------------- | -------------------------------------------- | ------------------------------------------------- |
+| WebSocket management        | `ApolloInternetAccount/model.ts`             | Session model (`session.ts`)                      |
+| Change sequence tracking    | `ApolloInternetAccount/model.ts`             | Session model                                     |
+| `baseURL`, `role`, `userId` | JWT token decode + `internetAccounts` config | `ApolloPlugin` config in `config.json`            |
+| API calls                   | `internetAccount.getFetcher()`               | `apolloFetch()` with `credentials: 'same-origin'` |
+| Multi-account UI            | ~200 lines across 6 components               | Deleted                                           |
 
 ## Login Flow (Proposed)
 
 1. Plugin reads `baseURL` from `ApolloPlugin` configuration
 2. Session fetches `${baseURL}/jbrowse/config.json` with cookie credentials
-3. Server returns config with `role`, `userId`, and assemblies (if authenticated)
+3. Server returns config with `role`, `userId`, and assemblies (if
+   authenticated)
 4. Session initializes WebSocket and admin menus based on role
 
 ## Impact
 
-| Metric | Current (origin/main) | Proposed |
-|--------|--------|-------|
-| InternetAccount files | 6 | 0 |
-| Auth mechanisms | Cookie + JWT + Authorization header | Cookie only |
-| Plugin bundle | 1.57 MB | 1.56 MB |
+| Metric                | Current (origin/main)               | Proposed    |
+| --------------------- | ----------------------------------- | ----------- |
+| InternetAccount files | 6                                   | 0           |
+| Auth mechanisms       | Cookie + JWT + Authorization header | Cookie only |
+| Plugin bundle         | 1.57 MB                             | 1.56 MB     |

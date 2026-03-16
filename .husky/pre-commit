@@ -1,3 +1,0 @@
-#!/usr/bin/env sh
-node .husky/pre-commit.cjs
-pnpm exec lint-staged

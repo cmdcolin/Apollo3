@@ -27,9 +27,9 @@ required. `allIds` still needed at the transcript level.
 
 ### Assessment
 
-Comparable effort to the relational migration. Addresses some concurrency
-issues but not fully (same-transcript conflicts remain). Does not address
-desktop deployment or simplify the operational setup.
+Comparable effort to the relational migration. Addresses some concurrency issues
+but not fully (same-transcript conflicts remain). Does not address desktop
+deployment or simplify the operational setup.
 
 ## Option 2: Firestore / Firebase
 
@@ -39,13 +39,13 @@ Passport/JWT/session code.
 
 **Why problematic for Apollo3**:
 
-| Issue | Impact |
-|-------|--------|
-| No MikroORM driver | Would need to replace the ORM entirely, losing SQLite/PostgreSQL portability |
-| Vendor lock-in | Proprietary to Google Cloud; no standard SQL; pricing subject to change |
-| No offline/Electron | Requires network to Google servers — same hard constraint as MongoDB |
+| Issue                | Impact                                                                                        |
+| -------------------- | --------------------------------------------------------------------------------------------- |
+| No MikroORM driver   | Would need to replace the ORM entirely, losing SQLite/PostgreSQL portability                  |
+| Vendor lock-in       | Proprietary to Google Cloud; no standard SQL; pricing subject to change                       |
+| No offline/Electron  | Requires network to Google servers — same hard constraint as MongoDB                          |
 | No WebSocket support | Cloud Functions don't support persistent connections; would need to rearchitect collaboration |
-| Still document-based | No FKs, no cascades, no joins, no standard query language |
+| Still document-based | No FKs, no cascades, no joins, no standard query language                                     |
 
 **Viable hybrid**: Use Firebase Authentication (standalone) while keeping
 MikroORM for data. This captures the auth simplification without database
@@ -55,9 +55,9 @@ lock-in. Compatible with the relational migration as an independent improvement.
 
 The repository interface pattern technically allows multiple backend
 implementations. In practice, maintaining two complete repository sets, test
-suites, and deployment configs roughly doubles maintenance burden. The
-MikroORM migration period (when both MongoDB and relational paths coexisted)
-confirmed this cost.
+suites, and deployment configs roughly doubles maintenance burden. The MikroORM
+migration period (when both MongoDB and relational paths coexisted) confirmed
+this cost.
 
 Only worthwhile if two fundamentally different deployment targets are needed.
 The relational model already covers desktop (SQLite) through production server

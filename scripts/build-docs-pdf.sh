@@ -71,6 +71,15 @@ pandoc "${COMMON_ARGS[@]}" \
 
 echo "Built: apollo3-docs.docx (upload to Google Docs)"
 
+# .md — single combined markdown (for GitHub)
+pandoc "${INPUTS[@]}" \
+  --from gfm \
+  --to gfm \
+  --columns=80 \
+  -o "$DOCS_DIR/apollo3-refactoring-proposal.md"
+
+echo "Built: docs/apollo3-refactoring-proposal.md (combined markdown)"
+
 if [ "$DOCX_ONLY" -eq 1 ]; then
   exit 0
 fi

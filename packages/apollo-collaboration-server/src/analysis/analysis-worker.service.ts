@@ -35,9 +35,7 @@ export class AnalysisWorkerService implements OnModuleInit, OnModuleDestroy {
     this.runners.set(blat.tool, blat)
     this.runners.set(miniprot.tool, miniprot)
 
-    this.maxConcurrent = Number(
-      process.env.ANALYSIS_MAX_CONCURRENT_JOBS ?? '2',
-    )
+    this.maxConcurrent = Number(process.env.ANALYSIS_MAX_CONCURRENT_JOBS ?? '2')
     this.jobTimeoutMs =
       Number(process.env.ANALYSIS_JOB_TIMEOUT_MINUTES ?? '5') * 60_000
   }
@@ -126,8 +124,7 @@ export class AnalysisWorkerService implements OnModuleInit, OnModuleDestroy {
 
   private async cleanupOldJobs() {
     const cutoff = new Date(Date.now() - JOB_RETENTION_MS)
-    const deleted =
-      await this.db.analysisJob.deleteCompletedOlderThan(cutoff)
+    const deleted = await this.db.analysisJob.deleteCompletedOlderThan(cutoff)
     if (deleted > 0) {
       this.logger.log(`Cleaned up ${deleted} old analysis jobs`)
     }

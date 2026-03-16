@@ -109,9 +109,7 @@ export class NcbiBlastRunner implements AnalysisRunner {
           },
         )
         if (!resultsResponse.ok) {
-          throw new Error(
-            `Failed to fetch results: ${resultsResponse.status}`,
-          )
+          throw new Error(`Failed to fetch results: ${resultsResponse.status}`)
         }
         return resultsResponse.json()
       }

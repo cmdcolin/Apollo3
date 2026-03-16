@@ -67,7 +67,10 @@ export class ToolsConfigService implements OnModuleInit {
     const raw = readFileSync(configPath, 'utf8')
     const parsed = JSON.parse(raw) as ToolsFileConfig | undefined
     if (parsed?.tools?.tiberius) {
-      this.tiberiusConfig = { ...defaultTiberiusConfig, ...parsed.tools.tiberius }
+      this.tiberiusConfig = {
+        ...defaultTiberiusConfig,
+        ...parsed.tools.tiberius,
+      }
       this.logger.log(`Loaded Tiberius config from ${configPath}`)
     }
   }

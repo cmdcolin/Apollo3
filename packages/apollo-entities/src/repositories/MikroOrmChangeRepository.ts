@@ -45,7 +45,9 @@ export class MikroOrmChangeRepository implements ChangeRepository {
   }
 
   async findAll(opts?: {
-    filter?: Partial<Pick<ChangeRow, 'assembly' | 'user' | 'typeName' | 'geneId'>>
+    filter?: Partial<
+      Pick<ChangeRow, 'assembly' | 'user' | 'typeName' | 'geneId'>
+    >
     changedIds?: string[]
     sinceSequence?: number
     sort?: 'asc' | 'desc'

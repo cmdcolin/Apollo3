@@ -26,8 +26,8 @@
 
 ### Option 1: Single Server (simplest)
 
-NestJS serves everything. Set `JBROWSE_STATIC_DIR` to the JBrowse web
-directory. Good for development and small teams (< 10 users).
+NestJS serves everything. Set `JBROWSE_STATIC_DIR` to the JBrowse web directory.
+Good for development and small teams (< 10 users).
 
 ### Option 2: nginx + NestJS (recommended for production)
 
@@ -44,10 +44,10 @@ Same role as nginx. See `.github/workflows/deploy/` for Apache configuration.
 
 ### Static file performance
 
-| Server | Mechanism | Notes |
-|--------|-----------|-------|
-| nginx | `sendfile()` — zero-copy | Multi-process, excellent throughput |
-| Apache | `sendfile()` via `mod_mpm_event` | Multi-threaded, excellent throughput |
+| Server  | Mechanism                                 | Notes                                     |
+| ------- | ----------------------------------------- | ----------------------------------------- |
+| nginx   | `sendfile()` — zero-copy                  | Multi-process, excellent throughput       |
+| Apache  | `sendfile()` via `mod_mpm_event`          | Multi-threaded, excellent throughput      |
 | Node.js | `fs.createReadStream()` with byte offsets | Single-threaded, adequate for small teams |
 
 Use nginx/Apache when: BAM/CRAM > 1GB, 10+ concurrent users, or production.
@@ -64,33 +64,33 @@ nginx
   └─ everything else       → proxy to NestJS (API)
 ```
 
-`JBROWSE_STATIC_DIR` is **not set** on NestJS when using nginx. `config.json`
-is always proxied (dynamically generated from track/assembly records in DB).
+`JBROWSE_STATIC_DIR` is **not set** on NestJS when using nginx. `config.json` is
+always proxied (dynamically generated from track/assembly records in DB).
 
 ## Database
 
-| Backend | Use case | Config |
-|---------|----------|--------|
-| SQLite | Dev, desktop, small deployments | Default (no config) |
-| PostgreSQL | Production collaborative | `DB_BACKEND=postgresql DB_CONNECTION_URL=postgresql://...` |
-| MongoDB | Existing deployments migrating from origin/main | `DB_BACKEND=mongo DB_CONNECTION_URL=mongodb://...` |
+| Backend    | Use case                                        | Config                                                     |
+| ---------- | ----------------------------------------------- | ---------------------------------------------------------- |
+| SQLite     | Dev, desktop, small deployments                 | Default (no config)                                        |
+| PostgreSQL | Production collaborative                        | `DB_BACKEND=postgresql DB_CONNECTION_URL=postgresql://...` |
+| MongoDB    | Existing deployments migrating from origin/main | `DB_BACKEND=mongo DB_CONNECTION_URL=mongodb://...`         |
 
 ## Environment Variables
 
 ### Required
 
-| Variable | Description |
-|----------|-------------|
-| `URL` | Public URL (e.g. `https://apollo.example.com`) |
-| `NAME` | Instance name shown in UI |
-| `FILE_UPLOAD_FOLDER` | Directory for uploaded files |
-| `PORT` | Server port (default: 3999) |
+| Variable             | Description                                    |
+| -------------------- | ---------------------------------------------- |
+| `URL`                | Public URL (e.g. `https://apollo.example.com`) |
+| `NAME`               | Instance name shown in UI                      |
+| `FILE_UPLOAD_FOLDER` | Directory for uploaded files                   |
+| `PORT`               | Server port (default: 3999)                    |
 
 ### Secrets
 
-| Variable | Description |
-|----------|-------------|
-| `JWT_SECRET` | JWT signing secret (min 32 chars) |
+| Variable         | Description                          |
+| ---------------- | ------------------------------------ |
+| `JWT_SECRET`     | JWT signing secret (min 32 chars)    |
 | `SESSION_SECRET` | Session cookie secret (min 32 chars) |
 
 If not set, the server auto-generates random secrets and persists them to
@@ -99,18 +99,18 @@ If not set, the server auto-generates random secrets and persists them to
 
 ### Optional
 
-| Variable | Description |
-|----------|-------------|
-| `JBROWSE_STATIC_DIR` | JBrowse static files (single-server only) |
-| `DB_BACKEND` | `sqlite` / `postgresql` / `mongo` |
-| `DB_CONNECTION_URL` | Database connection string |
-| `ALLOW_GUEST_USER` | Allow unauthenticated guest (default: false) |
-| `GUEST_USER_ROLE` | Guest role: `admin` / `user` / `readOnly` |
-| `DEFAULT_NEW_USER_ROLE` | New user role: `admin` / `user` / `readOnly` / `none` |
-| `GOOGLE_CLIENT_ID` / `_SECRET` | Google OAuth |
-| `MICROSOFT_CLIENT_ID` / `_SECRET` | Microsoft OAuth |
-| `ALLOW_ROOT_USER` | Enable root password login |
-| `ROOT_USER_PASSWORD` | Root admin password |
+| Variable                          | Description                                           |
+| --------------------------------- | ----------------------------------------------------- |
+| `JBROWSE_STATIC_DIR`              | JBrowse static files (single-server only)             |
+| `DB_BACKEND`                      | `sqlite` / `postgresql` / `mongo`                     |
+| `DB_CONNECTION_URL`               | Database connection string                            |
+| `ALLOW_GUEST_USER`                | Allow unauthenticated guest (default: false)          |
+| `GUEST_USER_ROLE`                 | Guest role: `admin` / `user` / `readOnly`             |
+| `DEFAULT_NEW_USER_ROLE`           | New user role: `admin` / `user` / `readOnly` / `none` |
+| `GOOGLE_CLIENT_ID` / `_SECRET`    | Google OAuth                                          |
+| `MICROSOFT_CLIENT_ID` / `_SECRET` | Microsoft OAuth                                       |
+| `ALLOW_ROOT_USER`                 | Enable root password login                            |
+| `ROOT_USER_PASSWORD`              | Root admin password                                   |
 
 ## First-Time Setup
 

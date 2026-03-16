@@ -88,9 +88,7 @@ function groupIntoGeneModels(alignments: MiniprotAlignment[]) {
 export class MiniprotRunner implements AnalysisRunner {
   readonly tool = 'miniprot'
 
-  constructor(
-    @Inject(DatabaseService) private readonly db: DatabaseService,
-  ) {}
+  constructor(@Inject(DatabaseService) private readonly db: DatabaseService) {}
 
   private readonly logger = new Logger(MiniprotRunner.name)
 

@@ -38,9 +38,9 @@ access to another lab's private data — all on the same server.
 
 ## Summary of Changes
 
-| Change | Current (origin/main) | Proposed |
-|--------|----------------------|----------|
-| Assembly/track storage | Single monolithic config document | Individual records with many-to-many relationships |
-| Access control | All users see everything | Per-assembly roles with public/private visibility |
-| Analysis tools | External tools, manual result transfer | Generic runner framework: local BLAST, NCBI BLAST, BLAT, miniprot, Tiberius |
-| Database | MongoDB (replica set required) | SQLite, PostgreSQL, or MongoDB via single codebase |
+| Change                 | Current (origin/main)                  | Proposed                                                                    |
+| ---------------------- | -------------------------------------- | --------------------------------------------------------------------------- |
+| Assembly/track storage | Single monolithic config document      | Individual records with many-to-many relationships                          |
+| Access control         | All users see everything               | Per-assembly roles with public/private visibility                           |
+| Analysis tools         | External tools, manual result transfer | Generic runner framework: local BLAST, NCBI BLAST, BLAT, miniprot, Tiberius |
+| Database               | MongoDB (replica set required)         | SQLite, PostgreSQL, or MongoDB via single codebase                          |

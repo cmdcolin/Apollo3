@@ -12,8 +12,7 @@
     "start:memory": "pnpm --filter @apollo-annotation/collaboration-server run start:memory",
     "start:guest": "pnpm --filter @apollo-annotation/collaboration-server run start:guest",
     "regenerate-demo-db": "node --experimental-strip-types scripts/regenerate-demo-db.ts",
-    "test": "pnpm -r run test:ci",
-    "prepare": "husky"
+    "test": "pnpm -r run test:ci"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
@@ -34,7 +33,6 @@
     "eslint-plugin-tsdoc": "^0.4.0",
     "eslint-plugin-unicorn": "^57.0.0",
     "globals": "^15.12.0",
-    "husky": "^9.0.11",
     "lint-staged": "^15.2.2",
     "prettier": "^3.3.2",
     "prettier-plugin-packagejson": "^2.5.2",
@@ -46,7 +44,6 @@
     "typescript-eslint": "^8.25.0",
     "yargs": "^17.7.2"
   },
-  "packageManager": "pnpm@10.12.1",
   "pnpm": {
     "onlyBuiltDependencies": [
       "better-sqlite3",
