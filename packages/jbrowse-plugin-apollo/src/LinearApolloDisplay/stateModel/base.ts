@@ -25,7 +25,7 @@ import { autorun } from 'mobx'
 
 import { FilterFeatures } from '../../components/FilterFeatures'
 import type { ApolloSessionModel, HoveredFeature } from '../../session'
-import { getRole } from '../../util'
+import { getRole, isReadOnly } from '../../util'
 import { EditZoomThresholdDialog } from '../../util/displayUtils'
 
 const minDisplayHeight = 20
@@ -119,6 +119,9 @@ export function baseModelFactory(
       get role() {
         const session = self.session as unknown as ApolloSessionModel
         return getRole(session)
+      },
+      get readOnly() {
+        return isReadOnly(self.session as unknown as ApolloSessionModel)
       },
       get changeManager() {
         return (self.session as unknown as ApolloSessionModel).apolloDataStore

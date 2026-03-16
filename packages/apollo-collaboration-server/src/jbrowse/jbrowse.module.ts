@@ -1,14 +1,13 @@
-import { Module, forwardRef } from '@nestjs/common'
+import { Module } from '@nestjs/common'
 
-import { AssembliesModule } from '../assemblies/assemblies.module.js'
-import { RefSeqsModule } from '../refSeqs/refSeqs.module.js'
+import { PermissionsModule } from '../permissions/permissions.module.js'
 
 import { JBrowseController } from './jbrowse.controller.js'
 import { JBrowseService } from './jbrowse.service.js'
 
 @Module({
   controllers: [JBrowseController],
-  imports: [forwardRef(() => AssembliesModule), RefSeqsModule],
+  imports: [PermissionsModule],
   providers: [JBrowseService],
   exports: [JBrowseService],
 })

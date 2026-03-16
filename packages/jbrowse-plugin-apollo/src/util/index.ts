@@ -39,6 +39,11 @@ export function getRole(session: ApolloSessionModel) {
   return (readConfObject(pluginConfiguration, 'role') as string) || undefined
 }
 
+export function isReadOnly(session: ApolloSessionModel) {
+  const pluginConfiguration = getPluginConfiguration(session)
+  return readConfObject(pluginConfiguration, 'readOnly') as boolean
+}
+
 export function getUserId(session: ApolloSessionModel) {
   const pluginConfiguration = getPluginConfiguration(session)
   return (readConfObject(pluginConfiguration, 'userId') as string) || undefined

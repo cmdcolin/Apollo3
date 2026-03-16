@@ -14,6 +14,7 @@ import { getSession } from '@jbrowse/core/util'
 import type { IAnyStateTreeNode } from '@jbrowse/mobx-state-tree'
 
 import type { ApolloSessionModel } from './session'
+import { isReadOnly } from './util'
 
 export interface SubmitOpts {
   /** defaults to true */
@@ -36,13 +37,18 @@ export class ChangeManager {
       submitToBackend = true,
       updateJobsManager = false,
     } = opts
-    // pre-validate
     const session = getSession(this.dataStore)
+    const apolloSession = session as unknown as ApolloSessionModel
     const controller = new AbortController()
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     const { jobsManager, isLocked, changeInProgress, setChangeInProgress } =
-      getSession(this.dataStore) as unknown as ApolloSessionModel
+      apolloSession
+
+    if (submitToBackend && isReadOnly(apolloSession)) {
+      session.notify('Read-only mode: changes are not allowed', 'warning')
+      return
+    }
 
     if (isLocked) {
       console.warn(

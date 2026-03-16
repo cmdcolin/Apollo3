@@ -119,5 +119,5 @@ Platform: linux x64
 
 ```bash
 cd packages/apollo-cli
-yarn tsx src/test/benchmark.ts --synthetic
+pnpm tsx src/test/benchmark.ts --synthetic
 ```

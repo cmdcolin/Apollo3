@@ -14,7 +14,7 @@ import React, { useState } from 'react'
 
 import type { ChangeManager } from '../ChangeManager'
 import { isOntologyClass } from '../OntologyManager'
-import type OntologyStore from '../OntologyManager/OntologyStore'
+import type { OntologyLookup } from '../OntologyManager/OntologyLookup'
 import { fetchValidDescendantTerms } from '../OntologyManager/util'
 import type { ApolloSessionModel } from '../session'
 
@@ -42,19 +42,11 @@ export function AddChildFeature({
   const [errorMessage, setErrorMessage] = useState('')
   const [typeWarningText, setTypeWarningText] = useState('')
 
-  async function fetchValidTerms(
-    parentFeature: AnnotationFeature | undefined,
-    ontologyStore: OntologyStore,
-    _signal: AbortSignal,
-  ) {
-    const terms = await fetchValidDescendantTerms(
-      parentFeature,
-      ontologyStore,
-      _signal,
-    )
+  function fetchValidTerms(ontologyStore: OntologyLookup) {
+    const terms = fetchValidDescendantTerms(sourceFeature, ontologyStore)
     if (!terms) {
       setTypeWarningText(
-        `Type "${parentFeature?.type}" does not have any children in the ontology`,
+        `Type "${sourceFeature?.type}" does not have any children in the ontology`,
       )
       return
     }
@@ -131,7 +123,7 @@ export function AddChildFeature({
             style={{ width: 170 }}
             value={type}
             filterTerms={isOntologyClass}
-            fetchValidTerms={fetchValidTerms.bind(null, sourceFeature)}
+            fetchValidTerms={fetchValidTerms}
             renderInput={(params) => (
               <TextField
                 {...params}

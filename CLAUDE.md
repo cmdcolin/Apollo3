@@ -112,8 +112,8 @@ migration; others may prefer PostgreSQL for production deployments. This means:
 ## Authentication & Authorization
 
 Auth was simplified from a 5-file indirection chain down to a single file
-(`src/utils/roles.guard.ts`). Every controller must have a class-level
-decorator — just pick one of three:
+(`src/utils/roles.guard.ts`). Every controller must have a class-level decorator
+— just pick one of three:
 
 - `@Public()` — no login needed (auth endpoints, health, config.json)
 - `@Authenticated()` — logged in, any role (even pending users)

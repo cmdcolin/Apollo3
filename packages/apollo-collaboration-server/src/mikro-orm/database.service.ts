@@ -1,4 +1,5 @@
 import type {
+  AssemblyPermissionRepository,
   AssemblyRepository,
   ChangeRepository,
   CheckRepository,
@@ -10,9 +11,12 @@ import type {
   OrganismRepository,
   RefSeqChunkRepository,
   RefSeqRepository,
+  TextSearchAdapterConfigRepository,
+  TrackConfigRepository,
   UserRepository,
 } from '@apollo-annotation/common'
 import {
+  MikroOrmAssemblyPermissionRepository,
   MikroOrmAssemblyRepository,
   MikroOrmChangeRepository,
   MikroOrmCheckRepository,
@@ -24,6 +28,8 @@ import {
   MikroOrmOrganismRepository,
   MikroOrmRefSeqChunkRepository,
   MikroOrmRefSeqRepository,
+  MikroOrmTextSearchAdapterConfigRepository,
+  MikroOrmTrackConfigRepository,
   MikroOrmUserRepository,
   MongoFeatureRepository,
 } from '@apollo-annotation/entities'
@@ -32,6 +38,7 @@ import { Inject, Injectable } from '@nestjs/common'
 
 export interface TransactionScope {
   assembly: AssemblyRepository
+  assemblyPermission: AssemblyPermissionRepository
   organism: OrganismRepository
   feature: FeatureRepository
   refSeq: RefSeqRepository
@@ -41,6 +48,8 @@ export interface TransactionScope {
   file: FileRepository
   user: UserRepository
   jbrowseConfig: JBrowseConfigRepository
+  trackConfig: TrackConfigRepository
+  textSearchAdapterConfig: TextSearchAdapterConfigRepository
   counter: CounterRepository
 }
 
@@ -62,6 +71,7 @@ export class DatabaseService {
   // Cached repository instances. Safe to reuse because the injected EM uses
   // AsyncLocalStorage (via RequestContext middleware) for per-request isolation.
   readonly assembly: AssemblyRepository
+  readonly assemblyPermission: AssemblyPermissionRepository
   readonly organism: OrganismRepository
   readonly feature: FeatureRepository
   readonly refSeq: RefSeqRepository
@@ -72,11 +82,14 @@ export class DatabaseService {
   readonly counter: CounterRepository
   readonly checkConfig: CheckRepository
   readonly jbrowseConfig: JBrowseConfigRepository
+  readonly trackConfig: TrackConfigRepository
+  readonly textSearchAdapterConfig: TextSearchAdapterConfigRepository
   readonly changeLog: ChangeRepository
 
   constructor(@Inject(EntityManager) private readonly em: EntityManager) {
     this.dbType = process.env.DB_BACKEND ?? 'sqlite'
     this.assembly = new MikroOrmAssemblyRepository(em)
+    this.assemblyPermission = new MikroOrmAssemblyPermissionRepository(em)
     this.organism = new MikroOrmOrganismRepository(em)
     this.feature = createFeatureRepository(em, this.dbType)
     this.refSeq = new MikroOrmRefSeqRepository(em)
@@ -87,6 +100,9 @@ export class DatabaseService {
     this.counter = new MikroOrmCounterRepository(em)
     this.checkConfig = new MikroOrmCheckRepository(em)
     this.jbrowseConfig = new MikroOrmJBrowseConfigRepository(em)
+    this.trackConfig = new MikroOrmTrackConfigRepository(em)
+    this.textSearchAdapterConfig =
+      new MikroOrmTextSearchAdapterConfigRepository(em)
     this.changeLog = new MikroOrmChangeRepository(em)
   }
 
@@ -97,6 +113,7 @@ export class DatabaseService {
     return this.em.transactional(async (txEm) => {
       return callback({
         assembly: new MikroOrmAssemblyRepository(txEm),
+        assemblyPermission: new MikroOrmAssemblyPermissionRepository(txEm),
         organism: new MikroOrmOrganismRepository(txEm),
         feature: createFeatureRepository(txEm, this.dbType),
         refSeq: new MikroOrmRefSeqRepository(txEm),
@@ -106,6 +123,10 @@ export class DatabaseService {
         file: new MikroOrmFileRepository(txEm),
         user: new MikroOrmUserRepository(txEm),
         jbrowseConfig: new MikroOrmJBrowseConfigRepository(txEm),
+        trackConfig: new MikroOrmTrackConfigRepository(txEm),
+        textSearchAdapterConfig: new MikroOrmTextSearchAdapterConfigRepository(
+          txEm,
+        ),
         counter: new MikroOrmCounterRepository(txEm),
       })
     })

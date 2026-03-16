@@ -1,4 +1,5 @@
 import Alert from '@mui/material/Alert'
+import Chip from '@mui/material/Chip'
 import Container from '@mui/material/Container'
 import Link from '@mui/material/Link'
 import Paper from '@mui/material/Paper'
@@ -21,6 +22,7 @@ interface Assembly {
   displayName?: string
   description?: string
   organism?: string
+  visibility?: 'public' | 'private'
 }
 
 function AssembliesPage() {
@@ -62,19 +64,38 @@ function AssembliesPage() {
                 <TableCell>Display Name</TableCell>
                 <TableCell>Description</TableCell>
                 <TableCell>Organism</TableCell>
+                <TableCell>Visibility</TableCell>
                 <TableCell>Open</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {assemblies.map((a) => (
                 <TableRow key={a._id} hover>
-                  <TableCell>{a.name}</TableCell>
+                  <TableCell>
+                    <Link href={`/ui/assemblies/${a._id}`}>{a.name}</Link>
+                  </TableCell>
                   <TableCell>{a.displayName ?? ''}</TableCell>
                   <TableCell>{a.description ?? ''}</TableCell>
-                  <TableCell>{a.organism ?? ''}</TableCell>
+                  <TableCell>
+                    {a.organism ? (
+                      <Link href={`/ui/organisms/${a.organism}`}>
+                        {a.organism}
+                      </Link>
+                    ) : (
+                      ''
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={a.visibility ?? 'private'}
+                      size="small"
+                      color={a.visibility === 'public' ? 'success' : 'default'}
+                      variant="outlined"
+                    />
+                  </TableCell>
                   <TableCell>
                     <Link
-                      href={`/jbrowse/?assembly=${encodeURIComponent(a.name)}`}
+                      href={`/jbrowse/?assemblies=${encodeURIComponent(a._id)}`}
                     >
                       Open in JBrowse
                     </Link>
@@ -84,7 +105,7 @@ function AssembliesPage() {
               {assemblies.length === 0 && !error && (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     align="center"
                     sx={{ color: 'text.secondary' }}
                   >

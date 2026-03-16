@@ -10,7 +10,7 @@
     "build": "pnpm dev:build && pnpm --filter @apollo-annotation/web-ui build",
     "build:client": "pnpm --filter @apollo-annotation/web-ui build",
     "e2e:start": "GUEST_USER_ROLE=admin LOG_LEVELS=error,warn pnpm start:no-watch",
-    "start": "echo '[start] Building (esbuild)...' && pnpm dev:build && echo '[start] Starting server...' && NODE_ENV=development node --watch-path dist dist/main.js",
+    "start": "bash scripts/dev-start.sh",
     "start:debug": "echo '[start] Building (esbuild)...' && pnpm dev:build && echo '[start] Starting server...' && NODE_ENV=development node --inspect --watch-path dist dist/main.js",
     "start:no-watch": "echo '[start] Building (esbuild)...' && pnpm dev:build && echo '[start] Starting server...' && NODE_ENV=development node dist/main.js",
     "start:prod": "NODE_ENV=production node dist/main.js",

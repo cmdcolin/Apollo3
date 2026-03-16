@@ -4,7 +4,7 @@
 
 The local development setup has been simplified from a multi-process,
 multi-repository architecture to a single-server model. Starting Apollo for
-development now requires only `yarn install` and `yarn start`.
+development now requires only `pnpm install` and `pnpm start`.
 
 ## What changed
 
@@ -33,8 +33,8 @@ start script also builds shared packages automatically before starting.
   setup; replaced by `scripts/e2e-servers.sh`.
 - **serve**: was used to serve static files from the plugin directory; the
   NestJS server now handles this.
-- **justfile**: the `just` command runner recipes only wrapped `yarn install`
-  and `yarn start`, adding no value over calling yarn directly.
+- **justfile**: the `just` command runner recipes only wrapped `pnpm install`
+  and `pnpm start`, adding no value over calling pnpm directly.
 
 ### MongoDB to PostgreSQL in dev container
 
@@ -57,4 +57,4 @@ from MongoDB to MikroORM:
 - Fewer moving parts for new contributors to understand and debug
 - No need to clone or maintain a sibling jbrowse-components repository
 - Single port to manage instead of three or four
-- Faster onboarding: `yarn install && yarn start` is the complete setup
+- Faster onboarding: `pnpm install && pnpm start` is the complete setup

@@ -13,7 +13,6 @@ import { ThemeProvider } from '@mui/material/styles'
 import { useEffect, useRef, useState } from 'react'
 
 import logoUrl from './apollo_logo.svg'
-import { fetchJson } from './fetchUtil.js'
 
 const theme = createJBrowseTheme({
   palette: {
@@ -32,8 +31,18 @@ function useCurrentUser() {
   const [user, setUser] = useState<UserInfo>()
 
   useEffect(() => {
-    fetchJson<UserInfo>('/users/me')
-      .then(setUser)
+    fetch('/users/me')
+      .then((r) => {
+        if (r.ok) {
+          return r.json()
+        }
+        return null
+      })
+      .then((data) => {
+        if (data) {
+          setUser(data)
+        }
+      })
       .catch(() => {})
   }, [])
 
@@ -54,7 +63,7 @@ const fileMenuItems: {
   { label: 'Users', href: '/admin/users/', value: 'users', admin: true },
 ]
 
-function NavBar({ current, user }: { current: Page; user?: UserInfo }) {
+function NavBar({ current, user }: { current?: Page; user?: UserInfo }) {
   const [open, setOpen] = useState(false)
   const anchorRef = useRef<HTMLButtonElement>(null)
 
@@ -75,7 +84,12 @@ function NavBar({ current, user }: { current: Page; user?: UserInfo }) {
             textDecoration: 'none',
           }}
         >
-          <img src={logoUrl} alt="Apollo" height={28} />
+          <img
+            src={logoUrl}
+            alt="Apollo"
+            height={28}
+            style={{ filter: 'brightness(0) invert(1)' }}
+          />
         </Box>
         <Typography
           variant="h6"
@@ -142,7 +156,7 @@ export function Nav({
   current,
   children,
 }: {
-  current: Page
+  current?: Page
   children: React.ReactNode
 }) {
   const user = useCurrentUser()

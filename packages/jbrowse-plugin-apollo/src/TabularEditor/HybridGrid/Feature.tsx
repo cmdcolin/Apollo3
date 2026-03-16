@@ -8,7 +8,7 @@ import { observer } from 'mobx-react'
 import React from 'react'
 
 import { isOntologyClass } from '../../OntologyManager'
-import type OntologyStore from '../../OntologyManager/OntologyStore'
+import type { OntologyLookup } from '../../OntologyManager/OntologyLookup'
 import { OntologyTermAutocomplete } from '../../components/OntologyTermAutocomplete'
 import { navToFeatureCenter } from '../../util'
 import type { DisplayStateModel } from '../types'
@@ -279,27 +279,20 @@ export const Feature = observer(function Feature({
     </>
   )
 })
-async function fetchValidTypeTerms(
+function fetchValidTypeTerms(
   feature: AnnotationFeature,
-  ontologyStore: OntologyStore,
-  _signal: AbortSignal,
+  ontologyStore: OntologyLookup,
 ) {
   const { parent: parentFeature } = feature
   if (parentFeature) {
-    // if this is a child of an existing feature, restrict the autocomplete choices to valid
-    // parts of that feature
-    const parentTypeTerms = await ontologyStore.getTermsWithLabelOrSynonym(
+    const parentTypeTerms = ontologyStore.getTermsWithLabelOrSynonym(
       parentFeature.type,
       { includeSubclasses: false },
     )
     // eslint-disable-next-line unicorn/no-array-callback-reference
     const parentTypeClassTerms = parentTypeTerms.filter(isOntologyClass)
     if (parentTypeClassTerms.length > 0) {
-      const subpartTerms = await ontologyStore.getClassesThat(
-        'part_of',
-        parentTypeClassTerms,
-      )
-      return subpartTerms
+      return ontologyStore.getClassesThat('part_of', parentTypeClassTerms)
     }
   }
   return

@@ -42,10 +42,7 @@ import {
   InMemoryFileDriver,
 } from '../BackendDrivers'
 import { ChangeManager } from '../ChangeManager'
-import {
-  OntologyManagerType,
-  type TextIndexFieldDefinition,
-} from '../OntologyManager'
+import { OntologyManagerType } from '../OntologyManager'
 import type ApolloPluginConfigurationSchema from '../config'
 import type { ApolloRootModel } from '../types'
 
@@ -175,54 +172,13 @@ export function clientDataStoreFactory(
             const configuredOntologies =
               pluginConfiguration.ontologies as AnyConfigurationModel[]
             for (const ont of configuredOntologies || []) {
-              const [name, version, source, indexFields] = [
-                readConfObject(ont, 'name') as string,
-                readConfObject(ont, 'version') as string,
-                readConfObject(ont, 'source') as
-                  | Instance<typeof LocalPathLocation>
-                  | Instance<typeof UriLocation>,
-                readConfObject(
-                  ont,
-                  'textIndexFields',
-                ) as TextIndexFieldDefinition[],
-              ]
+              const name = readConfObject(ont, 'name') as string
+              const version = readConfObject(ont, 'version') as string
+              const source = readConfObject(ont, 'source') as
+                | Instance<typeof LocalPathLocation>
+                | Instance<typeof UriLocation>
               if (!ontologyManager.findOntology(name)) {
-                const session = getSession(
-                  self,
-                ) as unknown as ApolloSessionModel
-                const { jobsManager } = session
-                const controller = new AbortController()
-                const jobName = `Loading ontology "${name}"`
-                const job = {
-                  name: jobName,
-                  statusMessage: `Loading ontology "${name}", version "${version}", this may take a while`,
-                  progressPct: 0,
-                  cancelCallback: () => {
-                    controller.abort(
-                      new DOMException(
-                        `Canceling loading of ontology "${name}"`,
-                        'AbortError',
-                      ),
-                    )
-                    jobsManager.abortJob(job.name)
-                  },
-                }
-                const update = (message: string, progress: number): void => {
-                  if (progress === 0) {
-                    jobsManager.runJob(job)
-                    return
-                  }
-                  if (progress === 100) {
-                    jobsManager.done(job)
-                    return
-                  }
-                  jobsManager.update(jobName, message, progress)
-                  return
-                }
-                ontologyManager.addOntology(name, version, source, {
-                  textIndexing: { indexFields },
-                  update,
-                })
+                ontologyManager.addOntology(name, version, source)
               }
             }
           }),

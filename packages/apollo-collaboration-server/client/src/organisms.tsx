@@ -2,6 +2,7 @@ import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Container from '@mui/material/Container'
+import Link from '@mui/material/Link'
 import Paper from '@mui/material/Paper'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
@@ -82,7 +83,9 @@ function OrganismsPage() {
             <TableBody>
               {organisms.map((o) => (
                 <TableRow key={o._id} hover>
-                  <TableCell>{o._id}</TableCell>
+                  <TableCell>
+                    <Link href={`/ui/organisms/${o._id}`}>{o._id}</Link>
+                  </TableCell>
                   <TableCell>{o.taxid ?? ''}</TableCell>
                   <TableCell>{o.genus ?? ''}</TableCell>
                   <TableCell>{o.species ?? ''}</TableCell>

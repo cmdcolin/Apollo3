@@ -24,9 +24,17 @@ export function LoginDialog({ handleClose, session }: LoginDialogProps) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let cancelled = false
     async function fetchLoginTypes() {
+      console.debug('[LoginDialog] fetchLoginTypes starting', { baseURL })
       const url = new URL('auth/types', baseURL)
       const response = await apolloFetch(url.toString())
+      if (cancelled) {
+        console.debug(
+          '[LoginDialog] fetchLoginTypes completed after cleanup — would have called setState on unmounted component.',
+        )
+        return
+      }
       if (response.ok) {
         const types = (await response.json()) as string[]
         setLoginTypes(types)
@@ -36,9 +44,14 @@ export function LoginDialog({ handleClose, session }: LoginDialogProps) {
       setLoading(false)
     }
     fetchLoginTypes().catch((error) => {
-      setErrorMessage(String(error))
-      setLoading(false)
+      if (!cancelled) {
+        setErrorMessage(String(error))
+        setLoading(false)
+      }
     })
+    return () => {
+      cancelled = true
+    }
   }, [baseURL])
 
   async function handleGuestLogin() {

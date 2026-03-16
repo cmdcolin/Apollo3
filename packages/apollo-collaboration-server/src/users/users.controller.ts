@@ -5,6 +5,7 @@ import type { Request } from 'express'
 import { Role } from '../utils/role/role.enum.js'
 import { Authenticated, Roles } from '../utils/roles.guard.js'
 
+import { ActiveUsersService } from './active-users.service.js'
 import { UsersService } from './users.service.js'
 
 @Roles(Role.Admin)
@@ -12,6 +13,8 @@ import { UsersService } from './users.service.js'
 export class UsersController {
   constructor(
     @Inject(UsersService) private readonly usersService: UsersService,
+    @Inject(ActiveUsersService)
+    private readonly activeUsersService: ActiveUsersService,
   ) {}
   private readonly logger = new Logger(UsersController.name)
 
@@ -31,6 +34,15 @@ export class UsersController {
   @Get('admin')
   findAdmin() {
     return this.usersService.findByRole(Role.Admin)
+  }
+
+  @Authenticated()
+  @Get('stats')
+  async getStats() {
+    return {
+      active: this.activeUsersService.getActiveCount(),
+      total: await this.usersService.getCount(),
+    }
   }
 
   @Get(':id')

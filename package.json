@@ -8,7 +8,7 @@
     "build:shared": "pnpm --filter @apollo-annotation/shared run build",
     "release": "tsx scripts/makeGitTag.ts",
     "start": "pnpm --filter @apollo-annotation/collaboration-server run start",
-    "start-with-demo-data": "bash scripts/start-with-demo-data.sh",
+    "regenerate-demo-db": "node --experimental-strip-types scripts/regenerate-demo-db.ts",
     "test": "pnpm -r run test:ci",
     "prepare": "husky"
   },

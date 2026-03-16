@@ -85,12 +85,45 @@ describe('MongoFeatureRepository', () => {
     await setupRefSeq(em)
     const repo = new MongoFeatureRepository(em)
 
-    await repo.create({ _id: 'gene-1', refSeq: 'rs-1', type: 'gene', min: 100, max: 500 })
-    await repo.create({ _id: 'mrna-1', refSeq: 'rs-1', type: 'mRNA', min: 100, max: 500, parentId: 'gene-1' })
-    await repo.create({ _id: 'exon-1', refSeq: 'rs-1', type: 'exon', min: 100, max: 200, parentId: 'mrna-1' })
-    await repo.create({ _id: 'exon-2', refSeq: 'rs-1', type: 'exon', min: 300, max: 500, parentId: 'mrna-1' })
+    await repo.create({
+      _id: 'gene-1',
+      refSeq: 'rs-1',
+      type: 'gene',
+      min: 100,
+      max: 500,
+    })
+    await repo.create({
+      _id: 'mrna-1',
+      refSeq: 'rs-1',
+      type: 'mRNA',
+      min: 100,
+      max: 500,
+      parentId: 'gene-1',
+    })
+    await repo.create({
+      _id: 'exon-1',
+      refSeq: 'rs-1',
+      type: 'exon',
+      min: 100,
+      max: 200,
+      parentId: 'mrna-1',
+    })
+    await repo.create({
+      _id: 'exon-2',
+      refSeq: 'rs-1',
+      type: 'exon',
+      min: 300,
+      max: 500,
+      parentId: 'mrna-1',
+    })
     // Sibling gene — should NOT appear in descendants of gene-1
-    await repo.create({ _id: 'gene-2', refSeq: 'rs-1', type: 'gene', min: 600, max: 900 })
+    await repo.create({
+      _id: 'gene-2',
+      refSeq: 'rs-1',
+      type: 'gene',
+      min: 600,
+      max: 900,
+    })
 
     const descendants = await repo.findDescendants('gene-1')
     expect(descendants).toHaveLength(3)
@@ -107,7 +140,13 @@ describe('MongoFeatureRepository', () => {
     await setupRefSeq(em)
     const repo = new MongoFeatureRepository(em)
 
-    await repo.create({ _id: 'gene-1', refSeq: 'rs-1', type: 'gene', min: 100, max: 500 })
+    await repo.create({
+      _id: 'gene-1',
+      refSeq: 'rs-1',
+      type: 'gene',
+      min: 100,
+      max: 500,
+    })
 
     expect(await repo.findDescendants('gene-1')).toHaveLength(0)
   })
@@ -117,10 +156,36 @@ describe('MongoFeatureRepository', () => {
     await setupRefSeq(em)
     const repo = new MongoFeatureRepository(em)
 
-    await repo.create({ _id: 'gene-1', refSeq: 'rs-1', type: 'gene', min: 100, max: 500 })
-    await repo.create({ _id: 'mrna-1', refSeq: 'rs-1', type: 'mRNA', min: 100, max: 500, parentId: 'gene-1' })
-    await repo.create({ _id: 'gene-2', refSeq: 'rs-1', type: 'gene', min: 600, max: 900 })
-    await repo.create({ _id: 'mrna-2', refSeq: 'rs-1', type: 'mRNA', min: 600, max: 900, parentId: 'gene-2' })
+    await repo.create({
+      _id: 'gene-1',
+      refSeq: 'rs-1',
+      type: 'gene',
+      min: 100,
+      max: 500,
+    })
+    await repo.create({
+      _id: 'mrna-1',
+      refSeq: 'rs-1',
+      type: 'mRNA',
+      min: 100,
+      max: 500,
+      parentId: 'gene-1',
+    })
+    await repo.create({
+      _id: 'gene-2',
+      refSeq: 'rs-1',
+      type: 'gene',
+      min: 600,
+      max: 900,
+    })
+    await repo.create({
+      _id: 'mrna-2',
+      refSeq: 'rs-1',
+      type: 'mRNA',
+      min: 600,
+      max: 900,
+      parentId: 'gene-2',
+    })
 
     const descendants = await repo.findDescendantsOfMany(['gene-1', 'gene-2'])
     expect(descendants).toHaveLength(2)
@@ -142,9 +207,29 @@ describe('MongoFeatureRepository', () => {
     await setupRefSeq(em)
     const repo = new MongoFeatureRepository(em)
 
-    await repo.create({ _id: 'gene-1', refSeq: 'rs-1', type: 'gene', min: 100, max: 500 })
-    await repo.create({ _id: 'mrna-1', refSeq: 'rs-1', type: 'mRNA', min: 100, max: 500, parentId: 'gene-1' })
-    await repo.create({ _id: 'exon-1', refSeq: 'rs-1', type: 'exon', min: 100, max: 300, parentId: 'mrna-1' })
+    await repo.create({
+      _id: 'gene-1',
+      refSeq: 'rs-1',
+      type: 'gene',
+      min: 100,
+      max: 500,
+    })
+    await repo.create({
+      _id: 'mrna-1',
+      refSeq: 'rs-1',
+      type: 'mRNA',
+      min: 100,
+      max: 500,
+      parentId: 'gene-1',
+    })
+    await repo.create({
+      _id: 'exon-1',
+      refSeq: 'rs-1',
+      type: 'exon',
+      min: 100,
+      max: 300,
+      parentId: 'mrna-1',
+    })
 
     const count = await repo.deleteDescendants('gene-1')
     expect(count).toBeGreaterThanOrEqual(1)
@@ -161,7 +246,13 @@ describe('MongoFeatureRepository', () => {
     await setupRefSeq(em)
     const repo = new MongoFeatureRepository(em)
 
-    await repo.create({ _id: 'gene-1', refSeq: 'rs-1', type: 'gene', min: 100, max: 500 })
+    await repo.create({
+      _id: 'gene-1',
+      refSeq: 'rs-1',
+      type: 'gene',
+      min: 100,
+      max: 500,
+    })
 
     expect(await repo.deleteDescendants('gene-1')).toBe(0)
     expect(await repo.findById('gene-1')).toBeDefined()
@@ -172,9 +263,29 @@ describe('MongoFeatureRepository', () => {
     await setupRefSeq(em)
     const repo = new MongoFeatureRepository(em)
 
-    await repo.create({ _id: 'gene-1', refSeq: 'rs-1', type: 'gene', min: 100, max: 500 })
-    await repo.create({ _id: 'mrna-1', refSeq: 'rs-1', type: 'mRNA', min: 100, max: 500, parentId: 'gene-1' })
-    await repo.create({ _id: 'exon-1', refSeq: 'rs-1', type: 'exon', min: 100, max: 300, parentId: 'mrna-1' })
+    await repo.create({
+      _id: 'gene-1',
+      refSeq: 'rs-1',
+      type: 'gene',
+      min: 100,
+      max: 500,
+    })
+    await repo.create({
+      _id: 'mrna-1',
+      refSeq: 'rs-1',
+      type: 'mRNA',
+      min: 100,
+      max: 500,
+      parentId: 'gene-1',
+    })
+    await repo.create({
+      _id: 'exon-1',
+      refSeq: 'rs-1',
+      type: 'exon',
+      min: 100,
+      max: 300,
+      parentId: 'mrna-1',
+    })
 
     const root = await repo.findRootParent('exon-1')
     expect(root).toBeDefined()
@@ -186,7 +297,13 @@ describe('MongoFeatureRepository', () => {
     await setupRefSeq(em)
     const repo = new MongoFeatureRepository(em)
 
-    await repo.create({ _id: 'gene-1', refSeq: 'rs-1', type: 'gene', min: 100, max: 500 })
+    await repo.create({
+      _id: 'gene-1',
+      refSeq: 'rs-1',
+      type: 'gene',
+      min: 100,
+      max: 500,
+    })
 
     const root = await repo.findRootParent('gene-1')
     expect(root).toBeDefined()
@@ -198,12 +315,45 @@ describe('MongoFeatureRepository', () => {
     await setupRefSeq(em)
     const repo = new MongoFeatureRepository(em)
 
-    await repo.create({ _id: 'gene-1', refSeq: 'rs-1', type: 'gene', min: 100, max: 500 })
-    await repo.create({ _id: 'mrna-1', refSeq: 'rs-1', type: 'mRNA', min: 100, max: 500, parentId: 'gene-1' })
-    await repo.create({ _id: 'exon-1', refSeq: 'rs-1', type: 'exon', min: 100, max: 300, parentId: 'mrna-1' })
+    await repo.create({
+      _id: 'gene-1',
+      refSeq: 'rs-1',
+      type: 'gene',
+      min: 100,
+      max: 500,
+    })
+    await repo.create({
+      _id: 'mrna-1',
+      refSeq: 'rs-1',
+      type: 'mRNA',
+      min: 100,
+      max: 500,
+      parentId: 'gene-1',
+    })
+    await repo.create({
+      _id: 'exon-1',
+      refSeq: 'rs-1',
+      type: 'exon',
+      min: 100,
+      max: 300,
+      parentId: 'mrna-1',
+    })
 
-    await repo.create({ _id: 'gene-2', refSeq: 'rs-1', type: 'gene', min: 600, max: 900 })
-    await repo.create({ _id: 'mrna-2', refSeq: 'rs-1', type: 'mRNA', min: 600, max: 900, parentId: 'gene-2' })
+    await repo.create({
+      _id: 'gene-2',
+      refSeq: 'rs-1',
+      type: 'gene',
+      min: 600,
+      max: 900,
+    })
+    await repo.create({
+      _id: 'mrna-2',
+      refSeq: 'rs-1',
+      type: 'mRNA',
+      min: 600,
+      max: 900,
+      parentId: 'gene-2',
+    })
 
     // Both exon-1 and mrna-2 resolve to different roots
     const roots = await repo.findRootParentsOfMany(['exon-1', 'mrna-2'])
@@ -226,10 +376,37 @@ describe('MongoFeatureRepository', () => {
     await setupRefSeq(em)
     const repo = new MongoFeatureRepository(em)
 
-    await repo.create({ _id: 'gene-1', refSeq: 'rs-1', type: 'gene', min: 100, max: 500 })
-    await repo.create({ _id: 'mrna-1', refSeq: 'rs-1', type: 'mRNA', min: 100, max: 500, parentId: 'gene-1' })
-    await repo.create({ _id: 'exon-1', refSeq: 'rs-1', type: 'exon', min: 100, max: 300, parentId: 'mrna-1' })
-    await repo.create({ _id: 'exon-2', refSeq: 'rs-1', type: 'exon', min: 350, max: 500, parentId: 'mrna-1' })
+    await repo.create({
+      _id: 'gene-1',
+      refSeq: 'rs-1',
+      type: 'gene',
+      min: 100,
+      max: 500,
+    })
+    await repo.create({
+      _id: 'mrna-1',
+      refSeq: 'rs-1',
+      type: 'mRNA',
+      min: 100,
+      max: 500,
+      parentId: 'gene-1',
+    })
+    await repo.create({
+      _id: 'exon-1',
+      refSeq: 'rs-1',
+      type: 'exon',
+      min: 100,
+      max: 300,
+      parentId: 'mrna-1',
+    })
+    await repo.create({
+      _id: 'exon-2',
+      refSeq: 'rs-1',
+      type: 'exon',
+      min: 350,
+      max: 500,
+      parentId: 'mrna-1',
+    })
 
     // exon-1 and exon-2 both resolve to gene-1 — result should be deduplicated
     const roots = await repo.findRootParentsOfMany(['exon-1', 'exon-2'])
@@ -242,9 +419,27 @@ describe('MongoFeatureRepository', () => {
     await setupRefSeq(em)
     const repo = new MongoFeatureRepository(em)
 
-    await repo.create({ _id: 'gene-1', refSeq: 'rs-1', type: 'gene', min: 100, max: 500 })
-    await repo.create({ _id: 'mrna-1', refSeq: 'rs-1', type: 'mRNA', min: 100, max: 500 })
-    await repo.create({ _id: 'exon-1', refSeq: 'rs-1', type: 'exon', min: 100, max: 300 })
+    await repo.create({
+      _id: 'gene-1',
+      refSeq: 'rs-1',
+      type: 'gene',
+      min: 100,
+      max: 500,
+    })
+    await repo.create({
+      _id: 'mrna-1',
+      refSeq: 'rs-1',
+      type: 'mRNA',
+      min: 100,
+      max: 500,
+    })
+    await repo.create({
+      _id: 'exon-1',
+      refSeq: 'rs-1',
+      type: 'exon',
+      min: 100,
+      max: 300,
+    })
 
     expect(await repo.searchText(['rs-1'], 'gene')).toHaveLength(1)
     expect(await repo.searchText(['rs-1'], 'mRNA')).toHaveLength(1)
@@ -295,8 +490,20 @@ describe('MongoFeatureRepository', () => {
     await setupRefSeq(em)
     const repo = new MongoFeatureRepository(em)
 
-    await repo.create({ _id: 'f1', refSeq: 'rs-1', type: 'gene', min: 100, max: 500 })
-    await repo.create({ _id: 'f2', refSeq: 'rs-2', type: 'gene', min: 100, max: 500 })
+    await repo.create({
+      _id: 'f1',
+      refSeq: 'rs-1',
+      type: 'gene',
+      min: 100,
+      max: 500,
+    })
+    await repo.create({
+      _id: 'f2',
+      refSeq: 'rs-2',
+      type: 'gene',
+      min: 100,
+      max: 500,
+    })
 
     expect(await repo.searchText(['rs-1'], 'gene')).toHaveLength(1)
     expect(await repo.searchText(['rs-2'], 'gene')).toHaveLength(1)
@@ -308,7 +515,13 @@ describe('MongoFeatureRepository', () => {
     await setupRefSeq(em)
     const repo = new MongoFeatureRepository(em)
 
-    await repo.create({ _id: 'gene-1', refSeq: 'rs-1', type: 'gene', min: 100, max: 500 })
+    await repo.create({
+      _id: 'gene-1',
+      refSeq: 'rs-1',
+      type: 'gene',
+      min: 100,
+      max: 500,
+    })
 
     expect(await repo.searchText([], 'gene')).toHaveLength(0)
   })
@@ -318,7 +531,13 @@ describe('MongoFeatureRepository', () => {
     await setupRefSeq(em)
     const repo = new MongoFeatureRepository(em)
 
-    await repo.create({ _id: 'gene-1', refSeq: 'rs-1', type: 'gene', min: 100, max: 500 })
+    await repo.create({
+      _id: 'gene-1',
+      refSeq: 'rs-1',
+      type: 'gene',
+      min: 100,
+      max: 500,
+    })
 
     // "the" is a stop word — tokenize filters it, so query becomes empty → no results
     expect(await repo.searchText(['rs-1'], 'the')).toHaveLength(0)

@@ -25,6 +25,11 @@ const ApolloPluginConfigurationSchema = ConfigurationSchema('ApolloPlugin', {
     type: 'string',
     defaultValue: '',
   },
+  readOnly: {
+    description: 'Whether the user has read-only access (no editing)',
+    type: 'boolean',
+    defaultValue: false,
+  },
   userId: {
     description: 'User ID returned by server',
     type: 'string',

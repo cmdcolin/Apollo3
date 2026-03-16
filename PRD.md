@@ -7,9 +7,116 @@ backend uses MikroORM with multi-database support (SQLite, PostgreSQL, MongoDB).
 The repository pattern abstracts the database layer behind interfaces in
 `apollo-common`, with implementations in `apollo-entities`.
 
+## Getting Started with Demo Data
+
+Apollo3 ships with a pre-built SQLite database (`demo-data/demo.sqlite`)
+containing sample assemblies and evidence tracks. Starting a fully functional
+instance requires only two commands:
+
+```sh
+pnpm install
+pnpm start
+```
+
+This starts the server on http://localhost:3999 with the demo database
+automatically seeded on first run. The demo includes:
+
+- **volvox** — a synthetic test assembly with GFF3 annotations and six evidence
+  tracks (BAM, CRAM, VCF, BigWig)
+- **Volvox carteri organism** — the volvox assembly is assigned to an organism,
+  demonstrating the organism/assembly hierarchy
+
+### Login and First-Time Admin Setup
+
+Guest login is enabled by default for development. The guest user has
+**read-only** access — they can browse assemblies and view tracks but cannot
+make changes.
+
+On a fresh database with no admin user, the server prints a one-time **setup
+URL** to the console:
+
+```
+No admin user found. Use the following URL to set up the first admin account:
+  /auth/setup?token=<random-token>
+Setup URL: http://localhost:3999/auth/setup?token=<random-token>
+```
+
+Visiting this URL activates setup mode. The next user who logs in (via Google,
+Microsoft, or root login — not guest) is promoted to admin. This is a one-time
+operation; the token is consumed after use. For local development, the root
+login (`root`/`password` as configured in `.development.env`) is the simplest
+way to get admin access.
+
+### User Roles
+
+Apollo3 has four global roles, in order of increasing privilege:
+
+| Role       | Capabilities                                                    |
+| ---------- | --------------------------------------------------------------- |
+| `none`     | Authenticated but no access (pending approval)                  |
+| `readOnly` | Browse assemblies, view tracks and annotations                  |
+| `user`     | All read-only capabilities, plus create/edit/delete annotations |
+| `admin`    | Full access: manage users, assemblies, organisms, permissions   |
+
+Roles inherit downward — an `admin` can do everything a `user` can, and a `user`
+can do everything `readOnly` can.
+
+New users who register via OAuth get the role configured by
+`DEFAULT_NEW_USER_ROLE` (defaults to `none`, meaning they need admin approval).
+
+### Per-Assembly Permissions
+
+Beyond global roles, Apollo3 supports **per-assembly access control** for
+multi-assembly deployments where different teams manage different genomes:
+
+- **Assembly visibility** — each assembly is either `public` (visible to all
+  authenticated users as read-only) or `private` (visible only to users with
+  explicit permission). The demo volvox assembly is set to `public`.
+
+- **Per-assembly roles** — admins can assign individual users a role (`admin`,
+  `user`, or `readOnly`) on specific assemblies. This allows, for example,
+  giving a collaborator edit access to one assembly while keeping others
+  restricted.
+
+- **Resolution order** — when a user accesses an assembly, the system checks:
+  1. Global admin → full access to all assemblies
+  2. Per-assembly permission → use that role
+  3. Assembly is public → read-only access
+  4. Otherwise → access denied (403)
+
+### Per-Assembly Track Management
+
+Evidence tracks (BAM, VCF, BigWig, CRAM, etc.) are stored in the database and
+associated with specific assemblies. Track access follows the assembly
+permission model:
+
+- Viewing tracks requires at least `readOnly` access to the assembly
+- Creating, updating, or deleting tracks requires `user`-level access to all
+  associated assemblies
+- Admins can manage tracks on any assembly
+
+This means a team with `user` access to their assembly can upload and manage
+their own evidence tracks without affecting other assemblies.
+
+### Regenerating the Demo Database
+
+After schema changes, regenerate the demo database:
+
+```sh
+pnpm -C packages/apollo-collaboration-server dev:build
+bash scripts/regenerate-demo-db.sh
+```
+
+This starts a temporary server, authenticates as root, uploads the volvox GFF3,
+creates evidence tracks, and saves the resulting database to
+`demo-data/demo.sqlite`.
+
 ## Outstanding Issues (Priority Order)
 
 ### P1 — Playwright E2E Tests
+
+This tends to be important. Improving the speed of the tests is important also,
+however possible
 
 1. **Playwright test stabilization** — All Cypress tests have been ported to
    Playwright (`pw-tests/`), but some may need timing adjustments:
@@ -29,6 +136,17 @@ The repository pattern abstracts the database layer behind interfaces in
    - GO term annotation with evidence codes (EXP, IDA, ISS, etc.)
    - Gene product names
    - Free-text comments/notes
+   - **GO term autocomplete** — the Gene Ontology JSON is ~79MB, too large for
+     client-side in-memory parsing. Strategy depends on deployment:
+     - **Collaboration server**: load GO at server startup, expose REST search
+       endpoints (`GET /ontology/go/search?term=...`). Client calls these lazily
+       when the GO autocomplete is opened.
+     - **Desktop (Electron)**: parse GO JSON once on first launch, store in a
+       local SQLite file via `better-sqlite3`. Query with SQL on subsequent
+       uses. The `OntologyLookup` interface stays the same; a
+       `SqliteOntologyLookup` implementation wraps the local DB.
+     - The Sequence Ontology (2MB) continues to work client-side in-memory via
+       `OntologyLookup`. Only GO needs the server/SQLite path due to size.
    - **Files**: new components in
      `packages/jbrowse-plugin-apollo/src/components/`, extend "Edit feature
      details" dialog
@@ -84,15 +202,14 @@ The repository pattern abstracts the database layer behind interfaces in
 
 ### P2 — Collaboration & Workflow
 
-8. **Per-assembly permissions** — Apollo Classic has user/group permissions per
-   organism. Apollo3 currently has global roles only (admin/user/readOnly).
-   Multi-assembly deployments need per-assembly access control.
-   - New `AssemblyPermission` entity: maps user → assembly → role
-   - `ValidationGuard` checks per-assembly permissions before changes
-   - Admin UI for assigning users to assemblies
-   - Fallback: global role applies when no per-assembly permission exists
-   - **Files**: new entity in `apollo-entities`, new guard logic in server, new
-     admin component in plugin
+8. ~~**Per-assembly permissions**~~ **DONE** — `AssemblyPermissionEntity` maps
+   user → assembly → role. `PermissionService` checks global admin →
+   per-assembly permission → public visibility. Assemblies have
+   `public`/`private` visibility. `PermissionsController` provides admin API for
+   managing per-assembly roles. Track access follows assembly permissions. See
+   "Per-Assembly Permissions" section above for details.
+   - **Remaining**: Admin UI for assigning users to assemblies (currently
+     API-only)
 
 9. **Feature ownership & audit display** — Apollo Classic tracks who
    created/last edited each feature. Apollo3 stores `user` on entities but
@@ -263,3 +380,9 @@ if profiling proves that tree loading is a real bottleneck in production.
 All change executions are wrapped in `em.transactional()` which auto-commits on
 success and auto-rolls-back on error. RequestContext middleware provides
 per-request EM isolation.
+
+## More changes to add
+
+No tooltip when zoomed in on feature
+
+Right click->Create annotation worked as guest

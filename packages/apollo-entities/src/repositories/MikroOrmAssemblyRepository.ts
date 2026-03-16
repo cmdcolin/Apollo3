@@ -1,7 +1,10 @@
 import type { AssemblyRepository, AssemblyRow } from '@apollo-annotation/common'
 import type { EntityManager, InferEntity } from '@mikro-orm/core'
 
-import { AssemblyEntity } from '../entities/AssemblyEntity.js'
+import {
+  AssemblyEntity,
+  AssemblyVisibility,
+} from '../entities/AssemblyEntity.js'
 
 function organismId(val: InferEntity<typeof AssemblyEntity>['organism']) {
   if (!val) {
@@ -24,6 +27,7 @@ function toRow(entity: InferEntity<typeof AssemblyEntity>): AssemblyRow {
     sequenceSource: entity.sequenceSource ?? undefined,
     checks: entity.checks ?? undefined,
     organism: organismId(entity.organism),
+    visibility: entity.visibility,
   }
 }
 
@@ -57,6 +61,7 @@ export class MikroOrmAssemblyRepository implements AssemblyRepository {
       sequenceSource: row.sequenceSource,
       checks: row.checks,
       organism: row.organism,
+      visibility: row.visibility as AssemblyVisibility | undefined,
     })
     this.em.persist(entity)
     await this.em.flush()
@@ -68,7 +73,12 @@ export class MikroOrmAssemblyRepository implements AssemblyRepository {
     if (!entity) {
       return
     }
-    this.em.assign(entity, data)
+    const { visibility, ...rest } = data
+    const assignData: Record<string, unknown> = { ...rest }
+    if (visibility !== undefined) {
+      assignData.visibility = visibility as AssemblyVisibility
+    }
+    this.em.assign(entity, assignData)
     await this.em.flush()
     return toRow(entity)
   }
@@ -76,6 +86,28 @@ export class MikroOrmAssemblyRepository implements AssemblyRepository {
   async findAll() {
     const entities = await this.em.find(AssemblyEntity, {})
     return entities.map(toRow)
+  }
+
+  async findByIds(ids: string[]) {
+    if (ids.length === 0) {
+      return []
+    }
+    const entities = await this.em.find(AssemblyEntity, {
+      _id: { $in: ids },
+    })
+    return entities.map(toRow)
+  }
+
+  async findPublic() {
+    const entities = await this.em.find(AssemblyEntity, {
+      visibility: AssemblyVisibility.PUBLIC,
+    })
+    return entities.map(toRow)
+  }
+
+  async findAllIds() {
+    const entities = await this.em.find(AssemblyEntity, {}, { fields: ['_id'] })
+    return entities.map((e) => e._id)
   }
 
   async deleteById(id: string) {

@@ -12,6 +12,7 @@ import { AuthenticationModule } from './authentication/authentication.module.js'
 import { ChangesModule } from './changes/changes.module.js'
 import { ChecksModule } from './checks/checks.module.js'
 import { ExportModule } from './export/export.module.js'
+import { FallbackModule } from './fallback/fallback.module.js'
 import { FeaturesModule } from './features/features.module.js'
 import { FilesModule } from './files/files.module.js'
 import { HealthModule } from './health/health.module.js'
@@ -19,10 +20,12 @@ import { JBrowseModule } from './jbrowse/jbrowse.module.js'
 import { MessagesModule } from './messages/messages.module.js'
 import { ApolloMikroOrmModule } from './mikro-orm/mikro-orm.module.js'
 import { OrganismsModule } from './organisms/organisms.module.js'
+import { PermissionsModule } from './permissions/permissions.module.js'
 import { PluginsModule } from './plugins/plugins.module.js'
 import { RefSeqsModule } from './refSeqs/refSeqs.module.js'
 import { SequenceModule } from './sequence/sequence.module.js'
 import { ToolsModule } from './tools/tools.module.js'
+import { TracksModule } from './tracks/tracks.module.js'
 import { UsersModule } from './users/users.module.js'
 import { JwtAuthGuard } from './utils/jwt-auth.guard.js'
 import { RolesGuard } from './utils/roles.guard.js'
@@ -127,7 +130,19 @@ const validationSchema = Joi.object({
         'pages',
       ),
       serveRoot: '/',
-      serveStaticOptions: { fallthrough: true },
+      serveStaticOptions: {
+        fallthrough: true,
+        setHeaders(res, filePath) {
+          if (filePath.includes('/assets/')) {
+            res.setHeader(
+              'Cache-Control',
+              'public, max-age=31536000, immutable',
+            )
+          } else {
+            res.setHeader('Cache-Control', 'no-cache')
+          }
+        },
+      },
     }),
     HealthModule,
     MessagesModule,
@@ -145,7 +160,10 @@ const validationSchema = Joi.object({
     ExportModule,
     ChangesModule,
     ToolsModule,
+    TracksModule,
+    PermissionsModule,
     AuthenticationModule,
+    FallbackModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

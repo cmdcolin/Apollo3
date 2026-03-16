@@ -228,13 +228,14 @@ export class AuthenticationService {
    * @returns Return token with HttpResponse status 'HttpStatus.OK'
    */
   async logIn(name: string, email: string) {
+    const isGuestUser = email === GUEST_USER_EMAIL
     let user = await this.usersService.findByEmail(email)
     if (!user) {
       let newUserRole = this.defaultNewUserRole
       const isRootUser = name === ROOT_USER_NAME && email === ROOT_USER_EMAIL
       if (isRootUser) {
         newUserRole = Role.Admin
-      } else if (this.setupActive) {
+      } else if (this.setupActive && !isGuestUser) {
         newUserRole = Role.Admin
         this.consumeSetup()
         this.logger.log(`Setup complete: ${email} promoted to admin`)
@@ -245,7 +246,7 @@ export class AuthenticationService {
         role: newUserRole,
       }
       user = await this.usersService.addNew(newUser)
-    } else if (user.role === 'none' && this.setupActive) {
+    } else if (user.role === 'none' && this.setupActive && !isGuestUser) {
       await this.usersService.updateRole(user._id, Role.Admin)
       user = { ...user, role: Role.Admin }
       this.consumeSetup()

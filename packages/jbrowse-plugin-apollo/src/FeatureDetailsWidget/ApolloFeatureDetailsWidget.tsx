@@ -11,6 +11,7 @@ import { observer } from 'mobx-react'
 import React, { useEffect, useState } from 'react'
 
 import type { ApolloSessionModel } from '../session'
+import { isReadOnly } from '../util'
 
 import { Attributes } from './Attributes'
 import { BasicInformation } from './BasicInformation'
@@ -48,6 +49,10 @@ export const ApolloFeatureDetailsWidget = observer(
     const { max, min } = feature
     const sequence = refSeq.getSequence(min, max)
     if (!sequence) {
+      console.debug(
+        '[ApolloFeatureDetailsWidget] loadRefSeq called from render body — this fires on EVERY render while sequence is missing.',
+        { assembly, refName, min, max },
+      )
       void session.apolloDataStore.loadRefSeq([
         { assemblyName: assembly, refName, start: min, end: max },
       ])
@@ -87,7 +92,7 @@ export const ApolloFeatureDetailsWidget = observer(
               feature={feature}
               session={session}
               assembly={currentAssembly._id}
-              editable={true}
+              editable={!isReadOnly(session)}
             />
           </AccordionDetails>
         </Accordion>

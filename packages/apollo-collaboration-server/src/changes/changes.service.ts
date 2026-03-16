@@ -87,13 +87,22 @@ export class ChangesService {
     }
 
     const userSessionId = makeUserSessionId(user)
-    await this.messagesGateway.create(COMMON_CHANNEL, {
+    const assemblyId = isAssemblySpecificChange(change)
+      ? change.assembly
+      : undefined
+    const message: ChangeMessage = {
       changeInfo: change.toJSON(),
       userName: user.username,
       userSessionId,
       channel: COMMON_CHANNEL,
       changeSequence: sequence,
-    })
+      assemblyId,
+    }
+    if (assemblyId) {
+      this.messagesGateway.emitToAssembly(assemblyId, COMMON_CHANNEL, message)
+    } else {
+      this.messagesGateway.broadcast(COMMON_CHANNEL, message)
+    }
     return changeDoc
   }
 

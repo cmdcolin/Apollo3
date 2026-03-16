@@ -477,9 +477,9 @@ docker compose up -d
 
 # Run the server against PostgreSQL
 DB_BACKEND=postgresql DB_CONNECTION_URL=postgresql://apollo:apollo@localhost:5432/apollo \
-  yarn --cwd packages/apollo-collaboration-server start
+  pnpm -C packages/apollo-collaboration-server start
 
 # Run E2E tests against PostgreSQL
 DB_BACKEND=postgresql DB_CONNECTION_URL=postgresql://apollo:apollo@localhost:5432/apollo \
-  yarn --cwd packages/jbrowse-plugin-apollo test:e2e
+  pnpm -C packages/jbrowse-plugin-apollo test:e2e
 ```

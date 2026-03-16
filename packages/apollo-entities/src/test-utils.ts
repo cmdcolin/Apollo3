@@ -3,6 +3,7 @@ import { MikroORM as PostgreSqlORM } from '@mikro-orm/postgresql'
 import { NodeSqliteDialect, SqliteDriver } from '@mikro-orm/sqlite'
 
 import { AssemblyEntity } from './entities/AssemblyEntity.js'
+import { AssemblyPermissionEntity } from './entities/AssemblyPermissionEntity.js'
 import { ChangeEntity } from './entities/ChangeEntity.js'
 import { CheckEntity } from './entities/CheckEntity.js'
 import { CheckResultEntity } from './entities/CheckResultEntity.js'
@@ -14,10 +15,13 @@ import { JBrowseConfigEntity } from './entities/JBrowseConfigEntity.js'
 import { OrganismEntity } from './entities/OrganismEntity.js'
 import { RefSeqChunkEntity } from './entities/RefSeqChunkEntity.js'
 import { RefSeqEntity } from './entities/RefSeqEntity.js'
+import { TextSearchAdapterConfigEntity } from './entities/TextSearchAdapterConfigEntity.js'
+import { TrackConfigEntity } from './entities/TrackConfigEntity.js'
 import { UserEntity } from './entities/UserEntity.js'
 
 const allEntities = [
   AssemblyEntity,
+  AssemblyPermissionEntity,
   ChangeEntity,
   CheckEntity,
   CheckResultEntity,
@@ -29,6 +33,8 @@ const allEntities = [
   OrganismEntity,
   RefSeqChunkEntity,
   RefSeqEntity,
+  TextSearchAdapterConfigEntity,
+  TrackConfigEntity,
   UserEntity,
 ]
 

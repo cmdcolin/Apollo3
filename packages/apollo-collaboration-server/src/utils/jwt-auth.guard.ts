@@ -9,11 +9,17 @@ import {
 import { Reflector } from '@nestjs/core'
 import { AuthGuard } from '@nestjs/passport'
 
+import { ActiveUsersService } from '../users/active-users.service.js'
+
 import { IS_PUBLIC_KEY } from './roles.guard.js'
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
-  constructor(@Inject(Reflector) private reflector: Reflector) {
+  constructor(
+    @Inject(Reflector) private reflector: Reflector,
+    @Inject(ActiveUsersService)
+    private activeUsers: ActiveUsersService,
+  ) {
     super()
   }
 
@@ -37,6 +43,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       }
       throw new UnauthorizedException()
     }
+    this.activeUsers.touch(user.id)
     return super.handleRequest(err, user, info, context, status)
   }
 }

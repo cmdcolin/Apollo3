@@ -7,7 +7,7 @@ Tests are in `pw-tests/` and use Playwright.
 ### Full E2E run (build + start servers + test + stop)
 
 ```bash
-yarn test:e2e
+pnpm test:e2e
 # or equivalently:
 bash scripts/e2e-servers.sh test
 ```
@@ -15,13 +15,13 @@ bash scripts/e2e-servers.sh test
 ### Run with servers already running
 
 ```bash
-yarn playwright test
+pnpm playwright test
 ```
 
 ### Run a single test file
 
 ```bash
-yarn playwright test pw-tests/deleteFeature.test.ts
+pnpm playwright test pw-tests/deleteFeature.test.ts
 ```
 
 ### Server management

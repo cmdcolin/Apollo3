@@ -69,7 +69,7 @@ that transpiles all five workspace packages in parallel in ~3s.
   FASTA references:
   - **volvox** — bgzip FASTA served locally from `test_data/`
   - **hg38** — remote bgzip FASTA from `jbrowse.org`
-  - Usage: `yarn start-with-demo-data` (or `--no-build` to skip rebuilding)
+  - Usage: `pnpm start-with-demo-data` (or `--no-build` to skip rebuilding)
   - To regenerate after schema changes: `bash scripts/regenerate-demo-db.sh`
 
 ## Core Annotation Features

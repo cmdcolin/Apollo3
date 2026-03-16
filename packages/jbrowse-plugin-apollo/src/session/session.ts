@@ -10,13 +10,7 @@ import {
   type AnnotationFeature,
   AnnotationFeatureModel,
 } from '@apollo-annotation/mst'
-import {
-  COMMON_CHANNEL,
-  type ChangeMessage,
-  ImportJBrowseConfigChange,
-  type JBrowseConfig,
-  filterJBrowseConfig,
-} from '@apollo-annotation/shared'
+import { COMMON_CHANNEL, type ChangeMessage } from '@apollo-annotation/shared'
 import type PluginManager from '@jbrowse/core/PluginManager'
 import type { AssemblyModel } from '@jbrowse/core/assemblyManager/assembly'
 import { getConf, readConfObject } from '@jbrowse/core/configuration'
@@ -43,6 +37,7 @@ import { ApolloJobModel } from '../ApolloJobModel'
 import type { ChangeManager } from '../ChangeManager'
 import { LoginDialog } from '../components/LoginDialog'
 import type ApolloPluginConfigurationSchema from '../config'
+import { addTopLevelMenus } from '../menus/topLevelMenu'
 import { addTopLevelAdminMenus } from '../menus/topLevelMenuAdmin'
 import type { ApolloRootModel } from '../types'
 import {
@@ -50,6 +45,7 @@ import {
   createFetchErrorMessage,
   getBaseURL,
   getRole,
+  isReadOnly,
 } from '../util'
 
 import { clientDataStoreFactory } from './ClientDataStore'
@@ -242,13 +238,11 @@ export function extendSession(
           return
         }
         const { origin, pathname: path } = new URL('socket.io/', baseURL)
-        const socket = io(origin, { path })
+        const socket = io(origin, { path, withCredentials: true })
         self.apolloSocket = socket
         const { apolloUserSessionId } = self
         if (!apolloUserSessionId) {
-          throw new Error(
-            'No userSessionId — cannot set up WebSocket',
-          )
+          throw new Error('No userSessionId — cannot set up WebSocket')
         }
         const localSessionId = apolloUserSessionId
         const { apolloDataStore } = self
@@ -287,7 +281,8 @@ export function extendSession(
     }))
     .actions((self) => ({
       async initializeApolloConnection() {
-        const role = getRole(self as unknown as ApolloSessionModel)
+        const apolloSession = self as unknown as ApolloSessionModel
+        const role = getRole(apolloSession)
         if (!role || role === 'none') {
           if (role === 'none') {
             ;(self as unknown as AbstractSessionModel).notify(
@@ -297,9 +292,11 @@ export function extendSession(
           }
           return
         }
-        if (role === 'admin') {
-          const rootModel = getRoot(self)
-          if (isAbstractMenuManager(rootModel)) {
+        const rootModel = getRoot(self)
+        if (isAbstractMenuManager(rootModel)) {
+          const readOnly = isReadOnly(apolloSession)
+          addTopLevelMenus(rootModel, readOnly)
+          if (role === 'admin') {
             addTopLevelAdminMenus(rootModel)
           }
         }
@@ -386,17 +383,17 @@ export function extendSession(
                 ?.hasRole as boolean | undefined
               if (!serverHasRole) {
                 // User is not authenticated — show login dialog
-                ;(
-                  self as unknown as AbstractSessionModel
-                ).queueDialog((doneCallback) => [
-                  LoginDialog,
-                  {
-                    session: self as unknown as ApolloSessionModel,
-                    handleClose: () => {
-                      doneCallback()
+                ;(self as unknown as AbstractSessionModel).queueDialog(
+                  (doneCallback) => [
+                    LoginDialog,
+                    {
+                      session: self as unknown as ApolloSessionModel,
+                      handleClose: () => {
+                        doneCallback()
+                      },
                     },
-                  },
-                ])
+                  ],
+                )
                 reaction.dispose()
                 return
               }
@@ -448,13 +445,10 @@ export function extendSession(
                 {
                   label: 'Save track to Apollo',
                   onClick: async () => {
+                    const baseURL = getBaseURL(
+                      self as unknown as ApolloSessionModel,
+                    )
                     const { jbrowse } = getRoot<ApolloRootModel>(self)
-                    const currentConfig = getSnapshot<JBrowseConfig>(jbrowse)
-                    let filteredConfig: JBrowseConfig | undefined
-                    filteredConfig = filterJBrowseConfig(currentConfig)
-                    if (Object.keys(filteredConfig).length === 0) {
-                      filteredConfig = undefined
-                    }
                     const trackConfigSnapshot = getSnapshot(conf)
                     const newTrackId = trackId.slice(
                       0,
@@ -464,20 +458,29 @@ export function extendSession(
                       ...trackConfigSnapshot,
                       trackId: newTrackId,
                     }
-                    const change = new ImportJBrowseConfigChange({
-                      typeName: 'ImportJBrowseConfigChange',
-                      oldJBrowseConfig: filteredConfig,
-                      newJBrowseConfig: {
-                        ...filteredConfig,
-                        // @ts-expect-error The track types are in the snapshot
-                        tracks: filteredConfig?.tracks && [
-                          ...filteredConfig.tracks,
-                          newTrackConfigSnapshot,
-                        ],
-                      },
+                    const assemblyIds = readConfObject(
+                      conf,
+                      'assemblyNames',
+                    ) as string[]
+                    const uri = new URL('tracks', baseURL).href
+                    const response = await apolloFetch(uri, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        trackId: newTrackId,
+                        assemblyIds,
+                        config: newTrackConfigSnapshot,
+                      }),
                     })
-                    await self.apolloDataStore.changeManager.submit(change)
                     const { notify } = self as unknown as AbstractSessionModel
+                    if (!response.ok) {
+                      const errorMessage = await createFetchErrorMessage(
+                        response,
+                        'Failed to save track',
+                      )
+                      notify(errorMessage, 'error')
+                      return
+                    }
                     notify('Track added', 'success')
                     // @ts-expect-error This method is missing in the JB types
                     self.deleteTrackConf(conf)
@@ -492,26 +495,43 @@ export function extendSession(
                 {
                   label: 'Remove track from Apollo',
                   onClick: async () => {
-                    const { jbrowse } = getRoot<ApolloRootModel>(self)
-                    const currentConfig = getSnapshot<JBrowseConfig>(jbrowse)
-                    let filteredConfig: JBrowseConfig | undefined
-                    filteredConfig = filterJBrowseConfig(currentConfig)
-                    if (Object.keys(filteredConfig).length === 0) {
-                      filteredConfig = undefined
-                    }
-                    const filteredTracks = filteredConfig?.tracks?.filter(
-                      (t) => t.trackId !== trackId,
+                    const baseURL = getBaseURL(
+                      self as unknown as ApolloSessionModel,
                     )
-                    const change = new ImportJBrowseConfigChange({
-                      typeName: 'ImportJBrowseConfigChange',
-                      oldJBrowseConfig: filteredConfig,
-                      newJBrowseConfig: {
-                        ...filteredConfig,
-                        tracks: filteredTracks,
-                      },
+                    const { jbrowse } = getRoot<ApolloRootModel>(self)
+                    const listUri = new URL('tracks', baseURL).href
+                    const listResponse = await apolloFetch(listUri, {
+                      method: 'GET',
                     })
-                    await self.apolloDataStore.changeManager.submit(change)
                     const { notify } = self as unknown as AbstractSessionModel
+                    if (!listResponse.ok) {
+                      const errorMessage = await createFetchErrorMessage(
+                        listResponse,
+                        'Failed to find track',
+                      )
+                      notify(errorMessage, 'error')
+                      return
+                    }
+                    const tracks = (await listResponse.json()) as {
+                      _id: string
+                      trackId: string
+                    }[]
+                    const track = tracks.find((t) => t.trackId === trackId)
+                    if (track) {
+                      const deleteUri = new URL(`tracks/${track._id}`, baseURL)
+                        .href
+                      const deleteResponse = await apolloFetch(deleteUri, {
+                        method: 'DELETE',
+                      })
+                      if (!deleteResponse.ok) {
+                        const errorMessage = await createFetchErrorMessage(
+                          deleteResponse,
+                          'Failed to remove track',
+                        )
+                        notify(errorMessage, 'error')
+                        return
+                      }
+                    }
                     notify('Track removed', 'success')
                     // @ts-expect-error This method is missing in the JB types
                     self.deleteTrackConf(conf)

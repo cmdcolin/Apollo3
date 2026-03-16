@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 
 import type { AbstractSessionModel } from '@jbrowse/core/util'
-import { isAbortException } from '@jbrowse/core/util/aborting'
 import {
   Autocomplete,
   type AutocompleteRenderInputParams,
@@ -10,7 +9,7 @@ import {
 import React, { useCallback, useEffect, useState } from 'react'
 
 import { type OntologyTerm, isDeprecated } from '../OntologyManager'
-import type OntologyStore from '../OntologyManager/OntologyStore'
+import type { OntologyLookup } from '../OntologyManager/OntologyLookup'
 import type { ApolloSessionModel } from '../session'
 
 interface OntologyTermAutocompleteProps {
@@ -21,9 +20,8 @@ interface OntologyTermAutocompleteProps {
   error?: boolean
   filterTerms?: (term: OntologyTerm) => boolean
   fetchValidTerms?: (
-    ontologyStore: OntologyStore,
-    signal: AbortSignal,
-  ) => Promise<OntologyTerm[] | undefined>
+    ontologyStore: OntologyLookup,
+  ) => OntologyTerm[] | undefined
   style?: React.CSSProperties
   renderInput?: (
     params: AutocompleteRenderInputParams & {
@@ -75,61 +73,33 @@ export function OntologyTermAutocomplete({
 
   // effect for matching the current value with an ontology term
   useEffect(() => {
-    const controller = new AbortController()
-    const { signal } = controller
-    if (needToLoadCurrentTerm) {
-      getCurrentTerm(ontologyStore, valueString, filterTerms, signal).then(
-        (term) => {
-          setCurrentOntologyTermInvalid('')
-          if (!signal.aborted) {
-            setCurrentOntologyTerm(term)
-          }
-        },
-        (error: unknown) => {
-          if (!signal.aborted && !isAbortException(error)) {
-            setCurrentOntologyTermInvalid(String(error))
-          }
-        },
-      )
-    }
-    return () => {
-      controller.abort(
-        new DOMException(
-          'Cancel getting current term from ontology store',
-          'AbortError',
-        ),
-      )
+    if (needToLoadCurrentTerm && ontologyStore) {
+      try {
+        const term = getCurrentTerm(ontologyStore, valueString, filterTerms)
+        setCurrentOntologyTermInvalid('')
+        setCurrentOntologyTerm(term)
+      } catch (error) {
+        setCurrentOntologyTermInvalid(String(error))
+      }
     }
   }, [session, valueString, filterTerms, ontologyStore, needToLoadCurrentTerm])
 
   // effect for loading term autocompletions
   useEffect(() => {
-    const controller = new AbortController()
-    const { signal } = controller
-    if (needToLoadTermChoices) {
-      getValidTerms(ontologyStore, fetchValidTerms, filterTerms, signal).then(
-        (soTerms) => {
-          if (soTerms && !signal.aborted) {
-            setTermChoices(soTerms)
-          }
-        },
-        (error: unknown) => {
-          if (!signal.aborted && !isAbortException(error)) {
-            ;(session as unknown as AbstractSessionModel).notify(
-              error instanceof Error ? error.message : String(error),
-              'error',
-            )
-          }
-        },
-      )
-    }
-    return () => {
-      controller.abort(
-        new DOMException(
-          'Canceling getting valid terms from ontology store',
-          'AbortError',
-        ),
-      )
+    if (needToLoadTermChoices && ontologyStore) {
+      try {
+        const soTerms = getValidTerms(
+          ontologyStore,
+          fetchValidTerms,
+          filterTerms,
+        )
+        setTermChoices(soTerms)
+      } catch (error) {
+        ;(session as unknown as AbstractSessionModel).notify(
+          error instanceof Error ? error.message : String(error),
+          'error',
+        )
+      }
     }
   }, [
     needToLoadTermChoices,
@@ -198,21 +168,19 @@ export function OntologyTermAutocomplete({
   )
 }
 
-async function getCurrentTerm(
-  ontologyStore: OntologyStore,
+function getCurrentTerm(
+  ontologyStore: OntologyLookup,
   currentTermLabel: string,
   filterTerms: OntologyTermAutocompleteProps['filterTerms'],
-  _signal: AbortSignal,
 ) {
   if (!currentTermLabel) {
     return
   }
 
   // TODO: support prefixed IDs as ontology terms here (e.g. SO:001234)
-  const terms = await ontologyStore.getTermsWithLabelOrSynonym(
-    currentTermLabel,
-    { includeSubclasses: false },
-  )
+  const terms = ontologyStore.getTermsWithLabelOrSynonym(currentTermLabel, {
+    includeSubclasses: false,
+  })
   const term = terms.find((term) => (filterTerms ?? (() => true))(term))
   if (!term) {
     throw new Error(`not a valid ${ontologyStore.ontologyName} term`)
@@ -221,22 +189,21 @@ async function getCurrentTerm(
   return term
 }
 
-async function getValidTerms(
-  ontologyStore: OntologyStore,
+function getValidTerms(
+  ontologyStore: OntologyLookup,
   fetchValidTerms: OntologyTermAutocompleteProps['fetchValidTerms'],
   filterTerms: OntologyTermAutocompleteProps['filterTerms'],
-  signal: AbortSignal,
 ) {
   let result: OntologyTerm[] | undefined
   if (fetchValidTerms) {
-    const customTermList = await fetchValidTerms(ontologyStore, signal)
+    const customTermList = fetchValidTerms(ontologyStore)
     if (customTermList) {
       result = customTermList
     }
   }
 
   if (!result) {
-    result = await ontologyStore.getAllTerms()
+    result = ontologyStore.getAllTerms()
   }
   return filterTerms ? result.filter((element) => filterTerms(element)) : result
 }

@@ -1,4 +1,8 @@
-export { AssemblyEntity } from './AssemblyEntity.js'
+export { AssemblyEntity, AssemblyVisibility } from './AssemblyEntity.js'
+export {
+  AssemblyPermissionEntity,
+  AssemblyRole,
+} from './AssemblyPermissionEntity.js'
 export { OrganismEntity } from './OrganismEntity.js'
 export { ChangeEntity } from './ChangeEntity.js'
 export { CheckEntity } from './CheckEntity.js'
@@ -10,4 +14,6 @@ export { FileEntity, FileType } from './FileEntity.js'
 export { JBrowseConfigEntity } from './JBrowseConfigEntity.js'
 export { RefSeqChunkEntity } from './RefSeqChunkEntity.js'
 export { RefSeqEntity } from './RefSeqEntity.js'
+export { TextSearchAdapterConfigEntity } from './TextSearchAdapterConfigEntity.js'
+export { TrackConfigEntity } from './TrackConfigEntity.js'
 export { UserEntity, UserRole } from './UserEntity.js'

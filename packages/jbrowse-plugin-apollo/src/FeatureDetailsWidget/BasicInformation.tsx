@@ -12,14 +12,70 @@ import { observer } from 'mobx-react'
 import React, { useState } from 'react'
 
 import { isOntologyClass } from '../OntologyManager'
-import type OntologyStore from '../OntologyManager/OntologyStore'
+import type { OntologyLookup } from '../OntologyManager/OntologyLookup'
 import { fetchValidDescendantTerms } from '../OntologyManager/util'
 import { OntologyTermAutocomplete } from '../components/OntologyTermAutocomplete'
 import type { ApolloSessionModel } from '../session'
+import { isReadOnly } from '../util'
 
 import { NumberTextField } from './NumberTextField'
 
+function strandLabel(strand: 1 | -1 | undefined) {
+  if (strand === 1) {
+    return '+ (positive)'
+  }
+  if (strand === -1) {
+    return '- (negative)'
+  }
+  return 'none'
+}
+
+const ReadOnlyBasicInformation = observer(function ReadOnlyBasicInformation({
+  feature,
+}: {
+  feature: AnnotationFeature
+}) {
+  const { max, min, strand, type } = feature
+  return (
+    <div data-testid="basic_information">
+      <Typography variant="body2">
+        <strong>Start:</strong> {min + 1}
+      </Typography>
+      <Typography variant="body2">
+        <strong>End:</strong> {max}
+      </Typography>
+      <Typography variant="body2">
+        <strong>Type:</strong> {type}
+      </Typography>
+      <Typography variant="body2">
+        <strong>Strand:</strong> {strandLabel(strand)}
+      </Typography>
+    </div>
+  )
+})
+
 export const BasicInformation = observer(function BasicInformation({
+  assembly,
+  feature,
+  session,
+}: {
+  feature: AnnotationFeature
+  session: ApolloSessionModel
+  assembly: string
+}) {
+  if (isReadOnly(session)) {
+    return <ReadOnlyBasicInformation feature={feature} />
+  }
+  return (
+    <EditableBasicInformation
+      feature={feature}
+      session={session}
+      assembly={assembly}
+    />
+  )
+})
+
+const EditableBasicInformation = observer(function EditableBasicInformation({
   assembly,
   feature,
   session,
@@ -93,19 +149,11 @@ export const BasicInformation = observer(function BasicInformation({
     return true
   }
 
-  async function fetchValidTerms(
-    parentFeature: undefined | AnnotationFeature,
-    ontologyStore: OntologyStore,
-    _signal: AbortSignal,
-  ) {
-    const terms = await fetchValidDescendantTerms(
-      parentFeature,
-      ontologyStore,
-      _signal,
-    )
+  function fetchValidTerms(ontologyStore: OntologyLookup) {
+    const terms = fetchValidDescendantTerms(feature, ontologyStore)
     if (!terms) {
       setTypeWarningText(
-        `Type "${parentFeature?.type}" does not have any children in the ontology`,
+        `Type "${feature?.type}" does not have any children in the ontology`,
       )
       return
     }
@@ -137,7 +185,7 @@ export const BasicInformation = observer(function BasicInformation({
         ontologyName="Sequence Ontology"
         value={type}
         filterTerms={isOntologyClass}
-        fetchValidTerms={fetchValidTerms.bind(null, feature)}
+        fetchValidTerms={fetchValidTerms}
         renderInput={(params) => (
           <TextField
             {...params}

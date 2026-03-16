@@ -19,7 +19,7 @@ import { observer } from 'mobx-react'
 import React, { useEffect, useState } from 'react'
 
 import type { ApolloSessionModel } from '../session'
-import { getRole } from '../util'
+import { isReadOnly } from '../util'
 
 import { Attributes } from './Attributes'
 import { TranscriptSequence } from './TranscriptSequence'
@@ -73,8 +73,7 @@ export const ApolloTranscriptDetailsWidget = observer(
     const currentAssembly =
       apolloSession.apolloDataStore.assemblies.get(assembly)
 
-    const role = getRole(apolloSession) ?? 'admin'
-    const editable = ['admin', 'user'].includes(role)
+    const editable = !isReadOnly(apolloSession)
 
     if (!(feature && currentAssembly)) {
       return null
@@ -87,6 +86,10 @@ export const ApolloTranscriptDetailsWidget = observer(
 
     const sequence = refSeq.getSequence(min, max)
     if (!sequence) {
+      console.debug(
+        '[ApolloTranscriptDetailsWidget] loadRefSeq called from render body — this fires on EVERY render while sequence is missing.',
+        { assembly, refName, min, max },
+      )
       void apolloSession.apolloDataStore.loadRefSeq([
         { assemblyName: assembly, refName, start: min, end: max },
       ])
@@ -172,36 +175,40 @@ export const ApolloTranscriptDetailsWidget = observer(
           </AccordionDetails>
         </Accordion>
         <CustomComponentAfterSummary session={session} feature={feature} />
-        <Accordion
-          style={{ marginTop: 5 }}
-          expanded={panelState.includes('location')}
-          onChange={(e, expanded) => {
-            handlePanelChange(expanded, 'location')
-          }}
-        >
-          <StyledAccordionSummary
-            expandIcon={<ExpandMoreIcon style={{ color: 'white' }} />}
-            aria-controls="panel2-content"
-            id="panel2-header"
-          >
-            <Typography component="span" fontWeight={'bold'}>
-              Location
-            </Typography>
-          </StyledAccordionSummary>
-          <AccordionDetails>
-            <TranscriptWidgetEditLocation
-              feature={feature}
-              refName={refName}
-              session={apolloSession}
-              assembly={currentAssembly._id || ''}
-            />
-            <CustomComponentInsideLocation
-              session={session}
-              feature={feature}
-            />
-          </AccordionDetails>
-        </Accordion>
-        <CustomComponentAfterLocation session={session} feature={feature} />
+        {editable ? (
+          <>
+            <Accordion
+              style={{ marginTop: 5 }}
+              expanded={panelState.includes('location')}
+              onChange={(e, expanded) => {
+                handlePanelChange(expanded, 'location')
+              }}
+            >
+              <StyledAccordionSummary
+                expandIcon={<ExpandMoreIcon style={{ color: 'white' }} />}
+                aria-controls="panel2-content"
+                id="panel2-header"
+              >
+                <Typography component="span" fontWeight={'bold'}>
+                  Location
+                </Typography>
+              </StyledAccordionSummary>
+              <AccordionDetails>
+                <TranscriptWidgetEditLocation
+                  feature={feature}
+                  refName={refName}
+                  session={apolloSession}
+                  assembly={currentAssembly._id || ''}
+                />
+                <CustomComponentInsideLocation
+                  session={session}
+                  feature={feature}
+                />
+              </AccordionDetails>
+            </Accordion>
+            <CustomComponentAfterLocation session={session} feature={feature} />
+          </>
+        ) : null}
         <Accordion
           style={{ marginTop: 5 }}
           expanded={panelState.includes('attrs')}

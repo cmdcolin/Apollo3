@@ -13,6 +13,7 @@ export interface AssemblyRow {
   sequenceSource?: SequenceSource
   checks?: string[]
   organism?: string
+  visibility?: 'public' | 'private'
 }
 
 export interface AssemblyRepository {
@@ -25,4 +26,7 @@ export interface AssemblyRepository {
   ): Promise<AssemblyRow | undefined>
   deleteById(id: string): Promise<boolean>
   findAll(): Promise<AssemblyRow[]>
+  findByIds(ids: string[]): Promise<AssemblyRow[]>
+  findPublic(): Promise<AssemblyRow[]>
+  findAllIds(): Promise<string[]>
 }

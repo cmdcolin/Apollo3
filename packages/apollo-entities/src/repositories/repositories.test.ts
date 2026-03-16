@@ -2,6 +2,7 @@ import type { MikroORM } from '@mikro-orm/core'
 
 import { createTestORM } from '../test-utils.js'
 import { MikroOrmAssemblyRepository } from './MikroOrmAssemblyRepository.js'
+import { MikroOrmAssemblyPermissionRepository } from './MikroOrmAssemblyPermissionRepository.js'
 import { MikroOrmChangeRepository } from './MikroOrmChangeRepository.js'
 import { MikroOrmCheckRepository } from './MikroOrmCheckRepository.js'
 import { MikroOrmCheckResultRepository } from './MikroOrmCheckResultRepository.js'
@@ -11,6 +12,8 @@ import { MikroOrmFileRepository } from './MikroOrmFileRepository.js'
 import { MikroOrmJBrowseConfigRepository } from './MikroOrmJBrowseConfigRepository.js'
 import { MikroOrmRefSeqChunkRepository } from './MikroOrmRefSeqChunkRepository.js'
 import { MikroOrmRefSeqRepository } from './MikroOrmRefSeqRepository.js'
+import { MikroOrmTextSearchAdapterConfigRepository } from './MikroOrmTextSearchAdapterConfigRepository.js'
+import { MikroOrmTrackConfigRepository } from './MikroOrmTrackConfigRepository.js'
 import { MikroOrmUserRepository } from './MikroOrmUserRepository.js'
 
 let orm: MikroORM
@@ -1566,5 +1569,467 @@ describe('End-to-end: assembly with features and sequence', () => {
     expect(await refSeqRepo.findByAssembly('asm-1')).toHaveLength(0)
     expect(await chunkRepo.findByRefSeq('rs-1')).toHaveLength(0)
     expect(await featureRepo.findByRange('rs-1', 0, 2000)).toHaveLength(0)
+  })
+})
+
+describe('MikroOrmTrackConfigRepository', () => {
+  async function setupAssemblies(em: ReturnType<typeof orm.em.fork>) {
+    const asmRepo = new MikroOrmAssemblyRepository(em)
+    await asmRepo.create({ _id: 'asm-1', name: 'volvox' })
+    await asmRepo.create({ _id: 'asm-2', name: 'yeast' })
+    await asmRepo.create({ _id: 'asm-3', name: 'human' })
+  }
+
+  it('should create and find a track config', async () => {
+    const em = orm.em.fork()
+    await setupAssemblies(em)
+    const repo = new MikroOrmTrackConfigRepository(em)
+    const created = await repo.create({
+      _id: 'trk-1',
+      trackId: 'my-track',
+      assemblyIds: ['asm-1'],
+      config: { type: 'QuantitativeTrack', name: 'Coverage' },
+    })
+    expect(created._id).toBe('trk-1')
+    expect(created.trackId).toBe('my-track')
+
+    const found = await repo.findById('trk-1')
+    expect(found).toBeDefined()
+    expect(found!.trackId).toBe('my-track')
+  })
+
+  it('should find by trackId', async () => {
+    const em = orm.em.fork()
+    await setupAssemblies(em)
+    const repo = new MikroOrmTrackConfigRepository(em)
+    await repo.create({
+      _id: 'trk-1',
+      trackId: 'my-track',
+      assemblyIds: ['asm-1'],
+      config: { type: 'QuantitativeTrack' },
+    })
+
+    const found = await repo.findByTrackId('my-track')
+    expect(found).toBeDefined()
+    expect(found!._id).toBe('trk-1')
+
+    expect(await repo.findByTrackId('nonexistent')).toBeUndefined()
+  })
+
+  it('should find by assembly id', async () => {
+    const em = orm.em.fork()
+    await setupAssemblies(em)
+    const repo = new MikroOrmTrackConfigRepository(em)
+    await repo.create({
+      _id: 'trk-1',
+      trackId: 'track-a',
+      assemblyIds: ['asm-1'],
+      config: {},
+    })
+    await repo.create({
+      _id: 'trk-2',
+      trackId: 'track-b',
+      assemblyIds: ['asm-2'],
+      config: {},
+    })
+    await repo.create({
+      _id: 'trk-3',
+      trackId: 'track-c',
+      assemblyIds: ['asm-1', 'asm-2'],
+      config: {},
+    })
+
+    const asm1Tracks = await repo.findByAssemblyId('asm-1')
+    expect(asm1Tracks).toHaveLength(2)
+
+    const asm2Tracks = await repo.findByAssemblyId('asm-2')
+    expect(asm2Tracks).toHaveLength(2)
+
+    expect(await repo.findByAssemblyId('asm-3')).toHaveLength(0)
+  })
+
+  it('should find by assembly ids', async () => {
+    const em = orm.em.fork()
+    await setupAssemblies(em)
+    const repo = new MikroOrmTrackConfigRepository(em)
+    await repo.create({
+      _id: 'trk-1',
+      trackId: 'track-a',
+      assemblyIds: ['asm-1'],
+      config: {},
+    })
+    await repo.create({
+      _id: 'trk-2',
+      trackId: 'track-b',
+      assemblyIds: ['asm-3'],
+      config: {},
+    })
+
+    const tracks = await repo.findByAssemblyIds(['asm-1', 'asm-2'])
+    expect(tracks).toHaveLength(1)
+    expect(tracks[0].trackId).toBe('track-a')
+  })
+
+  it('should update by id', async () => {
+    const em = orm.em.fork()
+    await setupAssemblies(em)
+    const repo = new MikroOrmTrackConfigRepository(em)
+    await repo.create({
+      _id: 'trk-1',
+      trackId: 'my-track',
+      assemblyIds: ['asm-1'],
+      config: { name: 'Old' },
+    })
+
+    const updated = await repo.updateById('trk-1', {
+      config: { name: 'New' },
+    })
+    expect(updated).toBeDefined()
+    expect(updated!.config).toEqual({ name: 'New' })
+  })
+
+  it('should delete by id', async () => {
+    const em = orm.em.fork()
+    await setupAssemblies(em)
+    const repo = new MikroOrmTrackConfigRepository(em)
+    await repo.create({
+      _id: 'trk-1',
+      trackId: 'my-track',
+      assemblyIds: ['asm-1'],
+      config: {},
+    })
+
+    expect(await repo.deleteById('trk-1')).toBe(true)
+    expect(await repo.findById('trk-1')).toBeUndefined()
+    expect(await repo.deleteById('trk-1')).toBe(false)
+  })
+
+  it('should remove assembly from tracks and delete orphans', async () => {
+    const em = orm.em.fork()
+    await setupAssemblies(em)
+    const repo = new MikroOrmTrackConfigRepository(em)
+    await repo.create({
+      _id: 'trk-1',
+      trackId: 'track-a',
+      assemblyIds: ['asm-1', 'asm-2'],
+      config: {},
+    })
+    await repo.create({
+      _id: 'trk-2',
+      trackId: 'track-b',
+      assemblyIds: ['asm-1'],
+      config: {},
+    })
+
+    await repo.removeAssemblyFromTracks('asm-1')
+
+    const trk1 = await repo.findById('trk-1')
+    expect(trk1).toBeDefined()
+    expect(trk1!.assemblyIds).toEqual(['asm-2'])
+
+    expect(await repo.findById('trk-2')).toBeUndefined()
+  })
+})
+
+describe('MikroOrmAssemblyPermissionRepository', () => {
+  async function setupUsersAndAssemblies(em: ReturnType<typeof orm.em.fork>) {
+    const userRepo = new MikroOrmUserRepository(em)
+    const asmRepo = new MikroOrmAssemblyRepository(em)
+    await userRepo.create({
+      _id: 'user-1',
+      username: 'alice',
+      email: 'alice@example.com',
+      role: 'admin',
+    })
+    await userRepo.create({
+      _id: 'user-2',
+      username: 'bob',
+      email: 'bob@example.com',
+      role: 'user',
+    })
+    await asmRepo.create({ _id: 'asm-1', name: 'volvox' })
+    await asmRepo.create({ _id: 'asm-2', name: 'yeast' })
+  }
+
+  it('should create and find permissions', async () => {
+    const em = orm.em.fork()
+    await setupUsersAndAssemblies(em)
+    const repo = new MikroOrmAssemblyPermissionRepository(em)
+
+    const created = await repo.create({
+      _id: 'perm-1',
+      user: 'user-1',
+      assembly: 'asm-1',
+      role: 'admin',
+    })
+    expect(created._id).toBe('perm-1')
+    expect(created.role).toBe('admin')
+
+    const found = await repo.findById('perm-1')
+    expect(found).toBeDefined()
+    expect(found!.user).toBe('user-1')
+    expect(found!.assembly).toBe('asm-1')
+  })
+
+  it('should find by user', async () => {
+    const em = orm.em.fork()
+    await setupUsersAndAssemblies(em)
+    const repo = new MikroOrmAssemblyPermissionRepository(em)
+
+    await repo.create({
+      _id: 'perm-1',
+      user: 'user-1',
+      assembly: 'asm-1',
+      role: 'admin',
+    })
+    await repo.create({
+      _id: 'perm-2',
+      user: 'user-1',
+      assembly: 'asm-2',
+      role: 'readOnly',
+    })
+    await repo.create({
+      _id: 'perm-3',
+      user: 'user-2',
+      assembly: 'asm-1',
+      role: 'user',
+    })
+
+    const user1Perms = await repo.findByUser('user-1')
+    expect(user1Perms).toHaveLength(2)
+
+    const user2Perms = await repo.findByUser('user-2')
+    expect(user2Perms).toHaveLength(1)
+  })
+
+  it('should find by assembly', async () => {
+    const em = orm.em.fork()
+    await setupUsersAndAssemblies(em)
+    const repo = new MikroOrmAssemblyPermissionRepository(em)
+
+    await repo.create({
+      _id: 'perm-1',
+      user: 'user-1',
+      assembly: 'asm-1',
+      role: 'admin',
+    })
+    await repo.create({
+      _id: 'perm-2',
+      user: 'user-2',
+      assembly: 'asm-1',
+      role: 'user',
+    })
+
+    const perms = await repo.findByAssembly('asm-1')
+    expect(perms).toHaveLength(2)
+  })
+
+  it('should find by user and assembly', async () => {
+    const em = orm.em.fork()
+    await setupUsersAndAssemblies(em)
+    const repo = new MikroOrmAssemblyPermissionRepository(em)
+
+    await repo.create({
+      _id: 'perm-1',
+      user: 'user-1',
+      assembly: 'asm-1',
+      role: 'admin',
+    })
+
+    const found = await repo.findByUserAndAssembly('user-1', 'asm-1')
+    expect(found).toBeDefined()
+    expect(found!.role).toBe('admin')
+
+    expect(await repo.findByUserAndAssembly('user-2', 'asm-1')).toBeUndefined()
+  })
+
+  it('should delete by user and assembly', async () => {
+    const em = orm.em.fork()
+    await setupUsersAndAssemblies(em)
+    const repo = new MikroOrmAssemblyPermissionRepository(em)
+
+    await repo.create({
+      _id: 'perm-1',
+      user: 'user-1',
+      assembly: 'asm-1',
+      role: 'admin',
+    })
+
+    expect(await repo.deleteByUserAndAssembly('user-1', 'asm-1')).toBe(true)
+    expect(await repo.findByUserAndAssembly('user-1', 'asm-1')).toBeUndefined()
+    expect(await repo.deleteByUserAndAssembly('user-1', 'asm-1')).toBe(false)
+  })
+
+  it('should delete by assembly', async () => {
+    const em = orm.em.fork()
+    await setupUsersAndAssemblies(em)
+    const repo = new MikroOrmAssemblyPermissionRepository(em)
+
+    await repo.create({
+      _id: 'perm-1',
+      user: 'user-1',
+      assembly: 'asm-1',
+      role: 'admin',
+    })
+    await repo.create({
+      _id: 'perm-2',
+      user: 'user-2',
+      assembly: 'asm-1',
+      role: 'user',
+    })
+
+    await repo.deleteByAssembly('asm-1')
+    expect(await repo.findByAssembly('asm-1')).toHaveLength(0)
+  })
+})
+
+describe('MikroOrmTextSearchAdapterConfigRepository', () => {
+  async function setupAssemblies(em: ReturnType<typeof orm.em.fork>) {
+    const asmRepo = new MikroOrmAssemblyRepository(em)
+    await asmRepo.create({ _id: 'asm-1', name: 'volvox' })
+    await asmRepo.create({ _id: 'asm-2', name: 'yeast' })
+    await asmRepo.create({ _id: 'asm-3', name: 'human' })
+  }
+
+  it('should create and find an adapter config', async () => {
+    const em = orm.em.fork()
+    await setupAssemblies(em)
+    const repo = new MikroOrmTextSearchAdapterConfigRepository(em)
+    const created = await repo.create({
+      _id: 'tsa-1',
+      textSearchAdapterId: 'my-adapter',
+      assemblyIds: ['asm-1'],
+      config: { type: 'JBrowse1TextSearchAdapter' },
+    })
+    expect(created._id).toBe('tsa-1')
+
+    const found = await repo.findById('tsa-1')
+    expect(found).toBeDefined()
+    expect(found!.textSearchAdapterId).toBe('my-adapter')
+  })
+
+  it('should find by adapter id', async () => {
+    const em = orm.em.fork()
+    await setupAssemblies(em)
+    const repo = new MikroOrmTextSearchAdapterConfigRepository(em)
+    await repo.create({
+      _id: 'tsa-1',
+      textSearchAdapterId: 'my-adapter',
+      assemblyIds: ['asm-1'],
+      config: {},
+    })
+
+    const found = await repo.findByAdapterId('my-adapter')
+    expect(found).toBeDefined()
+    expect(found!._id).toBe('tsa-1')
+
+    expect(await repo.findByAdapterId('nonexistent')).toBeUndefined()
+  })
+
+  it('should find by assembly id', async () => {
+    const em = orm.em.fork()
+    await setupAssemblies(em)
+    const repo = new MikroOrmTextSearchAdapterConfigRepository(em)
+    await repo.create({
+      _id: 'tsa-1',
+      textSearchAdapterId: 'adapter-a',
+      assemblyIds: ['asm-1'],
+      config: {},
+    })
+    await repo.create({
+      _id: 'tsa-2',
+      textSearchAdapterId: 'adapter-b',
+      assemblyIds: ['asm-2'],
+      config: {},
+    })
+
+    expect(await repo.findByAssemblyId('asm-1')).toHaveLength(1)
+    expect(await repo.findByAssemblyId('asm-3')).toHaveLength(0)
+  })
+
+  it('should remove assembly from adapters and delete orphans', async () => {
+    const em = orm.em.fork()
+    await setupAssemblies(em)
+    const repo = new MikroOrmTextSearchAdapterConfigRepository(em)
+    await repo.create({
+      _id: 'tsa-1',
+      textSearchAdapterId: 'adapter-a',
+      assemblyIds: ['asm-1', 'asm-2'],
+      config: {},
+    })
+    await repo.create({
+      _id: 'tsa-2',
+      textSearchAdapterId: 'adapter-b',
+      assemblyIds: ['asm-1'],
+      config: {},
+    })
+
+    await repo.removeAssemblyFromAdapters('asm-1')
+
+    const tsa1 = await repo.findById('tsa-1')
+    expect(tsa1).toBeDefined()
+    expect(tsa1!.assemblyIds).toEqual(['asm-2'])
+
+    expect(await repo.findById('tsa-2')).toBeUndefined()
+  })
+
+  it('should update by id', async () => {
+    const em = orm.em.fork()
+    await setupAssemblies(em)
+    const repo = new MikroOrmTextSearchAdapterConfigRepository(em)
+    await repo.create({
+      _id: 'tsa-1',
+      textSearchAdapterId: 'adapter-a',
+      assemblyIds: ['asm-1'],
+      config: { name: 'Old' },
+    })
+
+    const updated = await repo.updateById('tsa-1', {
+      config: { name: 'New' },
+    })
+    expect(updated).toBeDefined()
+    expect(updated!.config).toEqual({ name: 'New' })
+  })
+
+  it('should delete by id', async () => {
+    const em = orm.em.fork()
+    await setupAssemblies(em)
+    const repo = new MikroOrmTextSearchAdapterConfigRepository(em)
+    await repo.create({
+      _id: 'tsa-1',
+      textSearchAdapterId: 'adapter-a',
+      assemblyIds: ['asm-1'],
+      config: {},
+    })
+
+    expect(await repo.deleteById('tsa-1')).toBe(true)
+    expect(await repo.findById('tsa-1')).toBeUndefined()
+    expect(await repo.deleteById('tsa-1')).toBe(false)
+  })
+})
+
+describe('Assembly visibility field', () => {
+  it('should default to private', async () => {
+    const repo = new MikroOrmAssemblyRepository(orm.em.fork())
+    const created = await repo.create({
+      _id: 'asm-1',
+      name: 'volvox',
+    })
+    expect(created.visibility).toBe('private')
+  })
+
+  it('should store and update visibility', async () => {
+    const repo = new MikroOrmAssemblyRepository(orm.em.fork())
+    await repo.create({
+      _id: 'asm-1',
+      name: 'volvox',
+      visibility: 'public',
+    })
+
+    const found = await repo.findById('asm-1')
+    expect(found!.visibility).toBe('public')
+
+    const updated = await repo.updateById('asm-1', { visibility: 'private' })
+    expect(updated!.visibility).toBe('private')
   })
 })

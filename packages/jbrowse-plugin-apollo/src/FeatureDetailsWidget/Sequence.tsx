@@ -53,6 +53,10 @@ export const Sequence = observer(function Sequence({
   if (sequence) {
     sequence = formatSequence(sequence, refName, min, max)
   } else {
+    console.debug(
+      '[Sequence] loadRefSeq called from render body — this fires on EVERY render while sequence is missing.',
+      { assembly, refName, min, max },
+    )
     void session.apolloDataStore.loadRefSeq([
       { assemblyName: assembly, refName, start: min, end: max },
     ])

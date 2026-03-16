@@ -161,7 +161,7 @@ export const LinearApolloDisplayComponent = observer(function DisplayComponent({
   const session = getSession(model) as unknown as ApolloSessionModel
   const { ontologyManager } = session.apolloDataStore
   const { featureTypeOntology } = ontologyManager
-  const ontologyStore = featureTypeOntology?.dataStore
+  const ontologyAvailable = featureTypeOntology !== undefined
 
   const { classes } = useStyles()
 
@@ -184,7 +184,7 @@ export const LinearApolloDisplayComponent = observer(function DisplayComponent({
     model.setDetailsHeight(model.detailsHeight - delta)
   }
 
-  if (!ontologyStore) {
+  if (!ontologyAvailable) {
     return (
       <div className={classes.alertContainer}>
         <Alert severity="error">Could not load feature type ontology.</Alert>
@@ -253,7 +253,7 @@ export const LinearApolloSixFrameDisplayComponent = observer(
     const session = getSession(model) as unknown as ApolloSessionModel
     const { ontologyManager } = session.apolloDataStore
     const { featureTypeOntology } = ontologyManager
-    const ontologyStore = featureTypeOntology?.dataStore
+    const ontologyAvailable = featureTypeOntology !== undefined
 
     const { classes } = useStyles()
 
@@ -277,7 +277,7 @@ export const LinearApolloSixFrameDisplayComponent = observer(
       model.setDetailsHeight(detailsHeight - delta)
     }
 
-    if (!ontologyStore) {
+    if (!ontologyAvailable) {
       return (
         <div className={classes.alertContainer}>
           <Alert severity="error">Could not load feature type ontology.</Alert>

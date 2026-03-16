@@ -113,13 +113,13 @@ Assembly metadata no longer includes `internetAccountConfigId` — just
 
 ## Impact
 
-| Metric | Before | After |
-| --- | --- | --- |
-| ApolloInternetAccount files | 6 | 0 |
-| Lines in InternetAccount model | ~430 | 0 |
-| Multi-account UI code | ~200 lines across 6 components | 0 |
-| Auth mechanisms | Cookie + JWT token + Authorization header | Cookie only |
-| Plugin bundle size | 1.57 MB | 1.56 MB |
+| Metric                         | Before                                    | After       |
+| ------------------------------ | ----------------------------------------- | ----------- |
+| ApolloInternetAccount files    | 6                                         | 0           |
+| Lines in InternetAccount model | ~430                                      | 0           |
+| Multi-account UI code          | ~200 lines across 6 components            | 0           |
+| Auth mechanisms                | Cookie + JWT token + Authorization header | Cookie only |
+| Plugin bundle size             | 1.57 MB                                   | 1.56 MB     |
 
 ## Login Flow (Current)
 

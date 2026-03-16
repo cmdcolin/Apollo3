@@ -1,5 +1,6 @@
 import { MikroORM, RequestContext } from '@mikro-orm/core'
 import {
+  Global,
   Inject,
   Logger,
   Module,
@@ -8,14 +9,16 @@ import {
 
 import { MessagesModule } from '../messages/messages.module.js'
 
+import { ActiveUsersService } from './active-users.service.js'
 import { UsersController } from './users.controller.js'
 import { UsersService } from './users.service.js'
 
+@Global()
 @Module({
   controllers: [UsersController],
-  providers: [UsersService],
+  providers: [UsersService, ActiveUsersService],
   imports: [MessagesModule],
-  exports: [UsersService],
+  exports: [UsersService, ActiveUsersService],
 })
 export class UsersModule implements OnApplicationBootstrap {
   private readonly logger = new Logger(UsersModule.name)

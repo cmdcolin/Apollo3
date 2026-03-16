@@ -1,7 +1,5 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-/* eslint-disable @typescript-eslint/use-unknown-in-catch-callback-variable */
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
-import { isAbortException } from '@jbrowse/core/util/aborting'
 import { getParent } from '@jbrowse/mobx-state-tree'
 import {
   Autocomplete,
@@ -23,30 +21,18 @@ import {
   type OntologyTerm,
   isOntologyClass,
 } from '../OntologyManager'
-import type { Match } from '../OntologyManager/OntologyStore/fulltext'
-import { isDeprecated } from '../OntologyManager/OntologyStore/indexeddb-schema'
+import { isDeprecated } from '../OntologyManager/OntologyLookup'
 import type { ApolloSessionModel } from '../session'
+
+interface FulltextMatch {
+  term: OntologyTerm
+  fieldName: string
+}
 
 interface TermValue {
   term: OntologyTerm
-  matches?: Match[]
+  matches?: FulltextMatch[]
 }
-
-// interface TermAutocompleteResult extends TermValue {
-//   label: string[]
-//   match: string
-//   category: string[]
-//   taxon: string
-//   taxon_label: string
-//   highlight: string
-//   has_highlight: boolean
-// }
-
-// interface TermAutocompleteResponse {
-//   docs: TermAutocompleteResult[]
-// }
-
-// const hiliteRegex = /(?<=<em class="hilite">)(.*?)(?=<\/em>)/g
 
 function TermTagWithTooltip({
   getItemProps,
@@ -62,39 +48,16 @@ function TermTagWithTooltip({
   const manager = getParent<OntologyManager>(ontology, 2)
 
   const [description, setDescription] = React.useState('')
-  const [errorMessage, setErrorMessage] = React.useState('')
 
   React.useEffect(() => {
-    const controller = new AbortController()
-    const { signal } = controller
-    async function fetchDescription() {
-      const termUrl = manager.expandPrefixes(termId)
-      const db = await ontology.dataStore?.db
-      if (!db || signal.aborted) {
-        return
-      }
-      const term = await db
-        .transaction('nodes')
-        .objectStore('nodes')
-        .get(termUrl)
-
-      if (term && term.lbl && !signal.aborted) {
-        setDescription(term.lbl || 'no label')
-      }
+    const { dataStore } = ontology
+    if (!dataStore) {
+      return
     }
-    fetchDescription().catch((error) => {
-      if (!signal.aborted) {
-        setErrorMessage(String(error))
-      }
-    })
-
-    return () => {
-      controller.abort(
-        new DOMException(
-          'Cancel fetching term description from ontology store',
-          'AbortError',
-        ),
-      )
+    const termUrl = manager.expandPrefixes(termId)
+    const term = dataStore.getNodeById(termUrl)
+    if (term?.lbl) {
+      setDescription(term.lbl)
     }
   }, [termId, ontology, manager])
 
@@ -102,8 +65,7 @@ function TermTagWithTooltip({
     <Tooltip title={description}>
       <div>
         <Chip
-          label={errorMessage || manager.applyPrefixes(termId)}
-          color={errorMessage ? 'error' : 'default'}
+          label={manager.applyPrefixes(termId)}
           size="small"
           {...getItemProps({ index })}
         />
@@ -144,8 +106,8 @@ export function OntologyTermMultiSelect({
   const getOntologyTerms = React.useMemo(
     () =>
       debounce(
-        async (
-          request: { input: string; signal: AbortSignal },
+        (
+          request: { input: string },
           callback: (results: TermValue[]) => void,
         ) => {
           if (!ontology) {
@@ -155,13 +117,9 @@ export function OntologyTermMultiSelect({
           if (!dataStore) {
             return
           }
-          const { input, signal } = request
+          const { input } = request
           try {
-            const matches = await dataStore.getTermsByFulltext(
-              input,
-              undefined,
-              signal,
-            )
+            const matches = dataStore.getTermsByFulltext(input)
             // aggregate the matches by term
             const byTerm = new Map<string, Required<TermValue>>()
             const options: Required<TermValue>[] = []
@@ -182,9 +140,7 @@ export function OntologyTermMultiSelect({
             }
             callback(options)
           } catch (error) {
-            if (!isAbortException(error)) {
-              setErrorMessage(String(error))
-            }
+            setErrorMessage(String(error))
           }
         },
         400,
@@ -193,9 +149,6 @@ export function OntologyTermMultiSelect({
   )
 
   React.useEffect(() => {
-    const aborter = new AbortController()
-    const { signal } = aborter
-
     if (inputValue === '') {
       setOptions([])
       return
@@ -203,7 +156,7 @@ export function OntologyTermMultiSelect({
 
     setLoading(true)
 
-    void getOntologyTerms({ input: inputValue, signal }, (results) => {
+    void getOntologyTerms({ input: inputValue }, (results) => {
       let newOptions: readonly TermValue[] = []
       if (value.length > 0) {
         newOptions = value
@@ -214,12 +167,6 @@ export function OntologyTermMultiSelect({
       setOptions(newOptions)
       setLoading(false)
     })
-
-    return () => {
-      aborter.abort(
-        new DOMException('Cancel getting ontology terms', 'AbortError'),
-      )
-    }
   }, [getOntologyTerms, ontology, includeDeprecated, inputValue, value])
 
   if (!ontology) {
@@ -324,15 +271,15 @@ function Option(props: {
   const { inputValue, ontologyManager, option, ...other } = props
   const matches = option.matches ?? []
   const fields = matches
-    .filter((match) => match.field.jsonPath !== '$.lbl')
+    .filter((match) => match.fieldName !== 'Label')
     .map((match) => {
       return (
-        <React.Fragment key={`option-${match.term.id}-${match.str}`}>
+        <React.Fragment key={`option-${match.term.id}-${match.fieldName}`}>
           <Typography component="dt" variant="body2" color="text.secondary">
-            {match.field.displayName}
+            {match.fieldName}
           </Typography>
           <dd>
-            <HighlightedText str={match.str} search={inputValue} />
+            <HighlightedText str={match.term.lbl ?? ''} search={inputValue} />
           </dd>
         </React.Fragment>
       )

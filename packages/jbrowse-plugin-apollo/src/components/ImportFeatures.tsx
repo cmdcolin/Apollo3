@@ -104,6 +104,17 @@ export function ImportFeatures({
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (submitted) {
+      console.debug(
+        '[ImportFeatures] onSubmit called while already submitted — confirms double-submit race condition.',
+      )
+      return
+    }
+    console.debug('[ImportFeatures] onSubmit called.', {
+      file: file?.name,
+      assembly: selectedAssembly?.name,
+      submitted,
+    })
     setErrorMessage('')
     setLoading(true)
     setSubmitted(true)

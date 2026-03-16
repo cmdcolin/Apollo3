@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import {
   changeRegistry,
@@ -110,7 +111,7 @@ async function bootstrap() {
 
   // Serve JBrowse static files from JBROWSE_STATIC_DIR (if configured)
   // under /jbrowse/. config.json is excluded — served dynamically by
-  // JBrowseController.
+  // JBrowseController. index.html is wrapped to support ?assemblies= param.
   if (JBROWSE_STATIC_DIR) {
     const staticDir = path.resolve(JBROWSE_STATIC_DIR)
     // eslint-disable-next-line no-console
@@ -121,8 +122,65 @@ async function bootstrap() {
         next()
         return
       }
+      if (req.path === '/' || req.path === '/index.html') {
+        const indexPath = path.join(staticDir, 'index.html')
+        if (fs.existsSync(indexPath)) {
+          let html = fs.readFileSync(indexPath, 'utf8')
+          const configScript = `<script>
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var assemblies = params.get('assemblies');
+  if (assemblies) {
+    window.__jbrowseConfigPath = '/jbrowse/config.json?assemblies=' + encodeURIComponent(assemblies);
+  }
+})();
+</script>`
+          html = html.replace('</head>', configScript + '\n</head>')
+          res.type('html').send(html)
+          return
+        }
+      }
       staticMiddleware(req, res, next)
     })
+  }
+
+  // Serve demo evidence track data files (BAM, VCF, BigWig, etc.) under
+  // /jbrowse/volvox/. These are referenced by track configs stored in the DB.
+  const demoDataDir = path.resolve('../../demo-data')
+  if (fs.existsSync(demoDataDir)) {
+    app.use('/jbrowse', express.static(demoDataDir))
+  }
+
+  // Serve detail pages for dynamic routes like /ui/assemblies/:id
+  // and /ui/organisms/:id. These aren't static files, so the
+  // ServeStaticModule won't match them — we serve the built SPA HTML
+  // and let the client-side JS extract the ID from the URL.
+  const pagesDir = path.join(
+    path.dirname(fileURLToPath(import.meta.url)),
+    'pages',
+  )
+  const detailPages: Record<string, string> = {
+    assemblies: path.join(pagesDir, 'ui/assembly-detail/index.html'),
+    organisms: path.join(pagesDir, 'ui/organism-detail/index.html'),
+  }
+  for (const [resource, htmlFile] of Object.entries(detailPages)) {
+    app.use(
+      `/ui/${resource}`,
+      (req: Request, _res: Response, next: () => void) => {
+        // Let the list page (/ui/assemblies/ or /ui/assemblies/index.html)
+        // and static assets fall through to ServeStaticModule
+        if (
+          req.path === '/' ||
+          req.path === '/index.html' ||
+          req.path.startsWith('/assets/')
+        ) {
+          next()
+          return
+        }
+        // Serve the detail page HTML for /ui/assemblies/:id etc.
+        _res.sendFile(htmlFile)
+      },
+    )
   }
 
   const server = await app.listen(PORT, '0.0.0.0')

@@ -158,6 +158,9 @@ export function mouseEventsModelFactory(
 
   return LinearApolloSixFrameDisplayMouseEvents.views((self) => ({
     contextMenuItems(event: React.MouseEvent<HTMLDivElement>): MenuItem[] {
+      if (self.readOnly) {
+        return []
+      }
       const { hoveredFeature } = self
       if (!hoveredFeature) {
         return []
@@ -180,6 +183,9 @@ export function mouseEventsModelFactory(
         edge: Edge,
         shrinkParent = false,
       ) {
+        if (self.readOnly) {
+          return
+        }
         self.apolloDragging = {
           start: mousePosition,
           current: mousePosition,

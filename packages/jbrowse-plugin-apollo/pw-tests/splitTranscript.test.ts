@@ -61,7 +61,9 @@ test('Split transcript at first exon boundary', async ({ page }) => {
   )
 
   // mrna03 should be gone after split
-  await expect(page.getByText('Id=mrna03,')).not.toBeVisible({ timeout: 10_000 })
+  await expect(page.getByText('Id=mrna03,')).not.toBeVisible({
+    timeout: 10_000,
+  })
 
   // Two new transcripts should appear (their IDs are generated, so verify by count)
   // gene02 should now have mrna02, mrna04, mrna05, mrna06, and the 2 new split transcripts
@@ -72,7 +74,9 @@ test('Split transcript at first exon boundary', async ({ page }) => {
   await expect(page.getByText('Id=gene02,')).toBeVisible()
 })
 
-test('Split transcript shows error when fewer than 2 exons', async ({ page }) => {
+test('Split transcript shows error when fewer than 2 exons', async ({
+  page,
+}) => {
   // onegene.fasta.gff3 has tx1 with only 1 CDS child and no exon children
   // Use mergeTranscripts.gff3 but look for mrna05 which has 1 exon
   await addAssemblyFromGff(page, ASSEMBLY, GFF_PATH)
@@ -87,7 +91,9 @@ test('Split transcript shows error when fewer than 2 exons', async ({ page }) =>
   const dialog = page.locator('[data-testid="split-transcript"]')
   await expect(dialog).toBeVisible({ timeout: 5_000 })
   await expect(
-    dialog.getByText('This transcript has fewer than 2 exons and cannot be split.'),
+    dialog.getByText(
+      'This transcript has fewer than 2 exons and cannot be split.',
+    ),
   ).toBeVisible()
 
   // Submit button should be disabled
@@ -115,7 +121,9 @@ test('Split and undo restores original transcript', async ({ page }) => {
   )
 
   // mrna03 should be gone
-  await expect(page.getByText('Id=mrna03,')).not.toBeVisible({ timeout: 10_000 })
+  await expect(page.getByText('Id=mrna03,')).not.toBeVisible({
+    timeout: 10_000,
+  })
 
   // Undo the split — Apollo menu → Undo
   await page.getByRole('button', { name: 'Apollo' }).click()

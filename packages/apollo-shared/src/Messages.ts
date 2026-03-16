@@ -2,6 +2,10 @@ import type { SerializedChange } from '@apollo-annotation/common'
 
 export const COMMON_CHANNEL = 'COMMON'
 
+export function assemblyChannel(assemblyId: string) {
+  return `assembly:${assemblyId}`
+}
+
 interface BaseMessage {
   channel: string
   userName: string
@@ -11,4 +15,5 @@ interface BaseMessage {
 export interface ChangeMessage extends BaseMessage {
   changeInfo: SerializedChange
   changeSequence: number
+  assemblyId?: string
 }

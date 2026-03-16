@@ -1,19 +1,15 @@
 import type { AssemblyRow } from '@apollo-annotation/common'
-import { Inject, Injectable, Logger } from '@nestjs/common'
+import { Inject, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import merge from 'deepmerge'
 
-import { AssembliesService } from '../assemblies/assemblies.service.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
-import { RefSeqsService } from '../refSeqs/refSeqs.service.js'
+import { PermissionService } from '../permissions/permission.service.js'
 import { Role } from '../utils/role/role.enum.js'
 
 @Injectable()
 export class JBrowseService {
   constructor(
-    @Inject(AssembliesService)
-    private readonly assembliesService: AssembliesService,
-    @Inject(RefSeqsService) private readonly refSeqsService: RefSeqsService,
     @Inject(ConfigService)
     private readonly configService: ConfigService<
       {
@@ -26,9 +22,9 @@ export class JBrowseService {
       true
     >,
     @Inject(DatabaseService) private readonly db: DatabaseService,
+    @Inject(PermissionService)
+    private readonly permissionService: PermissionService,
   ) {}
-
-  private readonly logger = new Logger(JBrowseService.name)
 
   getConfiguration(role?: Role, userId?: string, userSessionId?: string) {
     const url = this.configService.get('URL', { infer: true })
@@ -37,6 +33,10 @@ export class JBrowseService {
         infer: true,
       }) ?? 'sequence_ontology.json'
     const configuration = {
+      logoPath: {
+        uri: new URL('apollo_logo.svg', url).href,
+        locationType: 'UriLocation',
+      },
       theme: {
         palette: {
           primary: {
@@ -79,12 +79,14 @@ export class JBrowseService {
         },
       }
     }
+    const readOnly = role === Role.ReadOnly
     return {
       ...configuration,
       ApolloPlugin: {
         hasRole: true,
         baseURL: url,
         role,
+        readOnly,
         userId,
         userSessionId,
         ontologies: [
@@ -118,81 +120,74 @@ export class JBrowseService {
     }
   }
 
-  async getAssemblies() {
+  getAssemblyConfig(assembly: AssemblyRow) {
     const url = this.configService.get('URL', { infer: true })
-    const assemblies = await this.assembliesService.findAll()
-    return assemblies.map((assembly: AssemblyRow) => {
-      const assemblyId = String(assembly._id)
-      const trackId = `sequenceConfigId-${assembly.name}`
-      return {
-        name: assemblyId,
-        aliases:
-          assembly.aliases && assembly.aliases.length > 0
-            ? [...assembly.aliases]
-            : [assembly.name],
-        displayName: assembly.displayName || assembly.name,
-        sequence: {
-          trackId,
-          type: 'ReferenceSequenceTrack',
-          adapter: {
-            type: 'ApolloSequenceAdapter',
-            assemblyId,
-            baseURL: {
-              uri: url,
-              locationType: 'UriLocation',
-            },
-          },
-          displays: [
-            {
-              type: 'LinearApolloReferenceSequenceDisplay',
-              displayId: `${trackId}-LinearApolloReferenceSequenceDisplay`,
-            },
-          ],
-          metadata: {
-            apollo: true,
-          },
-        },
-        refNameAliases: {
-          adapter: {
-            type: 'ApolloRefNameAliasAdapter',
-            assemblyId,
-            baseURL: { uri: url, locationType: 'UriLocation' },
-          },
-        },
-      }
-    })
-  }
-
-  async getTracks() {
-    const url = this.configService.get('URL', { infer: true })
-    const assemblies = await this.assembliesService.findAll()
-    return assemblies.map((assembly: AssemblyRow) => {
-      const trackId = `apollo_track_${assembly._id}`
-      return {
-        type: 'ApolloTrack',
+    const assemblyId = String(assembly._id)
+    const trackId = `sequenceConfigId-${assembly.name}`
+    return {
+      name: assemblyId,
+      aliases:
+        assembly.aliases && assembly.aliases.length > 0
+          ? [...assembly.aliases]
+          : [assembly.name],
+      displayName: assembly.displayName || assembly.name,
+      sequence: {
         trackId,
-        name: `Annotations (${assembly.displayName || assembly.name})`,
-        assemblyNames: [assembly._id],
-        textSearching: {
-          textSearchAdapter: {
-            type: 'ApolloTextSearchAdapter',
-            trackId,
-            assemblyNames: [assembly._id],
-            textSearchAdapterId: `apollo_search_${assembly._id}`,
-            baseURL: {
-              uri: url,
-              locationType: 'UriLocation',
-            },
+        type: 'ReferenceSequenceTrack',
+        adapter: {
+          type: 'ApolloSequenceAdapter',
+          assemblyId,
+          baseURL: {
+            uri: url,
+            locationType: 'UriLocation',
           },
         },
-      }
-    })
+        displays: [
+          {
+            type: 'LinearApolloReferenceSequenceDisplay',
+            displayId: `${trackId}-LinearApolloReferenceSequenceDisplay`,
+          },
+        ],
+        metadata: {
+          apollo: true,
+        },
+      },
+      refNameAliases: {
+        adapter: {
+          type: 'ApolloRefNameAliasAdapter',
+          assemblyId,
+          baseURL: { uri: url, locationType: 'UriLocation' },
+        },
+      },
+    }
   }
 
-  async getAggregateTextSearchAdapters() {
+  getApolloTrackConfig(assembly: AssemblyRow) {
     const url = this.configService.get('URL', { infer: true })
-    const assemblies = await this.assembliesService.findAll()
-    return assemblies.map((assembly: AssemblyRow) => ({
+    const trackId = `apollo_track_${assembly._id}`
+    return {
+      type: 'ApolloTrack',
+      trackId,
+      name: `Annotations (${assembly.displayName || assembly.name})`,
+      assemblyNames: [assembly._id],
+      textSearching: {
+        textSearchAdapter: {
+          type: 'ApolloTextSearchAdapter',
+          trackId,
+          assemblyNames: [assembly._id],
+          textSearchAdapterId: `apollo_search_${assembly._id}`,
+          baseURL: {
+            uri: url,
+            locationType: 'UriLocation',
+          },
+        },
+      },
+    }
+  }
+
+  getApolloTextSearchAdapter(assembly: AssemblyRow) {
+    const url = this.configService.get('URL', { infer: true })
+    return {
       type: 'ApolloTextSearchAdapter',
       textSearchAdapterId: `apollo_search_${assembly._id}`,
       trackId: `apollo_track_${assembly._id}`,
@@ -201,7 +196,23 @@ export class JBrowseService {
         uri: url,
         locationType: 'UriLocation',
       },
-    }))
+    }
+  }
+
+  async getAccessibleAssemblies(
+    userId: string | undefined,
+    requestedAssemblyIds: string[] | undefined,
+  ) {
+    if (requestedAssemblyIds) {
+      const filteredIds = await this.permissionService.filterAccessibleIds(
+        userId,
+        requestedAssemblyIds,
+      )
+      return this.db.assembly.findByIds(filteredIds)
+    }
+    const accessibleIds =
+      await this.permissionService.getAccessibleAssemblyIds(userId)
+    return this.db.assembly.findByIds(accessibleIds)
   }
 
   async getJBrowseConfig() {
@@ -209,25 +220,70 @@ export class JBrowseService {
     return row?.config
   }
 
-  async getConfig(role?: Role, userId?: string, userSessionId?: string) {
-    if (!role || role === Role.None) {
-      return {
-        configuration: this.getConfiguration(role, userId, userSessionId),
-        plugins: this.getPlugins(),
-      }
+  async getConfig(
+    role?: Role,
+    userId?: string,
+    userSessionId?: string,
+    assemblyIds?: string[],
+  ) {
+    const configuration = this.getConfiguration(role, userId, userSessionId)
+    const plugins = this.getPlugins()
+    const assemblies = await this.getAccessibleAssemblies(userId, assemblyIds)
+
+    if (assemblies.length === 0) {
+      return { configuration, plugins }
     }
-    const storedConfig = await this.getJBrowseConfig()
+    return this.buildFullConfig(configuration, plugins, assemblies, assemblyIds)
+  }
+
+  private async buildFullConfig(
+    configuration: ReturnType<typeof this.getConfiguration>,
+    plugins: ReturnType<typeof this.getPlugins>,
+    assemblies: AssemblyRow[],
+    requestedAssemblyIds: string[] | undefined,
+  ) {
+    const assemblyConfigs = assemblies.map((a) => this.getAssemblyConfig(a))
+
+    const apolloTracks = assemblies.map((a) => this.getApolloTrackConfig(a))
+    const apolloSearchAdapters = assemblies.map((a) =>
+      this.getApolloTextSearchAdapter(a),
+    )
+
+    const assemblyIdSet = new Set(assemblies.map((a) => a._id))
+    const storedTracks = requestedAssemblyIds
+      ? await this.db.trackConfig.findByAssemblyIds(requestedAssemblyIds)
+      : await this.db.trackConfig.findAll()
+    const filteredStoredTracks = storedTracks.filter((t) =>
+      t.assemblyIds.some((id) => assemblyIdSet.has(id)),
+    )
+    const storedTrackConfigs = filteredStoredTracks.map((t) => t.config)
+
+    const storedTextSearchAdapters = requestedAssemblyIds
+      ? await this.db.textSearchAdapterConfig.findByAssemblyIds(
+          requestedAssemblyIds,
+        )
+      : await this.db.textSearchAdapterConfig.findAll()
+    const filteredStoredAdapters = storedTextSearchAdapters.filter((a) =>
+      a.assemblyIds.some((id) => assemblyIdSet.has(id)),
+    )
+    const storedAdapterConfigs = filteredStoredAdapters.map((a) => a.config)
+
     const generatedConfig = {
-      configuration: this.getConfiguration(role, userId, userSessionId),
-      assemblies: await this.getAssemblies(),
-      tracks: await this.getTracks(),
-      aggregateTextSearchAdapters: await this.getAggregateTextSearchAdapters(),
-      plugins: this.getPlugins(),
+      configuration,
+      assemblies: assemblyConfigs,
+      tracks: [...apolloTracks, ...storedTrackConfigs],
+      aggregateTextSearchAdapters: [
+        ...apolloSearchAdapters,
+        ...storedAdapterConfigs,
+      ],
+      plugins,
       defaultSession: this.getDefaultSession(),
     }
-    if (!storedConfig) {
+
+    const storedGlobalConfig = await this.getJBrowseConfig()
+    if (!storedGlobalConfig) {
       return generatedConfig
     }
-    return merge(generatedConfig, storedConfig)
+    return merge(generatedConfig, storedGlobalConfig)
   }
 }

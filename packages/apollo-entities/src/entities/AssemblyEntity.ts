@@ -7,6 +7,11 @@ type SequenceSource =
   | { type: 'indexed'; fa: string; fai: string; gzi: string }
   | { type: 'chunked'; fa: string }
 
+export enum AssemblyVisibility {
+  PUBLIC = 'public',
+  PRIVATE = 'private',
+}
+
 export const AssemblyEntity = defineEntity({
   name: 'AssemblyEntity',
   tableName: 'assembly',
@@ -20,6 +25,9 @@ export const AssemblyEntity = defineEntity({
     sequenceSource: p.json<SequenceSource>().nullable(),
     checks: p.json<string[]>().nullable(),
     organism: () => p.manyToOne(OrganismEntity).nullable(),
+    visibility: p
+      .enum(() => AssemblyVisibility)
+      .default(AssemblyVisibility.PRIVATE),
   },
   indexes: [{ properties: ['organism'] }],
 })

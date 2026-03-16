@@ -1,20 +1,17 @@
 import type { AnnotationFeature } from '@apollo-annotation/mst'
 
-import type OntologyStore from './OntologyStore'
+import type { OntologyLookup } from './OntologyLookup'
 
 import { isOntologyClass } from '.'
 
-export async function fetchValidDescendantTerms(
+export function fetchValidDescendantTerms(
   parentFeature: AnnotationFeature | undefined,
-  ontologyStore: OntologyStore,
-  _signal: AbortSignal,
+  ontologyStore: OntologyLookup,
 ) {
   if (!parentFeature) {
     return
   }
-  // since this is a child of an existing feature, restrict the autocomplete choices to valid
-  // parts of that feature
-  const parentTypeTerms = await ontologyStore.getTermsWithLabelOrSynonym(
+  const parentTypeTerms = ontologyStore.getTermsWithLabelOrSynonym(
     parentFeature.type,
     { includeSubclasses: false },
   )
@@ -23,7 +20,7 @@ export async function fetchValidDescendantTerms(
   if (parentTypeTerms.length === 0) {
     return
   }
-  const subpartTerms = await ontologyStore.getClassesThat(
+  const subpartTerms = ontologyStore.getClassesThat(
     'part_of',
     parentTypeClassTerms,
   )

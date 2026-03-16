@@ -70,7 +70,6 @@ import {
   LinearApolloDisplayComponent,
   LinearApolloSixFrameDisplayComponent,
 } from './makeDisplayComponent'
-import { addTopLevelMenus } from './menus'
 import { type ApolloSessionModel, extendSession } from './session'
 
 interface RpcHandle {
@@ -441,7 +440,6 @@ export default class ApolloPlugin extends Plugin {
           return
         },
       )
-      addTopLevelMenus(pluginManager.rootModel)
     }
   }
 }

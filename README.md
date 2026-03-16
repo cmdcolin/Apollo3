@@ -16,10 +16,11 @@ See [the contribution guide](./CONTRIBUTING.md) for instructions to developers.
 To boot up the dev server, run:
 
 ```sh
-yarn start
+pnpm start
 ```
 
 This builds shared packages and starts the collaboration server, which serves
-both the API and the JBrowse UI on http://localhost:3999.
+both the API and the JBrowse UI on http://localhost:3999. On first run, it
+automatically seeds a demo database with sample assemblies (volvox and hg38).
 
-Make sure you've run `yarn install` first if you haven't already.
+Make sure you've run `pnpm install` first if you haven't already.

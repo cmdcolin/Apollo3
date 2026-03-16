@@ -4,6 +4,10 @@ export type {
   SequenceSource,
 } from './AssemblyRepository.js'
 export type {
+  AssemblyPermissionRepository,
+  AssemblyPermissionRow,
+} from './AssemblyPermissionRepository.js'
+export type {
   OrganismRepository,
   OrganismRow,
   PaginationOptions,
@@ -26,4 +30,12 @@ export type {
   RefSeqChunkRow,
 } from './RefSeqChunkRepository.js'
 export type { RefSeqRepository, RefSeqRow } from './RefSeqRepository.js'
+export type {
+  TextSearchAdapterConfigRepository,
+  TextSearchAdapterConfigRow,
+} from './TextSearchAdapterConfigRepository.js'
+export type {
+  TrackConfigRepository,
+  TrackConfigRow,
+} from './TrackConfigRepository.js'
 export type { UserRepository, UserRow } from './UserRepository.js'

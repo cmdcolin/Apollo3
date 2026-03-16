@@ -575,6 +575,9 @@ function onMouseDown(
   currentMousePosition: MousePositionWithFeature,
   event: CanvasMouseEvent,
 ) {
+  if (stateModel.readOnly) {
+    return
+  }
   const { feature } = currentMousePosition
   // swallow the mouseDown if we are on the edge of the feature so that we
   // don't start dragging the view if we try to drag the feature edge
@@ -601,14 +604,16 @@ function onMouseMove(
   if (isMousePositionWithFeature(mousePosition)) {
     const { feature, bp } = mousePosition
     stateModel.setHoveredFeature({ feature, bp })
-    const draggableFeature = getDraggableFeatureInfo(
-      mousePosition,
-      feature,
-      stateModel,
-    )
-    if (draggableFeature) {
-      stateModel.setCursor('col-resize')
-      return
+    if (!stateModel.readOnly) {
+      const draggableFeature = getDraggableFeatureInfo(
+        mousePosition,
+        feature,
+        stateModel,
+      )
+      if (draggableFeature) {
+        stateModel.setCursor('col-resize')
+        return
+      }
     }
   }
   stateModel.setCursor()

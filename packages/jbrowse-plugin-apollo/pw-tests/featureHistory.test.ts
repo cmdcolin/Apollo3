@@ -48,7 +48,10 @@ test('Feature history dialog opens and shows changes after an edit', async ({
   await expect(tbody).toBeVisible({ timeout: 10_000 })
 
   // Right-click on the gene feature and open "View feature history"
-  await tbody.locator('tr').filter({ hasText: '=gx1' }).click({ button: 'right' })
+  await tbody
+    .locator('tr')
+    .filter({ hasText: '=gx1' })
+    .click({ button: 'right' })
   await page.getByText('View feature history').click({ timeout: 10_000 })
 
   // Dialog should open
@@ -87,7 +90,10 @@ test('Feature history shows changes for child features of the same gene', async 
   await expect(tbody).toBeVisible({ timeout: 10_000 })
 
   // Open history from the gene row — it should also include changes to child features
-  await tbody.locator('tr').filter({ hasText: '=gx1' }).click({ button: 'right' })
+  await tbody
+    .locator('tr')
+    .filter({ hasText: '=gx1' })
+    .click({ button: 'right' })
   await page.getByText('View feature history').click({ timeout: 10_000 })
 
   const dialog = page.locator('[data-testid="feature-changelog"]')
@@ -96,7 +102,9 @@ test('Feature history shows changes for child features of the same gene', async 
   // The grid should have at least one row (the CDS edit)
   const grid = page.locator('[role="grid"]')
   await expect(grid).toBeVisible({ timeout: 10_000 })
-  const dataRows = grid.locator('[role="row"]').filter({ hasNot: page.locator('[role="columnheader"]') })
+  const dataRows = grid
+    .locator('[role="row"]')
+    .filter({ hasNot: page.locator('[role="columnheader"]') })
   await expect(dataRows).not.toHaveCount(0, { timeout: 10_000 })
 
   await dialog.getByRole('button', { name: 'Close' }).click()
@@ -114,8 +122,16 @@ test('Feature history API returns changes for a specific feature', async ({
 
   // Make two edits to create two change records
   const cds1Row = tbody.locator('tr').filter({ hasText: 'CDS1' })
-  await cds1Row.locator('td').filter({ hasText: '99' }).locator('input').fill('90')
-  await cds1Row.locator('td').filter({ hasText: '99' }).locator('input').press('Enter')
+  await cds1Row
+    .locator('td')
+    .filter({ hasText: '99' })
+    .locator('input')
+    .fill('90')
+  await cds1Row
+    .locator('td')
+    .filter({ hasText: '99' })
+    .locator('input')
+    .press('Enter')
   const firstChange = page.waitForResponse(
     (resp) => resp.url().includes('/changes') && resp.status() === 201,
   )
@@ -125,7 +141,10 @@ test('Feature history API returns changes for a specific feature', async ({
   await expect(tbody).toBeVisible({ timeout: 10_000 })
 
   // Open history for the tx1 transcript
-  await tbody.locator('tr').filter({ hasText: '=tx1' }).click({ button: 'right' })
+  await tbody
+    .locator('tr')
+    .filter({ hasText: '=tx1' })
+    .click({ button: 'right' })
   await page.getByText('View feature history').click({ timeout: 10_000 })
 
   const dialog = page.locator('[data-testid="feature-changelog"]')

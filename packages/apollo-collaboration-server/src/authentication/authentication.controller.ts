@@ -27,11 +27,15 @@ import {
 
 const isProduction = process.env.NODE_ENV === 'production'
 
-const COOKIE_OPTIONS = {
+const COOKIE_BASE = {
   httpOnly: true,
   sameSite: 'lax' as const,
   secure: isProduction,
   path: '/',
+}
+
+const COOKIE_OPTIONS = {
+  ...COOKIE_BASE,
   maxAge: 24 * 60 * 60 * 1000,
 }
 
@@ -102,10 +106,17 @@ export class AuthenticationController {
   }
 
   @Get('guest')
-  async guestLogin(@Res({ passthrough: true }) res: Response) {
+  async guestLogin(
+    @Query('redirect_uri') redirectUri: string | undefined,
+    @Res() res: Response,
+  ) {
     const result = await this.authService.guestLogin()
     res.cookie(AUTH_COOKIE_NAME, result.token, COOKIE_OPTIONS)
-    return result
+    if (redirectUri) {
+      res.redirect(redirectUri)
+    } else {
+      res.json(result)
+    }
   }
 
   @Post('root')
@@ -121,6 +132,6 @@ export class AuthenticationController {
   @Get('logout')
   @Redirect('/')
   logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie(AUTH_COOKIE_NAME, { path: '/' })
+    res.clearCookie(AUTH_COOKIE_NAME, COOKIE_BASE)
   }
 }
