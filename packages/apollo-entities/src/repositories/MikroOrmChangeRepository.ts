@@ -18,6 +18,7 @@ function toRow(entity: InferEntity<typeof ChangeEntity>): ChangeRow {
   return {
     _id: entity._id,
     assembly: entity.assembly ?? undefined,
+    geneId: entity.geneId ?? undefined,
     typeName: entity.typeName,
     changedIds: entity.changedIds,
     changes: entity.changes,
@@ -44,7 +45,7 @@ export class MikroOrmChangeRepository implements ChangeRepository {
   }
 
   async findAll(opts?: {
-    filter?: Partial<Pick<ChangeRow, 'assembly' | 'user' | 'typeName'>>
+    filter?: Partial<Pick<ChangeRow, 'assembly' | 'user' | 'typeName' | 'geneId'>>
     changedIds?: string[]
     sinceSequence?: number
     sort?: 'asc' | 'desc'
@@ -61,6 +62,9 @@ export class MikroOrmChangeRepository implements ChangeRepository {
       }
       if (opts.filter.typeName) {
         where.typeName = opts.filter.typeName
+      }
+      if (opts.filter.geneId) {
+        where.geneId = opts.filter.geneId
       }
     }
     if (opts?.sinceSequence !== undefined) {
@@ -98,5 +102,15 @@ export class MikroOrmChangeRepository implements ChangeRepository {
       return matched.slice(start, end).map(toRow)
     }
     return entities.map(toRow)
+  }
+
+  async countByGeneId(geneId: string) {
+    return this.em.count(ChangeEntity, { geneId })
+  }
+
+  async updateGeneId(changeId: string, geneId: string) {
+    const entity = await this.em.findOneOrFail(ChangeEntity, { _id: changeId })
+    entity.geneId = geneId
+    await this.em.flush()
   }
 }

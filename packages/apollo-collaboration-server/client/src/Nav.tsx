@@ -49,7 +49,7 @@ function useCurrentUser() {
   return user
 }
 
-type Page = 'organisms' | 'assemblies' | 'blast' | 'changes' | 'users'
+type Page = 'organisms' | 'assemblies' | 'sequence-search' | 'changes' | 'users' | 'jobs'
 
 const fileMenuItems: {
   label: string
@@ -59,9 +59,10 @@ const fileMenuItems: {
 }[] = [
   { label: 'Organisms', href: '/ui/organisms/', value: 'organisms' },
   { label: 'Assemblies', href: '/ui/assemblies/', value: 'assemblies' },
-  { label: 'BLAST', href: '/ui/blast/', value: 'blast' },
+  { label: 'Sequence Search', href: '/ui/sequence-search/', value: 'sequence-search' },
   { label: 'Recent Changes', href: '/ui/changes/', value: 'changes' },
   { label: 'Users', href: '/admin/users/', value: 'users', admin: true },
+  { label: 'Analysis Jobs', href: '/admin/jobs/', value: 'jobs', admin: true },
 ]
 
 function NavBar({ current, user }: { current?: Page; user?: UserInfo }) {

@@ -6,6 +6,7 @@ import {
   Get,
   Inject,
   Logger,
+  Param,
   Post,
   Query,
   Req,
@@ -47,6 +48,23 @@ export class ChangesController {
     const pageNum = Math.max(1, Number(pageStr) || 1)
     const lim = Math.min(100, Math.max(1, Number(limit) || 25))
     return this.changesService.findRecent(lim, (pageNum - 1) * lim)
+  }
+
+  @Get('gene/:geneId')
+  async findByGene(
+    @Param('geneId') geneId: string,
+    @Query('limit') limit?: string,
+    @Query('page') pageStr?: string,
+  ) {
+    const pageNum = Math.max(1, Number(pageStr) || 1)
+    const lim = Math.min(100, Math.max(1, Number(limit) || 25))
+    const changes = await this.changesService.findByGeneId(
+      geneId,
+      lim,
+      (pageNum - 1) * lim,
+    )
+    const total = await this.changesService.countByGeneId(geneId)
+    return { changes, total, page: pageNum, limit: lim }
   }
 
   @Get()

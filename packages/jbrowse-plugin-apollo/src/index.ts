@@ -71,6 +71,7 @@ import {
   LinearApolloSixFrameDisplayComponent,
 } from './makeDisplayComponent'
 import { type ApolloSessionModel, extendSession } from './session'
+import { isTiberiusAvailable } from './util'
 
 interface RpcHandle {
   on(event: string, listener: (event: MessageEvent) => void): this
@@ -253,32 +254,40 @@ export default class ApolloPlugin extends Plugin {
                       )
                     },
                   },
-                  {
-                    label: 'Run Tiberius gene prediction',
-                    icon: BiotechIcon,
-                    onClick: () => {
-                      const session = getSession(
-                        self,
-                      ) as unknown as ApolloSessionModel
-                      const { leftOffset, rightOffset } = self
-                      const selectedRegions = self.getSelectedRegions(
-                        leftOffset,
-                        rightOffset,
-                      )
-                      ;(session as unknown as AbstractSessionModel).queueDialog(
-                        (doneCallback) => [
-                          RunTiberius,
-                          {
-                            session,
-                            handleClose: () => {
-                              doneCallback()
-                            },
-                            region: selectedRegions[0],
+                  ...(isTiberiusAvailable(
+                    getSession(self) as unknown as ApolloSessionModel,
+                  )
+                    ? [
+                        {
+                          label: 'Run Tiberius gene prediction',
+                          icon: BiotechIcon,
+                          onClick: () => {
+                            const session = getSession(
+                              self,
+                            ) as unknown as ApolloSessionModel
+                            const { leftOffset, rightOffset } = self
+                            const selectedRegions = self.getSelectedRegions(
+                              leftOffset,
+                              rightOffset,
+                            )
+                            const view = self
+                            ;(
+                              session as unknown as AbstractSessionModel
+                            ).queueDialog((doneCallback) => [
+                              RunTiberius,
+                              {
+                                session,
+                                view,
+                                handleClose: () => {
+                                  doneCallback()
+                                },
+                                region: selectedRegions[0],
+                              },
+                            ])
                           },
-                        ],
-                      )
-                    },
-                  },
+                        },
+                      ]
+                    : []),
                 ]
               },
             }

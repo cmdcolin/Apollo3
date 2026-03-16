@@ -1,6 +1,7 @@
 export class FindChangeDto {
   readonly assembly?: string
   readonly featureId?: string
+  readonly geneId?: string
   readonly reverts?: string
   readonly user?: string
   readonly typeName?: string

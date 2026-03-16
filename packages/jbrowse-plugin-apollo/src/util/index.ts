@@ -44,6 +44,11 @@ export function isReadOnly(session: ApolloSessionModel) {
   return readConfObject(pluginConfiguration, 'readOnly') as boolean
 }
 
+export function isTiberiusAvailable(session: ApolloSessionModel) {
+  const pluginConfiguration = getPluginConfiguration(session)
+  return readConfObject(pluginConfiguration, 'tiberiusAvailable') as boolean
+}
+
 export function getUserId(session: ApolloSessionModel) {
   const pluginConfiguration = getPluginConfiguration(session)
   return (readConfObject(pluginConfiguration, 'userId') as string) || undefined

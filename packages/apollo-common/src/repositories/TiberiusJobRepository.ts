@@ -6,6 +6,8 @@ export interface TiberiusJobRow {
   refSeqName: string
   start: number
   end: number
+  modelCfg?: string
+  useSingularity: boolean
   trackConfigId?: string
   error?: string
   createdBy?: string

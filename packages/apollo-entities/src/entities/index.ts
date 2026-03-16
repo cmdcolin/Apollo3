@@ -1,6 +1,6 @@
+export { AnalysisDbEntity } from './AnalysisDbEntity.js'
+export { AnalysisJobEntity, AnalysisJobStatus } from './AnalysisJobEntity.js'
 export { AssemblyEntity, AssemblyVisibility } from './AssemblyEntity.js'
-export { BlastDbEntity } from './BlastDbEntity.js'
-export { BlastJobEntity, BlastJobStatus } from './BlastJobEntity.js'
 export {
   AssemblyPermissionEntity,
   AssemblyRole,
@@ -18,4 +18,8 @@ export { RefSeqChunkEntity } from './RefSeqChunkEntity.js'
 export { RefSeqEntity } from './RefSeqEntity.js'
 export { TextSearchAdapterConfigEntity } from './TextSearchAdapterConfigEntity.js'
 export { TrackConfigEntity } from './TrackConfigEntity.js'
+export {
+  TiberiusJobEntity,
+  TiberiusJobStatus,
+} from './TiberiusJobEntity.js'
 export { UserEntity, UserRole } from './UserEntity.js'

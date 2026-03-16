@@ -1,10 +1,16 @@
 export type {
+  AnalysisDbRepository,
+  AnalysisDbRow,
+} from './AnalysisDbRepository.js'
+export type {
+  AnalysisJobRepository,
+  AnalysisJobRow,
+} from './AnalysisJobRepository.js'
+export type {
   AssemblyRepository,
   AssemblyRow,
   SequenceSource,
 } from './AssemblyRepository.js'
-export type { BlastDbRepository, BlastDbRow } from './BlastDbRepository.js'
-export type { BlastJobRepository, BlastJobRow } from './BlastJobRepository.js'
 export type {
   AssemblyPermissionRepository,
   AssemblyPermissionRow,
@@ -36,6 +42,10 @@ export type {
   TextSearchAdapterConfigRepository,
   TextSearchAdapterConfigRow,
 } from './TextSearchAdapterConfigRepository.js'
+export type {
+  TiberiusJobRepository,
+  TiberiusJobRow,
+} from './TiberiusJobRepository.js'
 export type {
   TrackConfigRepository,
   TrackConfigRow,

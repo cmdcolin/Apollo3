@@ -1,9 +1,9 @@
 import { NodeSqliteDialect, SqliteDriver } from '@mikro-orm/sqlite'
 
+import { AnalysisDbEntity } from './entities/AnalysisDbEntity.js'
+import { AnalysisJobEntity } from './entities/AnalysisJobEntity.js'
 import { AssemblyEntity } from './entities/AssemblyEntity.js'
 import { AssemblyPermissionEntity } from './entities/AssemblyPermissionEntity.js'
-import { BlastDbEntity } from './entities/BlastDbEntity.js'
-import { BlastJobEntity } from './entities/BlastJobEntity.js'
 import { ChangeEntity } from './entities/ChangeEntity.js'
 import { CheckEntity } from './entities/CheckEntity.js'
 import { CheckResultEntity } from './entities/CheckResultEntity.js'
@@ -16,14 +16,15 @@ import { OrganismEntity } from './entities/OrganismEntity.js'
 import { RefSeqChunkEntity } from './entities/RefSeqChunkEntity.js'
 import { RefSeqEntity } from './entities/RefSeqEntity.js'
 import { TextSearchAdapterConfigEntity } from './entities/TextSearchAdapterConfigEntity.js'
+import { TiberiusJobEntity } from './entities/TiberiusJobEntity.js'
 import { TrackConfigEntity } from './entities/TrackConfigEntity.js'
 import { UserEntity } from './entities/UserEntity.js'
 
 const allEntities = [
+  AnalysisDbEntity,
+  AnalysisJobEntity,
   AssemblyEntity,
   AssemblyPermissionEntity,
-  BlastDbEntity,
-  BlastJobEntity,
   ChangeEntity,
   OrganismEntity,
   CheckEntity,
@@ -36,6 +37,7 @@ const allEntities = [
   RefSeqChunkEntity,
   RefSeqEntity,
   TextSearchAdapterConfigEntity,
+  TiberiusJobEntity,
   TrackConfigEntity,
   UserEntity,
 ]

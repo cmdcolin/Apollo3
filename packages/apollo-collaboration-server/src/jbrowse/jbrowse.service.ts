@@ -3,6 +3,7 @@ import { Inject, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import merge from 'deepmerge'
 
+import { ToolsConfigService } from '../config/tools-config.service.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
 import { PermissionService } from '../permissions/permission.service.js'
 import { Role } from '../utils/role/role.enum.js'
@@ -24,6 +25,8 @@ export class JBrowseService {
     @Inject(DatabaseService) private readonly db: DatabaseService,
     @Inject(PermissionService)
     private readonly permissionService: PermissionService,
+    @Inject(ToolsConfigService)
+    private readonly toolsConfig: ToolsConfigService,
   ) {}
 
   getConfiguration(role?: Role, userId?: string, userSessionId?: string) {
@@ -80,6 +83,7 @@ export class JBrowseService {
       }
     }
     const readOnly = role === Role.ReadOnly
+    const tiberiusAvailable = this.toolsConfig.isToolAvailable('tiberius')
     return {
       ...configuration,
       ApolloPlugin: {
@@ -87,6 +91,7 @@ export class JBrowseService {
         baseURL: url,
         role,
         readOnly,
+        tiberiusAvailable,
         userId,
         userSessionId,
         ontologies: [

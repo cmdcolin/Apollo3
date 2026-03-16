@@ -13,7 +13,11 @@ follow the same pattern:
 - **MongoDB**: Load entire gene doc → walk tree → modify → save whole doc (~70 lines)
 - **Flat rows**: Look up one row → update → done (2 queries, ~15 lines)
 
-**Verdict**: Unambiguously better with flat rows.
+Flat rows produce shorter code, fewer database reads/writes, and less risk of
+unrelated data being touched. The tradeoff is that features are now on separate
+rows, so operations that need the full gene tree (like validation checks) require
+an extra assembly step — a recursive query to collect descendants. For single
+edits this cost doesn't apply.
 
 ### Adding features
 
@@ -21,7 +25,7 @@ follow the same pattern:
 |-----------|---------|-----------|---------|
 | New top-level gene | Create one nested doc | Flatten snapshot, batch insert | Roughly equal |
 | Add exon to existing mRNA | Load gene, insert child, update `allIds`, save whole doc | Insert one row with `parentId`. Existing rows untouched. | Simpler |
-| GFF3 import | One doc at a time, no transactions (16MB limit), OOM on large files | Flatten to rows, batch insert, full transaction support | Much simpler |
+| GFF3 import | One doc at a time, no transactions (16MB limit), OOM on large files | Flatten to rows, batch insert, full transaction support | Simpler, with transaction safety |
 
 ### Deleting features
 
@@ -38,39 +42,53 @@ follow the same pattern:
 | Merge exons | Load gene, merge in memory, save | Update first exon bounds, delete second | Simpler |
 | Merge transcripts | All in-memory on one document, single save | Query children separately, reparent, delete. N+1 issue. | More complex (fixable with batch UPDATE) |
 
+Merging transcripts is the clearest case where nested documents had an
+advantage — all children were already in memory. With flat rows, this requires
+separate queries and reparenting, though batching can reduce the overhead.
+
 ### Undo operations
 
 Delete what forward created, re-insert what forward deleted. No tree navigation
-or `allIds` bookkeeping. **Simpler** across the board.
+or `allIds` bookkeeping. Simpler in the flat model.
 
 ### Read operations
 
 | Operation | MongoDB | Flat rows | Verdict |
 |-----------|---------|-----------|---------|
 | Features in coordinate range | Returns full nested trees (loads more than needed) | Returns exactly matching features | More precise |
-| Find feature by ID | `findOne({allIds: id})` + tree walk | Primary key lookup | Much simpler |
-| Find all CDS on a chromosome | Load all genes, walk all trees | `WHERE type='CDS' AND refSeq=?` | Much simpler |
-| Count features by type | Load all, count in app code | `GROUP BY type` | Much simpler |
+| Find feature by ID | `findOne({allIds: id})` + tree walk | Primary key lookup | Simpler (direct indexed lookup vs array scan) |
+| Find all CDS on a chromosome | Load all genes, walk all trees | `WHERE type='CDS' AND refSeq=?` | Simpler (SQL filter vs in-memory traversal) |
+| Count features by type | Load all, count in app code | `GROUP BY type` | Simpler (database-level aggregation) |
 | Export to GFF3 | Data already nested | Rows map to GFF3 lines directly | Could be simpler |
-| Run validation checks | Data already nested | Fetch descendants + assemble tree (one extra step) | Slightly harder |
+| Run validation checks | Data already nested | Fetch descendants + assemble tree (one extra step) | Harder (requires recursive query) |
 | Text search | `$text` index (slow writes) | Currently `LIKE` only. Fixable with FTS5/tsvector. | Currently worse, fixable |
+
+For targeted queries (by ID, by type, by range), the relational model benefits
+from standard database indexing. For operations that need the full gene tree
+(validation, client display), there is an extra step to collect and reassemble
+descendants. MongoDB returned these pre-assembled, which was convenient. The
+cost of reassembly is modest (one recursive CTE query + O(n) in-memory pass),
+but it is a real tradeoff.
 
 ### Operations MongoDB couldn't do well
 
 - **Reparent a feature**: Flat rows: `UPDATE SET parent = :new WHERE _id = :id`.
   MongoDB: load both source/destination gene docs, move between nested Maps,
   update both `allIds`, save both docs.
-- **Query across hierarchy**: "genes with exons < 50bp?" — just a WHERE clause
+- **Query across hierarchy**: "genes with exons < 50bp?" — a WHERE clause
   with flat rows. MongoDB: load all gene docs, walk every tree.
 - **Stream imports**: Flat rows stream to DB with bounded memory. MongoDB
   required building nested trees in memory first; OOM on large files.
 
-### The bottom line
+### Summary
 
-Simple edits (the vast majority of operations) are cheaper with flat rows.
-Complex structural edits (transcript merges) cost more but are rare and fixable
-with batch queries. Read operations gain precise indexed queries at the cost of
-a cheap tree-assembly step when the full hierarchy is needed.
+Simple edits (the majority of annotation work) are shorter code, faster, and
+touch less data with flat rows. Complex structural edits like transcript merges
+require more database round-trips, though this is addressable with batch
+queries. Read operations gain precise indexed queries at the cost of a
+tree-assembly step when the full hierarchy is needed. The nested document model
+avoided that assembly step, but at the cost of loading and rewriting entire
+genes for every operation — including simple ones.
 
 ## Migration Cleanup
 
@@ -82,9 +100,10 @@ Single code path.
 
 ### Eliminated FeatureChange helpers
 
-Five MongoDB-specific tree navigation methods (`getFeatureFromId`,
-`getChildFeatureIds`, `generateNewIds`, `addChild`,
-`findAndDeleteChildFeature`) are unnecessary with flat rows and were deleted.
+Five tree navigation methods (`getFeatureFromId`, `getChildFeatureIds`,
+`generateNewIds`, `addChild`, `findAndDeleteChildFeature`) were specific to the
+nested document model and no longer needed after the switch to flat rows. The
+MongoDB backend retains its own tree traversal via `MongoFeatureRepository`.
 
 ### Removed dead code
 
@@ -108,8 +127,7 @@ useful for dense feature regions.
 ### Bulk import via COPY
 
 PostgreSQL's `COPY FROM` inserts millions of rows/second from flat files. A
-GFF3 → CSV → COPY pipeline would be dramatically faster than ORM-level
-insertion.
+GFF3 → CSV → COPY pipeline would be faster than ORM-level insertion.
 
 ### Explicit migrations
 
@@ -121,10 +139,12 @@ restoring the discipline Apollo2 had with Liquibase.
 
 | Issue | Location | Fix |
 |-------|----------|-----|
-| OAuth client ID file-read bug (file contents overwritten by path) | `authentication.service.ts:81-83` | Use `microsoftClientID?.trim()` on the value, not the path |
 | No DTO validation (invalid data reaches service layer) | 7 DTO files | Add `class-validator` decorators, enable `ValidationPipe` |
 | ChangesService has too many responsibilities | `changes.service.ts` | Extract WebSocket notification to EventEmitter2 |
 | Duplicated ServerDataStore factory | `changes.service.ts`, `operations.service.ts` | Extract to shared injectable |
 | Silent auth failures (generic 403) | `validation.guards.ts` | Throw `ForbiddenException` with message |
 | Duplicate OAuth guards | `google.guard.ts`, `microsoft.guard.ts` | Generic `OAuthGuard` factory |
 | Inefficient admin check on login | `authentication.service.ts` | `countByRole()` instead of `findAll()` |
+
+Security issues (OAuth file-read bug, open redirect, etc.) are tracked in the
+*Authentication & Security Audit* section.

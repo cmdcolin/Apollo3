@@ -6,6 +6,7 @@ export const ChangeEntity = defineEntity({
   properties: {
     _id: p.string().primary(),
     assembly: p.string().nullable(),
+    geneId: p.string().nullable(),
     typeName: p.string(),
     changedIds: p.json<string[]>(),
     changes: p.json<unknown>(),
@@ -18,5 +19,9 @@ export const ChangeEntity = defineEntity({
       .nullable()
       .onUpdate(() => new Date()),
   },
-  indexes: [{ properties: ['assembly'] }, { properties: ['sequence'] }],
+  indexes: [
+    { properties: ['assembly'] },
+    { properties: ['sequence'] },
+    { properties: ['geneId'] },
+  ],
 })

@@ -1,4 +1,5 @@
 import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
 import Chip from '@mui/material/Chip'
 import Container from '@mui/material/Container'
 import Link from '@mui/material/Link'
@@ -9,8 +10,9 @@ import TableCell from '@mui/material/TableCell'
 import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
+import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { Nav } from './Nav.js'
@@ -28,6 +30,7 @@ interface Assembly {
 function AssembliesPage() {
   const [assemblies, setAssemblies] = useState<Assembly[]>([])
   const [error, setError] = useState<string>()
+  const [search, setSearch] = useState('')
 
   const load = useCallback(async () => {
     try {
@@ -42,6 +45,19 @@ function AssembliesPage() {
     void load()
   }, [load])
 
+  const filtered = useMemo(() => {
+    if (!search.trim()) {
+      return assemblies
+    }
+    const q = search.toLowerCase()
+    return assemblies.filter(
+      (a) =>
+        a.name.toLowerCase().includes(q) ||
+        (a.displayName?.toLowerCase().includes(q) ?? false) ||
+        (a.description?.toLowerCase().includes(q) ?? false),
+    )
+  }, [assemblies, search])
+
   return (
     <Nav current="assemblies">
       <Container>
@@ -53,9 +69,20 @@ function AssembliesPage() {
             {error}
           </Alert>
         )}
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          Total: {assemblies.length}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+          <TextField
+            size="small"
+            placeholder="Search assemblies..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+            }}
+            sx={{ minWidth: 250 }}
+          />
+          <Typography variant="body2" color="text.secondary">
+            Showing {filtered.length} of {assemblies.length}
+          </Typography>
+        </Box>
         <TableContainer component={Paper} variant="outlined">
           <Table size="small">
             <TableHead>
@@ -69,7 +96,7 @@ function AssembliesPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {assemblies.map((a) => (
+              {filtered.map((a) => (
                 <TableRow key={a._id} hover>
                   <TableCell>
                     <Link href={`/ui/assemblies/${a._id}`}>{a.name}</Link>
@@ -102,14 +129,14 @@ function AssembliesPage() {
                   </TableCell>
                 </TableRow>
               ))}
-              {assemblies.length === 0 && !error && (
+              {filtered.length === 0 && !error && (
                 <TableRow>
                   <TableCell
                     colSpan={6}
                     align="center"
                     sx={{ color: 'text.secondary' }}
                   >
-                    No assemblies found
+                    {search ? 'No matching assemblies' : 'No assemblies found'}
                   </TableCell>
                 </TableRow>
               )}

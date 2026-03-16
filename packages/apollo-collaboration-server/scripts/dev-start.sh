@@ -83,6 +83,17 @@ if [ "$MEMORY" = true ]; then
   SESSION_SECRET="$(head -c 32 /dev/urandom | base64)"
   export SESSION_SECRET
 fi
+# 7. Auto-detect Tiberius if installed at common location
+if [ -z "${TIBERIUS_PATH:-}" ]; then
+  for tpath in "$HOME/src/Tiberius/tiberius.py" "$HOME/Tiberius/tiberius.py" "/opt/Tiberius/tiberius.py"; do
+    if [ -f "$tpath" ]; then
+      export TIBERIUS_PATH="$tpath"
+      echo "[start] Auto-detected Tiberius at $tpath"
+      break
+    fi
+  done
+fi
+
 JBROWSE_STATIC_DIR="$JBROWSE_DIR" \
   PLUGIN_LOCATION="/jbrowse/apollo-plugin.js" \
   FEATURE_TYPE_ONTOLOGY_LOCATION="/jbrowse/so-v3.1.json" \

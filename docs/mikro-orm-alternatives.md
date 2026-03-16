@@ -28,9 +28,9 @@ required. `allIds` still needed at the transcript level.
 
 ### Assessment
 
-Comparable effort to the relational migration, but doesn't solve desktop
-deployment, doesn't simplify ops, and only partially fixes the concurrent
-editing problem.
+Comparable effort to the relational migration. Addresses some concurrency
+issues but not fully (same-transcript conflicts remain). Does not address
+desktop deployment or simplify the operational setup.
 
 ## Option 2: Firestore / Firebase
 

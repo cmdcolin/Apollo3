@@ -324,20 +324,25 @@ export class CollaborationServerDriver extends BackendDriver {
     const url = new URL('tools/tiberius/available', baseURL)
     const response = await apolloFetch(url.toString())
     if (!response.ok) {
-      return { available: false, singularity: false }
+      return { available: false }
     }
     return response.json() as Promise<{
       available: boolean
-      singularity: boolean
+      useSingularity?: boolean
       maxRegionSize?: number
+      modelCfg?: string
+      availableModels?: string[]
     }>
   }
 
   async runTiberius(params: {
     assembly: string
     refSeqId: string
+    refSeqName: string
     start: number
     end: number
+    modelCfg?: string
+    useSingularity?: boolean
   }) {
     const baseURL = this.getBaseURL()
     const url = new URL('tools/tiberius/run', baseURL)
@@ -370,8 +375,8 @@ export class CollaborationServerDriver extends BackendDriver {
     return response.json() as Promise<{
       jobId: string
       status: string
-      message?: string
-      featureIds?: string[]
+      error?: string
+      trackConfigId?: string
     }>
   }
 

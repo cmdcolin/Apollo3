@@ -484,28 +484,53 @@ async function main() {
     }
     log(`  ${tracks.length} evidence tracks added.`)
 
-    // Add BLAST database configs
-    log('Adding BLAST database configs...')
-    const blastDbs = [
+    // Build local BLAST databases for the volvox assembly
+    log('Building local BLAST databases...')
+    const localBlastDbs = [
+      {
+        name: 'volvox (nucleotide)',
+        tool: 'local-blast',
+        params: { program: 'blastn' },
+        assemblyId: volvoxId,
+      },
+      {
+        name: 'volvox (protein search)',
+        tool: 'local-blast',
+        params: { program: 'tblastn' },
+        assemblyId: volvoxId,
+      },
+    ]
+    for (const db of localBlastDbs) {
+      log(`  ${db.name}`)
+      await apiPost(token, 'analysis/databases/build', db)
+    }
+    // Wait for local DBs to finish building (volvox is tiny, should be fast)
+    log('  Waiting for local BLAST DB builds to complete...')
+    await new Promise((r) => setTimeout(r, 5000))
+    log(`  ${localBlastDbs.length} local BLAST databases built.`)
+
+    // Add remote NCBI BLAST database configs (secondary, for functional annotation)
+    log('Adding NCBI BLAST database configs...')
+    const ncbiDbs = [
       {
         name: 'NCBI nr (protein)',
-        program: 'blastp',
-        database: 'nr',
+        tool: 'ncbi-blast',
+        params: { program: 'blastp', database: 'nr' },
       },
       {
         name: 'NCBI nt (nucleotide)',
-        program: 'blastn',
-        database: 'nt',
+        tool: 'ncbi-blast',
+        params: { program: 'blastn', database: 'nt' },
       },
     ]
-    for (const db of blastDbs) {
+    for (const db of ncbiDbs) {
       log(`  ${db.name}`)
-      await apiPost(token, 'blast/databases', {
+      await apiPost(token, 'analysis/databases', {
         ...db,
         assemblyIds: [volvoxId],
       })
     }
-    log(`  ${blastDbs.length} BLAST databases added.`)
+    log(`  ${ncbiDbs.length} NCBI BLAST databases added.`)
   } finally {
     // Checkpoint WAL before killing server
     try {

@@ -59,8 +59,9 @@ exists for existing MongoDB deployments.
    replica set for change streams that Apollo3 didn't use for collaboration
    (WebSockets handle that). PostgreSQL needs one container; SQLite needs none.
 
-6. **Desktop deployment was impossible.** No embedded MongoDB exists. SQLite
-   enables fully self-contained desktop/Electron use.
+6. **Desktop deployment was not practical.** MongoDB requires a running server
+   process with no embedded mode suitable for desktop apps. SQLite enables
+   fully self-contained desktop/Electron use.
 
 ## Why MikroORM
 
@@ -80,7 +81,7 @@ exists for existing MongoDB deployments.
 
 ## Serverless and Scale-to-Zero
 
-The relational model unlocks deployment patterns impossible with MongoDB:
+The relational model enables deployment patterns that were not practical with MongoDB:
 
 - **Scale-to-zero containers** (Fargate/Cloud Run + Aurora Serverless/Neon):
   idle cost ~$0-5/mo vs $50-60/mo MongoDB floor

@@ -1,20 +1,20 @@
 import type {
-  BlastJobRepository,
-  BlastJobRow,
+  AnalysisJobRepository,
+  AnalysisJobRow,
 } from '@apollo-annotation/common'
 import type { EntityManager, InferEntity } from '@mikro-orm/core'
 
-import { BlastJobEntity } from '../entities/BlastJobEntity.js'
+import { AnalysisJobEntity } from '../entities/AnalysisJobEntity.js'
 
-function toRow(entity: InferEntity<typeof BlastJobEntity>): BlastJobRow {
+function toRow(entity: InferEntity<typeof AnalysisJobEntity>): AnalysisJobRow {
   return {
     _id: entity._id,
     status: entity.status,
-    program: entity.program,
-    database: entity.database,
-    query: entity.query,
-    ncbiRid: entity.ncbiRid ?? undefined,
+    tool: entity.tool,
+    assemblyId: entity.assemblyId ?? undefined,
+    params: entity.params,
     results: entity.results ?? undefined,
+    metadata: entity.metadata ?? undefined,
     error: entity.error ?? undefined,
     createdBy: entity.createdBy ?? undefined,
     createdAt: entity.createdAt,
@@ -22,11 +22,11 @@ function toRow(entity: InferEntity<typeof BlastJobEntity>): BlastJobRow {
   }
 }
 
-export class MikroOrmBlastJobRepository implements BlastJobRepository {
+export class MikroOrmAnalysisJobRepository implements AnalysisJobRepository {
   constructor(private readonly em: EntityManager) {}
 
   async findById(id: string) {
-    const entity = await this.em.findOne(BlastJobEntity, { _id: id })
+    const entity = await this.em.findOne(AnalysisJobEntity, { _id: id })
     if (entity) {
       return toRow(entity)
     }
@@ -35,22 +35,22 @@ export class MikroOrmBlastJobRepository implements BlastJobRepository {
 
   async findByUser(userId: string) {
     const entities = await this.em.find(
-      BlastJobEntity,
+      AnalysisJobEntity,
       { createdBy: userId },
       { orderBy: { createdAt: 'DESC' }, limit: 50 },
     )
     return entities.map((e) => toRow(e))
   }
 
-  async create(row: BlastJobRow) {
-    const entity = this.em.create(BlastJobEntity, {
+  async create(row: AnalysisJobRow) {
+    const entity = this.em.create(AnalysisJobEntity, {
       _id: row._id,
       status: row.status,
-      program: row.program,
-      database: row.database,
-      query: row.query,
-      ncbiRid: row.ncbiRid,
+      tool: row.tool,
+      assemblyId: row.assemblyId,
+      params: row.params,
       results: row.results,
+      metadata: row.metadata,
       error: row.error,
       createdBy: row.createdBy,
       createdAt: row.createdAt,
@@ -61,19 +61,19 @@ export class MikroOrmBlastJobRepository implements BlastJobRepository {
     return toRow(entity)
   }
 
-  async updateById(id: string, data: Partial<Omit<BlastJobRow, '_id'>>) {
-    const entity = await this.em.findOne(BlastJobEntity, { _id: id })
+  async updateById(id: string, data: Partial<Omit<AnalysisJobRow, '_id'>>) {
+    const entity = await this.em.findOne(AnalysisJobEntity, { _id: id })
     if (!entity) {
       return
     }
     if (data.status !== undefined) {
       entity.status = data.status
     }
-    if (data.ncbiRid !== undefined) {
-      entity.ncbiRid = data.ncbiRid
-    }
     if (data.results !== undefined) {
       entity.results = data.results
+    }
+    if (data.metadata !== undefined) {
+      entity.metadata = data.metadata
     }
     if (data.error !== undefined) {
       entity.error = data.error
@@ -87,7 +87,7 @@ export class MikroOrmBlastJobRepository implements BlastJobRepository {
 
   async findPending(limit: number) {
     const entities = await this.em.find(
-      BlastJobEntity,
+      AnalysisJobEntity,
       { status: 'pending' },
       { orderBy: { createdAt: 'ASC' }, limit },
     )
@@ -95,12 +95,12 @@ export class MikroOrmBlastJobRepository implements BlastJobRepository {
   }
 
   async countByStatus(status: string) {
-    return this.em.count(BlastJobEntity, { status })
+    return this.em.count(AnalysisJobEntity, { status })
   }
 
   async findRunningOlderThan(cutoff: Date) {
     // eslint-disable-next-line unicorn/no-array-method-this-argument
-    const entities = await this.em.find(BlastJobEntity, {
+    const entities = await this.em.find(AnalysisJobEntity, {
       status: 'running',
       startedAt: { $lt: cutoff },
     })
@@ -109,7 +109,7 @@ export class MikroOrmBlastJobRepository implements BlastJobRepository {
 
   async deleteCompletedOlderThan(cutoff: Date) {
     // eslint-disable-next-line unicorn/no-array-method-this-argument
-    const entities = await this.em.find(BlastJobEntity, {
+    const entities = await this.em.find(AnalysisJobEntity, {
       status: { $in: ['ready', 'failed', 'cancelled'] },
       createdAt: { $lt: cutoff },
     })
@@ -122,11 +122,12 @@ export class MikroOrmBlastJobRepository implements BlastJobRepository {
 
   async resetOrphanedRunning() {
     // eslint-disable-next-line unicorn/no-array-method-this-argument
-    const entities = await this.em.find(BlastJobEntity, { status: 'running' })
+    const entities = await this.em.find(AnalysisJobEntity, {
+      status: 'running',
+    })
     for (const entity of entities) {
       entity.status = 'pending'
       entity.startedAt = null
-      entity.ncbiRid = null
     }
     await this.em.flush()
     return entities.length

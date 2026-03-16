@@ -10,8 +10,9 @@ import TableCell from '@mui/material/TableCell'
 import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
+import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { Nav } from './Nav.js'
@@ -31,6 +32,7 @@ function OrganismsPage() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [error, setError] = useState<string>()
+  const [search, setSearch] = useState('')
   const pageSize = 25
 
   const load = useCallback(async () => {
@@ -52,6 +54,21 @@ function OrganismsPage() {
     void load()
   }, [load])
 
+  const filtered = useMemo(() => {
+    if (!search.trim()) {
+      return organisms
+    }
+    const q = search.toLowerCase()
+    return organisms.filter(
+      (o) =>
+        (o.genus?.toLowerCase().includes(q) ?? false) ||
+        (o.species?.toLowerCase().includes(q) ?? false) ||
+        (o.commonName?.toLowerCase().includes(q) ?? false) ||
+        (o.description?.toLowerCase().includes(q) ?? false) ||
+        (o.taxid !== undefined && String(o.taxid).includes(q)),
+    )
+  }, [organisms, search])
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   return (
@@ -65,9 +82,21 @@ function OrganismsPage() {
             {error}
           </Alert>
         )}
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          Total: {total} | Page {page} of {totalPages}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+          <TextField
+            size="small"
+            placeholder="Search organisms..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+            }}
+            sx={{ minWidth: 250 }}
+          />
+          <Typography variant="body2" color="text.secondary">
+            Total: {total} | Page {page} of {totalPages}
+            {search ? ` | Showing ${filtered.length} matches` : ''}
+          </Typography>
+        </Box>
         <TableContainer component={Paper} variant="outlined">
           <Table size="small">
             <TableHead>
@@ -81,7 +110,7 @@ function OrganismsPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {organisms.map((o) => (
+              {filtered.map((o) => (
                 <TableRow key={o._id} hover>
                   <TableCell>
                     <Link href={`/ui/organisms/${o._id}`}>{o._id}</Link>
@@ -93,14 +122,14 @@ function OrganismsPage() {
                   <TableCell>{o.description ?? ''}</TableCell>
                 </TableRow>
               ))}
-              {organisms.length === 0 && !error && (
+              {filtered.length === 0 && !error && (
                 <TableRow>
                   <TableCell
                     colSpan={6}
                     align="center"
                     sx={{ color: 'text.secondary' }}
                   >
-                    No organisms found
+                    {search ? 'No matching organisms' : 'No organisms found'}
                   </TableCell>
                 </TableRow>
               )}

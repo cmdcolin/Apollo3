@@ -1,8 +1,8 @@
 import type {
+  AnalysisDbRepository,
+  AnalysisJobRepository,
   AssemblyPermissionRepository,
   AssemblyRepository,
-  BlastDbRepository,
-  BlastJobRepository,
   ChangeRepository,
   CheckRepository,
   CheckResultRepository,
@@ -14,14 +14,15 @@ import type {
   RefSeqChunkRepository,
   RefSeqRepository,
   TextSearchAdapterConfigRepository,
+  TiberiusJobRepository,
   TrackConfigRepository,
   UserRepository,
 } from '@apollo-annotation/common'
 import {
+  MikroOrmAnalysisDbRepository,
+  MikroOrmAnalysisJobRepository,
   MikroOrmAssemblyPermissionRepository,
   MikroOrmAssemblyRepository,
-  MikroOrmBlastDbRepository,
-  MikroOrmBlastJobRepository,
   MikroOrmChangeRepository,
   MikroOrmCheckRepository,
   MikroOrmCheckResultRepository,
@@ -33,6 +34,7 @@ import {
   MikroOrmRefSeqChunkRepository,
   MikroOrmRefSeqRepository,
   MikroOrmTextSearchAdapterConfigRepository,
+  MikroOrmTiberiusJobRepository,
   MikroOrmTrackConfigRepository,
   MikroOrmUserRepository,
   MongoFeatureRepository,
@@ -41,10 +43,11 @@ import { EntityManager } from '@mikro-orm/core'
 import { Inject, Injectable } from '@nestjs/common'
 
 export interface TransactionScope {
+  analysisDb: AnalysisDbRepository
+  analysisJob: AnalysisJobRepository
   assembly: AssemblyRepository
   assemblyPermission: AssemblyPermissionRepository
-  blastDb: BlastDbRepository
-  blastJob: BlastJobRepository
+  tiberiusJob: TiberiusJobRepository
   organism: OrganismRepository
   feature: FeatureRepository
   refSeq: RefSeqRepository
@@ -66,20 +69,15 @@ function createFeatureRepository(em: EntityManager, dbType: string) {
   return new MikroOrmFeatureRepository(em)
 }
 
-// Thin wrapper that constructs repository implementations from the injected
-// EntityManager. With RequestContext middleware registered in main.ts, the EM
-// is automatically request-scoped — each HTTP request gets its own identity
-// map via AsyncLocalStorage, so no manual em.fork() is needed.
 @Injectable()
 export class DatabaseService {
   private readonly dbType: string
 
-  // Cached repository instances. Safe to reuse because the injected EM uses
-  // AsyncLocalStorage (via RequestContext middleware) for per-request isolation.
+  readonly analysisDb: AnalysisDbRepository
+  readonly analysisJob: AnalysisJobRepository
   readonly assembly: AssemblyRepository
   readonly assemblyPermission: AssemblyPermissionRepository
-  readonly blastDb: BlastDbRepository
-  readonly blastJob: BlastJobRepository
+  readonly tiberiusJob: TiberiusJobRepository
   readonly organism: OrganismRepository
   readonly feature: FeatureRepository
   readonly refSeq: RefSeqRepository
@@ -96,10 +94,11 @@ export class DatabaseService {
 
   constructor(@Inject(EntityManager) private readonly em: EntityManager) {
     this.dbType = process.env.DB_BACKEND ?? 'sqlite'
+    this.analysisDb = new MikroOrmAnalysisDbRepository(em)
+    this.analysisJob = new MikroOrmAnalysisJobRepository(em)
     this.assembly = new MikroOrmAssemblyRepository(em)
     this.assemblyPermission = new MikroOrmAssemblyPermissionRepository(em)
-    this.blastDb = new MikroOrmBlastDbRepository(em)
-    this.blastJob = new MikroOrmBlastJobRepository(em)
+    this.tiberiusJob = new MikroOrmTiberiusJobRepository(em)
     this.organism = new MikroOrmOrganismRepository(em)
     this.feature = createFeatureRepository(em, this.dbType)
     this.refSeq = new MikroOrmRefSeqRepository(em)
@@ -116,16 +115,14 @@ export class DatabaseService {
     this.changeLog = new MikroOrmChangeRepository(em)
   }
 
-  // Runs a callback inside a database transaction. All repositories in the
-  // callback share the same transactional EM so their writes are atomic.
-  // Auto-commits on success, auto-rolls-back if the callback throws.
   async transactional<T>(callback: (scope: TransactionScope) => Promise<T>) {
     return this.em.transactional(async (txEm) => {
       return callback({
+        analysisDb: new MikroOrmAnalysisDbRepository(txEm),
+        analysisJob: new MikroOrmAnalysisJobRepository(txEm),
         assembly: new MikroOrmAssemblyRepository(txEm),
         assemblyPermission: new MikroOrmAssemblyPermissionRepository(txEm),
-        blastDb: new MikroOrmBlastDbRepository(txEm),
-        blastJob: new MikroOrmBlastJobRepository(txEm),
+        tiberiusJob: new MikroOrmTiberiusJobRepository(txEm),
         organism: new MikroOrmOrganismRepository(txEm),
         feature: createFeatureRepository(txEm, this.dbType),
         refSeq: new MikroOrmRefSeqRepository(txEm),

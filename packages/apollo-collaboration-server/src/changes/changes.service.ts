@@ -68,23 +68,28 @@ export class ChangesService {
       `Change executed in ${Date.now() - startTime}ms: ${change.typeName}`,
     )
 
+    let geneId: string | undefined
+    if (isFeatureChange(change)) {
+      const rootFeatures = await this.db.feature.findRootParentsOfMany(
+        change.changedIds,
+      )
+      if (rootFeatures.length > 0) {
+        geneId = rootFeatures[0]._id
+      }
+      for (const rootFeature of rootFeatures) {
+        await this.checksService.checkFeature(rootFeature._id)
+      }
+    }
+
     const changeDoc = await this.db.changeLog.create({
       assembly: isAssemblySpecificChange(change) ? change.assembly : undefined,
+      geneId,
       typeName: change.typeName,
       changedIds: 'changedIds' in change ? (change.changedIds as string[]) : [],
       changes: 'changes' in change ? change.changes : {},
       user: user.email,
       sequence,
     })
-
-    if (isFeatureChange(change)) {
-      const rootFeatures = await this.db.feature.findRootParentsOfMany(
-        change.changedIds,
-      )
-      for (const rootFeature of rootFeatures) {
-        await this.checksService.checkFeature(rootFeature._id)
-      }
-    }
 
     const userSessionId = makeUserSessionId(user)
     const assemblyId = isAssemblySpecificChange(change)
@@ -114,6 +119,47 @@ export class ChangesService {
     })
   }
 
+  async findByGeneId(geneId: string, limit: number, offset: number) {
+    return this.db.changeLog.findAll({
+      filter: { geneId },
+      sort: 'desc',
+      limit,
+      offset,
+    })
+  }
+
+  async countByGeneId(geneId: string) {
+    if (this.db.changeLog.countByGeneId) {
+      return this.db.changeLog.countByGeneId(geneId)
+    }
+    const all = await this.db.changeLog.findAll({ filter: { geneId } })
+    return all.length
+  }
+
+  async backfillGeneIds() {
+    const changes = await this.db.changeLog.findAll({
+      filter: {},
+      sort: 'asc',
+    })
+    let updated = 0
+    for (const change of changes) {
+      if (change.geneId) {
+        continue
+      }
+      if (change.changedIds.length === 0) {
+        continue
+      }
+      const rootFeatures = await this.db.feature.findRootParentsOfMany(
+        change.changedIds,
+      )
+      if (rootFeatures.length > 0) {
+        await this.db.changeLog.updateGeneId(change._id, rootFeatures[0]._id)
+        updated++
+      }
+    }
+    return { total: changes.length, updated }
+  }
+
   async findAll(changeFilter: FindChangeDto) {
     this.logger.debug(`Search criteria: "${JSON.stringify(changeFilter)}"`)
     let changedIds: string[] | undefined
@@ -129,6 +175,7 @@ export class ChangesService {
     return this.db.changeLog.findAll({
       filter: {
         assembly: changeFilter.assembly,
+        geneId: changeFilter.geneId,
         user: changeFilter.user,
         typeName: changeFilter.typeName,
       },
