@@ -1,5 +1,6 @@
 export { AssemblyEntity, AssemblyVisibility } from './AssemblyEntity.js'
 export { BlastDbEntity } from './BlastDbEntity.js'
+export { BlastJobEntity, BlastJobStatus } from './BlastJobEntity.js'
 export {
   AssemblyPermissionEntity,
   AssemblyRole,

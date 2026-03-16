@@ -483,6 +483,29 @@ async function main() {
       })
     }
     log(`  ${tracks.length} evidence tracks added.`)
+
+    // Add BLAST database configs
+    log('Adding BLAST database configs...')
+    const blastDbs = [
+      {
+        name: 'NCBI nr (protein)',
+        program: 'blastp',
+        database: 'nr',
+      },
+      {
+        name: 'NCBI nt (nucleotide)',
+        program: 'blastn',
+        database: 'nt',
+      },
+    ]
+    for (const db of blastDbs) {
+      log(`  ${db.name}`)
+      await apiPost(token, 'blast/databases', {
+        ...db,
+        assemblyIds: [volvoxId],
+      })
+    }
+    log(`  ${blastDbs.length} BLAST databases added.`)
   } finally {
     // Checkpoint WAL before killing server
     try {

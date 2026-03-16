@@ -2,6 +2,7 @@ import type {
   AssemblyPermissionRepository,
   AssemblyRepository,
   BlastDbRepository,
+  BlastJobRepository,
   ChangeRepository,
   CheckRepository,
   CheckResultRepository,
@@ -20,6 +21,7 @@ import {
   MikroOrmAssemblyPermissionRepository,
   MikroOrmAssemblyRepository,
   MikroOrmBlastDbRepository,
+  MikroOrmBlastJobRepository,
   MikroOrmChangeRepository,
   MikroOrmCheckRepository,
   MikroOrmCheckResultRepository,
@@ -42,6 +44,7 @@ export interface TransactionScope {
   assembly: AssemblyRepository
   assemblyPermission: AssemblyPermissionRepository
   blastDb: BlastDbRepository
+  blastJob: BlastJobRepository
   organism: OrganismRepository
   feature: FeatureRepository
   refSeq: RefSeqRepository
@@ -76,6 +79,7 @@ export class DatabaseService {
   readonly assembly: AssemblyRepository
   readonly assemblyPermission: AssemblyPermissionRepository
   readonly blastDb: BlastDbRepository
+  readonly blastJob: BlastJobRepository
   readonly organism: OrganismRepository
   readonly feature: FeatureRepository
   readonly refSeq: RefSeqRepository
@@ -95,6 +99,7 @@ export class DatabaseService {
     this.assembly = new MikroOrmAssemblyRepository(em)
     this.assemblyPermission = new MikroOrmAssemblyPermissionRepository(em)
     this.blastDb = new MikroOrmBlastDbRepository(em)
+    this.blastJob = new MikroOrmBlastJobRepository(em)
     this.organism = new MikroOrmOrganismRepository(em)
     this.feature = createFeatureRepository(em, this.dbType)
     this.refSeq = new MikroOrmRefSeqRepository(em)
@@ -120,6 +125,7 @@ export class DatabaseService {
         assembly: new MikroOrmAssemblyRepository(txEm),
         assemblyPermission: new MikroOrmAssemblyPermissionRepository(txEm),
         blastDb: new MikroOrmBlastDbRepository(txEm),
+        blastJob: new MikroOrmBlastJobRepository(txEm),
         organism: new MikroOrmOrganismRepository(txEm),
         feature: createFeatureRepository(txEm, this.dbType),
         refSeq: new MikroOrmRefSeqRepository(txEm),

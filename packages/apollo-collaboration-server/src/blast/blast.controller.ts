@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Inject,
   NotFoundException,
   Param,
@@ -24,6 +25,8 @@ export class BlastController {
   constructor(
     @Inject(BlastService) private readonly blastService: BlastService,
   ) {}
+
+  // ── BLAST database configs ───────────────────────────────────────────
 
   @Get('databases')
   getDatabases(@Query('assembly') assemblyId?: string) {
@@ -59,20 +62,49 @@ export class BlastController {
     return { deleted: true }
   }
 
-  @Post('search')
-  submitSearch(
+  // ── BLAST jobs ───────────────────────────────────────────────────────
+
+  @Post('jobs')
+  @Roles(Role.User)
+  @HttpCode(202)
+  submitJob(
     @Body() body: { program: string; database: string; query: string },
+    @Req() request: Request,
   ) {
-    return this.blastService.submitBlastSearch(body)
+    const user = request.user as DecodedJWT | undefined
+    return this.blastService.submitJob({
+      ...body,
+      createdBy: user?.email,
+    })
   }
 
-  @Get('status/:rid')
-  checkStatus(@Param('rid') rid: string) {
-    return this.blastService.checkBlastStatus(rid)
+  @Get('jobs')
+  getMyJobs(@Req() request: Request) {
+    const user = request.user as DecodedJWT | undefined
+    if (user?.email) {
+      return this.blastService.getJobsByUser(user.email)
+    }
+    return []
   }
 
-  @Get('results/:rid')
-  getResults(@Param('rid') rid: string) {
-    return this.blastService.getBlastResults(rid)
+  @Get('jobs/:id')
+  async getJob(@Param('id') id: string) {
+    const job = await this.blastService.getJob(id)
+    if (!job) {
+      throw new NotFoundException(`BLAST job "${id}" not found`)
+    }
+    return job
+  }
+
+  @Delete('jobs/:id')
+  @HttpCode(200)
+  async cancelJob(@Param('id') id: string) {
+    const cancelled = await this.blastService.cancelJob(id)
+    if (!cancelled) {
+      throw new NotFoundException(
+        `BLAST job "${id}" not found or already completed`,
+      )
+    }
+    return { cancelled: true }
   }
 }

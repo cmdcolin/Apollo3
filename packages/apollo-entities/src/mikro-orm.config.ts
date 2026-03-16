@@ -3,6 +3,7 @@ import { NodeSqliteDialect, SqliteDriver } from '@mikro-orm/sqlite'
 import { AssemblyEntity } from './entities/AssemblyEntity.js'
 import { AssemblyPermissionEntity } from './entities/AssemblyPermissionEntity.js'
 import { BlastDbEntity } from './entities/BlastDbEntity.js'
+import { BlastJobEntity } from './entities/BlastJobEntity.js'
 import { ChangeEntity } from './entities/ChangeEntity.js'
 import { CheckEntity } from './entities/CheckEntity.js'
 import { CheckResultEntity } from './entities/CheckResultEntity.js'
@@ -22,6 +23,7 @@ const allEntities = [
   AssemblyEntity,
   AssemblyPermissionEntity,
   BlastDbEntity,
+  BlastJobEntity,
   ChangeEntity,
   OrganismEntity,
   CheckEntity,

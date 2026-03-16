@@ -159,7 +159,7 @@ function OrganismDetailPage() {
                       </TableCell>
                       <TableCell>
                         <Link
-                          href={`/jbrowse/?assemblies=${encodeURIComponent(a._id)}`}
+                          href={`/jbrowse/?config=${encodeURIComponent(`/jbrowse/config.json?assemblies=${a._id}`)}`}
                         >
                           Open in JBrowse
                         </Link>

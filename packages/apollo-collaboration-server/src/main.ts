@@ -98,6 +98,16 @@ async function bootstrap() {
 
   app.use(cookieParser())
 
+  // Serve public folder for favicon and other static assets
+  const publicDir = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '..',
+    'public',
+  )
+  if (fs.existsSync(publicDir)) {
+    app.use(express.static(publicDir))
+  }
+
   // RequestContext middleware gives each HTTP request its own EntityManager
   // fork (via AsyncLocalStorage). This means all database operations within a
   // request share one identity map and don't interfere with other requests.
@@ -124,46 +134,19 @@ async function bootstrap() {
     }),
   )
 
-  // Serve JBrowse static files from JBROWSE_STATIC_DIR (if configured)
-  // under /jbrowse/. config.json is excluded — served dynamically by
-  // JBrowseController. index.html is wrapped to support ?assemblies= param.
+  // Serve JBrowse static files from JBROWSE_STATIC_DIR under /jbrowse/.
+  // config.json is excluded — served dynamically by JBrowseController.
   if (JBROWSE_STATIC_DIR) {
     const staticDir = path.resolve(JBROWSE_STATIC_DIR)
     // eslint-disable-next-line no-console
     console.log(`Serving JBrowse static files from: ${staticDir}`)
-    const staticMiddleware = express.static(staticDir)
-
-    // Pre-read and patch index.html once at startup
-    const indexPath = path.join(staticDir, 'index.html')
-    let jbrowseIndexHtml: string | undefined
-    if (fs.existsSync(indexPath)) {
-      const configScript = `<script>
-(function() {
-  var params = new URLSearchParams(window.location.search);
-  var assemblies = params.get('assemblies');
-  if (assemblies) {
-    window.__jbrowseConfigPath = '/jbrowse/config.json?assemblies=' + encodeURIComponent(assemblies);
-  }
-})();
-</script>`
-      jbrowseIndexHtml = fs
-        .readFileSync(indexPath, 'utf8')
-        .replace('</head>', configScript + '\n</head>')
-    }
-
-    app.use('/jbrowse', (req: Request, res: Response, next: () => void) => {
+    const jbrowseStatic = express.static(staticDir)
+    app.use('/jbrowse', (req: Request, _res: Response, next: () => void) => {
       if (req.path === '/config.json') {
         next()
         return
       }
-      if (
-        (req.path === '/' || req.path === '/index.html') &&
-        jbrowseIndexHtml
-      ) {
-        res.type('html').send(jbrowseIndexHtml)
-        return
-      }
-      staticMiddleware(req, res, next)
+      jbrowseStatic(req, _res, next)
     })
   }
 

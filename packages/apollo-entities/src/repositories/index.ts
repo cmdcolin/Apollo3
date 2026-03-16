@@ -1,5 +1,6 @@
 export { BaseFeatureRepository } from './BaseFeatureRepository.js'
 export { MikroOrmBlastDbRepository } from './MikroOrmBlastDbRepository.js'
+export { MikroOrmBlastJobRepository } from './MikroOrmBlastJobRepository.js'
 export { MikroOrmAssemblyRepository } from './MikroOrmAssemblyRepository.js'
 export { MikroOrmAssemblyPermissionRepository } from './MikroOrmAssemblyPermissionRepository.js'
 export { MikroOrmOrganismRepository } from './MikroOrmOrganismRepository.js'

@@ -21,11 +21,13 @@ import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { Nav } from './Nav.js'
 import { fetchJson } from './fetchUtil.js'
+
+// ── Types ──────────────────────────────────────────────────────────────
 
 interface Assembly {
   _id: string
@@ -41,22 +43,30 @@ interface BlastDb {
   assemblyIds: string[]
 }
 
+interface BlastHitDescription {
+  accession: string
+  sciname: string
+  title: string
+}
+
+interface BlastHsp {
+  bit_score: number
+  evalue: number
+  identity: number
+  align_len: number
+  query_from: number
+  query_to: number
+  hit_from: number
+  hit_to: number
+  hit_strand?: string
+  qseq: string
+  hseq: string
+  midline: string
+}
+
 interface BlastHit {
-  description: { accession: string; sciname: string; title: string }[]
-  hsps: {
-    bit_score: number
-    evalue: number
-    identity: number
-    align_len: number
-    query_from: number
-    query_to: number
-    hit_from: number
-    hit_to: number
-    hit_strand?: string
-    qseq: string
-    hseq: string
-    midline: string
-  }[]
+  description: BlastHitDescription[]
+  hsps: BlastHsp[]
   len: number
   num: number
 }
@@ -73,13 +83,23 @@ interface BlastSearchResult {
   }
 }
 
+// ── Constants ──────────────────────────────────────────────────────────
+
+const JOB_POLL_INTERVAL = 3000
+const MAX_POLL_ATTEMPTS = 200
+
 const NCBI_PROGRAMS = [
-  { value: 'blastn', label: 'blastn (nucleotide → nucleotide)' },
-  { value: 'blastp', label: 'blastp (protein → protein)' },
-  { value: 'blastx', label: 'blastx (translated nucl → protein)' },
-  { value: 'tblastn', label: 'tblastn (protein → translated nucl)' },
-  { value: 'tblastx', label: 'tblastx (translated nucl → translated nucl)' },
+  { value: 'blastn', label: 'blastn (nucleotide \u2192 nucleotide)' },
+  { value: 'blastp', label: 'blastp (protein \u2192 protein)' },
+  { value: 'blastx', label: 'blastx (translated nucl \u2192 protein)' },
+  { value: 'tblastn', label: 'tblastn (protein \u2192 translated nucl)' },
+  {
+    value: 'tblastx',
+    label: 'tblastx (translated nucl \u2192 translated nucl)',
+  },
 ]
+
+const PROTEIN_PROGRAMS = new Set(['blastp', 'blastx'])
 
 const NCBI_DATABASES: Record<string, { value: string; label: string }[]> = {
   blastn: [
@@ -109,6 +129,8 @@ const NCBI_DATABASES: Record<string, { value: string; label: string }[]> = {
   ],
 }
 
+// ── Hooks ──────────────────────────────────────────────────────────────
+
 interface UserInfo {
   username: string
   email: string
@@ -120,27 +142,260 @@ function useCurrentUser() {
 
   useEffect(() => {
     fetch('/users/me', { headers: { Accept: 'application/json' } })
-      .then((r) => {
-        if (r.ok) {
-          return r.json()
-        }
-        return null
-      })
+      .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data) {
           setUser(data as UserInfo)
         }
       })
-      .catch(() => {})
+      .catch((error_: unknown) => {
+        console.error('Failed to fetch user info', error_)
+      })
   }, [])
 
   return user
 }
 
+function delay(ms: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
+
+interface BlastJob {
+  _id: string
+  status: string
+  program: string
+  database: string
+  ncbiRid?: string
+  results?: BlastSearchResult
+  error?: string
+  createdAt: string
+}
+
+interface BlastSearchState {
+  submitting: boolean
+  jobId?: string
+  status?: string
+  program?: string
+  results?: BlastSearchResult
+  error?: string
+  submit: (program: string, database: string, query: string) => void
+  cancel: () => void
+}
+
+function useBlastSearch(): BlastSearchState {
+  const [submitting, setSubmitting] = useState(false)
+  const [jobId, setJobId] = useState<string>()
+  const [status, setStatus] = useState<string>()
+  const [program, setProgram] = useState<string>()
+  const [results, setResults] = useState<BlastSearchResult>()
+  const [error, setError] = useState<string>()
+
+  const submit = useCallback(
+    (prog: string, database: string, query: string) => {
+      setSubmitting(true)
+      setError(undefined)
+      setResults(undefined)
+      setStatus(undefined)
+      setJobId(undefined)
+      setProgram(prog)
+
+      async function run() {
+        const response = await fetch('/blast/jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ program: prog, database, query }),
+        })
+        if (!response.ok) {
+          const text = await response.text()
+          throw new Error(`${response.status}: ${text}`)
+        }
+        const job = (await response.json()) as BlastJob
+        setJobId(job._id)
+        setStatus(job.status)
+
+        for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+          await delay(JOB_POLL_INTERVAL)
+          const current = await fetchJson<BlastJob>(`/blast/jobs/${job._id}`)
+          setStatus(current.status)
+
+          if (current.status === 'ready') {
+            setResults(current.results)
+            return
+          }
+          if (
+            current.status === 'failed' ||
+            current.status === 'cancelled'
+          ) {
+            throw new Error(current.error ?? `BLAST job ${current.status}`)
+          }
+        }
+        throw new Error(
+          'BLAST search timed out after too many polling attempts',
+        )
+      }
+
+      void run()
+        .catch((error_: unknown) => {
+          setError(error_ instanceof Error ? error_.message : String(error_))
+        })
+        .finally(() => {
+          setSubmitting(false)
+        })
+    },
+    [],
+  )
+
+  const cancel = useCallback(() => {
+    if (!jobId) {
+      return
+    }
+    void fetch(`/blast/jobs/${jobId}`, { method: 'DELETE' }).catch(
+      (error_: unknown) => {
+        console.error('Failed to cancel BLAST job', error_)
+      },
+    )
+  }, [jobId])
+
+  return { submitting, jobId, status, program, results, error, submit, cancel }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────
+
 function getInitialAssembly() {
   const params = new URLSearchParams(globalThis.location.search)
   return params.get('assembly') ?? ''
 }
+
+function getFirstDbValue(programValue: string) {
+  const [first] = NCBI_DATABASES[programValue]
+  return first.value
+}
+
+function ncbiLinkForAccession(accession: string, isProteinResult: boolean) {
+  const db = isProteinResult ? 'protein' : 'nuccore'
+  return `https://www.ncbi.nlm.nih.gov/${db}/${accession}`
+}
+
+// ── Presentational components ──────────────────────────────────────────
+
+function HitRow({
+  hit,
+  isProteinResult,
+}: {
+  hit: BlastHit
+  isProteinResult: boolean
+}) {
+  const desc = hit.description[0] as BlastHitDescription | undefined
+  const [topHsp] = hit.hsps
+  const identPct =
+    topHsp.align_len > 0
+      ? ((topHsp.identity / topHsp.align_len) * 100).toFixed(1)
+      : '\u2014'
+
+  return (
+    <TableRow hover>
+      <TableCell>{hit.num}</TableCell>
+      <TableCell>
+        <Typography
+          variant="body2"
+          sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
+        >
+          {desc ? desc.accession : ''}
+        </Typography>
+      </TableCell>
+      <TableCell
+        sx={{
+          maxWidth: 300,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {desc ? desc.title : ''}
+      </TableCell>
+      <TableCell>
+        <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
+          {desc ? desc.sciname : ''}
+        </Typography>
+      </TableCell>
+      <TableCell align="right">{topHsp.bit_score.toFixed(1)}</TableCell>
+      <TableCell align="right">{topHsp.evalue.toExponential(2)}</TableCell>
+      <TableCell align="right">{identPct}%</TableCell>
+      <TableCell>
+        {topHsp.query_from}\u2013{topHsp.query_to}
+      </TableCell>
+      <TableCell>
+        {topHsp.hit_from}\u2013{topHsp.hit_to}
+      </TableCell>
+      <TableCell>
+        {desc ? (
+          <Link
+            href={ncbiLinkForAccession(desc.accession, isProteinResult)}
+            target="_blank"
+            rel="noopener"
+            variant="body2"
+          >
+            NCBI
+          </Link>
+        ) : null}
+      </TableCell>
+    </TableRow>
+  )
+}
+
+function HitAlignment({ hit }: { hit: BlastHit }) {
+  const desc = hit.description[0] as BlastHitDescription | undefined
+
+  return (
+    <Box sx={{ mb: 3 }}>
+      <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+        {hit.num}. {desc ? desc.accession : 'Unknown'} \u2014{' '}
+        {desc ? desc.title : ''}
+      </Typography>
+      {hit.hsps.map((hsp, i) => (
+        <Box
+          key={i}
+          component="pre"
+          sx={{
+            fontSize: '0.75rem',
+            fontFamily: 'monospace',
+            overflow: 'auto',
+            bgcolor: 'grey.50',
+            p: 1,
+            borderRadius: 1,
+            mb: 1,
+          }}
+        >
+          {`Score: ${hsp.bit_score.toFixed(1)} bits  E-value: ${hsp.evalue.toExponential(2)}  Identity: ${hsp.identity}/${hsp.align_len}\n`}
+          {`Query  ${String(hsp.query_from).padStart(8)}  ${hsp.qseq}  ${hsp.query_to}\n`}
+          {`               ${hsp.midline}\n`}
+          {`Sbjct  ${String(hsp.hit_from).padStart(8)}  ${hsp.hseq}  ${hsp.hit_to}`}
+        </Box>
+      ))}
+    </Box>
+  )
+}
+
+function AssemblyChip({
+  id,
+  assemblies,
+}: {
+  id: string
+  assemblies: Assembly[]
+}) {
+  const asm = assemblies.find((a) => a._id === id)
+  return (
+    <Chip
+      label={asm ? (asm.displayName ?? asm.name) : id}
+      size="small"
+      sx={{ mr: 0.5 }}
+    />
+  )
+}
+
+// ── Main page ──────────────────────────────────────────────────────────
 
 function BlastPage() {
   const user = useCurrentUser()
@@ -150,19 +405,17 @@ function BlastPage() {
   const [program, setProgram] = useState('blastn')
   const [database, setDatabase] = useState('nt')
   const [query, setQuery] = useState('')
-  const [error, setError] = useState<string>()
-  const [submitting, setSubmitting] = useState(false)
-  const [rid, setRid] = useState<string>()
-  const [status, setStatus] = useState<string>()
-  const [results, setResults] = useState<BlastSearchResult>()
-  const pollRef = useRef<ReturnType<typeof setInterval>>()
+  const [loadError, setLoadError] = useState<string>()
+  const blast = useBlastSearch()
 
   const loadAssemblies = useCallback(async () => {
     try {
       const data = await fetchJson<Assembly[]>('/assemblies')
       setAssemblies(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+    } catch (error_) {
+      const msg = error_ instanceof Error ? error_.message : String(error_)
+      console.error('Failed to load assemblies', error_)
+      setLoadError(msg)
     }
   }, [])
 
@@ -173,8 +426,10 @@ function BlastPage() {
         : '/blast/databases'
       const data = await fetchJson<BlastDb[]>(url)
       setBlastDbs(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+    } catch (error_) {
+      const msg = error_ instanceof Error ? error_.message : String(error_)
+      console.error('Failed to load BLAST databases', error_)
+      setLoadError(msg)
     }
   }, [selectedAssembly])
 
@@ -186,84 +441,13 @@ function BlastPage() {
     void loadBlastDbs()
   }, [loadBlastDbs])
 
-  useEffect(() => {
-    return () => {
-      if (pollRef.current) {
-        clearInterval(pollRef.current)
-      }
-    }
-  }, [])
-
-  const handleSubmit = useCallback(async () => {
-    setSubmitting(true)
-    setError(undefined)
-    setResults(undefined)
-    setStatus(undefined)
-    setRid(undefined)
-
-    try {
-      const response = await fetch('/blast/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ program, database, query }),
-      })
-      if (!response.ok) {
-        const text = await response.text()
-        throw new Error(`${response.status}: ${text}`)
-      }
-      const data = (await response.json()) as { rid: string; rtoe: number }
-      setRid(data.rid)
-      setStatus('WAITING')
-
-      const pollDelay = Math.max(data.rtoe * 1000, 5000)
-      pollRef.current = setInterval(async () => {
-        try {
-          const statusData = await fetchJson<{ rid: string; status: string }>(
-            `/blast/status/${data.rid}`,
-          )
-          setStatus(statusData.status)
-
-          if (statusData.status === 'READY') {
-            if (pollRef.current) {
-              clearInterval(pollRef.current)
-            }
-            const resultData = await fetchJson<BlastSearchResult>(
-              `/blast/results/${data.rid}`,
-            )
-            setResults(resultData)
-            setSubmitting(false)
-          } else if (statusData.status === 'FAILED') {
-            if (pollRef.current) {
-              clearInterval(pollRef.current)
-            }
-            setError('BLAST search failed at NCBI')
-            setSubmitting(false)
-          }
-        } catch (err) {
-          if (pollRef.current) {
-            clearInterval(pollRef.current)
-          }
-          setError(err instanceof Error ? err.message : String(err))
-          setSubmitting(false)
-        }
-      }, pollDelay)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-      setSubmitting(false)
-    }
-  }, [program, database, query])
-
-  const handleSelectConfiguredDb = useCallback(
-    (db: BlastDb) => {
-      setProgram(db.program)
-      setDatabase(db.database)
-    },
-    [],
-  )
-
   const availableDatabases = NCBI_DATABASES[program] ?? []
-
-  const hits = results?.report?.results?.search?.hits
+  const hits = blast.results
+    ? blast.results.report.results.search.hits
+    : undefined
+  const isProteinResult = PROTEIN_PROGRAMS.has(blast.program ?? '')
+  const canSubmit =
+    user?.role === 'admin' || user?.role === 'user'
 
   return (
     <Nav>
@@ -272,11 +456,24 @@ function BlastPage() {
           NCBI BLAST Search
         </Typography>
 
-        {error ? (
+        {loadError ? (
           <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
+            {loadError}
           </Alert>
         ) : null}
+
+        {blast.error ? (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {blast.error}
+          </Alert>
+        ) : null}
+
+        {canSubmit ? null : (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            BLAST search requires a logged-in user account. Guest and read-only
+            users cannot submit searches.
+          </Alert>
+        )}
 
         {blastDbs.length > 0 ? (
           <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
@@ -290,7 +487,8 @@ function BlastPage() {
                   variant="outlined"
                   size="small"
                   onClick={() => {
-                    handleSelectConfiguredDb(db)
+                    setProgram(db.program)
+                    setDatabase(db.database)
                   }}
                 >
                   {db.name} ({db.program}/{db.database})
@@ -327,10 +525,7 @@ function BlastPage() {
                 label="Program"
                 onChange={(e) => {
                   setProgram(e.target.value)
-                  const dbs = NCBI_DATABASES[e.target.value]
-                  if (dbs && dbs.length > 0) {
-                    setDatabase(dbs[0].value)
-                  }
+                  setDatabase(getFirstDbValue(e.target.value))
                 }}
               >
                 {NCBI_PROGRAMS.map((p) => (
@@ -375,22 +570,34 @@ function BlastPage() {
 
           <Button
             variant="contained"
-            disabled={submitting || query.trim().length === 0}
+            disabled={blast.submitting || query.trim().length === 0 || !canSubmit}
             onClick={() => {
-              void handleSubmit()
+              blast.submit(program, database, query)
             }}
           >
-            {submitting ? 'Searching…' : 'Search'}
+            {blast.submitting ? 'Searching\u2026' : 'Search'}
           </Button>
         </Paper>
 
-        {submitting ? (
+        {blast.submitting ? (
           <Paper variant="outlined" sx={{ p: 3, mb: 3, textAlign: 'center' }}>
             <CircularProgress size={24} sx={{ mb: 1 }} />
             <Typography variant="body2" color="text.secondary">
-              BLAST search in progress… RID: {rid} — Status: {status}
+              BLAST search in progress\u2026 Job: {blast.jobId} \u2014 Status:{' '}
+              {blast.status}
             </Typography>
             <LinearProgress sx={{ mt: 2 }} />
+            <Button
+              variant="outlined"
+              color="error"
+              size="small"
+              sx={{ mt: 2 }}
+              onClick={() => {
+                blast.cancel()
+              }}
+            >
+              Cancel
+            </Button>
           </Paper>
         ) : null}
 
@@ -416,70 +623,13 @@ function BlastPage() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {hits.map((hit) => {
-                    const desc = hit.description[0]
-                    const topHsp = hit.hsps[0]
-                    const identPct =
-                      topHsp.align_len > 0
-                        ? ((topHsp.identity / topHsp.align_len) * 100).toFixed(
-                            1,
-                          )
-                        : '—'
-
-                    return (
-                      <TableRow key={hit.num} hover>
-                        <TableCell>{hit.num}</TableCell>
-                        <TableCell>
-                          <Typography
-                            variant="body2"
-                            sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
-                          >
-                            {desc?.accession}
-                          </Typography>
-                        </TableCell>
-                        <TableCell
-                          sx={{
-                            maxWidth: 300,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {desc?.title}
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
-                            {desc?.sciname}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          {topHsp.bit_score.toFixed(1)}
-                        </TableCell>
-                        <TableCell align="right">
-                          {topHsp.evalue.toExponential(2)}
-                        </TableCell>
-                        <TableCell align="right">{identPct}%</TableCell>
-                        <TableCell>
-                          {topHsp.query_from}–{topHsp.query_to}
-                        </TableCell>
-                        <TableCell>
-                          {topHsp.hit_from}–{topHsp.hit_to}
-                        </TableCell>
-                        <TableCell>
-                          {desc?.accession ? (
-                            <Link
-                              href={`https://www.ncbi.nlm.nih.gov/protein/${desc.accession}`}
-                              target="_blank"
-                              rel="noopener"
-                              variant="body2"
-                            >
-                              NCBI
-                            </Link>
-                          ) : null}
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
+                  {hits.map((hit) => (
+                    <HitRow
+                      key={hit.num}
+                      hit={hit}
+                      isProteinResult={isProteinResult}
+                    />
+                  ))}
                   {hits.length === 0 ? (
                     <TableRow>
                       <TableCell
@@ -497,41 +647,14 @@ function BlastPage() {
           </Paper>
         ) : null}
 
-        {hits ? (
+        {hits && hits.length > 0 ? (
           <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
               Alignment Details
             </Typography>
-            {hits.slice(0, 20).map((hit) => {
-              const desc = hit.description[0]
-              return (
-                <Box key={hit.num} sx={{ mb: 3 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                    {hit.num}. {desc?.accession} — {desc?.title}
-                  </Typography>
-                  {hit.hsps.map((hsp, i) => (
-                    <Box
-                      key={i}
-                      component="pre"
-                      sx={{
-                        fontSize: '0.75rem',
-                        fontFamily: 'monospace',
-                        overflow: 'auto',
-                        bgcolor: 'grey.50',
-                        p: 1,
-                        borderRadius: 1,
-                        mb: 1,
-                      }}
-                    >
-                      {`Score: ${hsp.bit_score.toFixed(1)} bits  E-value: ${hsp.evalue.toExponential(2)}  Identity: ${hsp.identity}/${hsp.align_len}\n`}
-                      {`Query  ${String(hsp.query_from).padStart(8)}  ${hsp.qseq}  ${hsp.query_to}\n`}
-                      {`               ${hsp.midline}\n`}
-                      {`Sbjct  ${String(hsp.hit_from).padStart(8)}  ${hsp.hseq}  ${hsp.hit_to}`}
-                    </Box>
-                  ))}
-                </Box>
-              )
-            })}
+            {hits.slice(0, 20).map((hit) => (
+              <HitAlignment key={hit.num} hit={hit} />
+            ))}
           </Paper>
         ) : null}
 
@@ -548,6 +671,8 @@ function BlastPage() {
     </Nav>
   )
 }
+
+// ── Admin panel ────────────────────────────────────────────────────────
 
 function AdminBlastDbPanel({
   assemblies,
@@ -581,8 +706,8 @@ function AdminBlastDbPanel({
       setName('')
       setAssemblyIds([])
       onChanged()
-    } catch (err) {
-      setAdminError(err instanceof Error ? err.message : String(err))
+    } catch (error_) {
+      setAdminError(error_ instanceof Error ? error_.message : String(error_))
     }
     setSaving(false)
   }, [name, program, database, assemblyIds, onChanged])
@@ -596,8 +721,8 @@ function AdminBlastDbPanel({
           throw new Error(`${res.status}: ${text}`)
         }
         onChanged()
-      } catch (err) {
-        setAdminError(err instanceof Error ? err.message : String(err))
+      } catch (error_) {
+        setAdminError(error_ instanceof Error ? error_.message : String(error_))
       }
     },
     [onChanged],
@@ -637,17 +762,13 @@ function AdminBlastDbPanel({
                   <TableCell>{db.program}</TableCell>
                   <TableCell>{db.database}</TableCell>
                   <TableCell>
-                    {db.assemblyIds.map((id) => {
-                      const asm = assemblies.find((a) => a._id === id)
-                      return (
-                        <Chip
-                          key={id}
-                          label={asm?.displayName ?? asm?.name ?? id}
-                          size="small"
-                          sx={{ mr: 0.5 }}
-                        />
-                      )
-                    })}
+                    {db.assemblyIds.map((id) => (
+                      <AssemblyChip
+                        key={id}
+                        id={id}
+                        assemblies={assemblies}
+                      />
+                    ))}
                   </TableCell>
                   <TableCell>
                     <IconButton
@@ -658,7 +779,7 @@ function AdminBlastDbPanel({
                       }}
                       title="Delete"
                     >
-                      ✕
+                      \u2715
                     </IconButton>
                   </TableCell>
                 </TableRow>
@@ -689,10 +810,7 @@ function AdminBlastDbPanel({
               label="Program"
               onChange={(e) => {
                 setProgram(e.target.value)
-                const dbs = NCBI_DATABASES[e.target.value]
-                if (dbs && dbs.length > 0) {
-                  setDatabase(dbs[0].value)
-                }
+                setDatabase(getFirstDbValue(e.target.value))
               }}
             >
               {NCBI_PROGRAMS.map((p) => (
@@ -732,7 +850,7 @@ function AdminBlastDbPanel({
                 selected
                   .map((id) => {
                     const asm = assemblies.find((a) => a._id === id)
-                    return asm?.displayName ?? asm?.name ?? id
+                    return asm ? (asm.displayName ?? asm.name) : id
                   })
                   .join(', ')
               }

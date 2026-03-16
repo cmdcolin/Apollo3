@@ -1,8 +1,23 @@
 import { randomBytes } from 'node:crypto'
 
-import { Inject, Injectable, Logger } from '@nestjs/common'
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common'
 
 import { DatabaseService } from '../mikro-orm/database.service.js'
+
+const MAX_QUERY_BYTES = 10_485_760
+
+const VALID_PROGRAMS = new Set([
+  'blastn',
+  'blastp',
+  'blastx',
+  'tblastn',
+  'tblastx',
+])
 
 @Injectable()
 export class BlastService {
@@ -11,6 +26,8 @@ export class BlastService {
   ) {}
 
   private readonly logger = new Logger(BlastService.name)
+
+  // ── BLAST database configs ───────────────────────────────────────────
 
   async getBlastDbs(assemblyId?: string) {
     if (assemblyId) {
@@ -26,6 +43,9 @@ export class BlastService {
     assemblyIds: string[]
     createdBy?: string
   }) {
+    if (!VALID_PROGRAMS.has(params.program)) {
+      throw new BadRequestException(`Invalid BLAST program: ${params.program}`)
+    }
     const _id = randomBytes(16).toString('hex')
     return this.db.blastDb.create({
       _id,
@@ -41,71 +61,64 @@ export class BlastService {
     return this.db.blastDb.deleteById(id)
   }
 
-  async submitBlastSearch(params: {
+  // ── BLAST jobs ───────────────────────────────────────────────────────
+
+  async submitJob(params: {
     program: string
     database: string
     query: string
+    createdBy?: string
   }) {
-    this.logger.log(
-      `Submitting BLAST search: ${params.program} against ${params.database}`,
-    )
-
-    const formData = new URLSearchParams({
-      CMD: 'Put',
-      PROGRAM: params.program,
-      DATABASE: params.database,
-      QUERY: params.query,
-    })
-
-    const response = await fetch(
-      'https://blast.ncbi.nlm.nih.gov/blast/Blast.cgi',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: formData.toString(),
-      },
-    )
-
-    const text = await response.text()
-
-    const ridMatch = /RID = (\S+)/.exec(text)
-    const rtoeMatch = /RTOE = (\d+)/.exec(text)
-
-    if (!ridMatch) {
-      this.logger.error(`BLAST submit failed, response: ${text.slice(0, 500)}`)
-      throw new Error('Failed to submit BLAST search — no RID returned')
+    if (!VALID_PROGRAMS.has(params.program)) {
+      throw new BadRequestException(`Invalid BLAST program: ${params.program}`)
     }
-
-    const rid = ridMatch[1]
-    const rtoe = rtoeMatch ? Number(rtoeMatch[1]) : 30
-
-    this.logger.log(`BLAST search submitted: RID=${rid}, RTOE=${rtoe}`)
-    return { rid, rtoe }
-  }
-
-  async checkBlastStatus(rid: string) {
-    const response = await fetch(
-      `https://blast.ncbi.nlm.nih.gov/blast/Blast.cgi?CMD=Get&FORMAT_OBJECT=SearchInfo&RID=${encodeURIComponent(rid)}`,
-    )
-    const text = await response.text()
-
-    const statusMatch = /Status=(\S+)/.exec(text)
-    const status = statusMatch?.[1] ?? 'UNKNOWN'
-
-    return { rid, status }
-  }
-
-  async getBlastResults(rid: string) {
-    const response = await fetch(
-      `https://blast.ncbi.nlm.nih.gov/blast/Blast.cgi?CMD=Get&FORMAT_TYPE=JSON2_S&RID=${encodeURIComponent(rid)}`,
-    )
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch BLAST results: ${response.status} ${response.statusText}`,
+    if (!params.database || !params.query) {
+      throw new BadRequestException('database and query are required')
+    }
+    if (params.query.length > MAX_QUERY_BYTES) {
+      throw new BadRequestException(
+        `Query too large (${params.query.length} bytes, max ${MAX_QUERY_BYTES})`,
       )
     }
 
-    return response.json()
+    const _id = randomBytes(16).toString('hex')
+    const job = await this.db.blastJob.create({
+      _id,
+      status: 'pending',
+      program: params.program,
+      database: params.database,
+      query: params.query,
+      createdBy: params.createdBy,
+      createdAt: new Date(),
+    })
+
+    this.logger.log(
+      `BLAST job ${_id} created: ${params.program} against ${params.database}`,
+    )
+    return job
+  }
+
+  async getJob(id: string) {
+    return this.db.blastJob.findById(id)
+  }
+
+  async getJobsByUser(userId: string) {
+    return this.db.blastJob.findByUser(userId)
+  }
+
+  async cancelJob(id: string) {
+    const job = await this.db.blastJob.findById(id)
+    if (!job) {
+      return false
+    }
+    if (job.status === 'ready' || job.status === 'failed') {
+      return false
+    }
+    await this.db.blastJob.updateById(id, {
+      status: 'cancelled',
+      error: 'Cancelled by user',
+    })
+    this.logger.log(`BLAST job ${id} cancelled`)
+    return true
   }
 }

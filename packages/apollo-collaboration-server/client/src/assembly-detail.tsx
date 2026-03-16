@@ -162,7 +162,7 @@ function AssemblyDetailPage() {
               <Button
                 variant="contained"
                 size="small"
-                href={`/jbrowse/?assemblies=${encodeURIComponent(assembly._id)}`}
+                href={`/jbrowse/?config=${encodeURIComponent(`/jbrowse/config.json?assemblies=${assembly._id}`)}`}
               >
                 Open in JBrowse
               </Button>

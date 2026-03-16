@@ -43,12 +43,12 @@ export class MikroOrmBlastDbRepository implements BlastDbRepository {
       { assemblies: assemblyId },
       POPULATE,
     )
-    return entities.map(toRow)
+    return entities.map((e) => toRow(e))
   }
 
   async findAll() {
     const entities = await this.em.find(BlastDbEntity, {}, POPULATE)
-    return entities.map(toRow)
+    return entities.map((e) => toRow(e))
   }
 
   async create(row: BlastDbRow) {
