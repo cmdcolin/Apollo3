@@ -1,21 +1,11 @@
 import { defineEntity, p } from '@mikro-orm/core'
 
-export enum AnalysisJobStatus {
-  PENDING = 'pending',
-  RUNNING = 'running',
-  READY = 'ready',
-  FAILED = 'failed',
-  CANCELLED = 'cancelled',
-}
-
 export const AnalysisJobEntity = defineEntity({
   name: 'AnalysisJobEntity',
   tableName: 'analysis_job',
   properties: {
     _id: p.string().primary(),
-    status: p
-      .enum(() => AnalysisJobStatus)
-      .default(AnalysisJobStatus.PENDING),
+    status: p.string().default('pending'),
     tool: p.string(),
     assemblyId: p.string().nullable(),
     params: p.json<Record<string, unknown>>().default('{}'),
@@ -23,8 +13,8 @@ export const AnalysisJobEntity = defineEntity({
     metadata: p.json<Record<string, unknown>>().nullable(),
     error: p.string().nullable(),
     createdBy: p.string().nullable(),
-    createdAt: p.date().default('now'),
-    startedAt: p.date().nullable(),
+    createdAt: p.datetime().default('now'),
+    startedAt: p.datetime().nullable(),
   },
   indexes: [{ properties: ['status'] }, { properties: ['tool'] }],
 })

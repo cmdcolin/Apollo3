@@ -22,8 +22,5 @@ export interface ChangeRepository {
     limit?: number
     offset?: number
   }): Promise<ChangeRow[]>
-  /** Count changes matching the given geneId */
-  countByGeneId?(geneId: string): Promise<number>
-  /** Update the geneId for a specific change record (used by backfill) */
-  updateGeneId(changeId: string, geneId: string): Promise<void>
+  countByGeneId(geneId: string): Promise<number>
 }

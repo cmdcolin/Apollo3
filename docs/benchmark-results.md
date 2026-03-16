@@ -4,7 +4,7 @@
 
 ## Results
 
-| Operation | Before | After | Speedup |
+| Operation | origin/main | Proposed | Speedup |
 |-----------|--------|-------|---------|
 | Assembly import (5000 features) | 60s | 8.06s | **7.5x** |
 | Feature get (all) | 74s | 3.65s | **20x** |
@@ -25,24 +25,24 @@ Concurrent reads during writes, reduced fsync for batch inserts.
 
 Replaced `em.find()` with `em.getConnection().execute()` for all read-only
 feature queries. ORM hydration (proxy creation, identity map, change tracking)
-was pure overhead since results were immediately converted to plain objects.
+is pure overhead since results are immediately converted to plain objects.
 
 ### 3. Recursive CTEs for tree operations
 
-Replaced iterative BFS (N queries per depth level per root) with single
-recursive CTE queries for `findDescendantsOfMany`, `deleteDescendants`, and
-`findRootParent`. For 5000 features across ~1000 gene trees: hundreds of
-queries → 1.
+On origin/main, iterative BFS issues N queries per depth level per root.
+Replaced with single recursive CTE queries for `findDescendantsOfMany`,
+`deleteDescendants`, and `findRootParent`. For 5000 features across ~1000 gene
+trees: hundreds of queries → 1.
 
 ### 4. Moved check recalculation from GET to mutation pipeline
 
 **The single largest performance issue — responsible for the 20x speedup.**
 
-`GET /features/getFeatures` was re-running all quality checks on every root
-feature in the response. For 1000 genes, each pan/zoom triggered: 1000x
-findById + 1000x findDescendants + 1000x assembleFeatureTrees + check
-config lookups + delete/rerun/save checks. All redundant — results were already
-persisted from the last edit.
+On origin/main, `GET /features/getFeatures` re-runs all quality checks on every
+root feature in the response. For 1000 genes, each pan/zoom triggers: 1000x
+findById + 1000x findDescendants + 1000x assembleFeatureTrees + check config
+lookups + delete/rerun/save checks. All redundant — results are already persisted
+from the last edit.
 
 Fix: checks run after mutations only. GET returns pre-computed results.
 

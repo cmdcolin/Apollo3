@@ -1,7 +1,6 @@
 # Alternatives to the MikroORM Migration
 
-Evaluation of other paths. For the chosen approach, see
-[mikro-orm-migration-justification.md](./mikro-orm-migration-justification.md).
+Evaluation of other paths considered.
 
 ## Option 1: Stay on MongoDB With Targeted Fixes
 

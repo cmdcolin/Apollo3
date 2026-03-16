@@ -2,23 +2,23 @@
 
 ## Change
 
-Removed the `ApolloInternetAccount` JBrowse plugin abstraction (~500 lines, 6
-files). Replaced with direct cookie-based auth and session-level connection
+Removes the `ApolloInternetAccount` JBrowse plugin abstraction (~500 lines, 6
+files). Replaces it with direct cookie-based auth and session-level connection
 management.
 
 ## Why
 
-After migrating to cookie-based auth (HTTP-only cookies), the InternetAccount
-was redundant:
+With cookie-based auth (HTTP-only cookies), the InternetAccount becomes
+redundant:
 
-- `CollaborationServerDriver.fetch()` already used `credentials: 'same-origin'`
+- `CollaborationServerDriver.fetch()` already uses `credentials: 'same-origin'`
 - Cookie auth is handled transparently by the browser
-- Multi-account selection UI added complexity for a feature no deployment uses
+- Multi-account selection UI adds complexity for a feature no deployment uses
   (Apollo3 is single-server)
 
 ## What Moved Where
 
-| Concern | Before | After |
+| Concern | Current (origin/main) | Proposed |
 |---------|--------|-------|
 | WebSocket management | `ApolloInternetAccount/model.ts` | Session model (`session.ts`) |
 | Change sequence tracking | `ApolloInternetAccount/model.ts` | Session model |
@@ -26,7 +26,7 @@ was redundant:
 | API calls | `internetAccount.getFetcher()` | `apolloFetch()` with `credentials: 'same-origin'` |
 | Multi-account UI | ~200 lines across 6 components | Deleted |
 
-## Login Flow (Current)
+## Login Flow (Proposed)
 
 1. Plugin reads `baseURL` from `ApolloPlugin` configuration
 2. Session fetches `${baseURL}/jbrowse/config.json` with cookie credentials
@@ -35,7 +35,7 @@ was redundant:
 
 ## Impact
 
-| Metric | Before | After |
+| Metric | Current (origin/main) | Proposed |
 |--------|--------|-------|
 | InternetAccount files | 6 | 0 |
 | Auth mechanisms | Cookie + JWT + Authorization header | Cookie only |

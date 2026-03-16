@@ -1,19 +1,11 @@
 import { defineEntity, p } from '@mikro-orm/core'
 
-export enum TiberiusJobStatus {
-  PENDING = 'pending',
-  RUNNING = 'running',
-  READY = 'ready',
-  FAILED = 'failed',
-  CANCELLED = 'cancelled',
-}
-
 export const TiberiusJobEntity = defineEntity({
   name: 'TiberiusJobEntity',
   tableName: 'tiberius_job',
   properties: {
     _id: p.string().primary(),
-    status: p.enum(() => TiberiusJobStatus).default(TiberiusJobStatus.PENDING),
+    status: p.string().default('pending'),
     assemblyId: p.string(),
     refSeqId: p.string(),
     refSeqName: p.string(),
@@ -24,8 +16,8 @@ export const TiberiusJobEntity = defineEntity({
     trackConfigId: p.string().nullable(),
     error: p.string().nullable(),
     createdBy: p.string().nullable(),
-    createdAt: p.date().default('now'),
-    startedAt: p.date().nullable(),
+    createdAt: p.datetime().default('now'),
+    startedAt: p.datetime().nullable(),
   },
   indexes: [{ properties: ['status'] }, { properties: ['assemblyId'] }],
 })

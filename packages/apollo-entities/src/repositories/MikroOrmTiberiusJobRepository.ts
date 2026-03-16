@@ -4,10 +4,7 @@ import type {
 } from '@apollo-annotation/common'
 import type { EntityManager, InferEntity } from '@mikro-orm/core'
 
-import {
-  TiberiusJobEntity,
-  TiberiusJobStatus,
-} from '../entities/TiberiusJobEntity.js'
+import { TiberiusJobEntity } from '../entities/TiberiusJobEntity.js'
 
 function toRow(entity: InferEntity<typeof TiberiusJobEntity>): TiberiusJobRow {
   return {
@@ -85,7 +82,7 @@ export class MikroOrmTiberiusJobRepository implements TiberiusJobRepository {
       return
     }
     if (data.status !== undefined) {
-      entity.status = data.status as TiberiusJobStatus
+      entity.status = data.status
     }
     if (data.trackConfigId !== undefined) {
       entity.trackConfigId = data.trackConfigId
@@ -103,22 +100,20 @@ export class MikroOrmTiberiusJobRepository implements TiberiusJobRepository {
   async findPending(limit: number) {
     const entities = await this.em.find(
       TiberiusJobEntity,
-      { status: TiberiusJobStatus.PENDING },
+      { status: 'pending' },
       { orderBy: { createdAt: 'ASC' }, limit },
     )
     return entities.map((e) => toRow(e))
   }
 
   async countByStatus(status: string) {
-    return this.em.count(TiberiusJobEntity, {
-      status: status as TiberiusJobStatus,
-    })
+    return this.em.count(TiberiusJobEntity, { status })
   }
 
   async findRunningOlderThan(cutoff: Date) {
     // eslint-disable-next-line unicorn/no-array-method-this-argument
     const entities = await this.em.find(TiberiusJobEntity, {
-      status: TiberiusJobStatus.RUNNING,
+      status: 'running',
       startedAt: { $lt: cutoff },
     })
     return entities.map((e) => toRow(e))
@@ -127,7 +122,7 @@ export class MikroOrmTiberiusJobRepository implements TiberiusJobRepository {
   async deleteOlderThan(cutoff: Date, statuses: string[]) {
     // eslint-disable-next-line unicorn/no-array-method-this-argument
     const entities = await this.em.find(TiberiusJobEntity, {
-      status: { $in: statuses as TiberiusJobStatus[] },
+      status: { $in: statuses },
       createdAt: { $lt: cutoff },
     })
     const rows = entities.map((e) => toRow(e))
@@ -141,10 +136,10 @@ export class MikroOrmTiberiusJobRepository implements TiberiusJobRepository {
   async resetOrphanedRunning() {
     // eslint-disable-next-line unicorn/no-array-method-this-argument
     const entities = await this.em.find(TiberiusJobEntity, {
-      status: TiberiusJobStatus.RUNNING,
+      status: 'running',
     })
     for (const entity of entities) {
-      entity.status = TiberiusJobStatus.PENDING
+      entity.status = 'pending'
       entity.startedAt = null
     }
     await this.em.flush()

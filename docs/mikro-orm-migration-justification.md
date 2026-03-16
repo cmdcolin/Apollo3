@@ -1,7 +1,7 @@
 # From MongoDB to Relational Databases
 
-Apollo3 migrated from MongoDB to MikroORM, supporting SQLite, PostgreSQL, and
-MongoDB from a single codebase. The migration is complete. A
+This branch migrates Apollo3 from MongoDB to MikroORM, supporting SQLite,
+PostgreSQL, and MongoDB from a single codebase. A
 [migration script](../packages/apollo-collaboration-server/scripts/migrate-mongo-to-mikroorm.ts)
 exists for existing MongoDB deployments.
 
@@ -9,59 +9,83 @@ exists for existing MongoDB deployments.
 
 ### Data model and editing
 
-| Area | MongoDB (before) | Relational (after) |
+| Area | MongoDB (current) | Relational (proposed) |
 |------|-------------------|---------------------|
 | Editing a single feature | Load entire gene doc, modify, write back | Update one row |
-| Two users editing same gene | Second save overwrites first user's changes | No conflict — separate rows |
+| Two users editing same gene | Second save may overwrite first user's changes | No conflict — separate rows |
 | Data integrity | Application-enforced | Database-enforced (FKs, cascades, transactions) |
 | Feature lookup by ID | Scan `allIds` arrays across all genes | Direct primary key lookup |
 | Document/row size limits | 16MB per gene document | None |
 
 ### Deployment and operations
 
-| Area | MongoDB (before) | Relational (after) |
+| Area | MongoDB (current) | Relational (proposed) |
 |------|-------------------|---------------------|
 | Desktop deployment | Not possible (MongoDB requires a server) | Fully self-contained with SQLite |
 | Server deployment | 2 MongoDB containers in replica set, 4 volumes, init scripts | 1 PostgreSQL container, or 0 with SQLite |
 | Developer setup | Install + configure MongoDB replica set | `pnpm install && pnpm start` |
 | CI setup | MongoDB service container + replica set init | Nothing needed (SQLite) |
-| Min hosting cost | ~$50-60/mo (MongoDB Atlas) | $0 (SQLite) or ~$5-15/mo (PostgreSQL) |
+| Hosting footprint | Replica set (multi-container) | Potentially a nano instance (SQLite) or single PostgreSQL container |
 | Backups | `mongodump` | Copy one file (SQLite) or `pg_dump` |
 
 ### Code and maintenance
 
-| Area | MongoDB (before) | Relational (after) |
+| Area | MongoDB (current) | Relational (proposed) |
 |------|-------------------|---------------------|
-| Server code complexity | Each operation navigated nested trees; many were 30+ lines | Most operations are 5-10 lines targeting specific rows |
+| Server code complexity | Each operation navigates nested trees; many are 30+ lines | Most operations are 5-10 lines targeting specific rows |
 | Schema definitions | Mongoose schemas + separate `apollo-schemas` package | 13 compact entity definitions in `apollo-entities` |
 | Dependencies | `mongoose`, `@nestjs/mongoose`, `connect-mongodb-session`, `mongoose-id-validator`, `apollo-schemas` | One ORM (`@mikro-orm/*`) |
-| Real-time collaboration | Unchanged — runs through WebSockets, independent of DB | |
+| Schema migrations | No formal migration system; schema changes are implicit | Timestamped migration files (like Liquibase/Rails), committed to repo, run in order on deploy, reversible |
+| Real-time collaboration | Unchanged — WebSockets, independent of DB | |
 | Undo/redo | Unchanged — pure TypeScript, independent of DB | |
 
-## Why We Migrated
+## Why Migrate
 
-1. **Concurrent editing was broken by design.** MongoDB stored an entire gene
-   as one nested document. Two annotators editing different exons both
-   loaded/saved the full document — second save silently overwrote the first.
-   With flat rows, each feature is its own record.
+1. **Every edit loads and rewrites the entire gene.** On origin/main,
+   changing one exon by 1bp loads the full gene document (all exons, mRNAs,
+   CDSs) and writes the whole thing back. With flat rows, it is a single-row
+   update. This is the root cause of most code complexity on the server side —
+   each operation must navigate nested Maps, update parent bookkeeping, and
+   serialize the whole tree back to the database.
 
-2. **Every edit touched more data than necessary.** Changing one exon by 1bp
-   loaded and rewrote the entire gene. With flat rows, it's a single-row update.
+2. **The `allIds` bookkeeping is fragile.** On origin/main, every gene
+   carries a manually-maintained array of all descendant IDs. Application code
+   must keep this array in sync on every add, delete, or reparent. With flat
+   rows, every feature has its own primary key — no bookkeeping needed.
 
-3. **The `allIds` bookkeeping was fragile.** Every gene carried a
-   manually-maintained list of all descendant IDs. With flat rows, every feature
-   has its own primary key.
+3. **Concurrent editing.** Because the full gene document is loaded and saved
+   as a unit, two annotators editing different exons of the same gene both
+   load and save the full document — the second save could overwrite the first
+   user's changes. This is a known limitation of the document-per-gene model
+   (addressable with optimistic locking in MongoDB, but not currently
+   implemented on origin/main). With flat rows, edits to different features
+   target different rows and do not conflict. A database-level counter with
+   pessimistic locking assigns each change a unique sequence number within a
+   transaction, preventing ordering collisions.
 
-4. **16MB document size limit.** Highly spliced genes could hit MongoDB's
+4. **16MB document size limit.** Highly spliced genes can hit MongoDB's
    per-document ceiling. Flat rows have no per-record limit.
 
-5. **Deployment was unnecessarily complex.** MongoDB required a two-container
-   replica set for change streams that Apollo3 didn't use for collaboration
-   (WebSockets handle that). PostgreSQL needs one container; SQLite needs none.
+5. **Replica set required for transactions.** MongoDB requires a replica set
+   (minimum two containers) to support transactions. On origin/main, Apollo3
+   uses transactions for multi-step edits. A single-node MongoDB deployment
+   does not support transactions. The replica set also requires extra Docker
+   volumes, an init script, and an elevated timeout setting
+   (`transactionLifetimeLimitSeconds=300`) for large imports. PostgreSQL needs
+   one container; SQLite needs none — both support transactions natively.
 
-6. **Desktop deployment was not practical.** MongoDB requires a running server
-   process with no embedded mode suitable for desktop apps. SQLite enables
-   fully self-contained desktop/Electron use.
+6. **No desktop/Electron deployment.** MongoDB requires a running server
+   process with no embedded mode. SQLite enables fully self-contained
+   desktop/Electron deployment.
+
+7. **No formal schema migration system.** On origin/main, there is no
+   built-in way to version or migrate schema changes — changes are implicit
+   (start writing new fields and hope old documents still work). MikroORM
+   provides timestamped migration files committed to the repo, run in order on
+   deploy, and reversible. While NoSQL schemas are more flexible by nature (no
+   columns to add), that flexibility comes at the cost of no enforcement and
+   no audit trail. Automated migrations give us schema flexibility with a
+   safety net.
 
 ## Why MikroORM
 
@@ -71,27 +95,34 @@ exists for existing MongoDB deployments.
 - Built-in migration system (like Liquibase/Rails migrations)
 - First-class NestJS integration via `@mikro-orm/nestjs`
 
-## Tradeoffs
+## Tradeoffs: What Gets Harder
 
-| Area | Harder? | Mitigation |
-|------|---------|------------|
-| Loading a full gene tree | Yes — requires recursive CTEs vs one document fetch | `findDescendantsOfMany` batches all roots into one CTE. Add `root_id` only if profiling proves bottleneck |
-| Merging transcripts | Yes — more DB round-trips for cross-parent operations | Fixable with `UPDATE ... WHERE parent IN (...)` batching |
-| Text search | Currently weaker (`LIKE` vs MongoDB text indexes) | Replace with SQLite FTS5 or PostgreSQL tsvector |
+MongoDB's nested document model has genuine advantages for certain operations:
 
-## Serverless and Scale-to-Zero
+| Operation | MongoDB advantage | Relational cost | Mitigation |
+|-----------|-------------------|-----------------|------------|
+| Loading a full gene tree | One document fetch returns the entire gene pre-assembled | Recursive CTE query to walk the parent chain, then in-memory assembly | `findDescendantsOfMany` batches all roots into one CTE. Typically 3-4 levels deep |
+| Merging transcripts | All children already in memory from the document load | Children must be queried separately, reparented, flushed | Fixable with `UPDATE ... WHERE parent IN (...)` batching |
+| Attribute search | MongoDB natively queries inside nested documents and supports `$text` indexes with ranking | Feature attributes are stored in a JSON column. `LIKE` queries on JSON are slow and imprecise (no ranking, no stemming, risk of false positives) | SQLite FTS5 or PostgreSQL tsvector can index extracted text. Alternatively, a separate `feature_attribute` table would allow direct indexed queries at the cost of more joins |
+| Schema flexibility | Adding a field requires no migration — just start writing it | Requires a schema migration (add column, deploy) | MikroORM automates migration generation, but it is an extra step |
 
-The relational model enables deployment patterns that were not practical with MongoDB:
+These tradeoffs are real. The operations that get harder (tree loading,
+transcript merges, attribute search) are less frequent than those that get
+dramatically simpler (single-feature edits, feature lookup, bulk import,
+deletion), but the attribute search limitation in particular deserves attention
+as the annotation workflow matures.
 
+## New Deployment Options
+
+The relational model enables deployment patterns not practical with MongoDB:
+
+- **Nano instance with SQLite**: full Apollo3 in one process on minimal
+  hardware, when analysis tools are not in use. Analysis tools (BLAST, BLAT,
+  miniprot, Tiberius) are more resource-intensive and would increase
+  requirements.
 - **Scale-to-zero containers** (Fargate/Cloud Run + Aurora Serverless/Neon):
-  idle cost ~$0-5/mo vs $50-60/mo MongoDB floor
-- **Single-file SQLite** on a $3-6/mo nano instance: full Apollo3 in one process
+  no idle cost when nobody is using the instance
+- **Desktop/Electron**: SQLite has no server process requirement, enabling
+  fully self-contained desktop deployment — not possible with MongoDB
 - **Lambda** (read-only): viable for serving annotations to public JBrowse;
   full collaboration blocked by WebSocket requirement (solvable with SSE)
-
-## Related Documents
-
-- [Benchmark Results](./benchmark-results.md) — performance numbers
-- [Technical Details](./mikro-orm-technical-details.md) — worked examples, schema assessment
-- [History Tracking](./apollo2-migration-and-history-tracking.md) — per-gene history, Apollo2 migration
-- [Alternatives](./mikro-orm-alternatives.md) — MongoDB fixes, Firestore evaluation

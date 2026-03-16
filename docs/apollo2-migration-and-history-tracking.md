@@ -2,8 +2,8 @@
 
 ## Background
 
-Apollo3's change log was originally a **global stream** — every edit was
-recorded, but there was no way to query "all edits to gene X" without scanning
+On origin/main, Apollo3's change log is a **global stream** — every edit is
+recorded, but there is no way to query "all edits to gene X" without scanning
 the entire change table. Apollo2 had per-gene history via Grails audit logging.
 
 The `changedIds` field stores affected feature IDs as a JSON blob. JSON arrays
@@ -23,7 +23,7 @@ Standard indexed lookup, works identically in SQLite and PostgreSQL, O(log n).
 
 ### Comparison
 
-| Query                | Apollo2                  | Apollo3 (before)        | Apollo3 (now)              |
+| Query                | Apollo2                  | Apollo3 (origin/main)   | Apollo3 (proposed)         |
 | -------------------- | ------------------------ | ----------------------- | -------------------------- |
 | History of gene X    | Direct audit table query | Full table scan of JSON | Indexed `WHERE geneId = ?` |
 | Changes by user Y    | Scan                     | Indexed                 | Same                       |
@@ -46,8 +46,8 @@ Standard indexed lookup, works identically in SQLite and PostgreSQL, O(log n).
 
 ### "Backfilling" from existing Apollo 3 MongoDB data
 
-For databases with existing change records, we will have to run a migration
-script
+For databases with existing change records, a backfill script would walk the
+change table and populate the `geneId` column retroactively.
 
 ## Apollo 2 Data Migration
 
@@ -70,7 +70,7 @@ Map Apollo2 audit records to Apollo3 `ChangeEntity` rows:
 | Feature → organism/sequence            | `assembly`                               |
 | Feature → top-level gene               | `geneId`                                 |
 
-Imported records use a `Apollo2Import:` prefix on `typeName` — viewable but
+Imported records use an `Apollo2Import:` prefix on `typeName` — viewable but
 **not undoable** (no `getInverse()` implementation).
 
 ### Combined workflow: Apollo 2 → Apollo 3

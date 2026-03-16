@@ -14,19 +14,21 @@ if [ "${1:-}" = "--docx-only" ]; then
   DOCX_ONLY=1
 fi
 
-# Reading order: README first, then architecture/leadership docs, then
-# migration deep-dives, then changes/improvements, then future work.
+# Reading order: intro, then MikroORM migration (the core change), then
+# schema/technical details, then deployment/architecture, then
+# performance/security, then analysis tools, then appendices.
 FILES=(
   README.md
-  architecture-overview.md
   mikro-orm-migration-justification.md
-  deployment.md
   schema-comparison.md
   mikro-orm-technical-details.md
   mikro-orm-alternatives.md
+  deployment.md
+  architecture-overview.md
   benchmark-results.md
-  bug-fixes-code-quality.md
   authentication-security-audit.md
+  bug-fixes-code-quality.md
+  analysis-tools.md
   check-result-simplification.md
   internet-account-removal.md
   tech-notes.md

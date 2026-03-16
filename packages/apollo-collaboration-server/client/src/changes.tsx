@@ -24,7 +24,6 @@ interface ChangeRow {
   typeName: string
   user: string
   assembly?: string
-  geneId?: string
   changedIds?: string[]
   createdAt?: string
 }
@@ -129,6 +128,12 @@ function Pagination({
   )
 }
 
+function clearGeneIdParam() {
+  const url = new URL(globalThis.location.href)
+  url.searchParams.delete('geneId')
+  globalThis.history.replaceState(null, '', url.toString())
+}
+
 function RecentChangesPage() {
   const params = new URLSearchParams(globalThis.location.search)
   const initialGeneId = params.get('geneId') ?? ''
@@ -166,6 +171,13 @@ function RecentChangesPage() {
     void load()
   }, [load])
 
+  function clearFilter() {
+    setGeneIdInput('')
+    setActiveGeneId('')
+    setPage(1)
+    clearGeneIdParam()
+  }
+
   return (
     <Nav current="changes">
       <Container>
@@ -178,15 +190,16 @@ function RecentChangesPage() {
           sx={{ display: 'flex', gap: 1, mb: 2, alignItems: 'center' }}
           onSubmit={(e) => {
             e.preventDefault()
+            const trimmed = geneIdInput.trim()
             setPage(1)
-            setActiveGeneId(geneIdInput.trim())
-            const url = new URL(globalThis.location.href)
-            if (geneIdInput.trim()) {
-              url.searchParams.set('geneId', geneIdInput.trim())
+            setActiveGeneId(trimmed)
+            if (trimmed) {
+              const url = new URL(globalThis.location.href)
+              url.searchParams.set('geneId', trimmed)
+              globalThis.history.replaceState(null, '', url.toString())
             } else {
-              url.searchParams.delete('geneId')
+              clearGeneIdParam()
             }
-            globalThis.history.replaceState(null, '', url.toString())
           }}
         >
           <TextField
@@ -203,17 +216,7 @@ function RecentChangesPage() {
             Search
           </Button>
           {activeGeneId && (
-            <Button
-              size="small"
-              onClick={() => {
-                setGeneIdInput('')
-                setActiveGeneId('')
-                setPage(1)
-                const url = new URL(globalThis.location.href)
-                url.searchParams.delete('geneId')
-                globalThis.history.replaceState(null, '', url.toString())
-              }}
-            >
+            <Button size="small" onClick={clearFilter}>
               Clear
             </Button>
           )}
@@ -223,14 +226,7 @@ function RecentChangesPage() {
           <Box sx={{ mb: 2 }}>
             <Chip
               label={`Gene: ${activeGeneId}`}
-              onDelete={() => {
-                setGeneIdInput('')
-                setActiveGeneId('')
-                setPage(1)
-                const url = new URL(globalThis.location.href)
-                url.searchParams.delete('geneId')
-                globalThis.history.replaceState(null, '', url.toString())
-              }}
+              onDelete={clearFilter}
               color="primary"
               variant="outlined"
             />

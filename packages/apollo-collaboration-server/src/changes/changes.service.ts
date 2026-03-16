@@ -129,35 +129,7 @@ export class ChangesService {
   }
 
   async countByGeneId(geneId: string) {
-    if (this.db.changeLog.countByGeneId) {
-      return this.db.changeLog.countByGeneId(geneId)
-    }
-    const all = await this.db.changeLog.findAll({ filter: { geneId } })
-    return all.length
-  }
-
-  async backfillGeneIds() {
-    const changes = await this.db.changeLog.findAll({
-      filter: {},
-      sort: 'asc',
-    })
-    let updated = 0
-    for (const change of changes) {
-      if (change.geneId) {
-        continue
-      }
-      if (change.changedIds.length === 0) {
-        continue
-      }
-      const rootFeatures = await this.db.feature.findRootParentsOfMany(
-        change.changedIds,
-      )
-      if (rootFeatures.length > 0) {
-        await this.db.changeLog.updateGeneId(change._id, rootFeatures[0]._id)
-        updated++
-      }
-    }
-    return { total: changes.length, updated }
+    return this.db.changeLog.countByGeneId(geneId)
   }
 
   async findAll(changeFilter: FindChangeDto) {

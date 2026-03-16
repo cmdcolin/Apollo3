@@ -73,7 +73,7 @@ is always proxied (dynamically generated from track/assembly records in DB).
 |---------|----------|--------|
 | SQLite | Dev, desktop, small deployments | Default (no config) |
 | PostgreSQL | Production collaborative | `DB_BACKEND=postgresql DB_CONNECTION_URL=postgresql://...` |
-| MongoDB | Legacy (migration from Apollo2) | `DB_BACKEND=mongo DB_CONNECTION_URL=mongodb://...` |
+| MongoDB | Existing deployments migrating from origin/main | `DB_BACKEND=mongo DB_CONNECTION_URL=mongodb://...` |
 
 ## Environment Variables
 

@@ -42,8 +42,8 @@ edits this cost doesn't apply.
 | Merge exons | Load gene, merge in memory, save | Update first exon bounds, delete second | Simpler |
 | Merge transcripts | All in-memory on one document, single save | Query children separately, reparent, delete. N+1 issue. | More complex (fixable with batch UPDATE) |
 
-Merging transcripts is the clearest case where nested documents had an
-advantage — all children were already in memory. With flat rows, this requires
+Merging transcripts is the clearest case where nested documents have an
+advantage — all children are already in memory. With flat rows, this requires
 separate queries and reparenting, though batching can reduce the overhead.
 
 ### Undo operations
@@ -61,16 +61,16 @@ or `allIds` bookkeeping. Simpler in the flat model.
 | Count features by type | Load all, count in app code | `GROUP BY type` | Simpler (database-level aggregation) |
 | Export to GFF3 | Data already nested | Rows map to GFF3 lines directly | Could be simpler |
 | Run validation checks | Data already nested | Fetch descendants + assemble tree (one extra step) | Harder (requires recursive query) |
-| Text search | `$text` index (slow writes) | Currently `LIKE` only. Fixable with FTS5/tsvector. | Currently worse, fixable |
+| Text search on attributes | `$text` index (ranked, stemmed) | `LIKE` on JSON column (no ranking, no stemming, false-positive risk) | Currently worse. Fixable with FTS5/tsvector, or a normalized `feature_attribute` table |
 
 For targeted queries (by ID, by type, by range), the relational model benefits
 from standard database indexing. For operations that need the full gene tree
 (validation, client display), there is an extra step to collect and reassemble
-descendants. MongoDB returned these pre-assembled, which was convenient. The
-cost of reassembly is modest (one recursive CTE query + O(n) in-memory pass),
-but it is a real tradeoff.
+descendants. MongoDB returns these pre-assembled, which is convenient. The cost of
+reassembly is modest (one recursive CTE query + O(n) in-memory pass), but it is
+a real tradeoff.
 
-### Operations MongoDB couldn't do well
+### Operations MongoDB does not do well
 
 - **Reparent a feature**: Flat rows: `UPDATE SET parent = :new WHERE _id = :id`.
   MongoDB: load both source/destination gene docs, move between nested Maps,
@@ -78,7 +78,7 @@ but it is a real tradeoff.
 - **Query across hierarchy**: "genes with exons < 50bp?" — a WHERE clause
   with flat rows. MongoDB: load all gene docs, walk every tree.
 - **Stream imports**: Flat rows stream to DB with bounded memory. MongoDB
-  required building nested trees in memory first; OOM on large files.
+  requires building nested trees in memory first; OOM on large files.
 
 ### Summary
 
@@ -86,33 +86,32 @@ Simple edits (the majority of annotation work) are shorter code, faster, and
 touch less data with flat rows. Complex structural edits like transcript merges
 require more database round-trips, though this is addressable with batch
 queries. Read operations gain precise indexed queries at the cost of a
-tree-assembly step when the full hierarchy is needed. The nested document model
-avoided that assembly step, but at the cost of loading and rewriting entire
-genes for every operation — including simple ones.
+tree-assembly step when the full hierarchy is needed. The nested document model avoids that assembly step, but at the cost of
+loading and rewriting entire genes for every operation — including simple ones.
 
 ## Migration Cleanup
 
 ### Unified execution path
 
-Removed dual `executeOnServer()` / `executeOnServerV2()` implementations from
-all 23 Change classes and 2 Operation classes. Removed `ServerDataStoreV2`.
+Removes the dual `executeOnServer()` / `executeOnServerV2()` implementations
+from all 23 Change classes and 2 Operation classes. Removes `ServerDataStoreV2`.
 Single code path.
 
 ### Eliminated FeatureChange helpers
 
 Five tree navigation methods (`getFeatureFromId`, `getChildFeatureIds`,
-`generateNewIds`, `addChild`, `findAndDeleteChildFeature`) were specific to the
-nested document model and no longer needed after the switch to flat rows. The
-MongoDB backend retains its own tree traversal via `MongoFeatureRepository`.
+`generateNewIds`, `addChild`, `findAndDeleteChildFeature`) are specific to the
+nested document model and are no longer needed with flat rows. The MongoDB
+backend retains its own tree traversal via `MongoFeatureRepository`.
 
 ### Removed dead code
 
-- `backendPostValidate()` — never called from active code path. Entire
+- `backendPostValidate()` — never called from the active code path. Entire
   validation layer (`ParentChildValidation`, `ValidationSet`) removed.
-- `LocalGFF3DataStore` / `executeOnLocalGFF3` — never implemented (all threw
+- `LocalGFF3DataStore` / `executeOnLocalGFF3` — never implemented (all throw
   "not implemented"). Removed from all Operations and Changes.
 - `allIds` on `AddFeatureChangeDetails` — carried forward as dead weight in
-  serialized change format. Removed from interface and all client code.
+  the serialized change format. Removed from interface and all client code.
 - `@apollo-annotation/schemas` dependency — Mongoose schema types removed from
   `apollo-common` and `apollo-shared`.
 

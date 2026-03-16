@@ -1,8 +1,6 @@
 # Technical Details: Relational Migration
 
-Worked examples, tradeoff analysis, and schema assessment. For the rationale,
-see [mikro-orm-migration-justification.md](./mikro-orm-migration-justification.md).
-For deployment options, see [deployment.md](./deployment.md).
+Worked examples, tradeoff analysis, and schema assessment.
 
 ## Worked Example: Changing an Exon Boundary
 
@@ -76,8 +74,6 @@ architectural changes.
 
 - **(Deferred) `root_id` column** — single-query tree loading, but requires
   sync on reparent. Only if profiling justifies it.
-- **Normalize `CheckResultEntity.ids`** — junction table for indexed per-feature
-  lookups instead of JSON `LIKE` filtering.
 
 ### Schema relationships
 
@@ -97,7 +93,7 @@ All FKs have CASCADE delete.
 
 ## Schema Migrations
 
-MongoDB had no formal migration system. MikroORM provides timestamped migration
+MongoDB has no formal migration system. MikroORM provides timestamped migration
 files (like Liquibase/Rails) that are committed to the repo, run in order on
 deploy, and can be rolled back.
 

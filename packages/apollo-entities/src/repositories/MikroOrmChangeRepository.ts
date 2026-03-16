@@ -107,10 +107,4 @@ export class MikroOrmChangeRepository implements ChangeRepository {
   async countByGeneId(geneId: string) {
     return this.em.count(ChangeEntity, { geneId })
   }
-
-  async updateGeneId(changeId: string, geneId: string) {
-    const entity = await this.em.findOneOrFail(ChangeEntity, { _id: changeId })
-    entity.geneId = geneId
-    await this.em.flush()
-  }
 }
