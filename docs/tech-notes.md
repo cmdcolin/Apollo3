@@ -1,486 +1,130 @@
 # Technical Notes
 
-Deep technical analysis, architecture decisions, and improvement plans for the
-Apollo3 codebase.
+Deep technical analysis of the flat-row data model, migration cleanup, and
+remaining improvement opportunities.
 
-## Table of Contents
+## Flat Rows vs Nested Documents: Operation-by-Operation
 
-- [Flat Rows vs Nested Documents: Detailed Assessment](#flat-rows-vs-nested-documents)
-- [What Was Cleaned Up During the MongoDB Migration](#what-was-cleaned-up)
-- [Remaining Migration Issues](#remaining-migration-issues)
-- [Potential Database Optimizations](#potential-database-optimizations)
-- [NestJS Codebase Improvements](#nestjs-codebase-improvements)
+### Single-feature edits (most common)
 
----
+All single-feature operations (change coordinates, type, strand, attributes)
+follow the same pattern:
 
-## Flat Rows vs Nested Documents
+- **MongoDB**: Load entire gene doc → walk tree → modify → save whole doc (~70 lines)
+- **Flat rows**: Look up one row → update → done (2 queries, ~15 lines)
 
-The single biggest architectural change in the migration is how feature
-hierarchies are stored. In MongoDB, a gene and all its children (mRNAs, exons,
-CDS features) lived inside one document. In the new schema, each of those is its
-own row in a flat table, linked by a `parent` column.
-
-This section walks through the real editing operations that users perform and
-honestly assesses which model makes each one simpler, faster, or harder. The
-operations are grouped by type to show the pattern clearly.
-
-### Single-feature edits (the most common operations)
-
-These are the bread and butter of annotation — a user clicks on a feature and
-changes something about it. They happen far more often than any structural
-operation.
-
-| Operation                                 | MongoDB (old)                                                                                                          | Flat rows (new)                                           | Verdict          |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ---------------- |
-| Change an exon's start or end coordinate  | Load entire gene doc, walk tree to find exon, modify in memory, `markModified('children')`, save whole doc (~70 lines) | Look up one row, update one column (2 queries, ~15 lines) | **Much simpler** |
-| Change a feature's type (e.g. exon → CDS) | Same full-document load/traverse/save cycle                                                                            | Look up row, verify old value, update (2 queries)         | **Much simpler** |
-| Change strand                             | Same full-document cycle                                                                                               | Same 2-query pattern                                      | **Much simpler** |
-| Change attributes (Name, Dbxref, etc.)    | Same full-document cycle                                                                                               | Same 2-query pattern                                      | **Much simpler** |
-
-The pattern is clear: any operation that touches a single feature is
-unambiguously better with flat rows. The code is shorter, there are fewer places
-for bugs, and the database work is proportional to what actually changed — one
-row, not an entire gene tree.
+**Verdict**: Unambiguously better with flat rows.
 
 ### Adding features
 
-| Operation                        | MongoDB (old)                                                                                                                                               | Flat rows (new)                                                                             | Verdict           |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------- |
-| Add a new top-level gene         | Create one nested document                                                                                                                                  | Flatten snapshot into rows, batch insert                                                    | **Roughly equal** |
-| Add an exon to an existing mRNA  | Load gene doc, navigate to mRNA's children Map, insert child, update `allIds`, sort children, save whole doc                                                | Set `parentId` on new row, batch insert. No existing rows touched.                          | **Simpler**       |
-| Import features from a GFF3 file | Insert nested documents one at a time. Cannot use transactions for large files (16MB limit). Required `status: -1` workaround. Caused OOM on large imports. | Flatten each feature to rows, batch insert. Full transaction support. Naturally streamable. | **Much simpler**  |
-
-Adding child features to existing parents is where the flat model really helps.
-In MongoDB, adding one exon required loading and rewriting the entire gene. In
-the flat model, the existing gene row is not touched at all — the new exon is
-just a new row that happens to point at the mRNA as its parent.
+| Operation | MongoDB | Flat rows | Verdict |
+|-----------|---------|-----------|---------|
+| New top-level gene | Create one nested doc | Flatten snapshot, batch insert | Roughly equal |
+| Add exon to existing mRNA | Load gene, insert child, update `allIds`, save whole doc | Insert one row with `parentId`. Existing rows untouched. | Simpler |
+| GFF3 import | One doc at a time, no transactions (16MB limit), OOM on large files | Flatten to rows, batch insert, full transaction support | Much simpler |
 
 ### Deleting features
 
-| Operation                   | MongoDB (old)                                                                                                                   | Flat rows (new)                                                                | Verdict                   |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------- |
-| Delete a top-level gene     | Delete the whole document (one operation)                                                                                       | Delete the row, then BFS to find and delete all descendants (multiple queries) | **Slightly more complex** |
-| Delete an exon from an mRNA | Load gene doc, navigate tree to find exon, remove from parent's children Map, update `allIds`, `markModified('children')`, save | Look up row, delete descendants, delete row (3+ queries)                       | **Roughly equal**         |
+| Operation | MongoDB | Flat rows | Verdict |
+|-----------|---------|-----------|---------|
+| Delete top-level gene | Delete one document | `ON DELETE CASCADE` handles children | Equal |
+| Delete exon from mRNA | Load gene, find exon in tree, remove, update `allIds`, save | Delete one row | Simpler |
 
-Deleting is the one area where nested documents had a natural advantage for
-top-level features — deleting one document automatically deleted all its
-children. With flat rows, descendants must be found and deleted explicitly. In
-practice, the BFS deletion loop is simple and fast (one indexed query per
-nesting level), and it could be replaced with a single recursive CTE or an
-`ON DELETE CASCADE` foreign key constraint.
+### Structural edits
 
-### Structural edits (splitting and merging)
-
-These operations change the shape of the feature hierarchy itself.
-
-| Operation              | MongoDB (old)                                                                                 | Flat rows (new)                                                                                                                          | Verdict          |
-| ---------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| Split an exon into two | Load gene doc, navigate to exon, create two children, update `allIds`, sort, save whole doc   | Create two new rows with parent set, batch insert, delete old row (3 operations)                                                         | **Simpler**      |
-| Merge two exons        | Load gene doc, find both exons in tree, merge in memory, update `allIds`, save                | Look up first exon, update its bounds, delete second exon (3-4 queries)                                                                  | **Simpler**      |
-| Merge two transcripts  | Load gene doc (both transcripts in same tree), merge children Maps in memory, single `save()` | Query each transcript's children separately, match overlaps, reparent grandchildren one by one, delete. Currently has N+1 query problem. | **More complex** |
-
-Merging transcripts is the one operation that is genuinely harder with flat
-rows. It needs to compare children across two parents and reparent
-grandchildren, which generates many small queries. The MongoDB version could do
-all of this in memory on JavaScript Maps with a single document save at the end.
-
-However, the current N+1 query problem is a code issue, not a schema limitation.
-Caching the children list and batching reparenting into a single
-`UPDATE ... WHERE parent IN (...)` would reduce the query count dramatically.
+| Operation | MongoDB | Flat rows | Verdict |
+|-----------|---------|-----------|---------|
+| Split exon | Load gene, create two children, update `allIds`, save | Insert two rows, delete old row | Simpler |
+| Merge exons | Load gene, merge in memory, save | Update first exon bounds, delete second | Simpler |
+| Merge transcripts | All in-memory on one document, single save | Query children separately, reparent, delete. N+1 issue. | More complex (fixable with batch UPDATE) |
 
 ### Undo operations
 
-| Operation    | MongoDB (old)                                                                                  | Flat rows (new)                                                            | Verdict     |
-| ------------ | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ----------- |
-| Undo a merge | Load gene doc, navigate tree, reconstruct original children Maps and `allIds`, save            | Delete the merged result row, re-insert original rows from stored snapshot | **Simpler** |
-| Undo a split | Load gene doc, navigate tree, remove split children, re-insert original, update `allIds`, save | Delete the two split rows, re-insert the original row                      | **Simpler** |
+Delete what forward created, re-insert what forward deleted. No tree navigation
+or `allIds` bookkeeping. **Simpler** across the board.
 
-Undo operations follow a clean pattern with flat rows: delete what the forward
-operation created, then re-create what the forward operation deleted. The stored
-snapshots flatten directly into rows. No tree navigation or `allIds` bookkeeping
-needed.
+### Read operations
 
-### Read operations (queries, export, checks)
+| Operation | MongoDB | Flat rows | Verdict |
+|-----------|---------|-----------|---------|
+| Features in coordinate range | Returns full nested trees (loads more than needed) | Returns exactly matching features | More precise |
+| Find feature by ID | `findOne({allIds: id})` + tree walk | Primary key lookup | Much simpler |
+| Find all CDS on a chromosome | Load all genes, walk all trees | `WHERE type='CDS' AND refSeq=?` | Much simpler |
+| Count features by type | Load all, count in app code | `GROUP BY type` | Much simpler |
+| Export to GFF3 | Data already nested | Rows map to GFF3 lines directly | Could be simpler |
+| Run validation checks | Data already nested | Fetch descendants + assemble tree (one extra step) | Slightly harder |
+| Text search | `$text` index (slow writes) | Currently `LIKE` only. Fixable with FTS5/tsvector. | Currently worse, fixable |
 
-| Operation                             | MongoDB (old)                                                                         | Flat rows (new)                                                                                                                                                           | Verdict                      |
-| ------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| Get features in a coordinate range    | One query returns nested gene docs. Must load full trees even if you only need exons. | One query returns exactly the features in the range, including individual exons.                                                                                          | **Better (more precise)**    |
-| Find a feature by ID                  | `findOne({allIds: id})` + recursive tree walk to locate it                            | Direct primary key lookup (one query)                                                                                                                                     | **Much simpler**             |
-| Find all CDS features on a chromosome | Load every gene doc, walk each tree filtering by type                                 | `SELECT * FROM feature WHERE type='CDS' AND refSeq=?`                                                                                                                     | **Much simpler**             |
-| Count features by type                | Load all docs, walk all trees, count in application code                              | `SELECT type, COUNT(*) FROM feature GROUP BY type`                                                                                                                        | **Much simpler**             |
-| Export to GFF3                        | Data already nested, format directly                                                  | Rows map almost directly to GFF3 lines (one line per feature with `Parent=` attribute). Current code unnecessarily reassembles trees first, but this could be simplified. | **Could be simpler**         |
-| Run validation checks                 | Data already nested, pass tree to check function                                      | Fetch descendants, assemble tree, pass to check function (one extra step)                                                                                                 | **Slightly more complex**    |
-| Search features by text               | `$text` search across all nested fields (slow writes due to wildcard index)           | Currently only `LIKE` on `type` field. Can be improved with FTS5/tsvector.                                                                                                | **Currently worse, fixable** |
+### Operations MongoDB couldn't do well
 
-Read operations show a clear split. For targeted queries — "find this feature,"
-"get features in this range," "count features by type" — flat rows are strictly
-better because the database can answer these questions directly with indexes
-instead of loading and scanning entire document trees. For operations that need
-the full tree structure (checks, client display), there is a small assembly cost
-that was not present with nested documents.
-
-### Operations that MongoDB could not do well
-
-Some useful operations were impractical or impossible with the nested document
-model. Flat rows make them straightforward.
-
-**Move a feature to a different parent.** Reparenting an exon from one mRNA to
-another is a single column update:
-`UPDATE feature SET parent = :newParent WHERE _id = :featureId`. In MongoDB,
-this required loading both the source and destination gene documents, removing
-the child from one nested Map, inserting it into another, updating `allIds` on
-both, and saving both documents. If the source and destination were in different
-documents, that was two full document rewrites.
-
-Apollo3 does not currently have a dedicated "move feature" operation, but the
-flat-row schema makes it trivial to add one.
-
-**Query across the hierarchy.** Questions like "which genes have exons shorter
-than 50bp?" or "find all features with a specific Dbxref attribute" required
-loading every gene document and scanning every nested child in application code.
-With flat rows these are just WHERE clauses.
-
-**Stream features during import.** MongoDB required building nested document
-trees in memory before inserting them, and could not use transactions for large
-imports due to the 16MB transaction size limit. The server ran out of memory on
-large GFF3 files (commit `80a4c9eb`). With flat rows, features can be streamed
-directly to the database one row at a time with bounded memory usage, and the
-entire import can be wrapped in a single transaction regardless of size.
-
-### Data integrity
-
-In MongoDB, a child could not exist outside its parent document — nesting
-enforced structural integrity automatically. With flat rows, a child row can
-point to a parent that does not exist (an "orphan"). The application prevents
-this by always deleting descendants before deleting a feature, but it is not
-currently enforced at the database level.
-
-Adding `ON DELETE CASCADE` to the foreign key would enforce this automatically —
-something that was not possible with MongoDB's nested documents.
-
-### Coordinate consistency
-
-In both models, a gene's stored `min` and `max` may temporarily be stale after a
-child edit. Neither model automatically updates parent coordinates when a child
-changes — both rely on the client to submit separate coordinate-update
-operations for affected ancestors.
-
-The UI handles this correctly by computing bounds from children dynamically, so
-users never see incorrect coordinates. If automated consistency were ever
-needed, the flat model makes it easier: a database trigger or post-operation
-hook could query a feature's children and update its bounds. In MongoDB, this
-would have required loading and rewriting the entire document.
-
-### The wire format is unchanged
-
-The client still receives nested trees. The `GetFeaturesOperation` fetches flat
-rows, then calls `assembleFeatureTrees()` to rebuild the nested structure. This
-is a cheap O(n) in-memory conversion. The client has no awareness that the
-storage model changed.
+- **Reparent a feature**: Flat rows: `UPDATE SET parent = :new WHERE _id = :id`.
+  MongoDB: load both source/destination gene docs, move between nested Maps,
+  update both `allIds`, save both docs.
+- **Query across hierarchy**: "genes with exons < 50bp?" — just a WHERE clause
+  with flat rows. MongoDB: load all gene docs, walk every tree.
+- **Stream imports**: Flat rows stream to DB with bounded memory. MongoDB
+  required building nested trees in memory first; OOM on large files.
 
 ### The bottom line
 
-For the operations users perform most often — editing coordinates, changing
-types, modifying attributes — the flat-row model is clearly simpler and more
-efficient. The code is shorter, there are fewer things that can go wrong, and
-each operation touches only the data it needs to.
+Simple edits (the vast majority of operations) are cheaper with flat rows.
+Complex structural edits (transcript merges) cost more but are rare and fixable
+with batch queries. Read operations gain precise indexed queries at the cost of
+a cheap tree-assembly step when the full hierarchy is needed.
 
-For complex structural operations like merging transcripts, the flat model
-requires more database round-trips and the code is more verbose. But these
-operations are infrequent compared to simple edits, and the performance issues
-are fixable with straightforward optimizations (batch queries, recursive CTEs,
-caching child lists).
+## Migration Cleanup
 
-For read operations, flat rows enable precise queries (by type, by range, by ID)
-that were impossible or expensive with nested documents. The only cost is a
-cheap tree-assembly step for operations that need the full hierarchy.
+### Unified execution path
 
-The MongoDB model's main advantage was that complex tree operations could happen
-entirely in memory. But this came at the cost of making every operation — even
-simple ones — pay the price of loading and saving entire gene trees. The flat
-model inverts this trade-off: simple operations are cheap, and complex
-operations pay for their complexity explicitly.
+Removed dual `executeOnServer()` / `executeOnServerV2()` implementations from
+all 23 Change classes and 2 Operation classes. Removed `ServerDataStoreV2`.
+Single code path.
 
-Given that simple edits vastly outnumber complex structural changes in a typical
-annotation workflow, this is the right trade-off.
+### Eliminated FeatureChange helpers
 
----
+Five MongoDB-specific tree navigation methods (`getFeatureFromId`,
+`getChildFeatureIds`, `generateNewIds`, `addChild`,
+`findAndDeleteChildFeature`) are unnecessary with flat rows and were deleted.
 
-## What Was Cleaned Up
+### Removed dead code
 
-These are concrete simplifications achieved by fully removing Mongoose from the
-codebase.
+- `backendPostValidate()` — never called from active code path. Entire
+  validation layer (`ParentChildValidation`, `ValidationSet`) removed.
+- `LocalGFF3DataStore` / `executeOnLocalGFF3` — never implemented (all threw
+  "not implemented"). Removed from all Operations and Changes.
+- `allIds` on `AddFeatureChangeDetails` — carried forward as dead weight in
+  serialized change format. Removed from interface and all client code.
+- `@apollo-annotation/schemas` dependency — Mongoose schema types removed from
+  `apollo-common` and `apollo-shared`.
 
-### Unified server execution path
+## Potential Optimizations
 
-The old codebase had two parallel implementations for every operation:
-`executeOnServer()` (Mongoose) and `executeOnServerV2()` (MikroORM). Every
-Change class (23 of them) and both Operation classes carried two complete server
-implementations plus duplicated type interfaces (`ServerDataStore` and
-`ServerDataStoreV2`). This doubled the surface area for bugs.
+### R-tree spatial indexes
 
-All old Mongoose `executeOnServer()` methods have been deleted. The V2 methods
-have been renamed to `executeOnServer()`. The `ServerDataStoreV2` type has been
-renamed to `ServerDataStore`. The dispatch logic in `Operation.execute()` and
-`Change.execute()` has been simplified to a single code path.
-
-### Eliminated the FeatureChange helper methods
-
-The `FeatureChange` base class carried five helper methods that only existed to
-navigate and manipulate MongoDB's nested document structure:
-
-- `getFeatureFromId()` — walked a nested tree to find a feature by ID
-- `getChildFeatureIds()` — recursively collected IDs from a nested tree
-- `generateNewIds()` — assigned new ObjectIds to a nested tree
-- `addChild()` — inserted a child into a parent's nested Map and maintained
-  `allIds`
-- `findAndDeleteChildFeature()` — recursively searched a tree to find and remove
-  a child
-
-None of these are needed with flat rows. Finding a feature by ID is a direct
-primary key lookup. Adding a child is inserting a new row. Deleting is deleting
-a row. The `FeatureChange` class is now a thin wrapper with no helper methods.
-
-### Removed the dead validation layer
-
-The `ParentChildValidation` class was the only validator that used
-`backendPostValidate()`. It queried MongoDB using the `allIds` field and
-Mongoose sessions — patterns that cannot work with MikroORM. The
-`backendPostValidate()` method was never called from the active code path (it
-was removed from `changes.service.ts` during migration).
-
-The entire `backendPostValidate()` method has been removed from the `Validation`
-base class, the `ValidationSet` container, and all validators. The
-`ParentChildValidation` class has been deleted. The Mongoose types
-(`ClientSession`, `Model<FeatureDocument>`) that were imported solely for this
-method are gone from the validation layer.
-
-If parent-child boundary validation is needed in the future, it should be
-implemented using the repository pattern (a simple query) rather than the old
-Mongoose-specific approach.
-
-### Removed apollo-schemas dependency from core packages
-
-The `@apollo-annotation/schemas` package defined Mongoose schema types
-(`Feature`, `FeatureDocument`, `RefSeqDocument`, etc.). These types were
-imported by `apollo-common`, `apollo-shared`, and the collaboration server.
-Despite being type-only imports, they pulled in `mongoose` and
-`@nestjs/mongoose` as transitive dependencies.
-
-All `@apollo-annotation/schemas` imports have been removed from `apollo-common`
-and `apollo-shared`. The `transforms.ts` file in the export module (which used
-`FeatureDocument` and `RefSeqDocument` for Mongoose-specific `.toObject()`
-calls) was dead code and has been deleted. The `getPrintableId()` utility
-function that cast between Mongoose and MST types has been deleted.
-
-### Removed the allIds denormalization hack
-
-The `allIds` field on the `AddFeatureChangeDetails` interface has been removed.
-Client code that previously computed and sent `allIds` arrays to the server
-(CopyFeature UI, CLI copy command) no longer does so. The server never used the
-field in the MikroORM path — it was carried forward as dead weight in the
-serialized change format.
-
-### Removed LocalGFF3DataStore
-
-The `LocalGFF3DataStore` interface and `executeOnLocalGFF3` abstract method were
-defined on every Operation and Change but never implemented (all implementations
-threw "not implemented"). The interface, the abstract method, the dispatch
-branch in `execute()`, and the `FileHandle` import have all been removed. The
-`BackendDataStore` type alias (which was `ServerDataStore | LocalGFF3DataStore`)
-has been inlined to just `ServerDataStore`.
-
----
-
-## Remaining Migration Issues
-
-### Each repository getter creates a separate database context
-
-The `DatabaseService` provides repository access via getter properties like
-`this.db.feature`, `this.db.refSeq`, etc. Each getter call creates a new
-EntityManager fork — an independent database context with its own identity map
-and transaction scope.
-
-The `createUnitOfWork()` method exists and solves this — it creates a single
-EntityManager fork shared across all repositories. The change execution pipeline
-uses it correctly. But many read-heavy service methods (export, checks, feature
-queries) access repositories through the individual getters instead.
-
-**How to fix it:** Either use `createUnitOfWork()` for any method that accesses
-multiple repositories, or scope the EntityManager per request using NestJS's
-request-scoped providers or MikroORM's `@UseRequestContext()` decorator.
-
-### The collaboration server still lists Mongoose dependencies
-
-The `apollo-collaboration-server` `package.json` still lists `mongoose`,
-`@nestjs/mongoose`, `mongoose-id-validator`, and `connect-mongodb-session` as
-dependencies. These are no longer used at runtime but are still installed.
-Removing them will reduce the dependency footprint.
-
-### No ON DELETE CASCADE on feature parent relationship
-
-The `parent` column on the feature table is a self-referencing foreign key, but
-it does not have `ON DELETE CASCADE` defined. The application code prevents
-orphans by always calling `deleteDescendants()` before deleting a feature, but
-adding `ON DELETE CASCADE` would enforce this at the database level.
-
----
-
-## Potential Database Optimizations
-
-The relational schema opens up optimization possibilities that were not feasible
-with MongoDB's nested document model.
-
-### R-tree spatial indexes for faster range queries
-
-The current composite B-tree index on `(refSeq, min, max)` is good for range
-overlap queries, but it works by narrowing on one bound at a time. For a query
-like "find all features overlapping coordinates 10000-20000," the B-tree
-efficiently finds features where `min <= 20000`, then scans those results to
-check `max >= 10000`.
-
-R-tree indexes are purpose-built for this kind of interval overlap query. They
-can prune on both bounds simultaneously, which is faster when a region is dense
-with features.
-
-SQLite supports R-tree indexes natively:
-
-```sql
-CREATE VIRTUAL TABLE feature_rtree USING rtree(rowid, min_val, max_val);
-```
-
-PostgreSQL supports GiST range indexes:
-
-```sql
-CREATE INDEX ON feature USING GIST (int4range(min, max));
-```
-
-For genome browsers, where range overlap queries are the dominant access
-pattern, R-tree indexes could meaningfully reduce query time in feature-dense
-regions. For typical datasets the B-tree composite index is already efficient,
-so this is an optimization for large-scale deployments.
-
-### Recursive queries for single-round-trip tree loading
-
-Both PostgreSQL and SQLite support `WITH RECURSIVE` queries that can load an
-entire feature subtree in a single database call. Implementing this would make
-tree loading as fast or faster than MongoDB's single-document approach, while
-keeping the benefits of normalized storage.
+Current B-tree on `(refSeq, min, max)` narrows on one bound at a time. R-tree
+indexes (SQLite native, PostgreSQL GiST) prune on both bounds simultaneously —
+useful for dense feature regions.
 
 ### Bulk import via COPY
 
-PostgreSQL's `COPY FROM` command can insert millions of rows per second from
-flat files. A GFF3 import pipeline could flatten features to CSV, then use
-`COPY` for the actual database insertion. This would be dramatically faster than
-either the old MongoDB approach (one document at a time) or the current MikroORM
-approach (one entity at a time with ORM overhead).
+PostgreSQL's `COPY FROM` inserts millions of rows/second from flat files. A
+GFF3 → CSV → COPY pipeline would be dramatically faster than ORM-level
+insertion.
 
----
+### Explicit migrations
 
-## NestJS Codebase Improvements
+Currently using `SchemaGenerator.updateSchema()` at startup. Transitioning to
+committed migration files would provide auditable, reversible schema evolution —
+restoring the discipline Apollo2 had with Liquibase.
 
-Issues found during a review of the collaboration server NestJS code. These are
-independent of the MongoDB migration — they are general code quality and
-modernization improvements.
+## NestJS Code Issues Found
 
-### Bug: Auth service overwrites file-read result
-
-`authentication.service.ts:81-83` and `92-93` — the file content read from disk
-is immediately overwritten by the filename:
-
-```typescript
-microsoftClientID = clientIDFile && (await fs.readFile(clientIDFile, 'utf8'))
-microsoftClientID = clientIDFile?.trim() // overwrites content with filename
-```
-
-The second assignment should be `microsoftClientID = microsoftClientID?.trim()`.
-Same bug exists for Google client ID on lines 92-93. This means file-based
-secrets (e.g. Kubernetes secret mounts) for OAuth client IDs silently fail.
-
-### Missing DTO validation
-
-None of the DTOs use `class-validator` decorators. All DTOs are plain interfaces
-or classes with no validation. Invalid data can reach the service layer
-unchecked. For example, `FeatureCountRequest.start` arrives as a string from the
-query string and is never coerced to a number.
-
-Affected DTOs:
-
-- `features/dto/feature.dto.ts`
-- `entity/gff3Object.dto.ts`
-- `refSeqs/dto/find-refSeq.dto.ts`
-- `changes/dto/find-change.dto.ts`
-- `sequence/dto/get-sequence.dto.ts`
-- `assemblies/dto/create-assembly.dto.ts`
-- `users/dto/create-user.dto.ts`
-
-**Fix:** Add `class-validator` decorators to DTOs and enable the global
-`ValidationPipe` in `main.ts`. Some controllers already use `ParseIntPipe` and
-`DefaultValuePipe` correctly (e.g. `export.controller.ts`), so this would make
-the pattern consistent.
-
-### N+1 queries in FeaturesService
-
-`features.service.ts` has multiple methods that loop over refSeqs and issue a
-separate DB query per iteration:
-
-- `findAll()` — loads all refSeqs, queries features for each one
-- `getFeatureCount()` — same pattern; fetches all features just to count them
-- `searchFeatures()` — nested loop: per assembly → per refSeq → query features
-
-**Fix:** Add batch/aggregate queries to the repository layer (e.g.
-`countByRefSeq()`, `findByRefSeqs()`, `searchTextAcrossRefSeqs()`) to eliminate
-N+1 patterns.
-
-### ChangesService has too many responsibilities
-
-`changes.service.ts` handles validation, database operations, change execution,
-change logging, and WebSocket broadcasting all in a single `create()` method.
-
-**Fix:** Extract WebSocket notification to an event-based pattern using NestJS
-`EventEmitter2`. Extract the `ServerDataStore` builder to a shared factory (see
-next item).
-
-### Duplicated ServerDataStore factory
-
-`changes.service.ts` and `operations.service.ts` both contain nearly identical
-`buildServerDataStore()` methods (~25 lines each). The only difference is the
-`user` parameter.
-
-**Fix:** Extract to a `ServerDataStoreFactory` injectable service in the
-database module.
-
-### Silent authorization failures
-
-`validation.guards.ts` catches all errors and returns `false`, giving the client
-a generic 403 with no explanation of what went wrong:
-
-```typescript
-} catch (error) {
-  this.logger.error(error)
-  return false
-}
-```
-
-**Fix:** Throw `ForbiddenException` with descriptive messages instead of
-returning `false`.
-
-### Duplicated OAuth guards
-
-`google.guard.ts` and `microsoft.guard.ts` are identical implementations — only
-the strategy name string differs.
-
-**Fix:** Create a generic `OAuthGuard` factory or shared base class.
-
-### DTO type mismatches
-
-`FindChangeDto` uses `string` for fields like `since`, `limit`, and `sort`. The
-service then manually converts with `Number()` and compares against magic
-strings like `'1'` for sort direction. This should be handled at the controller
-boundary with NestJS pipes.
-
-### Inefficient admin check on login
-
-`authentication.service.ts` loads all users (`findAll()`) just to check whether
-any admin exists during login. This should be a `countByRole()` or
-`existsByRole()` query.
+| Issue | Location | Fix |
+|-------|----------|-----|
+| OAuth client ID file-read bug (file contents overwritten by path) | `authentication.service.ts:81-83` | Use `microsoftClientID?.trim()` on the value, not the path |
+| No DTO validation (invalid data reaches service layer) | 7 DTO files | Add `class-validator` decorators, enable `ValidationPipe` |
+| ChangesService has too many responsibilities | `changes.service.ts` | Extract WebSocket notification to EventEmitter2 |
+| Duplicated ServerDataStore factory | `changes.service.ts`, `operations.service.ts` | Extract to shared injectable |
+| Silent auth failures (generic 403) | `validation.guards.ts` | Throw `ForbiddenException` with message |
+| Duplicate OAuth guards | `google.guard.ts`, `microsoft.guard.ts` | Generic `OAuthGuard` factory |
+| Inefficient admin check on login | `authentication.service.ts` | `countByRole()` instead of `findAll()` |
