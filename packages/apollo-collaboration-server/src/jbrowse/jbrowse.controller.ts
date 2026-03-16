@@ -7,7 +7,7 @@ import { Public } from '../utils/roles.guard.js'
 import { JBrowseService } from './jbrowse.service.js'
 
 export interface RequestWithUser extends Request {
-  user?: { role: Role; id?: string }
+  user?: { role: Role; id?: string; iat?: number }
 }
 
 @Public()
@@ -32,9 +32,11 @@ export class JBrowseController {
     const { user } = request
     const role = user?.id ? user.role : undefined
     const userId = user?.id
+    const userSessionId =
+      userId && user?.iat ? `${userId}-${user.iat}` : undefined
     this.logger.debug(
       `config.json requested: user.id=${user?.id}, user.role=${user?.role}, passing role=${role}`,
     )
-    return this.jbrowseService.getConfig(role, userId)
+    return this.jbrowseService.getConfig(role, userId, userSessionId)
   }
 }

@@ -30,7 +30,7 @@ export class JBrowseService {
 
   private readonly logger = new Logger(JBrowseService.name)
 
-  getConfiguration(role?: Role, userId?: string) {
+  getConfiguration(role?: Role, userId?: string, userSessionId?: string) {
     const url = this.configService.get('URL', { infer: true })
     const feature_type_ontology_location =
       this.configService.get('FEATURE_TYPE_ONTOLOGY_LOCATION', {
@@ -75,6 +75,7 @@ export class JBrowseService {
           baseURL: url,
           role: 'none',
           userId,
+          userSessionId,
         },
       }
     }
@@ -85,6 +86,7 @@ export class JBrowseService {
         baseURL: url,
         role,
         userId,
+        userSessionId,
         ontologies: [
           {
             name: 'Sequence Ontology',
@@ -207,16 +209,16 @@ export class JBrowseService {
     return row?.config
   }
 
-  async getConfig(role?: Role, userId?: string) {
+  async getConfig(role?: Role, userId?: string, userSessionId?: string) {
     if (!role || role === Role.None) {
       return {
-        configuration: this.getConfiguration(role, userId),
+        configuration: this.getConfiguration(role, userId, userSessionId),
         plugins: this.getPlugins(),
       }
     }
     const storedConfig = await this.getJBrowseConfig()
     const generatedConfig = {
-      configuration: this.getConfiguration(role, userId),
+      configuration: this.getConfiguration(role, userId, userSessionId),
       assemblies: await this.getAssemblies(),
       tracks: await this.getTracks(),
       aggregateTextSearchAdapters: await this.getAggregateTextSearchAdapters(),

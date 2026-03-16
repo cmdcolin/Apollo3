@@ -41,6 +41,7 @@ import { type Socket, io } from 'socket.io-client'
 
 import { ApolloJobModel } from '../ApolloJobModel'
 import type { ChangeManager } from '../ChangeManager'
+import { LoginDialog } from '../components/LoginDialog'
 import type ApolloPluginConfigurationSchema from '../config'
 import { addTopLevelAdminMenus } from '../menus/topLevelMenuAdmin'
 import type { ApolloRootModel } from '../types'
@@ -87,6 +88,7 @@ export function extendSession(
       abortController: new AbortController(),
       changeInProgress: false,
       apolloSocket: undefined as Socket | undefined,
+      apolloUserSessionId: undefined as string | undefined,
       lastChangeSequenceNumber: undefined as number | undefined,
     }))
     .actions((self) => ({
@@ -142,6 +144,9 @@ export function extendSession(
       },
       setLastChangeSequenceNumber(sequenceNumber: number) {
         self.lastChangeSequenceNumber = sequenceNumber
+      },
+      setUserSessionId(id: string) {
+        self.apolloUserSessionId = id
       },
     }))
     .actions((self) => ({
@@ -231,14 +236,21 @@ export function extendSession(
     }))
     .actions((self) => ({
       addSocketListeners() {
-        const baseURL = getBaseURL(self as unknown as ApolloSessionModel)
+        const apolloSession = self as unknown as ApolloSessionModel
+        const baseURL = getBaseURL(apolloSession)
         if (!baseURL) {
           return
         }
         const { origin, pathname: path } = new URL('socket.io/', baseURL)
         const socket = io(origin, { path })
         self.apolloSocket = socket
-        const localSessionId = `client_${Math.random().toString(36).slice(2)}`
+        const { apolloUserSessionId } = self
+        if (!apolloUserSessionId) {
+          throw new Error(
+            'No userSessionId — cannot set up WebSocket',
+          )
+        }
+        const localSessionId = apolloUserSessionId
         const { apolloDataStore } = self
         const { changeManager } = apolloDataStore
         const { notify } = self as unknown as AbstractSessionModel
@@ -367,6 +379,36 @@ export function extendSession(
                 console.error(error)
                 return
               }
+
+              // Check if the server config includes a role (user is authenticated)
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+              const serverHasRole = jbrowseConfig?.configuration?.ApolloPlugin
+                ?.hasRole as boolean | undefined
+              if (!serverHasRole) {
+                // User is not authenticated — show login dialog
+                ;(
+                  self as unknown as AbstractSessionModel
+                ).queueDialog((doneCallback) => [
+                  LoginDialog,
+                  {
+                    session: self as unknown as ApolloSessionModel,
+                    handleClose: () => {
+                      doneCallback()
+                    },
+                  },
+                ])
+                reaction.dispose()
+                return
+              }
+
+              // Extract userSessionId before reloading config
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+              const userSessionId = jbrowseConfig?.configuration?.ApolloPlugin
+                ?.userSessionId as string | undefined
+              if (userSessionId) {
+                self.setUserSessionId(userSessionId)
+              }
+
               // eslint-disable-next-line @typescript-eslint/no-unsafe-call
               reloadPluginManagerCallback(jbrowseConfig, self.previousSnapshot)
               reaction.dispose()

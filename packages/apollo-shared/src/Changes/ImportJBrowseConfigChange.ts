@@ -59,8 +59,14 @@ export function filterJBrowseConfig(config: JBrowseConfig): JBrowseConfig {
     )
   }
   if (configuration?.ApolloPlugin) {
-    const { baseURL, hasRole, role, userId, ...apolloPluginRest } =
-      configuration.ApolloPlugin
+    const {
+      baseURL,
+      hasRole,
+      role,
+      userId,
+      userSessionId,
+      ...apolloPluginRest
+    } = configuration.ApolloPlugin
     filteredConfig.configuration = {
       ...configuration,
       ApolloPlugin: apolloPluginRest,

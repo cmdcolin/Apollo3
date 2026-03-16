@@ -7,6 +7,7 @@ import {
 import React from 'react'
 
 import type { ApolloSessionModel } from '../session'
+import { getBaseURL } from '../util'
 
 import { Dialog } from './Dialog'
 
@@ -15,12 +16,12 @@ interface LogOutProps {
   handleClose(): void
 }
 
-export function LogOut({ handleClose, session: _session }: LogOutProps) {
+export function LogOut({ handleClose, session }: LogOutProps) {
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    document.cookie =
-      'apollo-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
-    globalThis.location.reload()
+    const baseURL = getBaseURL(session)
+    const logoutUrl = new URL('auth/logout', baseURL)
+    globalThis.location.href = logoutUrl.toString()
   }
 
   return (
@@ -42,7 +43,7 @@ export function LogOut({ handleClose, session: _session }: LogOutProps) {
           <Button variant="contained" type="submit">
             Log Out
           </Button>
-          <Button variant="outlined" type="submit" onClick={handleClose}>
+          <Button variant="outlined" onClick={handleClose}>
             Cancel
           </Button>
         </DialogActions>
