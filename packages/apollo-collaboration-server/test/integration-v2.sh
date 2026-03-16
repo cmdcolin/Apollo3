@@ -68,7 +68,7 @@ NODE_ENV=development node dist/main.js > /tmp/apollo-integration-test.log 2>&1 &
 SERVER_PID=$!
 
 # Wait for server to be ready
-for i in $(seq 1 15); do
+for _ in $(seq 1 15); do
   if curl -sf "$BASE_URL/health" > /dev/null 2>&1; then
     break
   fi
@@ -88,8 +88,6 @@ TOKEN=$(curl -s -X POST "$BASE_URL/auth/root" \
   -H 'Content-Type: application/json' \
   -d '{"username":"root_user","password":"password"}' | json_field "['token']")
 assert_ge "token length" 10 "${#TOKEN}"
-
-AUTH="-H 'Authorization: Bearer $TOKEN'"
 
 # --- Upload file ---
 echo ""
@@ -145,13 +143,6 @@ echo ""
 echo "[7/12] Verify features"
 FEATURES=$(curl -sf "$BASE_URL/features" -H "Authorization: Bearer $TOKEN")
 F_COUNT=$(echo "$FEATURES" | json_len)
-F_TYPES=$(echo "$FEATURES" | python3 -c "
-import sys,json
-from collections import Counter
-features = json.load(sys.stdin)
-counts = Counter(f['type'] for f in features)
-print(','.join(f'{k}:{v}' for k,v in sorted(counts.items())))
-")
 F_WITH_PARENTS=$(echo "$FEATURES" | python3 -c "
 import sys,json
 print(sum(1 for f in json.load(sys.stdin) if f.get('parentId')))
@@ -188,7 +179,6 @@ assert_ge "export ID length" 5 "${#EXPORT_ID}"
 GFF3_OUTPUT=$(curl -sf "$BASE_URL/export?exportID=$EXPORT_ID" -H "Authorization: Bearer $TOKEN")
 GFF3_HEADER=$(echo "$GFF3_OUTPUT" | head -1)
 GFF3_SEQREGION_COUNT=$(echo "$GFF3_OUTPUT" | grep -c "^##sequence-region" || true)
-GFF3_FEATURE_LINES=$(echo "$GFF3_OUTPUT" | grep -cv "^#" | grep -cv "^$" || echo "$GFF3_OUTPUT" | grep -c $'^\w' || true)
 assert_eq "GFF3 header" "##gff-version 3" "$GFF3_HEADER"
 assert_eq "GFF3 sequence-region count" "3" "$GFF3_SEQREGION_COUNT"
 

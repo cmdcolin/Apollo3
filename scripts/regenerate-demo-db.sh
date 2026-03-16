@@ -20,7 +20,6 @@ COLLAB_PORT=3998
 API_BASE="http://127.0.0.1:$COLLAB_PORT"
 GFF3_FILE="$DEMO_DATA_DIR/volvox/volvox-genes.gff3"
 DEMO_DATA_DIR="$REPO_ROOT/demo-data"
-VOLVOX_DATA_DIR="$DEMO_DATA_DIR/volvox"
 
 cleanup() {
   local pids

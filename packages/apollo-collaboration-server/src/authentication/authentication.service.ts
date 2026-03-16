@@ -91,6 +91,10 @@ export class AuthenticationService {
 
   private setupActive = false
 
+  isSetupActive() {
+    return this.setupActive
+  }
+
   private consumeSetup() {
     this.setupActive = false
     this.setupToken = undefined

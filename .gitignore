@@ -134,6 +134,9 @@ demo-data/*
 .demo-server.log
 .demo-server.pid
 
+# Auto-generated secrets
+.secrets/
+
 # Claude Code worktrees
 .claude/worktrees/
 

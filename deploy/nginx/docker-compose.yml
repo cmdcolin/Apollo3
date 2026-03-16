@@ -1,0 +1,57 @@
+services:
+  apollo:
+    image: ghcr.io/gmod/apollo-collaboration-server:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NAME: Apollo
+      URL: ${URL:?Set URL in .env}
+      PORT: 3999
+      CORS: false
+      LOG_LEVELS: error,warn,log
+      DB_BACKEND: postgresql
+      DB_CONNECTION_URL: postgresql://apollo:${POSTGRES_PASSWORD:-apollo}@db:5432/apollo
+      FILE_UPLOAD_FOLDER: /data/uploads
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (min 32 chars)}
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in .env (min 32 chars)}
+      ALLOW_GUEST_USER: ${ALLOW_GUEST_USER:-false}
+      DEFAULT_NEW_USER_ROLE: ${DEFAULT_NEW_USER_ROLE:-none}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      # No JBROWSE_STATIC_DIR — nginx serves static files directly
+    volumes:
+      - uploads:/data/uploads
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "${PORT:-80}:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ${JBROWSE_DIR:?Set JBROWSE_DIR in .env}:/data/jbrowse:ro
+      - uploads:/data/uploads:ro
+    depends_on:
+      - apollo
+    restart: unless-stopped
+
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: apollo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-apollo}
+      POSTGRES_DB: apollo
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U apollo"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 5s
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  uploads:
+  pgdata:

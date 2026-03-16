@@ -31,7 +31,7 @@ function useCurrentUser() {
   const [user, setUser] = useState<UserInfo>()
 
   useEffect(() => {
-    fetch('/users/me')
+    fetch('/users/me', { headers: { Accept: 'application/json' } })
       .then((r) => {
         if (r.ok) {
           return r.json()
@@ -49,7 +49,7 @@ function useCurrentUser() {
   return user
 }
 
-type Page = 'organisms' | 'assemblies' | 'changes' | 'users'
+type Page = 'organisms' | 'assemblies' | 'blast' | 'changes' | 'users'
 
 const fileMenuItems: {
   label: string
@@ -59,6 +59,7 @@ const fileMenuItems: {
 }[] = [
   { label: 'Organisms', href: '/ui/organisms/', value: 'organisms' },
   { label: 'Assemblies', href: '/ui/assemblies/', value: 'assemblies' },
+  { label: 'BLAST', href: '/ui/blast/', value: 'blast' },
   { label: 'Recent Changes', href: '/ui/changes/', value: 'changes' },
   { label: 'Users', href: '/admin/users/', value: 'users', admin: true },
 ]
@@ -104,34 +105,38 @@ function NavBar({ current, user }: { current?: Page; user?: UserInfo }) {
         >
           Apollo
         </Typography>
-        <Button
-          ref={anchorRef}
-          color="inherit"
-          size="small"
-          onClick={() => {
-            setOpen(true)
-          }}
-        >
-          File
-        </Button>
-        <Menu
-          anchorEl={anchorRef.current}
-          open={open}
-          onClose={() => {
-            setOpen(false)
-          }}
-        >
-          {visibleItems.map((item) => (
-            <MenuItem
-              key={item.value}
-              component="a"
-              href={item.href}
-              selected={item.value === current}
+        {user ? (
+          <>
+            <Button
+              ref={anchorRef}
+              color="inherit"
+              size="small"
+              onClick={() => {
+                setOpen(true)
+              }}
             >
-              <ListItemText>{item.label}</ListItemText>
-            </MenuItem>
-          ))}
-        </Menu>
+              File
+            </Button>
+            <Menu
+              anchorEl={anchorRef.current}
+              open={open}
+              onClose={() => {
+                setOpen(false)
+              }}
+            >
+              {visibleItems.map((item) => (
+                <MenuItem
+                  key={item.value}
+                  component="a"
+                  href={item.href}
+                  selected={item.value === current}
+                >
+                  <ListItemText>{item.label}</ListItemText>
+                </MenuItem>
+              ))}
+            </Menu>
+          </>
+        ) : null}
         <Box sx={{ flexGrow: 1 }} />
         {user && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>

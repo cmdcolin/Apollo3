@@ -8,6 +8,7 @@ import { ServeStaticModule } from '@nestjs/serve-static'
 import Joi from 'joi'
 
 import { AssembliesModule } from './assemblies/assemblies.module.js'
+import { BlastModule } from './blast/blast.module.js'
 import { AuthenticationModule } from './authentication/authentication.module.js'
 import { ChangesModule } from './changes/changes.module.js'
 import { ChecksModule } from './checks/checks.module.js'
@@ -113,8 +114,8 @@ const validationSchema = Joi.object({
   .oxor('GOOGLE_CLIENT_SECRET', 'GOOGLE_CLIENT_SECRET_FILE')
   .oxor('MICROSOFT_CLIENT_ID', 'MICROSOFT_CLIENT_ID_FILE')
   .oxor('MICROSOFT_CLIENT_SECRET', 'MICROSOFT_CLIENT_SECRET_FILE')
-  .xor('JWT_SECRET', 'JWT_SECRET_FILE')
-  .xor('SESSION_SECRET', 'SESSION_SECRET_FILE')
+  .oxor('JWT_SECRET', 'JWT_SECRET_FILE')
+  .oxor('SESSION_SECRET', 'SESSION_SECRET_FILE')
   .xor('PLUGIN_URLS', 'PLUGIN_URLS_FILE')
 
 @Module({
@@ -155,6 +156,7 @@ const validationSchema = Joi.object({
     SequenceModule,
     FeaturesModule,
     AssembliesModule,
+    BlastModule,
     OrganismsModule,
     JBrowseModule,
     ExportModule,

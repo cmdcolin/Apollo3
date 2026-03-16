@@ -41,6 +41,7 @@ export default defineConfig({
       '/refSeqs': 'http://localhost:3999',
       '/features': 'http://localhost:3999',
       '/tracks': 'http://localhost:3999',
+      '/blast': 'http://localhost:3999',
     },
   },
   build: {
@@ -60,7 +61,9 @@ export default defineConfig({
           'ui/assembly-detail/index.html',
         ),
         'ui/changes/index': resolve(__dirname, 'ui/changes/index.html'),
+        'ui/blast/index': resolve(__dirname, 'ui/blast/index.html'),
         'admin/users/index': resolve(__dirname, 'admin/users/index.html'),
+        'error/index': resolve(__dirname, 'error/index.html'),
       },
     },
   },

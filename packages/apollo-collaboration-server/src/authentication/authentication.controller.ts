@@ -50,13 +50,18 @@ export class AuthenticationController {
   ) {}
 
   @Get('setup')
-  @Redirect('/')
+  @Redirect('/?setup=active')
   setupAdmin(@Query('token') token: string) {
     if (!token || !this.authService.validateAndActivateSetup(token)) {
       throw new BadRequestException('Invalid or expired setup token')
     }
     this.logger.log('Setup mode activated — next login will become admin')
-    return { url: '/' }
+    return { url: '/?setup=active' }
+  }
+
+  @Get('setup-active')
+  isSetupActive() {
+    return { active: this.authService.isSetupActive() }
   }
 
   @Get('types')

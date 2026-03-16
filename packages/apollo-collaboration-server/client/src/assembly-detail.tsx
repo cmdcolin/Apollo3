@@ -166,6 +166,13 @@ function AssemblyDetailPage() {
               >
                 Open in JBrowse
               </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                href={`/ui/blast/?assembly=${encodeURIComponent(assembly._id)}`}
+              >
+                BLAST Search
+              </Button>
             </Box>
 
             <Typography variant="h6" sx={{ mb: 1 }}>

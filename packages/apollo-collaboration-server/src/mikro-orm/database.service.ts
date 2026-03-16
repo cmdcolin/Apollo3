@@ -1,6 +1,7 @@
 import type {
   AssemblyPermissionRepository,
   AssemblyRepository,
+  BlastDbRepository,
   ChangeRepository,
   CheckRepository,
   CheckResultRepository,
@@ -18,6 +19,7 @@ import type {
 import {
   MikroOrmAssemblyPermissionRepository,
   MikroOrmAssemblyRepository,
+  MikroOrmBlastDbRepository,
   MikroOrmChangeRepository,
   MikroOrmCheckRepository,
   MikroOrmCheckResultRepository,
@@ -39,6 +41,7 @@ import { Inject, Injectable } from '@nestjs/common'
 export interface TransactionScope {
   assembly: AssemblyRepository
   assemblyPermission: AssemblyPermissionRepository
+  blastDb: BlastDbRepository
   organism: OrganismRepository
   feature: FeatureRepository
   refSeq: RefSeqRepository
@@ -72,6 +75,7 @@ export class DatabaseService {
   // AsyncLocalStorage (via RequestContext middleware) for per-request isolation.
   readonly assembly: AssemblyRepository
   readonly assemblyPermission: AssemblyPermissionRepository
+  readonly blastDb: BlastDbRepository
   readonly organism: OrganismRepository
   readonly feature: FeatureRepository
   readonly refSeq: RefSeqRepository
@@ -90,6 +94,7 @@ export class DatabaseService {
     this.dbType = process.env.DB_BACKEND ?? 'sqlite'
     this.assembly = new MikroOrmAssemblyRepository(em)
     this.assemblyPermission = new MikroOrmAssemblyPermissionRepository(em)
+    this.blastDb = new MikroOrmBlastDbRepository(em)
     this.organism = new MikroOrmOrganismRepository(em)
     this.feature = createFeatureRepository(em, this.dbType)
     this.refSeq = new MikroOrmRefSeqRepository(em)
@@ -114,6 +119,7 @@ export class DatabaseService {
       return callback({
         assembly: new MikroOrmAssemblyRepository(txEm),
         assemblyPermission: new MikroOrmAssemblyPermissionRepository(txEm),
+        blastDb: new MikroOrmBlastDbRepository(txEm),
         organism: new MikroOrmOrganismRepository(txEm),
         feature: createFeatureRepository(txEm, this.dbType),
         refSeq: new MikroOrmRefSeqRepository(txEm),

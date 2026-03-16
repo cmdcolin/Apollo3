@@ -3,6 +3,7 @@ export type {
   AssemblyRow,
   SequenceSource,
 } from './AssemblyRepository.js'
+export type { BlastDbRepository, BlastDbRow } from './BlastDbRepository.js'
 export type {
   AssemblyPermissionRepository,
   AssemblyPermissionRow,

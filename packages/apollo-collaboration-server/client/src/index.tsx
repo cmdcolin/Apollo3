@@ -15,6 +15,8 @@ import Chip from '@mui/material/Chip'
 
 import { Nav } from './Nav.js'
 
+const jsonHeaders = { Accept: 'application/json' }
+
 interface CurrentUser {
   username: string
   email: string
@@ -26,7 +28,7 @@ function useCurrentUser() {
   const [checked, setChecked] = useState(false)
 
   useEffect(() => {
-    fetch('/users/me')
+    fetch('/users/me', { headers: jsonHeaders })
       .then((r) => {
         if (r.ok) {
           return r.json()
@@ -50,7 +52,7 @@ function useLoginTypes() {
   const [types, setTypes] = useState<string[]>([])
 
   useEffect(() => {
-    fetch('/auth/types')
+    fetch('/auth/types', { headers: jsonHeaders })
       .then((r) => r.json())
       .then(setTypes)
       .catch((error) => {
@@ -65,7 +67,7 @@ function useAdminContact() {
   const [adminEmail, setAdminEmail] = useState<string>()
 
   useEffect(() => {
-    fetch('/users/admin')
+    fetch('/users/admin', { headers: jsonHeaders })
       .then((r) => {
         if (r.ok) {
           return r.json()
@@ -83,12 +85,37 @@ function useAdminContact() {
   return adminEmail
 }
 
+function useSetupActive() {
+  const [active, setActive] = useState(false)
+
+  useEffect(() => {
+    const params = new URLSearchParams(globalThis.location.search)
+    if (params.get('setup') === 'active') {
+      fetch('/auth/setup-active', { headers: jsonHeaders })
+        .then((r) => r.json())
+        .then((data) => {
+          setActive(data.active === true)
+        })
+        .catch(() => {})
+    }
+  }, [])
+
+  return active
+}
+
 function LoginSection() {
   const types = useLoginTypes()
+  const setupActive = useSetupActive()
   const currentUrl = globalThis.location.href
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+      {setupActive ? (
+        <Alert severity="success" sx={{ textAlign: 'left' }}>
+          <strong>Admin setup mode active.</strong> Sign in below — the first
+          account to log in will become the admin.
+        </Alert>
+      ) : null}
       <Typography variant="h6">Sign in</Typography>
       {types.includes('google') ? (
         <Button
@@ -147,7 +174,7 @@ function useUserStats() {
   const [stats, setStats] = useState<{ active: number; total: number }>()
 
   useEffect(() => {
-    fetch('/users/stats')
+    fetch('/users/stats', { headers: jsonHeaders })
       .then((r) => {
         if (r.ok) {
           return r.json()

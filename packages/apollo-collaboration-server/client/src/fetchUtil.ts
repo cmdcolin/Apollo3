@@ -1,5 +1,7 @@
+const jsonHeaders = { Accept: 'application/json' }
+
 export async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url)
+  const res = await fetch(url, { headers: jsonHeaders })
   if (res.status === 401) {
     globalThis.location.href = '/'
     throw new Error('Not authenticated')

@@ -27,15 +27,36 @@ import { AppModule } from './app.module.js'
 import { GlobalExceptionsFilter } from './global-exceptions.filter.js'
 import { DatabaseService } from './mikro-orm/database.service.js'
 
+const SECRETS_DIR = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '.secrets',
+)
+
+function ensureSecret(envName: string, envFileName: string, fileName: string) {
+  if (process.env[envName] || process.env[envFileName]) {
+    return
+  }
+  const secretPath = path.join(SECRETS_DIR, fileName)
+  if (fs.existsSync(secretPath)) {
+    process.env[envFileName] = secretPath
+    return
+  }
+  fs.mkdirSync(SECRETS_DIR, { recursive: true, mode: 0o700 })
+  const secret = randomBytes(48).toString('base64')
+  fs.writeFileSync(secretPath, secret, { mode: 0o600 })
+  process.env[envFileName] = secretPath
+  // eslint-disable-next-line no-console
+  console.log(
+    `Auto-generated ${envName} → ${secretPath} (set ${envName} explicitly for production)`,
+  )
+}
+
 async function bootstrap() {
-  const {
-    CORS,
-    JBROWSE_STATIC_DIR,
-    LOG_LEVELS,
-    PORT,
-    SESSION_SECRET,
-    SESSION_SECRET_FILE,
-  } = process.env
+  ensureSecret('JWT_SECRET', 'JWT_SECRET_FILE', 'jwt.key')
+  ensureSecret('SESSION_SECRET', 'SESSION_SECRET_FILE', 'session.key')
+
+  const { CORS, JBROWSE_STATIC_DIR, LOG_LEVELS, PORT } = process.env
   if (!CORS) {
     throw new Error('No CORS found in .env file')
   }
@@ -46,15 +67,9 @@ async function bootstrap() {
     throw new Error('No PORT found in .env file')
   }
 
-  let sessionSecret = SESSION_SECRET
-  if (!sessionSecret) {
-    if (!SESSION_SECRET_FILE) {
-      throw new Error(
-        'No SESSION_SECRET or SESSION_SECRET_FILE found in .env file',
-      )
-    }
-    sessionSecret = fs.readFileSync(SESSION_SECRET_FILE, 'utf8').trim()
-  }
+  const sessionSecret =
+    process.env.SESSION_SECRET ??
+    fs.readFileSync(process.env.SESSION_SECRET_FILE!, 'utf8').trim()
 
   for (const [changeName, change] of Object.entries(changes)) {
     changeRegistry.registerChange(changeName, change)
@@ -117,16 +132,12 @@ async function bootstrap() {
     // eslint-disable-next-line no-console
     console.log(`Serving JBrowse static files from: ${staticDir}`)
     const staticMiddleware = express.static(staticDir)
-    app.use('/jbrowse', (req: Request, res: Response, next: () => void) => {
-      if (req.path === '/config.json') {
-        next()
-        return
-      }
-      if (req.path === '/' || req.path === '/index.html') {
-        const indexPath = path.join(staticDir, 'index.html')
-        if (fs.existsSync(indexPath)) {
-          let html = fs.readFileSync(indexPath, 'utf8')
-          const configScript = `<script>
+
+    // Pre-read and patch index.html once at startup
+    const indexPath = path.join(staticDir, 'index.html')
+    let jbrowseIndexHtml: string | undefined
+    if (fs.existsSync(indexPath)) {
+      const configScript = `<script>
 (function() {
   var params = new URLSearchParams(window.location.search);
   var assemblies = params.get('assemblies');
@@ -135,10 +146,22 @@ async function bootstrap() {
   }
 })();
 </script>`
-          html = html.replace('</head>', configScript + '\n</head>')
-          res.type('html').send(html)
-          return
-        }
+      jbrowseIndexHtml = fs
+        .readFileSync(indexPath, 'utf8')
+        .replace('</head>', configScript + '\n</head>')
+    }
+
+    app.use('/jbrowse', (req: Request, res: Response, next: () => void) => {
+      if (req.path === '/config.json') {
+        next()
+        return
+      }
+      if (
+        (req.path === '/' || req.path === '/index.html') &&
+        jbrowseIndexHtml
+      ) {
+        res.type('html').send(jbrowseIndexHtml)
+        return
       }
       staticMiddleware(req, res, next)
     })
@@ -167,18 +190,15 @@ async function bootstrap() {
     app.use(
       `/ui/${resource}`,
       (req: Request, _res: Response, next: () => void) => {
-        // Let the list page (/ui/assemblies/ or /ui/assemblies/index.html)
-        // and static assets fall through to ServeStaticModule
-        if (
-          req.path === '/' ||
-          req.path === '/index.html' ||
-          req.path.startsWith('/assets/')
-        ) {
-          next()
+        // Only serve the detail page HTML for paths that look like an ID
+        // (single path segment, no file extension). Everything else
+        // (list page, assets, etc.) falls through to ServeStaticModule.
+        const segment = req.path.slice(1)
+        if (segment && !segment.includes('/') && !segment.includes('.')) {
+          _res.sendFile(htmlFile)
           return
         }
-        // Serve the detail page HTML for /ui/assemblies/:id etc.
-        _res.sendFile(htmlFile)
+        next()
       },
     )
   }
