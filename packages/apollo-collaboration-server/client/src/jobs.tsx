@@ -17,26 +17,13 @@ import { createRoot } from 'react-dom/client'
 import { AdminNav } from './Nav.js'
 import { fetchJson } from './fetchUtil.js'
 
-interface TiberiusJob {
+interface AnalysisJob {
   _id: string
   status: string
-  assemblyId: string
-  refSeqName: string
-  start: number
-  end: number
-  modelCfg?: string
-  trackConfigId?: string
-  error?: string
-  createdBy?: string
-  createdAt: string
-  startedAt?: string
-}
-
-interface BlastJob {
-  _id: string
-  status: string
-  program: string
-  database: string
+  tool: string
+  assemblyId?: string
+  params: Record<string, unknown>
+  results?: unknown
   error?: string
   createdBy?: string
   createdAt: string
@@ -72,20 +59,28 @@ function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleString()
 }
 
+function jobDescription(job: AnalysisJob) {
+  const { params } = job
+  if (job.tool === 'tiberius' && params.refSeqName) {
+    const start = Number(params.start ?? 0)
+    const end = Number(params.end ?? 0)
+    return `${params.refSeqName}:${start.toLocaleString()}-${end.toLocaleString()}`
+  }
+  if (params.program && params.database) {
+    return `${params.program} / ${params.database}`
+  }
+  return JSON.stringify(params).slice(0, 80)
+}
+
 function JobsPage() {
-  const [tiberiusJobs, setTiberiusJobs] = useState<TiberiusJob[]>([])
-  const [blastJobs, setBlastJobs] = useState<BlastJob[]>([])
+  const [jobs, setJobs] = useState<AnalysisJob[]>([])
   const [error, setError] = useState<string>()
 
   const load = useCallback(async () => {
     try {
       setError(undefined)
-      const [tJobs, bJobs] = await Promise.all([
-        fetchJson<TiberiusJob[]>('/tools/tiberius/jobs'),
-        fetchJson<BlastJob[]>('/analysis/jobs').catch(() => [] as BlastJob[]),
-      ])
-      setTiberiusJobs(tJobs)
-      setBlastJobs(bJobs)
+      const result = await fetchJson<AnalysisJob[]>('/analysis/jobs')
+      setJobs(result)
     } catch (error_) {
       setError(error_ instanceof Error ? error_.message : String(error_))
     }
@@ -95,16 +90,7 @@ function JobsPage() {
     void load()
   }, [load])
 
-  async function cancelTiberiusJob(jobId: string) {
-    try {
-      await fetch(`/tools/tiberius/jobs/${jobId}`, { method: 'DELETE' })
-      await load()
-    } catch (error_) {
-      setError(error_ instanceof Error ? error_.message : String(error_))
-    }
-  }
-
-  async function cancelBlastJob(jobId: string) {
+  async function cancelJob(jobId: string) {
     try {
       await fetch(`/analysis/jobs/${jobId}`, { method: 'DELETE' })
       await load()
@@ -135,107 +121,20 @@ function JobsPage() {
           </Alert>
         ) : null}
 
-        <Typography variant="h6" sx={{ mb: 1 }}>
-          Tiberius Gene Predictions ({tiberiusJobs.length})
-        </Typography>
-        <TableContainer component={Paper} variant="outlined" sx={{ mb: 4 }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Status</TableCell>
-                <TableCell>Region</TableCell>
-                <TableCell>Model</TableCell>
-                <TableCell>Created</TableCell>
-                <TableCell>Error</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {tiberiusJobs.map((job) => (
-                <TableRow key={job._id} hover>
-                  <TableCell>
-                    <Chip
-                      label={job.status}
-                      size="small"
-                      color={statusColor(job.status)}
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Typography
-                      variant="body2"
-                      sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
-                    >
-                      {job.refSeqName}:{job.start.toLocaleString()}-
-                      {job.end.toLocaleString()}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>{job.modelCfg ?? ''}</TableCell>
-                  <TableCell>{formatDate(job.createdAt)}</TableCell>
-                  <TableCell>
-                    {job.error ? (
-                      <Typography
-                        variant="body2"
-                        color="error"
-                        sx={{
-                          maxWidth: 300,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                        title={job.error}
-                      >
-                        {job.error}
-                      </Typography>
-                    ) : null}
-                  </TableCell>
-                  <TableCell align="right">
-                    {job.status === 'pending' || job.status === 'running' ? (
-                      <Button
-                        size="small"
-                        color="error"
-                        onClick={() => {
-                          void cancelTiberiusJob(job._id)
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    ) : null}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {tiberiusJobs.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    align="center"
-                    sx={{ color: 'text.secondary' }}
-                  >
-                    No Tiberius jobs
-                  </TableCell>
-                </TableRow>
-              ) : null}
-            </TableBody>
-          </Table>
-        </TableContainer>
-
-        <Typography variant="h6" sx={{ mb: 1 }}>
-          Sequence Search Jobs ({blastJobs.length})
-        </Typography>
         <TableContainer component={Paper} variant="outlined">
           <Table size="small">
             <TableHead>
               <TableRow>
                 <TableCell>Status</TableCell>
-                <TableCell>Program</TableCell>
-                <TableCell>Database</TableCell>
+                <TableCell>Tool</TableCell>
+                <TableCell>Description</TableCell>
                 <TableCell>Created</TableCell>
                 <TableCell>Error</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {blastJobs.map((job) => (
+              {jobs.map((job) => (
                 <TableRow key={job._id} hover>
                   <TableCell>
                     <Chip
@@ -245,8 +144,15 @@ function JobsPage() {
                       variant="outlined"
                     />
                   </TableCell>
-                  <TableCell>{job.program}</TableCell>
-                  <TableCell>{job.database}</TableCell>
+                  <TableCell>{job.tool}</TableCell>
+                  <TableCell>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
+                    >
+                      {jobDescription(job)}
+                    </Typography>
+                  </TableCell>
                   <TableCell>{formatDate(job.createdAt)}</TableCell>
                   <TableCell>
                     {job.error ? (
@@ -271,7 +177,7 @@ function JobsPage() {
                         size="small"
                         color="error"
                         onClick={() => {
-                          void cancelBlastJob(job._id)
+                          void cancelJob(job._id)
                         }}
                       >
                         Cancel
@@ -280,14 +186,14 @@ function JobsPage() {
                   </TableCell>
                 </TableRow>
               ))}
-              {blastJobs.length === 0 ? (
+              {jobs.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={6}
                     align="center"
                     sx={{ color: 'text.secondary' }}
                   >
-                    No sequence search jobs
+                    No analysis jobs
                   </TableCell>
                 </TableRow>
               ) : null}

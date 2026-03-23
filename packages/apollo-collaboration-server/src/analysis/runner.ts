@@ -24,4 +24,6 @@ export interface AnalysisRunner {
   run(context: RunContext): Promise<unknown>
 
   buildDb?(context: BuildDbContext): Promise<{ dbPath: string }>
+
+  getConfig?(): Record<string, unknown>
 }

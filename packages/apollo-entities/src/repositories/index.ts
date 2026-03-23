@@ -14,7 +14,6 @@ export { MikroOrmJBrowseConfigRepository } from './MikroOrmJBrowseConfigReposito
 export { MikroOrmRefSeqChunkRepository } from './MikroOrmRefSeqChunkRepository.js'
 export { MikroOrmRefSeqRepository } from './MikroOrmRefSeqRepository.js'
 export { MikroOrmTextSearchAdapterConfigRepository } from './MikroOrmTextSearchAdapterConfigRepository.js'
-export { MikroOrmTiberiusJobRepository } from './MikroOrmTiberiusJobRepository.js'
 export { MikroOrmTrackConfigRepository } from './MikroOrmTrackConfigRepository.js'
 export { MikroOrmUserRepository } from './MikroOrmUserRepository.js'
 export { MongoFeatureRepository } from './MongoFeatureRepository.js'

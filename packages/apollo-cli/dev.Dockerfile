@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 FROM node:24-alpine AS setup
-RUN corepack enable && corepack prepare pnpm@10.12.1 --activate
+RUN npm install -g pnpm@10.12.1
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY packages/ packages/
@@ -9,7 +9,7 @@ RUN find packages/ -type f \! \( -name "package.json" \) -delete && \
 find . -type d -empty -delete
 
 FROM node:24-alpine AS build
-RUN corepack enable && corepack prepare pnpm@10.12.1 --activate
+RUN npm install -g pnpm@10.12.1
 WORKDIR /app
 COPY --from=setup /app .
 RUN pnpm install --frozen-lockfile
@@ -20,7 +20,7 @@ WORKDIR /app/packages/apollo-cli
 RUN pnpm build
 
 FROM node:24-alpine
-RUN corepack enable && corepack prepare pnpm@10.12.1 --activate
+RUN npm install -g pnpm@10.12.1
 LABEL org.opencontainers.image.source=https://github.com/GMOD/Apollo3
 LABEL org.opencontainers.image.description="Apollo CLI"
 WORKDIR /app

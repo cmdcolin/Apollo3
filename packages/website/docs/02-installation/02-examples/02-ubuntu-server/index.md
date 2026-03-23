@@ -220,20 +220,13 @@ rm apollo.tar.gz apollo.json
 mv GMOD-Apollo3-*/ Apollo/
 ```
 
-To install Apollo, we'll need the tool `yarn`, which can be enabled through
-Node.js by running
-
-```sh
-sudo corepack enable
-```
-
 Then install and build Apollo by running
 
 ```sh
 cd Apollo/
-yarn # Need to answer "Y" to allow Corepack to download yarn
+pnpm install
 cd packages/apollo-collaboration-server/
-yarn build
+pnpm build
 ```
 
 Now that Apollo is installed, we need to configure it before starting it. We can

@@ -16,7 +16,6 @@ import { OrganismEntity } from './entities/OrganismEntity.js'
 import { RefSeqChunkEntity } from './entities/RefSeqChunkEntity.js'
 import { RefSeqEntity } from './entities/RefSeqEntity.js'
 import { TextSearchAdapterConfigEntity } from './entities/TextSearchAdapterConfigEntity.js'
-import { TiberiusJobEntity } from './entities/TiberiusJobEntity.js'
 import { TrackConfigEntity } from './entities/TrackConfigEntity.js'
 import { UserEntity } from './entities/UserEntity.js'
 
@@ -37,7 +36,6 @@ const allEntities = [
   RefSeqChunkEntity,
   RefSeqEntity,
   TextSearchAdapterConfigEntity,
-  TiberiusJobEntity,
   TrackConfigEntity,
   UserEntity,
 ]

@@ -8,6 +8,7 @@
 #   --memory  Use an in-memory SQLite database (no persistence across restarts)
 #   --guest   Enable guest user with admin role
 set -euo pipefail
+export COREPACK_ENABLE_AUTO_INSTALL=0
 
 FRESH=false
 MEMORY=false

@@ -14,7 +14,6 @@ import type {
   RefSeqChunkRepository,
   RefSeqRepository,
   TextSearchAdapterConfigRepository,
-  TiberiusJobRepository,
   TrackConfigRepository,
   UserRepository,
 } from '@apollo-annotation/common'
@@ -34,7 +33,6 @@ import {
   MikroOrmRefSeqChunkRepository,
   MikroOrmRefSeqRepository,
   MikroOrmTextSearchAdapterConfigRepository,
-  MikroOrmTiberiusJobRepository,
   MikroOrmTrackConfigRepository,
   MikroOrmUserRepository,
   MongoFeatureRepository,
@@ -47,7 +45,6 @@ export interface TransactionScope {
   analysisJob: AnalysisJobRepository
   assembly: AssemblyRepository
   assemblyPermission: AssemblyPermissionRepository
-  tiberiusJob: TiberiusJobRepository
   organism: OrganismRepository
   feature: FeatureRepository
   refSeq: RefSeqRepository
@@ -77,7 +74,6 @@ export class DatabaseService {
   readonly analysisJob: AnalysisJobRepository
   readonly assembly: AssemblyRepository
   readonly assemblyPermission: AssemblyPermissionRepository
-  readonly tiberiusJob: TiberiusJobRepository
   readonly organism: OrganismRepository
   readonly feature: FeatureRepository
   readonly refSeq: RefSeqRepository
@@ -98,7 +94,6 @@ export class DatabaseService {
     this.analysisJob = new MikroOrmAnalysisJobRepository(em)
     this.assembly = new MikroOrmAssemblyRepository(em)
     this.assemblyPermission = new MikroOrmAssemblyPermissionRepository(em)
-    this.tiberiusJob = new MikroOrmTiberiusJobRepository(em)
     this.organism = new MikroOrmOrganismRepository(em)
     this.feature = createFeatureRepository(em, this.dbType)
     this.refSeq = new MikroOrmRefSeqRepository(em)
@@ -122,7 +117,6 @@ export class DatabaseService {
         analysisJob: new MikroOrmAnalysisJobRepository(txEm),
         assembly: new MikroOrmAssemblyRepository(txEm),
         assemblyPermission: new MikroOrmAssemblyPermissionRepository(txEm),
-        tiberiusJob: new MikroOrmTiberiusJobRepository(txEm),
         organism: new MikroOrmOrganismRepository(txEm),
         feature: createFeatureRepository(txEm, this.dbType),
         refSeq: new MikroOrmRefSeqRepository(txEm),

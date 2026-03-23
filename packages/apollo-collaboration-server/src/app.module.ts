@@ -25,7 +25,6 @@ import { PermissionsModule } from './permissions/permissions.module.js'
 import { PluginsModule } from './plugins/plugins.module.js'
 import { RefSeqsModule } from './refSeqs/refSeqs.module.js'
 import { SequenceModule } from './sequence/sequence.module.js'
-import { ToolsModule } from './tools/tools.module.js'
 import { TracksModule } from './tracks/tracks.module.js'
 import { UsersModule } from './users/users.module.js'
 import { JwtAuthGuard } from './utils/jwt-auth.guard.js'
@@ -161,7 +160,6 @@ const validationSchema = Joi.object({
     JBrowseModule,
     ExportModule,
     ChangesModule,
-    ToolsModule,
     TracksModule,
     PermissionsModule,
     AuthenticationModule,

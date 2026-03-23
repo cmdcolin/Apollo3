@@ -14,6 +14,7 @@ import { BlatRunner } from './runners/blat.runner.js'
 import { LocalBlastRunner } from './runners/local-blast.runner.js'
 import { MiniprotRunner } from './runners/miniprot.runner.js'
 import { NcbiBlastRunner } from './runners/ncbi-blast.runner.js'
+import { TiberiusRunner } from './runners/tiberius.runner.js'
 
 const POLL_INTERVAL = 5000
 const JOB_RETENTION_MS = 86_400_000
@@ -29,11 +30,13 @@ export class AnalysisWorkerService implements OnModuleInit, OnModuleDestroy {
     @Inject(NcbiBlastRunner) ncbiBlast: NcbiBlastRunner,
     @Inject(BlatRunner) blat: BlatRunner,
     @Inject(MiniprotRunner) miniprot: MiniprotRunner,
+    @Inject(TiberiusRunner) tiberius: TiberiusRunner,
   ) {
     this.runners.set(localBlast.tool, localBlast)
     this.runners.set(ncbiBlast.tool, ncbiBlast)
     this.runners.set(blat.tool, blat)
     this.runners.set(miniprot.tool, miniprot)
+    this.runners.set(tiberius.tool, tiberius)
 
     this.maxConcurrent = Number(process.env.ANALYSIS_MAX_CONCURRENT_JOBS ?? '2')
     this.jobTimeoutMs =

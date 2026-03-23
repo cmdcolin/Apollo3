@@ -9,6 +9,7 @@ import { BlatRunner } from './runners/blat.runner.js'
 import { LocalBlastRunner } from './runners/local-blast.runner.js'
 import { MiniprotRunner } from './runners/miniprot.runner.js'
 import { NcbiBlastRunner } from './runners/ncbi-blast.runner.js'
+import { TiberiusRunner } from './runners/tiberius.runner.js'
 
 @Injectable()
 export class AnalysisService {
@@ -20,11 +21,13 @@ export class AnalysisService {
     @Inject(NcbiBlastRunner) ncbiBlast: NcbiBlastRunner,
     @Inject(BlatRunner) blat: BlatRunner,
     @Inject(MiniprotRunner) miniprot: MiniprotRunner,
+    @Inject(TiberiusRunner) tiberius: TiberiusRunner,
   ) {
     this.runners.set(localBlast.tool, localBlast)
     this.runners.set(ncbiBlast.tool, ncbiBlast)
     this.runners.set(blat.tool, blat)
     this.runners.set(miniprot.tool, miniprot)
+    this.runners.set(tiberius.tool, tiberius)
   }
 
   private readonly logger = new Logger(AnalysisService.name)
@@ -34,6 +37,7 @@ export class AnalysisService {
       tool: string
       installed: boolean
       canBuildDb: boolean
+      config?: Record<string, unknown>
     }[] = []
     for (const [tool, runner] of this.runners) {
       const installed = await runner.isInstalled()
@@ -41,6 +45,7 @@ export class AnalysisService {
         tool,
         installed,
         canBuildDb: typeof runner.buildDb === 'function',
+        config: runner.getConfig?.(),
       })
     }
     return results

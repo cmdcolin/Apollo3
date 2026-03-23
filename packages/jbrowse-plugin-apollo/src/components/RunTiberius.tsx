@@ -58,23 +58,28 @@ export function RunTiberius({
       region.assemblyName,
     )
     if (backendDriver instanceof CollaborationServerDriver) {
-      void backendDriver.checkTiberiusAvailable().then((result) => {
-        if (!result.available) {
+      void backendDriver.getAnalysisTools().then((tools) => {
+        const tiberius = tools.find((t) => t.tool === 'tiberius')
+        if (!tiberius?.installed) {
           setErrorMessage(
             'Tiberius is not available on this server. Set TIBERIUS_PATH or install tiberius.py on the server PATH.',
           )
+          return
         }
-        if (result.maxRegionSize) {
-          setMaxRegionSize(result.maxRegionSize)
-        }
-        if (result.useSingularity) {
-          setUseSingularity(true)
-        }
-        if (result.modelCfg) {
-          setModelCfg(result.modelCfg)
-        }
-        if (result.availableModels && result.availableModels.length > 0) {
-          setAvailableModels(result.availableModels)
+        const cfg = tiberius.config
+        if (cfg) {
+          if (typeof cfg.maxRegionSize === 'number') {
+            setMaxRegionSize(cfg.maxRegionSize)
+          }
+          if (cfg.useSingularity) {
+            setUseSingularity(true)
+          }
+          if (typeof cfg.modelCfg === 'string' && cfg.modelCfg) {
+            setModelCfg(cfg.modelCfg)
+          }
+          if (Array.isArray(cfg.availableModels) && cfg.availableModels.length > 0) {
+            setAvailableModels(cfg.availableModels as string[])
+          }
         }
       })
     }
@@ -90,12 +95,17 @@ export function RunTiberius({
       }
       const interval = setInterval(() => {
         void backendDriver
-          .getTiberiusStatus(id)
+          .getAnalysisJob(id)
           .then((result) => {
             if (result.status === 'ready') {
               clearInterval(interval)
               setStatus('completed')
-              setTrackConfigId(result.trackConfigId)
+              const results = result.results as
+                | { trackConfigId?: string }
+                | undefined
+              if (results?.trackConfigId) {
+                setTrackConfigId(results.trackConfigId)
+              }
             }
             if (result.status === 'failed') {
               clearInterval(interval)
@@ -141,18 +151,21 @@ export function RunTiberius({
       return
     }
 
-    const result = await backendDriver.runTiberius({
-      assembly: region.assemblyName,
-      refSeqId,
-      refSeqName: region.refName,
-      start: region.start,
-      end: region.end,
-      modelCfg: modelCfg || undefined,
-      useSingularity,
+    const result = await backendDriver.submitAnalysisJob({
+      tool: 'tiberius',
+      assemblyId: region.assemblyName,
+      params: {
+        refSeqId,
+        refSeqName: region.refName,
+        start: region.start,
+        end: region.end,
+        modelCfg: modelCfg || undefined,
+        useSingularity,
+      },
     })
-    setJobId(result.jobId)
+    setJobId(result._id)
     setStatus('running')
-    pollStatus(result.jobId)
+    pollStatus(result._id)
   }
 
   function handleShowTrack() {

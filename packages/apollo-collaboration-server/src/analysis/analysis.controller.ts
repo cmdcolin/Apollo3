@@ -1,9 +1,14 @@
+import { createReadStream, existsSync } from 'node:fs'
+import { join } from 'node:path'
+
 import type { DecodedJWT } from '@apollo-annotation/shared'
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
+  Header,
   HttpCode,
   Inject,
   NotFoundException,
@@ -11,7 +16,9 @@ import {
   Post,
   Query,
   Req,
+  StreamableFile,
 } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import type { Request } from 'express'
 
 import { Role } from '../utils/role/role.enum.js'
@@ -19,11 +26,17 @@ import { Roles } from '../utils/roles.guard.js'
 
 import { AnalysisService } from './analysis.service.js'
 
+const ALLOWED_FILES = new Set(['predictions.gtf'])
+
 @Roles(Role.ReadOnly)
 @Controller('analysis')
 export class AnalysisController {
   constructor(
     @Inject(AnalysisService) private readonly service: AnalysisService,
+    @Inject(ConfigService)
+    private readonly configService: ConfigService<{
+      FILE_UPLOAD_FOLDER: string
+    }>,
   ) {}
 
   @Get('tools')
@@ -145,5 +158,29 @@ export class AnalysisController {
       )
     }
     return { cancelled: true }
+  }
+
+  // ── Job files ──────────────────────────────────────────────────────
+
+  @Get('jobs/:id/files/:filename')
+  @Header('Content-Type', 'text/plain')
+  serveJobFile(
+    @Param('id') jobId: string,
+    @Param('filename') filename: string,
+  ) {
+    if (!ALLOWED_FILES.has(filename)) {
+      throw new BadRequestException(`File "${filename}" is not allowed`)
+    }
+
+    const fileUploadFolder = this.configService.get('FILE_UPLOAD_FOLDER', {
+      infer: true,
+    })!
+    const filePath = join(fileUploadFolder, 'analysis-jobs', jobId, filename)
+
+    if (!existsSync(filePath)) {
+      throw new NotFoundException('File not found')
+    }
+
+    return new StreamableFile(createReadStream(filePath))
   }
 }

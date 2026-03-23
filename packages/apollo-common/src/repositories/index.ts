@@ -43,10 +43,6 @@ export type {
   TextSearchAdapterConfigRow,
 } from './TextSearchAdapterConfigRepository.js'
 export type {
-  TiberiusJobRepository,
-  TiberiusJobRow,
-} from './TiberiusJobRepository.js'
-export type {
   TrackConfigRepository,
   TrackConfigRow,
 } from './TrackConfigRepository.js'

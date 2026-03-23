@@ -319,33 +319,30 @@ export class CollaborationServerDriver extends BackendDriver {
     }))
   }
 
-  async checkTiberiusAvailable() {
+  async getAnalysisTools() {
     const baseURL = this.getBaseURL()
-    const url = new URL('tools/tiberius/available', baseURL)
+    const url = new URL('analysis/tools', baseURL)
     const response = await apolloFetch(url.toString())
     if (!response.ok) {
-      return { available: false }
+      return []
     }
-    return response.json() as Promise<{
-      available: boolean
-      useSingularity?: boolean
-      maxRegionSize?: number
-      modelCfg?: string
-      availableModels?: string[]
-    }>
+    return response.json() as Promise<
+      {
+        tool: string
+        installed: boolean
+        canBuildDb: boolean
+        config?: Record<string, unknown>
+      }[]
+    >
   }
 
-  async runTiberius(params: {
-    assembly: string
-    refSeqId: string
-    refSeqName: string
-    start: number
-    end: number
-    modelCfg?: string
-    useSingularity?: boolean
+  async submitAnalysisJob(params: {
+    tool: string
+    assemblyId?: string
+    params: Record<string, unknown>
   }) {
     const baseURL = this.getBaseURL()
-    const url = new URL('tools/tiberius/run', baseURL)
+    const url = new URL('analysis/jobs', baseURL)
     const response = await apolloFetch(url.toString(), {
       method: 'POST',
       body: JSON.stringify(params),
@@ -354,29 +351,29 @@ export class CollaborationServerDriver extends BackendDriver {
     if (!response.ok) {
       const errorMessage = await createFetchErrorMessage(
         response,
-        'runTiberius failed',
+        'submitAnalysisJob failed',
       )
       throw new Error(errorMessage)
     }
-    return response.json() as Promise<{ jobId: string }>
+    return response.json() as Promise<{ _id: string; status: string }>
   }
 
-  async getTiberiusStatus(jobId: string) {
+  async getAnalysisJob(jobId: string) {
     const baseURL = this.getBaseURL()
-    const url = new URL(`tools/tiberius/status/${jobId}`, baseURL)
+    const url = new URL(`analysis/jobs/${jobId}`, baseURL)
     const response = await apolloFetch(url.toString())
     if (!response.ok) {
       const errorMessage = await createFetchErrorMessage(
         response,
-        'getTiberiusStatus failed',
+        'getAnalysisJob failed',
       )
       throw new Error(errorMessage)
     }
     return response.json() as Promise<{
-      jobId: string
+      _id: string
       status: string
       error?: string
-      trackConfigId?: string
+      results?: Record<string, unknown>
     }>
   }
 

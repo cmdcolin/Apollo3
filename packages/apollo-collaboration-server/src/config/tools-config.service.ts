@@ -182,20 +182,4 @@ export class ToolsConfigService implements OnModuleInit {
     return false
   }
 
-  // Keep for backwards compatibility with availability endpoint
-  getToolConfig(toolName: string) {
-    if (toolName === 'tiberius') {
-      return this.tiberiusConfig
-    }
-    return undefined
-  }
-
-  isSingularityAvailable() {
-    try {
-      execSync('which singularity', { stdio: 'pipe' })
-      return true
-    } catch {
-      return false
-    }
-  }
 }
