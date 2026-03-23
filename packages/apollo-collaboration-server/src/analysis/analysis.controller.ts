@@ -1,5 +1,5 @@
 import { createReadStream, existsSync } from 'node:fs'
-import { join } from 'node:path'
+import path from 'node:path'
 
 import type { DecodedJWT } from '@apollo-annotation/shared'
 import {
@@ -172,10 +172,9 @@ export class AnalysisController {
       throw new BadRequestException(`File "${filename}" is not allowed`)
     }
 
-    const fileUploadFolder = this.configService.get('FILE_UPLOAD_FOLDER', {
-      infer: true,
-    })!
-    const filePath = join(fileUploadFolder, 'analysis-jobs', jobId, filename)
+    const fileUploadFolder =
+      this.configService.get('FILE_UPLOAD_FOLDER', { infer: true }) ?? ''
+    const filePath = path.join(fileUploadFolder, 'analysis-jobs', jobId, filename)
 
     if (!existsSync(filePath)) {
       throw new NotFoundException('File not found')

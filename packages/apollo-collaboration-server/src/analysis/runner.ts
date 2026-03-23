@@ -1,4 +1,4 @@
-import type { AnalysisDbRow, AnalysisJobRow } from '@apollo-annotation/common'
+import type { AnalysisJobRow } from '@apollo-annotation/common'
 
 import type { DatabaseService } from '../mikro-orm/database.service.js'
 

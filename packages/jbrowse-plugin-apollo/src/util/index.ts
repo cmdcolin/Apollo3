@@ -44,9 +44,16 @@ export function isReadOnly(session: ApolloSessionModel) {
   return readConfObject(pluginConfiguration, 'readOnly') as boolean
 }
 
-export function isTiberiusAvailable(session: ApolloSessionModel) {
+export function isAnalysisToolAvailable(
+  session: ApolloSessionModel,
+  toolName: string,
+) {
   const pluginConfiguration = getPluginConfiguration(session)
-  return readConfObject(pluginConfiguration, 'tiberiusAvailable') as boolean
+  const tools = readConfObject(
+    pluginConfiguration,
+    'availableAnalysisTools',
+  ) as string[]
+  return tools.includes(toolName)
 }
 
 export function getUserId(session: ApolloSessionModel) {

@@ -3,7 +3,7 @@ import { Inject, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import merge from 'deepmerge'
 
-import { ToolsConfigService } from '../config/tools-config.service.js'
+import { AnalysisService } from '../analysis/analysis.service.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
 import { PermissionService } from '../permissions/permission.service.js'
 import { Role } from '../utils/role/role.enum.js'
@@ -25,11 +25,11 @@ export class JBrowseService {
     @Inject(DatabaseService) private readonly db: DatabaseService,
     @Inject(PermissionService)
     private readonly permissionService: PermissionService,
-    @Inject(ToolsConfigService)
-    private readonly toolsConfig: ToolsConfigService,
+    @Inject(AnalysisService)
+    private readonly analysisService: AnalysisService,
   ) {}
 
-  getConfiguration(role?: Role, userId?: string, userSessionId?: string) {
+  async getConfiguration(role?: Role, userId?: string, userSessionId?: string) {
     const url = this.configService.get('URL', { infer: true })
     const feature_type_ontology_location =
       this.configService.get('FEATURE_TYPE_ONTOLOGY_LOCATION', {
@@ -83,7 +83,10 @@ export class JBrowseService {
       }
     }
     const readOnly = role === Role.ReadOnly
-    const tiberiusAvailable = this.toolsConfig.isToolAvailable('tiberius')
+    const tools = await this.analysisService.getTools()
+    const availableAnalysisTools = tools
+      .filter((t) => t.installed)
+      .map((t) => t.tool)
     return {
       ...configuration,
       ApolloPlugin: {
@@ -91,7 +94,7 @@ export class JBrowseService {
         baseURL: url,
         role,
         readOnly,
-        tiberiusAvailable,
+        availableAnalysisTools,
         userId,
         userSessionId,
         ontologies: [
@@ -231,7 +234,7 @@ export class JBrowseService {
     userSessionId?: string,
     assemblyIds?: string[],
   ) {
-    const configuration = this.getConfiguration(role, userId, userSessionId)
+    const configuration = await this.getConfiguration(role, userId, userSessionId)
     const plugins = this.getPlugins()
     const assemblies = await this.getAccessibleAssemblies(userId, assemblyIds)
 

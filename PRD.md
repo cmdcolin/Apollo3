@@ -113,6 +113,9 @@ creates evidence tracks, and saves the resulting database to
 
 ## Outstanding Issues (Priority Order)
 
+> **Note**: When an item is completed, move it from this file to COMPLETED.md
+> and remove it here.
+
 ### P1 — Playwright E2E Tests
 
 This tends to be important. Improving the speed of the tests is important also,
@@ -162,16 +165,7 @@ however possible
 
 ### P2 — Simplification
 
-5. ~~**Remove InternetAccount from Apollo plugin**~~ **DONE** — Removed the
-   `ApolloInternetAccount` abstraction entirely. The server now includes
-   `baseURL`, `role`, and `userId` in the ApolloPlugin configuration returned by
-   `config.json`. WebSocket connection and change sequence tracking moved to the
-   session model. All API calls use plain `fetch` with
-   `credentials: 'same-origin'` (cookie auth). Components read `baseURL`,
-   `role`, and `userId` from the plugin config via utility functions.
-   Multi-account selection UI removed (single server per deployment).
-
-6. **Remove chunked RefSeqChunk storage** — Apollo3 currently stores reference
+5. **Remove chunked RefSeqChunk storage** — Apollo3 currently stores reference
    sequences as chunked text blobs in the `ref_seq_chunk` table. This is
    redundant with JBrowse 2's existing sequence adapters (IndexedFastaAdapter,
    BgzipFastaAdapter, etc.) which handle indexed FASTA efficiently. The chunked
@@ -189,29 +183,20 @@ however possible
    - **Files**: entity definitions, `FromFileBaseChange`, `SequenceService`,
      `assemblies.service.ts`, `DatabaseService`
 
-7. ~~**GFF3 export code deduplication**~~ **DONE** — The export service had its
-   own copy of the gene hierarchy assembly logic (`buildChildrenMap` +
-   `featureRowToSnapshot`). Replaced with the shared `assembleFeatureTrees()`
-   function, removing ~40 lines of duplicate code.
-   - **Future: per-exon CDS storage** — Currently CDS is stored as one row
-     spanning the full coding region. GFF3 export must split it per-exon and
-     compute phases. If CDS were stored as multiple rows (one per exon, with
-     pre-computed phases), export would be trivial raw-row output. This would
-     require changing all CDS mutation operations (create, resize, split, merge)
-     to maintain per-exon rows.
+6. **Future: per-exon CDS storage** — Currently CDS is stored as one row
+   spanning the full coding region. GFF3 export must split it per-exon and
+   compute phases. If CDS were stored as multiple rows (one per exon, with
+   pre-computed phases), export would be trivial raw-row output. This would
+   require changing all CDS mutation operations (create, resize, split, merge)
+   to maintain per-exon rows.
 
 ### P2 — Collaboration & Workflow
 
-8. ~~**Per-assembly permissions**~~ **DONE** — `AssemblyPermissionEntity` maps
-   user → assembly → role. `PermissionService` checks global admin →
-   per-assembly permission → public visibility. Assemblies have
-   `public`/`private` visibility. `PermissionsController` provides admin API for
-   managing per-assembly roles. Track access follows assembly permissions. See
-   "Per-Assembly Permissions" section above for details.
-   - **Remaining**: Admin UI for assigning users to assemblies (currently
-     API-only)
+7. **Per-assembly permissions admin UI** — The backend API for per-assembly
+   role management is complete. **Remaining**: Admin UI for assigning users to
+   assemblies (currently API-only).
 
-9. **Feature ownership & audit display** — Apollo Classic tracks who
+8. **Feature ownership & audit display** — Apollo Classic tracks who
    created/last edited each feature. Apollo3 stores `user` on entities but
    doesn't expose this in the UI.
    - Display last editor in "Edit feature details" dialog
@@ -219,17 +204,17 @@ however possible
    - Optional: highlight features by ownership in the track display
    - **Files**: plugin "Edit feature details" components
 
-10. **Canned comments/attributes** — Apollo Classic lets admins configure preset
-    comment templates and attribute keys/values, speeding up annotation
-    significantly.
-    - New `CannedElement` entity (type: comment|key|value, text, assembly?)
-    - Admin UI for managing canned elements
-    - Autocomplete in attribute editing UI (integrates with item 3 above)
-    - **Files**: new entity, new admin component, new API endpoints
+9. **Canned comments/attributes** — Apollo Classic lets admins configure preset
+   comment templates and attribute keys/values, speeding up annotation
+   significantly.
+   - New `CannedElement` entity (type: comment|key|value, text, assembly?)
+   - Admin UI for managing canned elements
+   - Autocomplete in attribute editing UI (integrates with item 3 above)
+   - **Files**: new entity, new admin component, new API endpoints
 
 ### P2 — Export/Import
 
-11. **FASTA export (CDS, protein, transcript sequences)** — Apollo Classic
+10. **FASTA export (CDS, protein, transcript sequences)** — Apollo Classic
     exports CDS sequences, protein translations, and genomic sequences. Apollo3
     only exports GFF3 + optional genomic FASTA.
     - Export types: CDS FASTA, protein FASTA, transcript FASTA
@@ -238,7 +223,7 @@ however possible
     - **Files**: `packages/apollo-collaboration-server/src/export/`, new
       `TranslationService`
 
-12. **Filtered/partial export** — Apollo Classic allows exporting specific
+11. **Filtered/partial export** — Apollo Classic allows exporting specific
     reference sequences. Apollo3 exports entire assemblies.
     - Filter by: reference sequence(s), feature type(s), coordinate range
     - Frontend: checkboxes/filters in "Download GFF3" dialog
@@ -246,58 +231,44 @@ however possible
 
 ### P2 — Search & Navigation
 
-13. **Sequence search (BLAT/BLAST integration)** — Apollo Classic has pluggable
-    BLAT/BLAST search. Annotators paste a sequence and get genomic hits.
-    Essential for evidence-based annotation.
-    - Pluggable `SequenceSearchProvider` interface (backend)
-    - Default implementation: BLAT via `gfClient`/`gfServer`
-    - Frontend: "Sequence Search" dialog, results displayed as track
-    - Config: search tool URL/path per assembly
-    - **Files**: new module in server, new component in plugin
+12. ~~**Sequence search (BLAT/BLAST integration)**~~ **Partially DONE** —
+    Backend runners exist for local BLAST, NCBI BLAST, BLAT, and Miniprot in
+    the generic analysis framework (`/analysis/` endpoints). Frontend sequence
+    search UI exists at `/ui/sequence-search/`. **Remaining**: polish the
+    results display, improve deep-linking from results to genome view
+    coordinates.
 
-### P2 — Gene Prediction
+### P2 — Analysis Tools & Gene Prediction
 
-14. **Tiberius on-the-fly gene prediction** — Run
-    [Tiberius](https://github.com/Gaius-Augustus/Tiberius) on a user-selected
-    genomic region to generate de novo gene predictions.
-
-    **TODO — Remaining work**:
-    - **Accept/reject workflow**: Currently predictions are auto-imported as
-      annotation features on completion. Instead, display them in a preview
-      layer and let the user accept/reject individual predictions before
-      importing. Requires a results panel UI and a separate display mode for
-      unconfirmed predictions.
+13. **Analysis tool remaining work** — The generic analysis tool framework is
+    complete (see COMPLETED.md). Remaining work:
+    - **Accept/reject workflow**: Predictions auto-appear as a track on
+      completion. Instead, display in a preview layer and let the user
+      accept/reject individual predictions before importing.
     - **RNA-seq evidence mode**: If BAM/CRAM alignment tracks are visible, offer
       to include them as evidence for Tiberius. Extract the corresponding BAM
       slice for the selected region and pass to Tiberius's evidence pipeline.
-      The 'Save track data' SAM export code in `jbrowse-components` may be
-      reusable here.
     - **Docker backend support**: Currently only Singularity and bare-process
       execution are supported. Add Docker as a backend option.
     - **GPU configuration**: Add `gpu: true/false` to tool config. Pass `--nv`
       flag to Singularity or `--gpus all` to Docker when enabled.
-    - **Job queue / rate limiting**: Currently no limit on concurrent jobs. Add
-      a configurable max-concurrent-jobs setting to prevent GPU contention.
     - **Per-assembly model config**: Allow different Tiberius models per
       assembly (e.g., different species models).
-    - **Job persistence**: Jobs are in-memory and lost on server restart. Could
-      store job records in the database for durability and history.
     - **E2E test**: Add a Playwright test that mocks Tiberius execution (stub
       GTF output) and verifies the full UI flow: rubber-band → dialog → run →
-      features appear.
-    - **GTF parser unit tests**: The parser works (verified manually) but the
-      server's jest config has PnP issues. Either fix ts-jest PnP resolution or
-      move the parser to `apollo-shared` where tests can run.
+      track appears.
+    - **GTF rewriter unit tests**: The rewriter works (verified manually) but
+      needs unit test coverage.
 
 ### P2 — Architecture
 
-15. **PostgreSQL E2E CI pipeline** — E2E script supports PostgreSQL and
+14. **PostgreSQL E2E CI pipeline** — E2E script supports PostgreSQL and
     `docker-compose.yml` provides a local PostgreSQL service, but no CI pipeline
     runs tests against PostgreSQL yet.
     - **Action**: Add a CI job that starts PostgreSQL via docker-compose and
       runs unit tests + E2E against it.
 
-16. **MongoDB E2E testing** — `MongoFeatureRepository` exists but has no test
+15. **MongoDB E2E testing** — `MongoFeatureRepository` exists but has no test
     coverage beyond type-checking. Unit tests run only against SQLite (and
     optionally PostgreSQL).
     - **Action**: Add a MongoDB test configuration and test the
@@ -305,14 +276,14 @@ however possible
 
 ### P3 — QC & Validation Checks
 
-17. **Reading frame validation check** — Verify CDS features maintain proper
+16. **Reading frame validation check** — Verify CDS features maintain proper
     reading frame across exon boundaries. Phase must be consistent with upstream
     exon lengths.
     - New check in `CheckRegistry`
     - Requires sequence context to compute expected phase per exon
     - **Files**: `packages/apollo-shared/src/Checks/`
 
-18. **Start codon presence check** — Verify CDS features begin with ATG (or
+17. **Start codon presence check** — Verify CDS features begin with ATG (or
     valid alternative start codons per translation table).
     - New check in `CheckRegistry`
     - Requires reading first 3bp of CDS sequence
@@ -321,7 +292,7 @@ however possible
 
 ### P3 — Collaboration UX
 
-19. **Collaborator location visualization** — Previously removed to simplify the
+18. **Collaborator location visualization** — Previously removed to simplify the
     codebase. Apollo Classic and the old Apollo3 code showed green rectangles on
     the genome view indicating where other users were browsing. Re-add as a
     lightweight feature: show collaborator cursors/regions on the annotation
@@ -330,7 +301,7 @@ however possible
 
 ### P3 — Cleanup
 
-20. **Remaining debug logging** — Standard `logger.debug()` calls exist
+19. **Remaining debug logging** — Standard `logger.debug()` calls exist
     throughout the server (features, changes, auth, files controllers). These
     are appropriate debug-level logging and can stay unless noisy.
 
@@ -383,7 +354,7 @@ per-request EM isolation.
 
 ### P3 — JBrowse Integration
 
-21. **JBrowse launcher page** — Currently, "Open in JBrowse" links use
+20. **JBrowse launcher page** — Currently, "Open in JBrowse" links use
     `?config=` with a URL-encoded config path
     (`/jbrowse/?config=%2Fjbrowse%2F config.json%3Fassemblies%3Dabc123`) which
     is functional but ugly. A dedicated launcher page

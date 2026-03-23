@@ -71,7 +71,7 @@ import {
   LinearApolloSixFrameDisplayComponent,
 } from './makeDisplayComponent'
 import { type ApolloSessionModel, extendSession } from './session'
-import { isTiberiusAvailable } from './util'
+import { isAnalysisToolAvailable } from './util'
 
 interface RpcHandle {
   on(event: string, listener: (event: MessageEvent) => void): this
@@ -254,8 +254,9 @@ export default class ApolloPlugin extends Plugin {
                       )
                     },
                   },
-                  ...(isTiberiusAvailable(
+                  ...(isAnalysisToolAvailable(
                     getSession(self) as unknown as ApolloSessionModel,
+                    'tiberius',
                   )
                     ? [
                         {

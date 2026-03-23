@@ -30,10 +30,10 @@ const ApolloPluginConfigurationSchema = ConfigurationSchema('ApolloPlugin', {
     type: 'boolean',
     defaultValue: false,
   },
-  tiberiusAvailable: {
-    description: 'Whether Tiberius gene prediction is configured on the server',
-    type: 'boolean',
-    defaultValue: false,
+  availableAnalysisTools: {
+    description: 'List of analysis tool names available on the server',
+    type: 'stringArray',
+    defaultValue: [],
   },
   userId: {
     description: 'User ID returned by server',

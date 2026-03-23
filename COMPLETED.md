@@ -177,31 +177,76 @@ that transpiles all five workspace packages in parallel in ~3s.
 
 - **Remove pending import status** — Removed `status` field from all entities.
   Transactions provide atomicity. Kept `user` field for attribution.
+- **Remove InternetAccount from Apollo plugin** — Removed the
+  `ApolloInternetAccount` abstraction entirely. The server now includes
+  `baseURL`, `role`, and `userId` in the ApolloPlugin configuration returned by
+  `config.json`. WebSocket connection and change sequence tracking moved to the
+  session model. All API calls use plain `fetch` with
+  `credentials: 'same-origin'` (cookie auth). Components read `baseURL`,
+  `role`, and `userId` from the plugin config via utility functions.
+  Multi-account selection UI removed (single server per deployment).
 
-## Tiberius Gene Prediction (Phase 1–4)
+## Collaboration & Workflow
 
-- Config file system (`apollo-tools.json`) with auto-detection of `tiberius.py`
-  and `singularity` on PATH. Configurable via `APOLLO_TOOLS_CONFIG` env var.
-- `ToolsConfigModule` + `ToolsConfigService` — loads config, exposes
-  `getToolConfig()`, `isToolAvailable()`, `isSingularityAvailable()`
-- `ToolsModule` with three endpoints:
-  - `GET /tools/tiberius/available` (ReadOnly) — availability + maxRegionSize
-  - `POST /tools/tiberius/run` (User) — starts background job, returns 202
-  - `GET /tools/tiberius/status/:jobId` (ReadOnly) — poll for status
-- `ToolsService` — full job lifecycle: region validation, sequence fetch, temp
-  FASTA, process spawn (with Singularity bind-mount support), GTF parsing,
-  feature import via `AddFeatureChange`, temp cleanup, timeout handling, process
-  cleanup on shutdown
-- `parseGtf()` — pure function converting Tiberius GTF to
-  `AnnotationFeatureSnapshot[]` with coordinate offset (GTF 1-based relative →
-  absolute 0-based) and SO type mapping
-- `RunTiberius` dialog — rubber-band menu item ("Run Tiberius gene prediction"),
-  shows region info, max size warning, progress spinner, polls status every 3s,
-  completion/error display
-- `CollaborationServerDriver` — `checkTiberiusAvailable()`, `runTiberius()`,
-  `getTiberiusStatus()` methods
-- **Files**:
-  `packages/apollo-collaboration-server/src/config/tools-config.service.ts`,
-  `tools-config.module.ts`, `src/tools/tools.module.ts`, `tools.controller.ts`,
-  `tools.service.ts`, `gtf-parser.ts`,
-  `packages/jbrowse-plugin-apollo/src/components/RunTiberius.tsx`
+- **Per-assembly permissions** — `AssemblyPermissionEntity` maps user →
+  assembly → role. `PermissionService` checks global admin → per-assembly
+  permission → public visibility. Assemblies have `public`/`private`
+  visibility. `PermissionsController` provides admin API for managing
+  per-assembly roles. Track access follows assembly permissions.
+
+## Export/Import
+
+- **GFF3 export code deduplication** — The export service had its own copy of
+  the gene hierarchy assembly logic (`buildChildrenMap` +
+  `featureRowToSnapshot`). Replaced with the shared `assembleFeatureTrees()`
+  function, removing ~40 lines of duplicate code.
+
+## Generic Analysis Tool Framework
+
+Pluggable analysis runner system where each tool (BLAST, BLAT, Miniprot,
+Tiberius, etc.) is a self-contained `AnalysisRunner` implementation. Adding a
+new tool requires only creating a runner class and registering it in the module.
+
+- `AnalysisRunner` interface — `tool: string`, `isInstalled()`, `run(context)`,
+  optional `buildDb(context)`, optional `getConfig()` for tool-specific metadata
+- `AnalysisService` — tool discovery (`getTools()`), database management, job
+  submission (`submitJob()`), job monitoring, cancellation
+- `AnalysisWorkerService` — background job poller (5s interval), max-concurrent
+  enforcement, timeout handling, orphan recovery on startup, abort via
+  `AbortController`
+- `AnalysisController` — REST API under `/analysis/`:
+  - `GET /analysis/tools` — list tools with install status and config
+  - `POST /analysis/jobs` — submit job (tool + params)
+  - `GET /analysis/jobs/:id` — poll status/results
+  - `DELETE /analysis/jobs/:id` — cancel
+  - `GET /analysis/jobs/:id/files/:filename` — serve output files
+  - Database CRUD endpoints for tool-specific databases
+- Generic `AnalysisJobEntity` — `tool` field + JSON `params`/`results`/`metadata`
+  columns, no per-tool schema
+- Plugin config: `availableAnalysisTools: string[]` array (set by server from
+  `getTools()`) replaces per-tool boolean flags
+- `isAnalysisToolAvailable(session, toolName)` utility for conditional menu items
+- `CollaborationServerDriver` — generic `getAnalysisTools()`,
+  `submitAnalysisJob()`, `getAnalysisJob()` methods
+- Admin jobs page — unified table showing all analysis jobs with tool column
+
+### Registered Runners
+
+- **local-blast** — local BLAST+ via `makeblastdb`/`blastn`/etc.
+- **ncbi-blast** — remote NCBI BLAST via REST API
+- **blat** — BLAT via `gfClient`/`gfServer`
+- **miniprot** — Miniprot protein-to-genome alignment
+- **tiberius** — Tiberius de novo gene prediction (see below)
+
+### Tiberius Runner
+
+- Auto-detection of `tiberius.py` via `TIBERIUS_PATH` env var, `apollo-tools.json`
+  config file, PATH lookup, or common filesystem locations
+- Model config listing from `$TIBERIUS_DIR/model_cfg/*.yaml`
+- Region size validation, sequence fetch, temp FASTA, process spawn (with
+  optional `--singularity` flag), GTF coordinate rewriting (relative → absolute),
+  track config creation
+- `RunTiberius` dialog — rubber-band menu item, species model autocomplete,
+  Singularity checkbox, progress polling, track display on completion
+- **Files**: `analysis/runners/tiberius.runner.ts`, `analysis/gtf-rewriter.ts`,
+  `jbrowse-plugin-apollo/src/components/RunTiberius.tsx`
