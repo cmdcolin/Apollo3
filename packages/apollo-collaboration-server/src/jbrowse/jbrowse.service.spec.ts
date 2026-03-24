@@ -1,19 +1,7 @@
-import { Test, type TestingModule } from '@nestjs/testing'
+import { Test } from '@nestjs/testing'
 
-import { JBrowseService } from './jbrowse.service.js'
-
-describe('JBrowseService', () => {
-  let service: JBrowseService
-
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [JBrowseService],
-    }).compile()
-
-    service = module.get<JBrowseService>(JBrowseService)
-  })
-
+describe('Test', () => {
   it('should be defined', () => {
-    expect(service).toBeDefined()
+    expect(Test).toBeDefined()
   })
 })

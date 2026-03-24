@@ -18,7 +18,6 @@ import type { BaseTrackConfig } from '@jbrowse/core/pluggableElementTypes'
 import {
   type AbstractSessionModel,
   type SessionWithAddTracks,
-  isAbstractMenuManager,
 } from '@jbrowse/core/util'
 import {
   type Instance,
@@ -29,15 +28,31 @@ import {
   getSnapshot,
   types,
 } from '@jbrowse/mobx-state-tree'
+import DownloadIcon from '@mui/icons-material/Download'
+import EditIcon from '@mui/icons-material/Edit'
+import FactCheckIcon from '@mui/icons-material/FactCheck'
+import FileOpenIcon from '@mui/icons-material/FileOpen'
+import LockIcon from '@mui/icons-material/Lock'
+import LogoutIcon from '@mui/icons-material/Logout'
+import RedoIcon from '@mui/icons-material/Redo'
 import SaveIcon from '@mui/icons-material/Save'
+import TrackChangesIcon from '@mui/icons-material/TrackChanges'
+import UndoIcon from '@mui/icons-material/Undo'
+import VisibilityIcon from '@mui/icons-material/Visibility'
 import { autorun } from 'mobx'
 import { type Socket, io } from 'socket.io-client'
 
 import { ApolloJobModel } from '../ApolloJobModel'
 import type { ChangeManager } from '../ChangeManager'
+import {
+  DownloadGFF3,
+  LogOut,
+  OpenLocalFile,
+  ViewChangeLog,
+  ViewCheckResults,
+} from '../components'
 import { LoginDialog } from '../components/LoginDialog'
 import type ApolloPluginConfigurationSchema from '../config'
-import { addTopLevelMenus } from '../menus/topLevelMenu'
 import type { ApolloRootModel } from '../types'
 import {
   createFetchErrorMessage,
@@ -290,11 +305,6 @@ export function extendSession(
           }
           return
         }
-        const rootModel = getRoot(self)
-        if (isAbstractMenuManager(rootModel)) {
-          const readOnly = isReadOnly(apolloSession)
-          addTopLevelMenus(rootModel, readOnly)
-        }
         await self.updateLastChangeSequenceNumber()
         self.addSocketListeners()
       },
@@ -327,7 +337,7 @@ export function extendSession(
               if (hasRole) {
                 // @ts-expect-error not sure why snapshot type is wrong for snapshot
                 applySnapshot(self, self.previousSnapshot)
-                // Initialize WebSocket + admin menus after config is loaded
+                // Initialize WebSocket after config is loaded
                 try {
                   await self.initializeApolloConnection()
                 } catch {
@@ -420,10 +430,152 @@ export function extendSession(
     }))
 
     .views((self) => {
+      const superMenus = (
+        self as unknown as AbstractSessionModel
+      ).menus.bind(self as unknown as AbstractSessionModel)
       const superTrackActionMenuItems = (
         self as unknown as AbstractSessionModel
       ).getTrackActionMenuItems
       return {
+        menus() {
+          const role = getRole(self)
+          if (!role || role === 'none') {
+            return superMenus()
+          }
+          const readOnly = isReadOnly(self)
+          const apolloMenuItems = [
+            ...(readOnly
+              ? []
+              : [
+                  {
+                    label: 'Edit',
+                    type: 'subMenu' as const,
+                    icon: EditIcon,
+                    subMenu: [
+                      {
+                        label: 'Undo',
+                        icon: UndoIcon,
+                        onClick(session: ApolloSessionModel) {
+                          void session.apolloDataStore.changeManager.undoLastChange()
+                        },
+                      },
+                      {
+                        label: 'Redo',
+                        icon: RedoIcon,
+                        onClick(session: ApolloSessionModel) {
+                          void session.apolloDataStore.changeManager.redoLastChange()
+                        },
+                      },
+                      {
+                        label: 'Open local GFF3 file',
+                        icon: FileOpenIcon,
+                        onClick: (session: ApolloSessionModel) => {
+                          ;(
+                            session as unknown as AbstractSessionModel
+                          ).queueDialog((doneCallback) => [
+                            OpenLocalFile,
+                            {
+                              session,
+                              handleClose: () => {
+                                doneCallback()
+                              },
+                              inMemoryFileDriver:
+                                session.apolloDataStore.inMemoryFileDriver,
+                            },
+                          ])
+                        },
+                      },
+                      {
+                        label: 'Lock/Unlock session',
+                        icon: LockIcon,
+                        onClick: (session: ApolloSessionModel) => {
+                          session.toggleLocked()
+                        },
+                      },
+                    ],
+                  },
+                ]),
+            {
+              label: 'View',
+              type: 'subMenu' as const,
+              icon: VisibilityIcon,
+              subMenu: [
+                {
+                  label: 'Download GFF3',
+                  icon: DownloadIcon,
+                  onClick: (session: ApolloSessionModel) => {
+                    ;(
+                      session as unknown as AbstractSessionModel
+                    ).queueDialog((doneCallback) => [
+                      DownloadGFF3,
+                      {
+                        session,
+                        handleClose: () => {
+                          doneCallback()
+                        },
+                      },
+                    ])
+                  },
+                },
+                {
+                  label: 'Change log',
+                  icon: TrackChangesIcon,
+                  onClick: (session: ApolloSessionModel) => {
+                    ;(
+                      session as unknown as AbstractSessionModel
+                    ).queueDialog((doneCallback) => [
+                      ViewChangeLog,
+                      {
+                        session,
+                        handleClose: () => {
+                          doneCallback()
+                        },
+                      },
+                    ])
+                  },
+                },
+                {
+                  label: 'Check results',
+                  icon: FactCheckIcon,
+                  onClick: (session: ApolloSessionModel) => {
+                    ;(
+                      session as unknown as AbstractSessionModel
+                    ).queueDialog((doneCallback) => [
+                      ViewCheckResults,
+                      {
+                        session,
+                        handleClose: () => {
+                          doneCallback()
+                        },
+                      },
+                    ])
+                  },
+                },
+              ],
+            },
+            {
+              label: 'Log out',
+              icon: LogoutIcon,
+              onClick: (session: ApolloSessionModel) => {
+                ;(
+                  session as unknown as AbstractSessionModel
+                ).queueDialog((doneCallback) => [
+                  LogOut,
+                  {
+                    session,
+                    handleClose: () => {
+                      doneCallback()
+                    },
+                  },
+                ])
+              },
+            },
+          ]
+          return [
+            ...superMenus(),
+            { label: 'Apollo', menuItems: apolloMenuItems },
+          ]
+        },
         getTrackActionMenuItems(conf: BaseTrackConfig) {
           if (
             conf.type === 'ApolloTrack' ||

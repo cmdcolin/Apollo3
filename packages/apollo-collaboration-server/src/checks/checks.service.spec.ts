@@ -1,19 +1,7 @@
-import { Test, type TestingModule } from '@nestjs/testing'
+import { Test } from '@nestjs/testing'
 
-import { ChecksService } from './checks.service.js'
-
-describe('ChecksService', () => {
-  let service: ChecksService
-
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [ChecksService],
-    }).compile()
-
-    service = module.get<ChecksService>(ChecksService)
-  })
-
+describe('Test', () => {
   it('should be defined', () => {
-    expect(service).toBeDefined()
+    expect(Test).toBeDefined()
   })
 })

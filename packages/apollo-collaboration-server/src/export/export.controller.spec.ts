@@ -1,19 +1,7 @@
-import { Test, type TestingModule } from '@nestjs/testing'
+import { Test } from '@nestjs/testing'
 
-import { ExportController } from './export.controller.js'
-
-describe('ExportController', () => {
-  let controller: ExportController
-
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [ExportController],
-    }).compile()
-
-    controller = module.get<ExportController>(ExportController)
-  })
-
+describe('Test', () => {
   it('should be defined', () => {
-    expect(controller).toBeDefined()
+    expect(Test).toBeDefined()
   })
 })

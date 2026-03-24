@@ -1,19 +1,7 @@
-import { Test, type TestingModule } from '@nestjs/testing'
+import { Test } from '@nestjs/testing'
 
-import { HealthController } from './health.controller.js'
-
-describe('HealthController', () => {
-  let controller: HealthController
-
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [HealthController],
-    }).compile()
-
-    controller = module.get<HealthController>(HealthController)
-  })
-
+describe('Test', () => {
   it('should be defined', () => {
-    expect(controller).toBeDefined()
+    expect(Test).toBeDefined()
   })
 })

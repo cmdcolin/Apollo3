@@ -43,9 +43,11 @@
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.ts$": [
-        "ts-jest",
+        "babel-jest",
         {
-          "useESM": true
+          "presets": [
+            ["@babel/preset-typescript"]
+          ]
         }
       ]
     }
@@ -95,7 +97,6 @@
   },
   "devDependencies": {
     "@apollo-annotation/mst": "workspace:^",
-    "@nestjs/testing": "^10.1.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^4.17.13",
     "@types/express-session": "^1",
@@ -109,10 +110,10 @@
     "@types/stream-concat": "^2.0.0",
     "esbuild": "^0.27.4",
     "glob": "^13.0.6",
+    "@babel/preset-typescript": "^7.0.0",
     "jest": "^29.6.2",
     "mongodb": "^4.7.0",
     "rimraf": "^3.0.2",
-    "ts-jest": "^29.4.6",
     "typescript": "^5.9.3"
   },
   "engines": {

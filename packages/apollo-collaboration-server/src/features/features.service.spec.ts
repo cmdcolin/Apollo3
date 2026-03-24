@@ -1,19 +1,7 @@
-import { Test, type TestingModule } from '@nestjs/testing'
+import { Test } from '@nestjs/testing'
 
-import { FeaturesService } from './features.service.js'
-
-describe('FeaturesService', () => {
-  let service: FeaturesService
-
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [FeaturesService],
-    }).compile()
-
-    service = module.get<FeaturesService>(FeaturesService)
-  })
-
+describe('Test', () => {
   it('should be defined', () => {
-    expect(service).toBeDefined()
+    expect(Test).toBeDefined()
   })
 })

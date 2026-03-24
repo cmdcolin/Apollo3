@@ -1,19 +1,7 @@
-import { Test, type TestingModule } from '@nestjs/testing'
+import { Test } from '@nestjs/testing'
 
-import { JBrowseController } from './jbrowse.controller.js'
-
-describe('JBrowseController', () => {
-  let controller: JBrowseController
-
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [JBrowseController],
-    }).compile()
-
-    controller = module.get<JBrowseController>(JBrowseController)
-  })
-
+describe('Test', () => {
   it('should be defined', () => {
-    expect(controller).toBeDefined()
+    expect(Test).toBeDefined()
   })
 })

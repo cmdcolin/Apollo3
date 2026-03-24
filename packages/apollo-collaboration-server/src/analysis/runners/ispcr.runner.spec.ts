@@ -1,4 +1,4 @@
-import { parseIsPcrFasta } from './ispcr.runner.js'
+import { parseIsPcrFasta } from '../parsers/ispcr.js'
 
 describe('parseIsPcrFasta', () => {
   it('returns empty array for empty string', () => {

@@ -1,4 +1,4 @@
-import { groupIntoGeneModels, parseGff3 } from './miniprot.runner.js'
+import { groupIntoGeneModels, parseGff3 } from '../parsers/gff3.js'
 
 describe('parseGff3', () => {
   it('returns empty array for empty string', () => {

@@ -1,4 +1,4 @@
-import { parsePsl } from './blat.runner.js'
+import { parsePsl } from '../parsers/psl.js'
 
 describe('parsePsl', () => {
   it('returns empty array for empty string', () => {
