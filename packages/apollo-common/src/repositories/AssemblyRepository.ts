@@ -1,7 +1,6 @@
 export type SequenceSource =
-  | { type: 'external'; fa: string; fai: string; gzi?: string }
-  | { type: 'indexed'; fa: string; fai: string; gzi: string }
-  | { type: 'chunked'; fa: string }
+  | { type: 'fasta'; fa: string; fai: string; gzi?: string }
+  | { type: 'twobit'; twobit: string }
 
 export interface AssemblyRow {
   _id: string

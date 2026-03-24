@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
+import path from 'node:path'
 
 import { type Page, expect } from '@playwright/test'
 
@@ -41,11 +42,40 @@ export async function uploadFileViaApi(filePath: string, fileType: string) {
   return data
 }
 
-export async function addAssemblyViaApi(assemblyName: string, fileId: string) {
+export function resolveTestDataFasta(gffPath: string) {
+  const dir = path.dirname(gffPath)
+  let base = path.basename(gffPath)
+  for (const ext of ['.gff3.gz', '.gff3']) {
+    if (base.endsWith(ext)) {
+      base = base.slice(0, -ext.length)
+      break
+    }
+  }
+  const fastaPath = path.join(dir, `${base}.fa`)
+  const faiPath = `${fastaPath}.fai`
+  if (!existsSync(fastaPath)) {
+    throw new Error(
+      `FASTA file not found: ${fastaPath}. Extract FASTA from GFF3 and run samtools faidx.`,
+    )
+  }
+  if (!existsSync(faiPath)) {
+    throw new Error(
+      `FAI index not found: ${faiPath}. Run: samtools faidx ${fastaPath}`,
+    )
+  }
+  return { fastaPath, faiPath }
+}
+
+export async function addAssemblyViaApi(
+  assemblyName: string,
+  gff3Path: string,
+) {
   const token = await getGuestToken()
   const assemblyId = [...Array(24)]
     .map(() => Math.floor(Math.random() * 16).toString(16))
     .join('')
+
+  const { fastaPath, faiPath } = resolveTestDataFasta(gff3Path)
 
   console.log(`[api] Creating assembly "${assemblyName}" (id=${assemblyId})...`)
   const res = await fetch(`${API_BASE}/changes`, {
@@ -58,7 +88,9 @@ export async function addAssemblyViaApi(assemblyName: string, fileId: string) {
       typeName: 'AddAssemblyAndFeaturesFromFileChange',
       assembly: assemblyId,
       assemblyName,
-      sequenceSource: { type: 'chunked', fa: fileId },
+      gff3Path,
+      fastaPath,
+      faiPath,
     }),
   })
   if (!res.ok) {
@@ -206,8 +238,7 @@ export async function addAssemblyFromGff(
   launch = true,
 ) {
   console.log(`[addAssembly] Starting for "${assemblyName}"...`)
-  const file = await uploadFileViaApi(gffPath, 'text/x-gff3')
-  await addAssemblyViaApi(assemblyName, file._id)
+  await addAssemblyViaApi(assemblyName, gffPath)
 
   // Reload to pick up the new assembly in config.json
   console.log('[addAssembly] Reloading to pick up new assembly...')

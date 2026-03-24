@@ -41,7 +41,6 @@ import { addTopLevelMenus } from '../menus/topLevelMenu'
 import { addTopLevelAdminMenus } from '../menus/topLevelMenuAdmin'
 import type { ApolloRootModel } from '../types'
 import {
-  apolloFetch,
   createFetchErrorMessage,
   getBaseURL,
   getRole,
@@ -156,7 +155,7 @@ export function extendSession(
         url.search = searchParams.toString()
         const uri = url.toString()
 
-        const response = await apolloFetch(uri, {
+        const response = await fetch(uri, {
           method: 'GET',
           signal: self.abortController.signal,
         })
@@ -197,7 +196,7 @@ export function extendSession(
 
         let response: Response
         try {
-          response = await apolloFetch(uri, {
+          response = await fetch(uri, {
             method: 'GET',
             signal: self.abortController.signal,
           })
@@ -354,7 +353,7 @@ export function extendSession(
               const uri = new URL('jbrowse/config.json', baseURL).href
               let response: Response
               try {
-                response = await apolloFetch(uri, { signal })
+                response = await fetch(uri, { signal })
               } catch (error) {
                 if (!self.abortController.signal.aborted) {
                   console.error(error)
@@ -463,7 +462,7 @@ export function extendSession(
                       'assemblyNames',
                     ) as string[]
                     const uri = new URL('tracks', baseURL).href
-                    const response = await apolloFetch(uri, {
+                    const response = await fetch(uri, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
@@ -500,7 +499,7 @@ export function extendSession(
                     )
                     const { jbrowse } = getRoot<ApolloRootModel>(self)
                     const listUri = new URL('tracks', baseURL).href
-                    const listResponse = await apolloFetch(listUri, {
+                    const listResponse = await fetch(listUri, {
                       method: 'GET',
                     })
                     const { notify } = self as unknown as AbstractSessionModel
@@ -520,7 +519,7 @@ export function extendSession(
                     if (track) {
                       const deleteUri = new URL(`tracks/${track._id}`, baseURL)
                         .href
-                      const deleteResponse = await apolloFetch(deleteUri, {
+                      const deleteResponse = await fetch(deleteUri, {
                         method: 'DELETE',
                       })
                       if (!deleteResponse.ok) {

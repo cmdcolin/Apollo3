@@ -8,7 +8,7 @@ import {
 import React, { useEffect, useState } from 'react'
 
 import type { ApolloSessionModel } from '../session'
-import { apolloFetch, getBaseURL } from '../util'
+import { getBaseURL } from '../util'
 
 import { Dialog } from './Dialog'
 
@@ -28,7 +28,7 @@ export function LoginDialog({ handleClose, session }: LoginDialogProps) {
     async function fetchLoginTypes() {
       console.debug('[LoginDialog] fetchLoginTypes starting', { baseURL })
       const url = new URL('auth/types', baseURL)
-      const response = await apolloFetch(url.toString())
+      const response = await fetch(url.toString())
       if (cancelled) {
         console.debug(
           '[LoginDialog] fetchLoginTypes completed after cleanup — would have called setState on unmounted component.',
@@ -58,7 +58,7 @@ export function LoginDialog({ handleClose, session }: LoginDialogProps) {
     setLoading(true)
     setErrorMessage('')
     const url = new URL('auth/guest', baseURL)
-    const response = await apolloFetch(url.toString())
+    const response = await fetch(url.toString())
     if (response.ok) {
       globalThis.location.reload()
     } else {

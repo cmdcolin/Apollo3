@@ -7,20 +7,14 @@ import type { StorageEngine } from 'multer'
 
 import { type UploadedFile, writeFileAndCalculateHash } from './filesUtil.js'
 
-interface FileUpload extends Express.Multer.File {
-  contentEncoding?: string
-}
-
 @Injectable()
 export class FileStorageEngine implements StorageEngine {
   private readonly logger = new Logger(FileStorageEngine.name)
 
-  private contentEncoding?: string
-
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   async _handleFile(
     req: Express.Request,
-    file: FileUpload,
+    file: Express.Multer.File,
     cb: (error?: unknown, info?: UploadedFile) => void,
   ) {
     const { FILE_UPLOAD_FOLDER } = process.env
@@ -31,9 +25,6 @@ export class FileStorageEngine implements StorageEngine {
         ),
       )
       return
-    }
-    if (file.originalname.toLocaleLowerCase().endsWith('.gz')) {
-      file.contentEncoding = 'gzip'
     }
 
     const checksum = await writeFileAndCalculateHash(

@@ -81,7 +81,6 @@ architectural changes.
 AssemblyEntity
   └─ RefSeqEntity (FK: assembly)
        ├─ FeatureEntity (FK: refSeq; FK: parent → self)
-       ├─ RefSeqChunkEntity (FK: refSeq)
        └─ CheckResultEntity (FK: refSeq)
 
 ChangeEntity (FK: reverts → self, for undo chain)

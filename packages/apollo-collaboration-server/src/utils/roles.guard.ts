@@ -4,10 +4,12 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  Logger,
   SetMetadata,
   UnauthorizedException,
 } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
+import type { Request } from 'express'
 
 import { Role, RoleInheritance } from './role/role.enum.js'
 
@@ -20,6 +22,8 @@ export const Authenticated = () => SetMetadata(ROLES_KEY, Role.None)
 
 @Injectable()
 export class RolesGuard implements CanActivate {
+  private readonly logger = new Logger(RolesGuard.name)
+
   constructor(@Inject(Reflector) private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext) {
@@ -37,14 +41,20 @@ export class RolesGuard implements CanActivate {
         context.getClass(),
       ]) ?? Role.Admin
 
-    const request = context.switchToHttp().getRequest()
+    const request = context.switchToHttp().getRequest<Request>()
     const user = request.user as { role?: string } | undefined
     if (!user?.role) {
+      this.logger.debug(
+        `401 Unauthorized: ${request.method} ${request.url} — no user/role in request`,
+      )
       throw new UnauthorizedException()
     }
 
     const inherited = RoleInheritance[user.role as keyof typeof RoleInheritance]
     if (!inherited?.includes(requiredRole)) {
+      this.logger.debug(
+        `403 Forbidden: ${request.method} ${request.url} — user.role=${user.role}, requiredRole=${requiredRole}`,
+      )
       throw new ForbiddenException()
     }
 

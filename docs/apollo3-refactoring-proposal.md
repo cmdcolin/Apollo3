@@ -308,12 +308,11 @@ CASCADE delete — the database enforces relationships automatically.
     AssemblyEntity
       - RefSeqEntity (FK → assembly, CASCADE)
         - FeatureEntity (FK → refSeq, CASCADE; FK → parent, CASCADE)
-        - RefSeqChunkEntity (FK → refSeq, CASCADE)
         - CheckResultEntity (FK → refSeq, CASCADE)
       - ExportEntity (FK → assembly, CASCADE)
 
 Deleting an assembly: one `DELETE` statement. The database removes all refSeqs,
-features, chunks, check results, and exports automatically.
+features, check results, and exports automatically.
 
 ## Unaffected Systems
 
@@ -454,7 +453,6 @@ architectural changes.
     AssemblyEntity
       └─ RefSeqEntity (FK: assembly)
            ├─ FeatureEntity (FK: refSeq; FK: parent → self)
-           ├─ RefSeqChunkEntity (FK: refSeq)
            └─ CheckResultEntity (FK: refSeq)
 
     ChangeEntity (FK: reverts → self, for undo chain)
@@ -1174,15 +1172,6 @@ backend retains its own tree traversal via `MongoFeatureRepository`.
   `apollo-common` and `apollo-shared`.
 
 ## Future Work
-
-### Remove RefSeqChunks from the database
-
-On origin/main, reference sequence data is chunked and stored in
-`RefSeqChunkEntity` rows in the database. This made sense when MongoDB was the
-only storage layer, but with the relational migration it may be better to serve
-reference sequences directly from indexed files (2bit, FASTA with .fai) and
-remove `RefSeqChunkEntity` entirely. This would reduce database size, simplify
-the import pipeline, and avoid duplicating data that already exists on disk.
 
 ### Full-text search on feature attributes
 

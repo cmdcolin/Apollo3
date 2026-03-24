@@ -8,10 +8,10 @@ import {
   Req,
   Res,
 } from '@nestjs/common'
-import type { Request, Response } from 'express'
+import type { Response } from 'express'
 
-import type { Role } from '../utils/role/role.enum.js'
 import { Public } from '../utils/roles.guard.js'
+import type { RequestWithUser } from '../utils/request-with-user.js'
 
 import { JBrowseService } from './jbrowse.service.js'
 
@@ -27,10 +27,6 @@ const logoSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 856 855" h
 <polygon class="d" points="224.7,657.3 244.6,657.3 326.9,508.9 303.1,508.9 219.6,657.3"/>
 <polygon class="d" points="273.7,657.3 293.6,657.3 375.9,508.9 352.1,508.9 268.6,657.3"/>
 </svg>`
-
-export interface RequestWithUser extends Request {
-  user?: { role: Role; id?: string; iat?: number }
-}
 
 @Public()
 @Controller()
@@ -65,21 +61,12 @@ export class JBrowseController {
 
   private configResponse(request: RequestWithUser, assemblies?: string) {
     const { user } = request
-    const role = user?.id ? user.role : undefined
-    const userId = user?.id
-    const userSessionId =
-      userId && user?.iat ? `${userId}-${user.iat}` : undefined
     const assemblyIds = assemblies
       ? assemblies.split(',').filter(Boolean)
       : undefined
     this.logger.debug(
       `config.json requested: user.id=${user?.id}, user.role=${user?.role}, assemblies=${assemblies ?? 'all'}`,
     )
-    return this.jbrowseService.getConfig(
-      role,
-      userId,
-      userSessionId,
-      assemblyIds,
-    )
+    return this.jbrowseService.getConfig(user, assemblyIds)
   }
 }

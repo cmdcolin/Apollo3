@@ -11,7 +11,6 @@ import type {
   FileRepository,
   JBrowseConfigRepository,
   OrganismRepository,
-  RefSeqChunkRepository,
   RefSeqRepository,
   TextSearchAdapterConfigRepository,
   TrackConfigRepository,
@@ -30,7 +29,6 @@ import {
   MikroOrmFileRepository,
   MikroOrmJBrowseConfigRepository,
   MikroOrmOrganismRepository,
-  MikroOrmRefSeqChunkRepository,
   MikroOrmRefSeqRepository,
   MikroOrmTextSearchAdapterConfigRepository,
   MikroOrmTrackConfigRepository,
@@ -48,7 +46,6 @@ export interface TransactionScope {
   organism: OrganismRepository
   feature: FeatureRepository
   refSeq: RefSeqRepository
-  refSeqChunk: RefSeqChunkRepository
   checkConfig: CheckRepository
   check: CheckResultRepository
   file: FileRepository
@@ -77,7 +74,6 @@ export class DatabaseService {
   readonly organism: OrganismRepository
   readonly feature: FeatureRepository
   readonly refSeq: RefSeqRepository
-  readonly refSeqChunk: RefSeqChunkRepository
   readonly user: UserRepository
   readonly file: FileRepository
   readonly check: CheckResultRepository
@@ -97,7 +93,6 @@ export class DatabaseService {
     this.organism = new MikroOrmOrganismRepository(em)
     this.feature = createFeatureRepository(em, this.dbType)
     this.refSeq = new MikroOrmRefSeqRepository(em)
-    this.refSeqChunk = new MikroOrmRefSeqChunkRepository(em)
     this.user = new MikroOrmUserRepository(em)
     this.file = new MikroOrmFileRepository(em)
     this.check = new MikroOrmCheckResultRepository(em)
@@ -120,7 +115,6 @@ export class DatabaseService {
         organism: new MikroOrmOrganismRepository(txEm),
         feature: createFeatureRepository(txEm, this.dbType),
         refSeq: new MikroOrmRefSeqRepository(txEm),
-        refSeqChunk: new MikroOrmRefSeqChunkRepository(txEm),
         checkConfig: new MikroOrmCheckRepository(txEm),
         check: new MikroOrmCheckResultRepository(txEm),
         file: new MikroOrmFileRepository(txEm),

@@ -19,6 +19,8 @@ import AddIcon from '@mui/icons-material/Add'
 import ObjectID from 'bson-objectid'
 
 import { CreateApolloAnnotation } from '../components/CreateApolloAnnotation'
+import type { ApolloSessionModel } from '../session'
+import { canEdit } from '../util'
 
 function parseCigar(cigar: string): [string, number][] {
   const regex = /(\d+)([MIDNSHPX=])/g
@@ -184,7 +186,10 @@ export function annotationFromPileup(pluggableElement: PluggableElementType) {
           const assembly = self.getAssembly()
           const region = self.getFirstRegion()
           const feature = self.contextMenuFeature
-          if (!feature) {
+          if (
+            !feature ||
+            !canEdit(session as unknown as ApolloSessionModel)
+          ) {
             return superContextMenuItems()
           }
           return [

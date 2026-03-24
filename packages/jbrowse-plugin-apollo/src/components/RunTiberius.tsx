@@ -1,16 +1,14 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 /* eslint-disable @typescript-eslint/unbound-method */
-import type { Region } from '@jbrowse/core/util'
+import { type Region, type SessionWithAddTracks } from '@jbrowse/core/util'
 import {
   Autocomplete,
   Box,
   Button,
-  Checkbox,
   CircularProgress,
   DialogActions,
   DialogContent,
   DialogContentText,
-  FormControlLabel,
   TextField,
   Typography,
 } from '@mui/material'
@@ -18,6 +16,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 
 import { CollaborationServerDriver } from '../BackendDrivers'
 import type { ApolloSessionModel } from '../session'
+import { getBaseURL } from '../util'
 
 import { Dialog } from './Dialog'
 
@@ -42,10 +41,8 @@ export function RunTiberius({
 }: RunTiberiusProps) {
   const [status, setStatus] = useState<JobStatus>('idle')
   const [jobId, setJobId] = useState<string>()
-  const [trackConfigId, setTrackConfigId] = useState<string>()
   const [errorMessage, setErrorMessage] = useState('')
   const [maxRegionSize, setMaxRegionSize] = useState<number>()
-  const [useSingularity, setUseSingularity] = useState(false)
   const [modelCfg, setModelCfg] = useState('')
   const [availableModels, setAvailableModels] = useState<string[]>([])
 
@@ -58,30 +55,37 @@ export function RunTiberius({
       region.assemblyName,
     )
     if (backendDriver instanceof CollaborationServerDriver) {
-      void backendDriver.getAnalysisTools().then((tools) => {
-        const tiberius = tools.find((t) => t.tool === 'tiberius')
-        if (!tiberius?.installed) {
+      void backendDriver
+        .getAnalysisTools()
+        .then((tools) => {
+          const tiberius = tools.find((t) => t.tool === 'tiberius')
+          if (!tiberius?.installed) {
+            setErrorMessage(
+              'Tiberius is not available on this server. Set TIBERIUS_PATH or install tiberius.py on the server PATH.',
+            )
+            return
+          }
+          const cfg = tiberius.config
+          if (cfg) {
+            if (typeof cfg.maxRegionSize === 'number') {
+              setMaxRegionSize(cfg.maxRegionSize)
+            }
+            if (typeof cfg.modelCfg === 'string' && cfg.modelCfg) {
+              setModelCfg(cfg.modelCfg)
+            }
+            if (
+              Array.isArray(cfg.availableModels) &&
+              cfg.availableModels.length > 0
+            ) {
+              setAvailableModels(cfg.availableModels as string[])
+            }
+          }
+        })
+        .catch((error: unknown) => {
           setErrorMessage(
-            'Tiberius is not available on this server. Set TIBERIUS_PATH or install tiberius.py on the server PATH.',
+            error instanceof Error ? error.message : String(error),
           )
-          return
-        }
-        const cfg = tiberius.config
-        if (cfg) {
-          if (typeof cfg.maxRegionSize === 'number') {
-            setMaxRegionSize(cfg.maxRegionSize)
-          }
-          if (cfg.useSingularity) {
-            setUseSingularity(true)
-          }
-          if (typeof cfg.modelCfg === 'string' && cfg.modelCfg) {
-            setModelCfg(cfg.modelCfg)
-          }
-          if (Array.isArray(cfg.availableModels) && cfg.availableModels.length > 0) {
-            setAvailableModels(cfg.availableModels as string[])
-          }
-        }
-      })
+        })
     }
   }, [session, region.assemblyName])
 
@@ -100,12 +104,6 @@ export function RunTiberius({
             if (result.status === 'ready') {
               clearInterval(interval)
               setStatus('completed')
-              const results = result.results as
-                | { trackConfigId?: string }
-                | undefined
-              if (results?.trackConfigId) {
-                setTrackConfigId(results.trackConfigId)
-              }
             }
             if (result.status === 'failed') {
               clearInterval(interval)
@@ -141,38 +139,60 @@ export function RunTiberius({
       return
     }
 
-    const refSeqId = await backendDriver.getRefSeqId(
-      region.assemblyName,
-      region.refName,
-    )
-    if (!refSeqId) {
-      setErrorMessage(`Could not find refSeq for "${region.refName}"`)
-      setStatus('failed')
-      return
-    }
+    try {
+      const refSeqId = await backendDriver.getRefSeqId(
+        region.assemblyName,
+        region.refName,
+      )
+      if (!refSeqId) {
+        setErrorMessage(`Could not find refSeq for "${region.refName}"`)
+        setStatus('failed')
+        return
+      }
 
-    const result = await backendDriver.submitAnalysisJob({
-      tool: 'tiberius',
-      assemblyId: region.assemblyName,
-      params: {
-        refSeqId,
-        refSeqName: region.refName,
-        start: region.start,
-        end: region.end,
-        modelCfg: modelCfg || undefined,
-        useSingularity,
-      },
-    })
-    setJobId(result._id)
-    setStatus('running')
-    pollStatus(result._id)
+      const result = await backendDriver.submitAnalysisJob({
+        tool: 'tiberius',
+        assemblyId: region.assemblyName,
+        params: {
+          refSeqId,
+          refSeqName: region.refName,
+          start: region.start,
+          end: region.end,
+          modelCfg: modelCfg || undefined,
+        },
+      })
+      setJobId(result._id)
+      setStatus('running')
+      pollStatus(result._id)
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : String(error),
+      )
+      setStatus('failed')
+    }
   }
 
   function handleShowTrack() {
-    if (!trackConfigId) {
+    if (!jobId) {
       return
     }
     const trackId = `tiberius_${jobId}`
+    const baseURL = getBaseURL(session)
+    const trackConfig = {
+      type: 'FeatureTrack',
+      trackId,
+      name: `Tiberius: ${region.refName}:${formatBp(region.start)}-${formatBp(region.end)}`,
+      category: ['Gene Predictions'],
+      assemblyNames: [region.assemblyName],
+      adapter: {
+        type: 'GtfAdapter',
+        gtfLocation: {
+          uri: `${baseURL}/analysis/jobs/${jobId}/files/predictions.gtf`,
+          locationType: 'UriLocation',
+        },
+      },
+    }
+    ;(session as unknown as SessionWithAddTracks).addTrackConf(trackConfig)
     view.showTrack(trackId)
     handleClose()
   }
@@ -216,17 +236,6 @@ export function RunTiberius({
                   helperText="Select a species model or type a custom model config path"
                 />
               )}
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={useSingularity}
-                  onChange={(e) => {
-                    setUseSingularity(e.target.checked)
-                  }}
-                />
-              }
-              label="Run inside Singularity container"
             />
           </Box>
         ) : null}

@@ -52,7 +52,7 @@ export class MessagesGateway implements OnGatewayInit, OnGatewayConnection {
       }
       try {
         const payload = this.jwtService.verify<JWTPayload>(token)
-        socket.data.userId = payload.id
+        socket.data.user = { id: payload.id, role: payload.role }
         next()
       } catch {
         next(new Error('Invalid token'))
@@ -61,10 +61,10 @@ export class MessagesGateway implements OnGatewayInit, OnGatewayConnection {
   }
 
   async handleConnection(client: Socket) {
-    const { userId } = client.data as { userId: string }
+    const { user } = client.data as { user: { id: string; role?: string } }
     await RequestContext.create(this.orm.em, async () => {
       const assemblyIds =
-        await this.permissionService.getAccessibleAssemblyIds(userId)
+        await this.permissionService.getAccessibleAssemblyIds(user)
       for (const id of assemblyIds) {
         await client.join(assemblyChannel(id))
       }
@@ -84,20 +84,24 @@ export class MessagesGateway implements OnGatewayInit, OnGatewayConnection {
 
   async updateClientRooms(userId: string) {
     await RequestContext.create(this.orm.em, async () => {
-      const assemblyIds =
-        await this.permissionService.getAccessibleAssemblyIds(userId)
-      const channels = new Set(assemblyIds.map(assemblyChannel))
       const sockets = await this.server.fetchSockets()
       for (const socket of sockets) {
-        if ((socket.data as { userId: string }).userId === userId) {
-          for (const room of socket.rooms) {
-            if (room.startsWith('assembly:') && !channels.has(room)) {
-              socket.leave(room)
-            }
+        const { user } = socket.data as {
+          user: { id: string; role?: string }
+        }
+        if (user.id !== userId) {
+          continue
+        }
+        const assemblyIds =
+          await this.permissionService.getAccessibleAssemblyIds(user)
+        const channels = new Set(assemblyIds.map(assemblyChannel))
+        for (const room of socket.rooms) {
+          if (room.startsWith('assembly:') && !channels.has(room)) {
+            socket.leave(room)
           }
-          for (const channel of channels) {
-            socket.join(channel)
-          }
+        }
+        for (const channel of channels) {
+          socket.join(channel)
         }
       }
     })

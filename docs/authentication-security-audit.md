@@ -61,6 +61,12 @@ this.logger.debug(
 )
 ```
 
+## Frontend Auth Gating
+
+Write actions (adding features, creating annotations) and analysis tools are
+hidden from unauthenticated and read-only users in the UI. Previously some of
+these actions were visible but would silently fail.
+
 ## Verified Secure
 
 - All 14 controllers have class-level auth decorators; default is `Role.Admin`

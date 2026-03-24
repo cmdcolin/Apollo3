@@ -35,6 +35,7 @@ export class AssembliesController {
   }
 
   @Post('checks')
+  @Roles(Role.Admin)
   updateChecks(@Body() updatedChecks: AssemblyDocument) {
     return this.assembliesService.updateChecks(
       updatedChecks._id,

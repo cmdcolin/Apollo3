@@ -22,7 +22,7 @@ import {
 import React, { useEffect, useState } from 'react'
 
 import type { ApolloSessionModel } from '../session'
-import { apolloFetch, createFetchErrorMessage, getBaseURL } from '../util'
+import { createFetchErrorMessage, getBaseURL } from '../util'
 
 import { Dialog } from './Dialog'
 
@@ -56,7 +56,7 @@ export function ManageChecks({ handleClose, session }: ManageChecksProps) {
   useEffect(() => {
     async function getChecks() {
       const uri = new URL('checks/types', baseURL).href
-      const response = await apolloFetch(uri, { method: 'GET' })
+      const response = await fetch(uri)
       if (!response.ok) {
         const newErrorMessage = await createFetchErrorMessage(
           response,
@@ -79,7 +79,7 @@ export function ManageChecks({ handleClose, session }: ManageChecksProps) {
         return
       }
       const uri = new URL(`assemblies/${selectedAssembly.name}`, baseURL).href
-      const response = await apolloFetch(uri, { method: 'GET' })
+      const response = await fetch(uri)
       if (!response.ok) {
         const newErrorMessage = await createFetchErrorMessage(
           response,
@@ -109,7 +109,7 @@ export function ManageChecks({ handleClose, session }: ManageChecksProps) {
     }
     const { notify } = session as unknown as AbstractSessionModel
     const uri = new URL('assemblies/checks', baseURL).href
-    const response = await apolloFetch(uri, {
+    const response = await fetch(uri, {
       method: 'POST',
       body: JSON.stringify({
         _id: selectedAssembly.name,

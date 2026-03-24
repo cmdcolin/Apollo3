@@ -16,7 +16,10 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '..')
 const COLLAB_DIR = path.join(REPO_ROOT, 'packages/apollo-collaboration-server')
 const DEMO_DATA_DIR = path.join(REPO_ROOT, 'demo-data')
-const GFF3_FILE = path.join(DEMO_DATA_DIR, 'volvox/volvox-genes.gff3')
+const VOLVOX_DIR = path.join(DEMO_DATA_DIR, 'volvox')
+const GFF3_FILE = path.join(VOLVOX_DIR, 'volvox-genes.gff3')
+const FASTA_FILE = path.join(VOLVOX_DIR, 'volvox.fa')
+const FAI_FILE = path.join(VOLVOX_DIR, 'volvox.fa.fai')
 const PORT = 3998
 const API_BASE = `http://127.0.0.1:${PORT}`
 const DB_FILE = path.join(COLLAB_DIR, 'apollo-regen.sqlite')
@@ -85,28 +88,6 @@ async function apiPatch(token: string, endpoint: string, body: unknown) {
   return res.json()
 }
 
-async function uploadFile(token: string, filePath: string, fileType: string) {
-  const fileContent = fs.readFileSync(filePath)
-  const fileName = path.basename(filePath)
-  const formData = new FormData()
-  formData.append('file', new Blob([fileContent]), fileName)
-  formData.append('type', fileType)
-
-  const res = await fetch(
-    `${API_BASE}/files?type=${encodeURIComponent(fileType)}`,
-    {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    },
-  )
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`File upload failed: ${res.status} ${text}`)
-  }
-  return res.json() as Promise<{ _id: string }>
-}
-
 function randomHexId() {
   const bytes = new Uint8Array(12)
   crypto.getRandomValues(bytes)
@@ -125,6 +106,12 @@ async function main() {
   }
   if (!fs.existsSync(GFF3_FILE)) {
     throw new Error(`GFF3 file not found at ${GFF3_FILE}`)
+  }
+  if (!fs.existsSync(FASTA_FILE)) {
+    throw new Error(`FASTA file not found at ${FASTA_FILE}`)
+  }
+  if (!fs.existsSync(FAI_FILE)) {
+    throw new Error(`FAI index not found at ${FAI_FILE}`)
   }
 
   // Clean slate
@@ -185,18 +172,16 @@ async function main() {
     const token = await getToken()
     log('Authenticated as root.')
 
-    // Upload GFF3 and create volvox assembly
-    log('Uploading volvox GFF3...')
-    const file = await uploadFile(token, GFF3_FILE, 'text/x-gff3')
-    log(`  File uploaded: ${file._id}`)
-
+    // Create volvox assembly using file paths
     const volvoxId = randomHexId()
     log(`Adding volvox assembly (id=${volvoxId})...`)
     await apiPost(token, 'changes', {
       typeName: 'AddAssemblyAndFeaturesFromFileChange',
       assembly: volvoxId,
       assemblyName: 'volvox',
-      sequenceSource: { type: 'chunked', fa: file._id },
+      gff3Path: GFF3_FILE,
+      fastaPath: FASTA_FILE,
+      faiPath: FAI_FILE,
     })
     log('  volvox assembly created.')
 
@@ -509,28 +494,6 @@ async function main() {
     await new Promise((r) => setTimeout(r, 5000))
     log(`  ${localBlastDbs.length} local BLAST databases built.`)
 
-    // Add remote NCBI BLAST database configs (secondary, for functional annotation)
-    log('Adding NCBI BLAST database configs...')
-    const ncbiDbs = [
-      {
-        name: 'NCBI nr (protein)',
-        tool: 'ncbi-blast',
-        params: { program: 'blastp', database: 'nr' },
-      },
-      {
-        name: 'NCBI nt (nucleotide)',
-        tool: 'ncbi-blast',
-        params: { program: 'blastn', database: 'nt' },
-      },
-    ]
-    for (const db of ncbiDbs) {
-      log(`  ${db.name}`)
-      await apiPost(token, 'analysis/databases', {
-        ...db,
-        assemblyIds: [volvoxId],
-      })
-    }
-    log(`  ${ncbiDbs.length} NCBI BLAST databases added.`)
   } finally {
     // Checkpoint WAL before killing server
     try {

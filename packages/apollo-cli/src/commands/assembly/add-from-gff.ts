@@ -12,25 +12,26 @@ import { FileCommand } from '../../fileCommand.js'
 import { submitAssembly } from '../../utils.js'
 
 export default class AddGff extends FileCommand {
-  static summary = 'Add new assembly from gff or gft file'
+  static summary = 'Add new assembly from GFF3 file'
   static description =
-    'The gff file is expected to contain sequences as per gff specifications. Features are also imported by default.'
+    'The GFF3 file provides features. A separate indexed FASTA must be provided for the sequence.'
 
   static examples = [
     {
       description: 'Import sequences and features:',
-      command: '<%= config.bin %> <%= command.id %> genome.gff -a myAssembly',
+      command:
+        '<%= config.bin %> <%= command.id %> annotations.gff3 --fasta genome.fa -a myAssembly',
     },
     {
-      description: 'Import sequences only:',
+      description: 'Import sequences only (no features):',
       command:
-        '<%= config.bin %> <%= command.id %> genome.gff -a myAssembly -o',
+        '<%= config.bin %> <%= command.id %> annotations.gff3 --fasta genome.fa -a myAssembly -o',
     },
   ]
 
   static args = {
     'input-file': Args.string({
-      description: 'Input gff file',
+      description: 'Input GFF3 file (path accessible to the server)',
       required: true,
     }),
   }
@@ -40,9 +41,20 @@ export default class AddGff extends FileCommand {
       char: 'a',
       description: 'Name for this assembly. Use the file name if omitted',
     }),
+    fasta: Flags.string({
+      description:
+        'Path to indexed FASTA file. The .fai index is auto-detected at <fasta>.fai',
+      required: true,
+    }),
+    fai: Flags.string({
+      description: 'Path to .fai index (defaults to <fasta>.fai)',
+    }),
+    gzi: Flags.string({
+      description: 'Path to .gzi index (for bgzip FASTA)',
+    }),
     'omit-features': Flags.boolean({
       char: 'o',
-      description: 'Do not import features, only upload the sequences',
+      description: 'Do not import features, only register the sequences',
     }),
     force: Flags.boolean({
       char: 'f',
@@ -56,31 +68,45 @@ export default class AddGff extends FileCommand {
     if (!fs.existsSync(args['input-file'])) {
       this.error(`File ${args['input-file']} does not exist`)
     }
+    if (!fs.existsSync(flags.fasta)) {
+      this.error(`FASTA file "${flags.fasta}" does not exist`)
+    }
 
     const access = await this.getAccess()
-
-    const fileId = await this.uploadFile(
-      access.address,
-      access.accessToken,
-      args['input-file'],
-      'text/x-gff3',
-      args['input-file'].endsWith('.gz'),
-    )
-
     const assemblyName = flags.assembly ?? path.basename(args['input-file'])
+
+    const fai = flags.fai ?? `${flags.fasta}.fai`
+    if (!fs.existsSync(fai)) {
+      this.error(
+        `Index file "${fai}" does not exist. Create it with: samtools faidx ${flags.fasta}`,
+      )
+    }
+
+    const gzi = flags.gzi ?? `${flags.fasta}.gzi`
+    const hasGzi = fs.existsSync(gzi)
+
+    const sequenceSource = {
+      type: 'fasta' as const,
+      fa: flags.fasta,
+      fai,
+      gzi: hasGzi ? gzi : undefined,
+    }
 
     const body:
       | SerializedAddAssemblyFromFileChange
       | SerializedAddAssemblyAndFeaturesFromFileChange = flags['omit-features']
       ? {
           assemblyName,
-          sequenceSource: { type: 'chunked' as const, fa: fileId },
+          sequenceSource,
           typeName: 'AddAssemblyFromFileChange',
           assembly: new ObjectId().toHexString(),
         }
       : {
           assemblyName,
-          sequenceSource: { type: 'chunked' as const, fa: fileId },
+          fastaPath: flags.fasta,
+          faiPath: fai,
+          gziPath: hasGzi ? gzi : undefined,
+          gff3Path: args['input-file'],
           typeName: 'AddAssemblyAndFeaturesFromFileChange',
           assembly: new ObjectId().toHexString(),
         }

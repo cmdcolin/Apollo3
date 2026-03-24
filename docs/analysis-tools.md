@@ -20,10 +20,14 @@ Five runners ship by default:
 | Runner        | Description                                                                 |
 | ------------- | --------------------------------------------------------------------------- |
 | `local-blast` | blastn/blastp/blastx/tblastn/tblastx against a locally built BLAST database |
-| `ncbi-blast`  | Same programs forwarded to NCBI's remote BLAST servers                      |
-| `blat`        | Fast nucleotide/protein alignment against a local BLAT database             |
+| `blat`        | Fast nucleotide/protein alignment against a local BLAT .2bit database       |
 | `miniprot`    | Protein-to-genome alignment via miniprot                                    |
+| `ispcr`       | In-silico PCR: amplicon prediction from a primer pair via UCSC isPcr        |
 | `tiberius`    | Gene prediction via Tiberius deep learning model                            |
+
+NCBI BLAST is not a server-side runner — the sequence search UI posts directly
+to blast.ncbi.nlm.nih.gov from the browser, giving users the full NCBI
+experience without adding job overhead to the Apollo server.
 
 Each runner implements the `AnalysisRunner` interface (submit, poll, cancel,
 parse results). Jobs and databases are stored as `AnalysisJobEntity` and
@@ -35,6 +39,12 @@ columns, so no schema changes are needed when adding a new tool.
 A tabbed _Sequence Search_ page shows one tab per available tool. Each tab has
 its own form and results renderer. Admins have a separate _Jobs_ panel for
 building databases.
+
+### Auth gating
+
+Analysis tools are only visible to authenticated users. Unauthenticated visitors
+do not see analysis menu items and receive clear error messages if they somehow
+attempt to use them.
 
 ## Adding a new tool
 

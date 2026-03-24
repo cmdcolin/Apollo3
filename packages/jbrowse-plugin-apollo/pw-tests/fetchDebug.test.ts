@@ -1,7 +1,8 @@
-import { test, expect } from '@playwright/test'
-import { readFileSync } from 'node:fs'
+import { test } from '@playwright/test'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+import { resolveTestDataFasta } from './helpers'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const GFF_PATH = path.resolve(__dirname, '../test_data/deleteFeature.gff3')
@@ -42,57 +43,38 @@ test('Reproduce fetch hang with upload + assembly flow', async () => {
   )
   const token = (tokenData as { token: string }).token
 
-  // Step 2: Upload file
-  const fileContent = readFileSync(GFF_PATH)
-  const formData = new FormData()
-  formData.append('file', new Blob([fileContent]), 'deleteFeature.gff3')
-  const { body: uploadData } = await timedFetch(
-    '2-upload',
-    `${API_BASE}/files?type=text/x-gff3`,
-    {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    },
-  )
-  const fileId = (uploadData as { _id: string })._id
-
-  // Step 3: Get token again
-  const { body: tokenData2 } = await timedFetch(
-    '3-token',
-    `${API_BASE}/auth/guest`,
-  )
-  const token2 = (tokenData2 as { token: string }).token
-
-  // Step 4: Create assembly
+  // Step 2: Create assembly using file paths (no upload needed)
+  const { fastaPath, faiPath } = resolveTestDataFasta(GFF_PATH)
   const assemblyId = 'aabbccddee112233aabbccdd'
-  await timedFetch('4-assembly', `${API_BASE}/changes`, {
+  await timedFetch('2-assembly', `${API_BASE}/changes`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${token2}`,
+      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
       typeName: 'AddAssemblyAndFeaturesFromFileChange',
       assembly: assemblyId,
       assemblyName: 'test',
-      sequenceSource: { type: 'chunked', fa: fileId },
+      gff3Path: GFF_PATH,
+      fastaPath,
+      faiPath,
     }),
   })
 
-  // Step 5: Get token AGAIN — this is the one that hangs
-  await timedFetch('5-token', `${API_BASE}/auth/guest`)
+  // Step 3: Get token AGAIN — this is the one that used to hang
+  await timedFetch('3-token', `${API_BASE}/auth/guest`)
 
-  // Step 6: List assemblies
-  await timedFetch('6-list', `${API_BASE}/assemblies`, {
+  // Step 4: List assemblies
+  await timedFetch('4-list', `${API_BASE}/assemblies`, {
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
   })
 
-  // Step 7: Delete assembly
-  await timedFetch('7-delete', `${API_BASE}/changes`, {
+  // Step 5: Delete assembly
+  await timedFetch('5-delete', `${API_BASE}/changes`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,

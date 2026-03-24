@@ -119,15 +119,6 @@ backend retains its own tree traversal via `MongoFeatureRepository`.
 
 ## Future Work
 
-### Remove RefSeqChunks from the database
-
-On origin/main, reference sequence data is chunked and stored in
-`RefSeqChunkEntity` rows in the database. This made sense when MongoDB was the
-only storage layer, but with the relational migration it may be better to serve
-reference sequences directly from indexed files (2bit, FASTA with .fai) and
-remove `RefSeqChunkEntity` entirely. This would reduce database size, simplify
-the import pipeline, and avoid duplicating data that already exists on disk.
-
 ### Full-text search on feature attributes
 
 Feature attributes are currently stored in a JSON column. Searching inside this

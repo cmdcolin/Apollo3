@@ -78,7 +78,6 @@ export class TiberiusRunner implements AnalysisRunner, OnModuleInit {
 
   getConfig() {
     return {
-      useSingularity: this.config.useSingularity,
       maxRegionSize: this.config.maxRegionSize,
       modelCfg: this.config.modelCfg,
       availableModels: this.listModelConfigs(),
@@ -101,9 +100,7 @@ export class TiberiusRunner implements AnalysisRunner, OnModuleInit {
       typeof params.modelCfg === 'string'
         ? params.modelCfg
         : this.config.modelCfg
-    const useSingularity = Boolean(
-      params.useSingularity ?? this.config.useSingularity,
-    )
+    const useSingularity = this.config.useSingularity
     const assemblyId = context.job.assemblyId ?? ''
 
     const regionSize = end - start

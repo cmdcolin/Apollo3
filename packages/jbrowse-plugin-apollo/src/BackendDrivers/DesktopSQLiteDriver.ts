@@ -141,7 +141,6 @@ export class DesktopSQLiteDriver extends BackendDriver {
         assembly: assemblyId,
         name: region.refName,
         length: region.end - region.start,
-        chunkSize: 256 * 1024,
       })
     }
     if (refSeqRows.length > 0) {
@@ -185,7 +184,6 @@ export class DesktopSQLiteDriver extends BackendDriver {
         assembly: assemblyId,
         name: region.refName,
         length: region.end - region.start,
-        chunkSize: 256 * 1024,
       })
     }
     if (refSeqRows.length > 0) {

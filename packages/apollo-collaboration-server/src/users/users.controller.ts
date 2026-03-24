@@ -1,7 +1,6 @@
-import type { DecodedJWT } from '@apollo-annotation/shared'
 import { Controller, Get, Inject, Logger, Param, Req } from '@nestjs/common'
-import type { Request } from 'express'
 
+import type { RequestWithUser } from '../utils/request-with-user.js'
 import { Role } from '../utils/role/role.enum.js'
 import { Authenticated, Roles } from '../utils/roles.guard.js'
 
@@ -20,9 +19,12 @@ export class UsersController {
 
   @Authenticated()
   @Get('me')
-  getMe(@Req() req: Request) {
-    const user = req.user as DecodedJWT
-    return { username: user.username, email: user.email, role: user.role }
+  getMe(@Req() req: RequestWithUser) {
+    return {
+      username: req.user?.username,
+      email: req.user?.email,
+      role: req.user?.role,
+    }
   }
 
   @Get()

@@ -88,7 +88,8 @@ export class LocalBlastRunner implements AnalysisRunner {
     this.logger.log(
       `Extracting FASTA for assembly ${context.assemblyId} → ${fastaPath}`,
     )
-    await extractAssemblyFasta(context.assemblyId, fastaPath, context.db)
+    const refSeqs = await context.db.refSeq.findByAssembly(context.assemblyId)
+    await extractAssemblyFasta(context.assemblyId, fastaPath, context.sequenceService, refSeqs)
 
     this.logger.log(`Running makeblastdb: dbtype=${dbType} out=${dbPath}`)
     const { stderr } = await runCommand('makeblastdb', [

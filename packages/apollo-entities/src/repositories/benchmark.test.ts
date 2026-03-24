@@ -13,12 +13,10 @@ import { FeatureEntity } from '../entities/FeatureEntity.js'
 import { FileEntity } from '../entities/FileEntity.js'
 import { JBrowseConfigEntity } from '../entities/JBrowseConfigEntity.js'
 import { OrganismEntity } from '../entities/OrganismEntity.js'
-import { RefSeqChunkEntity } from '../entities/RefSeqChunkEntity.js'
 import { RefSeqEntity } from '../entities/RefSeqEntity.js'
 import { UserEntity } from '../entities/UserEntity.js'
 import { MikroOrmAssemblyRepository } from './MikroOrmAssemblyRepository.js'
 import { MikroOrmFeatureRepository } from './MikroOrmFeatureRepository.js'
-import { MikroOrmRefSeqChunkRepository } from './MikroOrmRefSeqChunkRepository.js'
 import { MikroOrmRefSeqRepository } from './MikroOrmRefSeqRepository.js'
 
 const allEntities = [
@@ -32,7 +30,6 @@ const allEntities = [
   FileEntity,
   JBrowseConfigEntity,
   OrganismEntity,
-  RefSeqChunkEntity,
   RefSeqEntity,
   UserEntity,
 ]
@@ -80,31 +77,16 @@ function generateFeatures(count: number, refSeqId: string, prefix: string) {
   return features
 }
 
-function generateChunks(count: number, refSeqId: string, prefix: string) {
-  const chunks = []
-  for (let i = 0; i < count; i++) {
-    chunks.push({
-      _id: `${prefix}-chunk-${i}`,
-      refSeq: refSeqId,
-      n: i,
-      sequence: 'ATCGATCGATCG'.repeat(100),
-    })
-  }
-  return chunks
-}
-
 // Simulates the actual import flow: individual refSeq creates/updates,
-// chunk batches of 50, feature batches of 500
+// feature batches of 500
 async function simulateImport(
   em: ReturnType<typeof orm.em.fork>,
   prefix: string,
   refSeqCount: number,
-  chunksPerRefSeq: number,
   featuresPerRefSeq: number,
 ) {
   const asmRepo = new MikroOrmAssemblyRepository(em)
   const rsRepo = new MikroOrmRefSeqRepository(em)
-  const chunkRepo = new MikroOrmRefSeqChunkRepository(em)
   const featRepo = new MikroOrmFeatureRepository(em)
 
   await asmRepo.create({
@@ -119,17 +101,9 @@ async function simulateImport(
       assembly: `${prefix}-asm`,
       name: `chr${r}`,
       length: 0,
-      chunkSize: 20000,
       status: -1,
       user: 'u',
     })
-
-    const chunks = generateChunks(chunksPerRefSeq, rsId, `${prefix}-r${r}`)
-    for (let i = 0; i < chunks.length; i += 50) {
-      await chunkRepo.createMany(chunks.slice(i, i + 50))
-    }
-
-    await rsRepo.updateById(rsId, { length: chunksPerRefSeq * 1200 })
 
     const features = generateFeatures(
       featuresPerRefSeq,
@@ -144,7 +118,6 @@ async function simulateImport(
 
 describe('Benchmark: import simulation with and without transactions', () => {
   const REF_SEQ_COUNT = 3
-  const CHUNKS_PER_RS = 100
   const FEATURES_PER_RS = 1500
 
   it('without transaction (autocommit)', async () => {
@@ -156,13 +129,12 @@ describe('Benchmark: import simulation with and without transactions', () => {
       em,
       'no-tx',
       REF_SEQ_COUNT,
-      CHUNKS_PER_RS,
       FEATURES_PER_RS,
     )
     const elapsed = performance.now() - start
 
     console.log(
-      `WITHOUT transaction: ${REF_SEQ_COUNT} refSeqs × (${CHUNKS_PER_RS} chunks + ${FEATURES_PER_RS} features) = ${elapsed.toFixed(1)}ms`,
+      `WITHOUT transaction: ${REF_SEQ_COUNT} refSeqs × ${FEATURES_PER_RS} features = ${elapsed.toFixed(1)}ms`,
     )
   })
 
@@ -176,14 +148,13 @@ describe('Benchmark: import simulation with and without transactions', () => {
       em,
       'tx',
       REF_SEQ_COUNT,
-      CHUNKS_PER_RS,
       FEATURES_PER_RS,
     )
     await em.commit()
     const elapsed = performance.now() - start
 
     console.log(
-      `WITH transaction: ${REF_SEQ_COUNT} refSeqs × (${CHUNKS_PER_RS} chunks + ${FEATURES_PER_RS} features) = ${elapsed.toFixed(1)}ms`,
+      `WITH transaction: ${REF_SEQ_COUNT} refSeqs × ${FEATURES_PER_RS} features = ${elapsed.toFixed(1)}ms`,
     )
   })
 })

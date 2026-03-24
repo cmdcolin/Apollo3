@@ -3,10 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-misused-promises */
-import {
-  AddAssemblyAndFeaturesFromFileChange,
-  AddAssemblyFromFileChange,
-} from '@apollo-annotation/shared'
+import { AddAssemblyFromFileChange } from '@apollo-annotation/shared'
 import { readConfObject } from '@jbrowse/core/configuration'
 import type { AbstractSessionModel } from '@jbrowse/core/util'
 import { makeStyles } from '@jbrowse/core/util/tss-react'
@@ -42,7 +39,7 @@ import React, { useState } from 'react'
 
 import type { ChangeManager } from '../ChangeManager'
 import type { ApolloSessionModel } from '../session'
-import { apolloFetch, createFetchErrorMessage, getBaseURL } from '../util'
+import { createFetchErrorMessage, getBaseURL } from '../util'
 
 import { Dialog } from './Dialog'
 
@@ -197,7 +194,7 @@ export function AddAssembly({
     jobsManager.update(job.name, `Uploading ${file.name}, this may take awhile`)
     const { signal } = controller
 
-    const response = await apolloFetch(uri, {
+    const response = await fetch(uri, {
       method: 'POST',
       body: formData,
       signal,
@@ -227,7 +224,7 @@ export function AddAssembly({
     handleClose()
     event.preventDefault()
 
-    let change: AddAssemblyAndFeaturesFromFileChange | AddAssemblyFromFileChange
+    let change: AddAssemblyFromFileChange
 
     if (fileType === FileType.EXTERNAL) {
       change = new AddAssemblyFromFileChange({
@@ -235,7 +232,7 @@ export function AddAssembly({
         assembly: new ObjectID().toHexString(),
         assemblyName,
         sequenceSource: {
-          type: 'external',
+          type: 'fasta',
           fa: fastaUrl,
           fai: fastaIndexUrl,
           gzi: fastaGziIndexUrl,
@@ -246,48 +243,29 @@ export function AddAssembly({
         throw new Error('Missing fasta file')
       }
       if (fileType === FileType.GFF3 && importFeatures) {
-        const faId = await uploadFile(fastaFile, FileType.GFF3)
-        change = new AddAssemblyAndFeaturesFromFileChange({
-          typeName: 'AddAssemblyAndFeaturesFromFileChange',
-          assembly: new ObjectID().toHexString(),
-          assemblyName,
-          sequenceSource: { type: 'chunked', fa: faId },
-        })
+        // TODO: Browser file uploads need UI redesign - GFF3+FASTA upload
+        // now requires separate indexed FASTA files with server-side paths
+        throw new Error(
+          'GFF3 file upload with features is not yet supported in the browser UI. Use the CLI instead.',
+        )
       } else if (fileType === FileType.GFF3) {
-        const faId = await uploadFile(fastaFile, FileType.GFF3)
-        change = new AddAssemblyFromFileChange({
-          typeName: 'AddAssemblyFromFileChange',
-          assembly: new ObjectID().toHexString(),
-          assemblyName,
-          sequenceSource: { type: 'chunked', fa: faId },
-        })
+        // TODO: Browser file uploads need UI redesign - GFF3 upload
+        // now requires separate indexed FASTA files with server-side paths
+        throw new Error(
+          'GFF3 file upload is not yet supported in the browser UI. Use the CLI instead.',
+        )
       } else if (sequenceIsEditable) {
-        const faId = await uploadFile(fastaFile, FileType.FASTA)
-        change = new AddAssemblyFromFileChange({
-          typeName: 'AddAssemblyFromFileChange',
-          assembly: new ObjectID().toHexString(),
-          assemblyName,
-          sequenceSource: { type: 'chunked', fa: faId },
-        })
+        // TODO: Browser file uploads need UI redesign - editable sequence upload
+        // now requires separate indexed FASTA files with server-side paths
+        throw new Error(
+          'Editable sequence upload is not yet supported in the browser UI. Use the CLI instead.',
+        )
       } else {
-        if (!fastaIndexFile || !fastaGziIndexFile) {
-          throw new Error('Missing fasta index files')
-        }
-        const faId = await uploadFile(fastaFile, FileType.BGZIP_FASTA)
-        const faiId = await uploadFile(fastaIndexFile, FileType.FAI)
-        const gziId = await uploadFile(fastaGziIndexFile, FileType.GZI)
-
-        change = new AddAssemblyFromFileChange({
-          typeName: 'AddAssemblyFromFileChange',
-          assembly: new ObjectID().toHexString(),
-          assemblyName,
-          sequenceSource: {
-            type: 'indexed',
-            fa: faId,
-            fai: faiId,
-            gzi: gziId,
-          },
-        })
+        // TODO: Browser file uploads need UI redesign - bgzip FASTA upload
+        // now requires server-accessible paths instead of file uploads
+        throw new Error(
+          'Bgzip FASTA upload is not yet supported in the browser UI. Use the CLI instead.',
+        )
       }
     }
 

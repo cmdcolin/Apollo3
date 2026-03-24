@@ -1,5 +1,4 @@
 import type { Change } from '@apollo-annotation/common'
-import type { DecodedJWT } from '@apollo-annotation/shared'
 import {
   Body,
   Controller,
@@ -11,9 +10,9 @@ import {
   Query,
   Req,
 } from '@nestjs/common'
-import type { Request } from 'express'
 
 import { ParseChangePipe } from '../utils/parse-change.pipe.js'
+import type { RequestWithUser } from '../utils/request-with-user.js'
 import { Role } from '../utils/role/role.enum.js'
 import { Roles } from '../utils/roles.guard.js'
 
@@ -30,14 +29,18 @@ export class ChangesController {
 
   @Post()
   @Roles(Role.User)
-  async create(@Body(ParseChangePipe) change: Change, @Req() request: Request) {
-    const user = request.user as DecodedJWT
+  async create(
+    @Body(ParseChangePipe) change: Change,
+    @Req() request: RequestWithUser,
+  ) {
+    const { user } = request
     this.logger.debug(
       `Change type is '${change.typeName}', change object: ${JSON.stringify(
         change,
       )}`,
     )
-    return this.changesService.create(change, user)
+    // user is guaranteed by @Roles(Role.User) guard
+    return this.changesService.create(change, user!)
   }
 
   @Get('recent')

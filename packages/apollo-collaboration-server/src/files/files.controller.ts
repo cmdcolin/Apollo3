@@ -10,14 +10,13 @@ import {
   Param,
   Post,
   Query,
-  Req,
   Res,
   StreamableFile,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
-import type { Request, Response } from 'express'
+import type { Response } from 'express'
 
 import { Role } from '../utils/role/role.enum.js'
 import { Roles } from '../utils/roles.guard.js'
@@ -78,30 +77,13 @@ export class FilesController {
   @Get(':id')
   async downloadFile(
     @Param('id') id: string,
-    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
     const file = await this.filesService.findOne(id)
-    this.logger.debug(
-      `Streaming file '${file.basename}' from server to client'`,
-    )
-    this.logger.debug(`headers: ${JSON.stringify(req.headers)}`)
-    const acceptEncodingHeader = req.headers['accept-encoding']
-    const encodings =
-      typeof acceptEncodingHeader === 'string'
-        ? acceptEncodingHeader.split(',').map((s) => s.trim())
-        : acceptEncodingHeader
-    const acceptGzip = encodings?.includes('gzip')
     res.set({
       'Content-Type': file.type,
       'Content-Disposition': `attachment; filename="${file.basename}"`,
     })
-    if (acceptGzip) {
-      res.set({ 'Content-Encoding': 'gzip' })
-      return new StreamableFile(
-        Readable.fromWeb(this.filesService.getFileStream(file, true)),
-      )
-    }
     return new StreamableFile(
       Readable.fromWeb(this.filesService.getFileStream(file)),
     )

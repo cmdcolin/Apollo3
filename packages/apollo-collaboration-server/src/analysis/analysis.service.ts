@@ -3,12 +3,13 @@ import { randomBytes } from 'node:crypto'
 import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common'
 
 import { DatabaseService } from '../mikro-orm/database.service.js'
+import { SequenceService } from '../sequence/sequence.service.js'
 
 import type { AnalysisRunner } from './runner.js'
 import { BlatRunner } from './runners/blat.runner.js'
+import { IsPcrRunner } from './runners/ispcr.runner.js'
 import { LocalBlastRunner } from './runners/local-blast.runner.js'
 import { MiniprotRunner } from './runners/miniprot.runner.js'
-import { NcbiBlastRunner } from './runners/ncbi-blast.runner.js'
 import { TiberiusRunner } from './runners/tiberius.runner.js'
 
 @Injectable()
@@ -17,14 +18,15 @@ export class AnalysisService {
 
   constructor(
     @Inject(DatabaseService) private readonly db: DatabaseService,
+    @Inject(SequenceService) private readonly sequenceService: SequenceService,
     @Inject(LocalBlastRunner) localBlast: LocalBlastRunner,
-    @Inject(NcbiBlastRunner) ncbiBlast: NcbiBlastRunner,
+    @Inject(IsPcrRunner) ispcr: IsPcrRunner,
     @Inject(BlatRunner) blat: BlatRunner,
     @Inject(MiniprotRunner) miniprot: MiniprotRunner,
     @Inject(TiberiusRunner) tiberius: TiberiusRunner,
   ) {
     this.runners.set(localBlast.tool, localBlast)
-    this.runners.set(ncbiBlast.tool, ncbiBlast)
+    this.runners.set(ispcr.tool, ispcr)
     this.runners.set(blat.tool, blat)
     this.runners.set(miniprot.tool, miniprot)
     this.runners.set(tiberius.tool, tiberius)
@@ -138,6 +140,7 @@ export class AnalysisService {
         dbName,
         params,
         db: this.db,
+        sequenceService: this.sequenceService,
       })
       await this.db.analysisDb.updateById(dbId, { dbPath, status: 'ready' })
       this.logger.log(`Analysis DB ${dbId} built at ${dbPath}`)

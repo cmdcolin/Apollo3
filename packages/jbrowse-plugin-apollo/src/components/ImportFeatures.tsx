@@ -24,7 +24,7 @@ import React, { useEffect, useState } from 'react'
 import type { CollaborationServerDriver } from '../BackendDrivers'
 import type { ChangeManager } from '../ChangeManager'
 import type { ApolloSessionModel } from '../session'
-import { apolloFetch, createFetchErrorMessage, getBaseURL } from '../util'
+import { createFetchErrorMessage, getBaseURL } from '../util'
 
 import { Dialog } from './Dialog'
 
@@ -76,7 +76,7 @@ export function ImportFeatures({
       uri.search = searchParams.toString()
 
       setLoading(true)
-      const response = await apolloFetch(uri.toString(), { method: 'GET' })
+      const response = await fetch(uri.toString())
 
       if (response.ok) {
         const countObj = (await response.json()) as { count: number }
@@ -162,7 +162,7 @@ export function ImportFeatures({
     jobsManager.runJob(job)
 
     const { signal } = controller
-    const response = await apolloFetch(uri, {
+    const response = await fetch(uri, {
       method: 'POST',
       body: formData,
       signal,

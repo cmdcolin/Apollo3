@@ -6,9 +6,9 @@ import { AnalysisWorkerService } from './analysis-worker.service.js'
 import { AnalysisController } from './analysis.controller.js'
 import { AnalysisService } from './analysis.service.js'
 import { BlatRunner } from './runners/blat.runner.js'
+import { IsPcrRunner } from './runners/ispcr.runner.js'
 import { LocalBlastRunner } from './runners/local-blast.runner.js'
 import { MiniprotRunner } from './runners/miniprot.runner.js'
-import { NcbiBlastRunner } from './runners/ncbi-blast.runner.js'
 import { TiberiusRunner } from './runners/tiberius.runner.js'
 
 @Module({
@@ -18,7 +18,7 @@ import { TiberiusRunner } from './runners/tiberius.runner.js'
     AnalysisService,
     AnalysisWorkerService,
     LocalBlastRunner,
-    NcbiBlastRunner,
+    IsPcrRunner,
     BlatRunner,
     MiniprotRunner,
     TiberiusRunner,

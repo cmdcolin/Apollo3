@@ -1,10 +1,12 @@
 import type { AnalysisJobRow } from '@apollo-annotation/common'
 
 import type { DatabaseService } from '../mikro-orm/database.service.js'
+import type { SequenceService } from '../sequence/sequence.service.js'
 
 export interface RunContext {
   job: AnalysisJobRow
   db: DatabaseService
+  sequenceService: SequenceService
   signal: AbortSignal
   updateMetadata(metadata: Record<string, unknown>): Promise<void>
 }
@@ -14,6 +16,7 @@ export interface BuildDbContext {
   dbName: string
   params: Record<string, unknown>
   db: DatabaseService
+  sequenceService: SequenceService
 }
 
 export interface AnalysisRunner {

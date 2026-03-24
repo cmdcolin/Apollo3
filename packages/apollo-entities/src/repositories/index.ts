@@ -11,7 +11,6 @@ export { MikroOrmCheckResultRepository } from './MikroOrmCheckResultRepository.j
 export { MikroOrmFeatureRepository } from './MikroOrmFeatureRepository.js'
 export { MikroOrmFileRepository } from './MikroOrmFileRepository.js'
 export { MikroOrmJBrowseConfigRepository } from './MikroOrmJBrowseConfigRepository.js'
-export { MikroOrmRefSeqChunkRepository } from './MikroOrmRefSeqChunkRepository.js'
 export { MikroOrmRefSeqRepository } from './MikroOrmRefSeqRepository.js'
 export { MikroOrmTextSearchAdapterConfigRepository } from './MikroOrmTextSearchAdapterConfigRepository.js'
 export { MikroOrmTrackConfigRepository } from './MikroOrmTrackConfigRepository.js'

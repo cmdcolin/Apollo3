@@ -1,4 +1,5 @@
 import type { AssemblyRow } from '@apollo-annotation/common'
+import type { DecodedJWT } from '@apollo-annotation/shared'
 import { Inject, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import merge from 'deepmerge'
@@ -29,7 +30,11 @@ export class JBrowseService {
     private readonly analysisService: AnalysisService,
   ) {}
 
-  async getConfiguration(role?: Role, userId?: string, userSessionId?: string) {
+  async getConfiguration(user: DecodedJWT | undefined) {
+    const role = user?.role as Role | undefined
+    const userId = user?.id
+    const userSessionId =
+      userId && user?.iat ? `${userId}-${user.iat}` : undefined
     const url = this.configService.get('URL', { infer: true })
     const feature_type_ontology_location =
       this.configService.get('FEATURE_TYPE_ONTOLOGY_LOCATION', {
@@ -208,18 +213,18 @@ export class JBrowseService {
   }
 
   async getAccessibleAssemblies(
-    userId: string | undefined,
+    user: DecodedJWT | undefined,
     requestedAssemblyIds: string[] | undefined,
   ) {
     if (requestedAssemblyIds) {
       const filteredIds = await this.permissionService.filterAccessibleIds(
-        userId,
+        user,
         requestedAssemblyIds,
       )
       return this.db.assembly.findByIds(filteredIds)
     }
     const accessibleIds =
-      await this.permissionService.getAccessibleAssemblyIds(userId)
+      await this.permissionService.getAccessibleAssemblyIds(user)
     return this.db.assembly.findByIds(accessibleIds)
   }
 
@@ -228,53 +233,36 @@ export class JBrowseService {
     return row?.config
   }
 
-  async getConfig(
-    role?: Role,
-    userId?: string,
-    userSessionId?: string,
-    assemblyIds?: string[],
-  ) {
-    const configuration = await this.getConfiguration(role, userId, userSessionId)
+  async getConfig(user: DecodedJWT | undefined, assemblyIds?: string[]) {
+    const configuration = await this.getConfiguration(user)
     const plugins = this.getPlugins()
-    const assemblies = await this.getAccessibleAssemblies(userId, assemblyIds)
+    const assemblies = await this.getAccessibleAssemblies(user, assemblyIds)
 
     if (assemblies.length === 0) {
       return { configuration, plugins }
     }
-    return this.buildFullConfig(configuration, plugins, assemblies, assemblyIds)
+    return this.buildFullConfig(configuration, plugins, assemblies)
   }
 
   private async buildFullConfig(
     configuration: ReturnType<typeof this.getConfiguration>,
     plugins: ReturnType<typeof this.getPlugins>,
     assemblies: AssemblyRow[],
-    requestedAssemblyIds: string[] | undefined,
   ) {
-    const assemblyConfigs = assemblies.map((a) => this.getAssemblyConfig(a))
+    const assemblyIds = assemblies.map((a) => a._id)
 
+    const assemblyConfigs = assemblies.map((a) => this.getAssemblyConfig(a))
     const apolloTracks = assemblies.map((a) => this.getApolloTrackConfig(a))
     const apolloSearchAdapters = assemblies.map((a) =>
       this.getApolloTextSearchAdapter(a),
     )
 
-    const assemblyIdSet = new Set(assemblies.map((a) => a._id))
-    const storedTracks = requestedAssemblyIds
-      ? await this.db.trackConfig.findByAssemblyIds(requestedAssemblyIds)
-      : await this.db.trackConfig.findAll()
-    const filteredStoredTracks = storedTracks.filter((t) =>
-      t.assemblyIds.some((id) => assemblyIdSet.has(id)),
-    )
-    const storedTrackConfigs = filteredStoredTracks.map((t) => t.config)
+    const storedTracks = await this.db.trackConfig.findByAssemblyIds(assemblyIds)
+    const storedTrackConfigs = storedTracks.map((t) => t.config)
 
-    const storedTextSearchAdapters = requestedAssemblyIds
-      ? await this.db.textSearchAdapterConfig.findByAssemblyIds(
-          requestedAssemblyIds,
-        )
-      : await this.db.textSearchAdapterConfig.findAll()
-    const filteredStoredAdapters = storedTextSearchAdapters.filter((a) =>
-      a.assemblyIds.some((id) => assemblyIdSet.has(id)),
-    )
-    const storedAdapterConfigs = filteredStoredAdapters.map((a) => a.config)
+    const storedTextSearchAdapters =
+      await this.db.textSearchAdapterConfig.findByAssemblyIds(assemblyIds)
+    const storedAdapterConfigs = storedTextSearchAdapters.map((a) => a.config)
 
     const generatedConfig = {
       configuration,

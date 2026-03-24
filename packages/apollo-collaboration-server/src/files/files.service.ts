@@ -4,8 +4,6 @@ import { readFile, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { Readable } from 'node:stream'
 import { type ReadableStream, TransformStream } from 'node:stream/web'
-import { promisify } from 'node:util'
-import { gunzip as gunzipCb } from 'node:zlib'
 
 import { type GFF3Feature, GFFTransformer } from '@gmod/gff'
 import {
@@ -36,18 +34,14 @@ export class FilesService {
 
   private readonly logger = new Logger(FilesService.name)
 
+  private get uploadFolder() {
+    return this.configService.get('FILE_UPLOAD_FOLDER', { infer: true })
+  }
+
   async uploadFileFromRequest(req: FileRequest, name: string, size: number) {
-    const fileUploadFolder = this.configService.get('FILE_UPLOAD_FOLDER', {
-      infer: true,
-    })
     return writeFileAndCalculateHash(
-      {
-        originalname: name,
-        stream: req,
-        size,
-        contentEncoding: req.header('Content-Encoding'),
-      },
-      fileUploadFolder,
+      { originalname: name, stream: req },
+      this.uploadFolder,
       this.logger,
     )
   }
@@ -72,38 +66,18 @@ export class FilesService {
     return file
   }
 
-  getFileStream(
-    file: { checksum: string },
-    compressed = false,
-  ): ReadableStream<Uint8Array> {
-    const fileUploadFolder = this.configService.get('FILE_UPLOAD_FOLDER', {
-      infer: true,
-    })
-    const fileStream = Readable.toWeb(
-      createReadStream(path.join(fileUploadFolder, file.checksum)),
+  getFileStream(file: { checksum: string }): ReadableStream<Uint8Array> {
+    return Readable.toWeb(
+      createReadStream(path.join(this.uploadFolder, file.checksum)),
     ) as ReadableStream<Uint8Array>
-    if (compressed) {
-      return fileStream
-    }
-    const gunzip = new DecompressionStream('gzip')
-    return fileStream.pipeThrough(gunzip) as ReadableStream<Uint8Array>
   }
 
   getFileHandle(file: { checksum: string }) {
-    const fileUploadFolder = this.configService.get('FILE_UPLOAD_FOLDER', {
-      infer: true,
-    })
-    return new LocalFile(path.join(fileUploadFolder, file.checksum))
+    return new LocalFile(path.join(this.uploadFolder, file.checksum))
   }
 
-  async getDecompressedFileContents(file: { checksum: string }) {
-    const fileUploadFolder = this.configService.get('FILE_UPLOAD_FOLDER', {
-      infer: true,
-    })
-    const compressed = await readFile(
-      path.join(fileUploadFolder, file.checksum),
-    )
-    return promisify(gunzipCb)(compressed)
+  async getFileContents(file: { checksum: string }) {
+    return readFile(path.join(this.uploadFolder, file.checksum))
   }
 
   parseGFF3(
@@ -132,19 +106,13 @@ export class FilesService {
 
     const otherFiles = await this.db.file.findByChecksum(file.checksum)
     if (!otherFiles) {
-      const fileUploadFolder = this.configService.get('FILE_UPLOAD_FOLDER', {
-        infer: true,
-      })
-      const compressedFullFileName = path.join(fileUploadFolder, file.checksum)
-      this.logger.debug(
-        `Delete the file "${compressedFullFileName}" from server folder`,
-      )
-
+      const filePath = path.join(this.uploadFolder, file.checksum)
+      this.logger.debug(`Delete the file "${filePath}" from server folder`)
       try {
-        await unlink(compressedFullFileName)
+        await unlink(filePath)
       } catch {
         throw new InternalServerErrorException(
-          `File "${compressedFullFileName}" could not be deleted from server`,
+          `File "${filePath}" could not be deleted from server`,
         )
       }
     }

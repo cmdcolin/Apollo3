@@ -71,7 +71,7 @@ import {
   LinearApolloSixFrameDisplayComponent,
 } from './makeDisplayComponent'
 import { type ApolloSessionModel, extendSession } from './session'
-import { isAnalysisToolAvailable } from './util'
+import { canEdit, isAnalysisToolAvailable } from './util'
 
 interface RpcHandle {
   on(event: string, listener: (event: MessageEvent) => void): this
@@ -224,48 +224,46 @@ export default class ApolloPlugin extends Plugin {
             const superRubberBandMenuItems = self.rubberBandMenuItems
             return {
               rubberBandMenuItems() {
+                const session = getSession(
+                  self,
+                ) as unknown as ApolloSessionModel
                 return [
                   ...superRubberBandMenuItems(),
-                  {
-                    label: 'Add new feature',
-                    icon: AddIcon,
-                    onClick: () => {
-                      const session = getSession(
-                        self,
-                      ) as unknown as ApolloSessionModel
-                      const { leftOffset, rightOffset } = self
-                      const selectedRegions = self.getSelectedRegions(
-                        leftOffset,
-                        rightOffset,
-                      )
-                      ;(session as unknown as AbstractSessionModel).queueDialog(
-                        (doneCallback) => [
-                          AddFeature,
-                          {
-                            session,
-                            handleClose: () => {
-                              doneCallback()
-                            },
-                            region: selectedRegions[0],
-                            changeManager:
-                              session.apolloDataStore.changeManager,
+                  ...(canEdit(session)
+                    ? [
+                        {
+                          label: 'Add new feature',
+                          icon: AddIcon,
+                          onClick: () => {
+                            const { leftOffset, rightOffset } = self
+                            const selectedRegions = self.getSelectedRegions(
+                              leftOffset,
+                              rightOffset,
+                            )
+                            ;(
+                              session as unknown as AbstractSessionModel
+                            ).queueDialog((doneCallback) => [
+                              AddFeature,
+                              {
+                                session,
+                                handleClose: () => {
+                                  doneCallback()
+                                },
+                                region: selectedRegions[0],
+                                changeManager:
+                                  session.apolloDataStore.changeManager,
+                              },
+                            ])
                           },
-                        ],
-                      )
-                    },
-                  },
-                  ...(isAnalysisToolAvailable(
-                    getSession(self) as unknown as ApolloSessionModel,
-                    'tiberius',
-                  )
+                        },
+                      ]
+                    : []),
+                  ...(isAnalysisToolAvailable(session, 'tiberius')
                     ? [
                         {
                           label: 'Run Tiberius gene prediction',
                           icon: BiotechIcon,
                           onClick: () => {
-                            const session = getSession(
-                              self,
-                            ) as unknown as ApolloSessionModel
                             const { leftOffset, rightOffset } = self
                             const selectedRegions = self.getSelectedRegions(
                               leftOffset,

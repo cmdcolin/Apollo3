@@ -1,5 +1,20 @@
 # Apollo3 — Completed Work
 
+## Sequence Search Polish (sequence-search.tsx)
+
+- Tab order: NCBI BLAST first (most common use case), then local tools
+- NCBI BLAST tab: simplified form (removed confusing assembly selector and
+  admin-facing preset shortcuts); query label adjusts based on program type
+- BLAT form: added query type selector (DNA / Protein)
+- BLAST results: collapsible per-hit alignment detail (click row to expand);
+  stats header shows program, database, query length, and DB size; organism
+  column for nucleotide searches
+- BLAT results: "Copy loc" button per hit for deep-linking to genome view
+- miniprot results: "Copy loc" button per gene model; "Copy GFF3" button
+- NCBI polling: shows RID with direct link to NCBI results page while waiting
+- Admin panel: renamed "Add Remote NCBI BLAST Database" to "Add Remote NCBI
+  BLAST Preset" with description; tool chip now shows human-readable label
+
 ## Core Infrastructure
 
 - Entity definitions using MikroORM v7 `defineEntity` + `p` builders
@@ -175,6 +190,51 @@ that transpiles all five workspace packages in parallel in ~3s.
 
 ## Simplification
 
+- **Remove chunked RefSeqChunk storage & unify sequence sources** — Sequence
+  data is no longer stored in the database. All sequences are referenced by
+  path or URL, read on demand via `@gmod/indexedfasta` or `@gmod/twobit`.
+
+  **What was removed:**
+  - `RefSeqChunkEntity`, `MikroOrmRefSeqChunkRepository`,
+    `RefSeqChunkRepository` interface — deleted entirely
+  - `chunkSize` field from `RefSeqRow` and `RefSeqEntity` — vestigial after
+    chunk removal
+  - Chunk buffering logic from `FromFileBaseChange` (~100 lines)
+  - `addRefSeqIntoDb` method — replaced by reading `.fai` for sequence metadata
+  - Five `SequenceSource` type variants (`external`, `indexed`, `chunked`,
+    `upload-fasta`, `upload-gff3`) — replaced by two
+  - File-upload-based sequence storage — FASTA files are no longer uploaded to
+    the server; paths are provided instead
+  - `fileRepository` and `filesService` from `ServerDataStore` interface —
+    the change protocol no longer does file I/O
+  - `getDecompressedFileContents`, gzip compression in file storage — files
+    are now stored as-is (no automatic gzip on upload)
+
+  **What was added/simplified:**
+  - Unified `SequenceSource` type — two variants:
+    `{ type: 'fasta'; fa: string; fai: string; gzi?: string }` and
+    `{ type: 'twobit'; twobit: string }`. Values are local paths or URLs.
+    The server auto-detects local vs remote via protocol prefix.
+  - `SequenceService.buildAdapter()` — single method that opens any sequence
+    source as the right adapter (`IndexedFasta`, `BgzipIndexedFasta`, or
+    `TwoBitFile`) using a unified `openFilehandle()` helper
+  - `ExportService` — uses `SequenceService` for FASTA export instead of
+    reading chunks or streaming raw files
+  - `ServerDataStore` interface — simplified to just repositories +
+    `parseGFF3` stream transformer + `pluginsService`. No file I/O.
+  - GFF3 annotation import reads from a server-accessible path (`gff3Path`)
+    instead of uploading to the file store
+  - `AddAssemblyFromFileChange` — collapsed from five handler methods
+    (`executeOnServerExternal`, `executeOnServerIndexed`,
+    `executeOnServerChunked`, `executeOnServerUploadFasta`,
+    `executeOnServerUploadGff3`) to a single `getSequenceSizes()` that works
+    with any adapter
+  - CLI `add-from-fasta` — simplified from ~160 lines (upload detection,
+    file ID management, editable flag) to ~60 lines (just provide paths)
+  - CLI `add-from-gff` — now requires separate FASTA+index files via
+    `--fasta` flag, matching standard bioinformatics workflows
+  - MongoDB migration script updated to skip chunk migration with a warning
+  - Added `@gmod/twobit` support for `.2bit` sequence files
 - **Remove pending import status** — Removed `status` field from all entities.
   Transactions provide atomicity. Kept `user` field for attribution.
 - **Remove InternetAccount from Apollo plugin** — Removed the

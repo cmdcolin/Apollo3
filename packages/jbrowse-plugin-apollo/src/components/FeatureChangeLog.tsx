@@ -23,7 +23,7 @@ import {
 import React, { useEffect, useState } from 'react'
 
 import type { ApolloSessionModel } from '../session'
-import { apolloFetch, createFetchErrorMessage, getBaseURL } from '../util'
+import { createFetchErrorMessage, getBaseURL } from '../util'
 
 import { Dialog } from './Dialog'
 
@@ -114,7 +114,7 @@ export function FeatureChangeLog({
       const url = new URL('changes', baseURL)
       url.searchParams.set('featureId', rootFeature._id)
       const uri = url.toString()
-      const response = await apolloFetch(uri, {
+      const response = await fetch(uri, {
         headers: new Headers({ 'Content-Type': 'application/json' }),
       })
       if (!response.ok) {

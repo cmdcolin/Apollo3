@@ -45,6 +45,7 @@
     "@apollo-annotation/shared": "workspace:^",
     "@gmod/gff": "^2.0.0",
     "@gmod/indexedfasta": "^5.0.0",
+    "@gmod/twobit": "^6.0.1",
     "@jbrowse/core": "^4.1.1",
     "@jbrowse/mobx-state-tree": "^5.5.0",
     "@mikro-orm/core": "^7.0.1",

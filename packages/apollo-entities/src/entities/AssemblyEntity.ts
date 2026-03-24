@@ -3,9 +3,8 @@ import { defineEntity, p } from '@mikro-orm/core'
 import { OrganismEntity } from './OrganismEntity.js'
 
 type SequenceSource =
-  | { type: 'external'; fa: string; fai: string; gzi?: string }
-  | { type: 'indexed'; fa: string; fai: string; gzi: string }
-  | { type: 'chunked'; fa: string }
+  | { type: 'fasta'; fa: string; fai: string; gzi?: string }
+  | { type: 'twobit'; twobit: string }
 
 export enum AssemblyVisibility {
   PUBLIC = 'public',

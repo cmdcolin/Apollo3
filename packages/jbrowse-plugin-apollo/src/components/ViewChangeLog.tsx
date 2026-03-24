@@ -25,7 +25,7 @@ import {
 import React, { useEffect, useState } from 'react'
 
 import type { ApolloSessionModel } from '../session'
-import { apolloFetch, createFetchErrorMessage, getBaseURL } from '../util'
+import { createFetchErrorMessage, getBaseURL } from '../util'
 
 import { Dialog } from './Dialog'
 
@@ -99,7 +99,7 @@ export function ViewChangeLog({ handleClose, session }: ViewChangeLogProps) {
       })
       url.search = searchParams.toString()
       const uri = url.toString()
-      const response = await apolloFetch(uri, {
+      const response = await fetch(uri, {
         headers: new Headers({ 'Content-Type': 'application/json' }),
       })
       if (!response.ok) {

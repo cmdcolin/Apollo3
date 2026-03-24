@@ -18,8 +18,11 @@ COLLAB_DIR="$REPO_ROOT/packages/apollo-collaboration-server"
 LOG_FILE="/tmp/apollo-demo-regen.log"
 COLLAB_PORT=3998
 API_BASE="http://127.0.0.1:$COLLAB_PORT"
-GFF3_FILE="$DEMO_DATA_DIR/volvox/volvox-genes.gff3"
 DEMO_DATA_DIR="$REPO_ROOT/demo-data"
+VOLVOX_DIR="$DEMO_DATA_DIR/volvox"
+GFF3_FILE="$VOLVOX_DIR/volvox-genes.gff3"
+FASTA_FILE="$VOLVOX_DIR/volvox.fa"
+FAI_FILE="$VOLVOX_DIR/volvox.fa.fai"
 
 cleanup() {
   local pids
@@ -43,6 +46,14 @@ if [ ! -f "$COLLAB_DIR/dist/main.js" ]; then
 fi
 if [ ! -f "$GFF3_FILE" ]; then
   echo "ERROR: GFF3 file not found at $GFF3_FILE"
+  exit 1
+fi
+if [ ! -f "$FASTA_FILE" ]; then
+  echo "ERROR: FASTA file not found at $FASTA_FILE"
+  exit 1
+fi
+if [ ! -f "$FAI_FILE" ]; then
+  echo "ERROR: FAI index not found at $FAI_FILE"
   exit 1
 fi
 
@@ -88,15 +99,7 @@ echo "Authenticated as root."
 
 AUTH_HEADER="Authorization: Bearer $TOKEN"
 
-# --- Upload GFF3 and create volvox assembly with annotations ---
-
-echo "Uploading volvox GFF3..."
-FILE_ID="$(curl -sf \
-  -H "$AUTH_HEADER" \
-  -F "file=@$GFF3_FILE" \
-  "$API_BASE/files?type=text/x-gff3" \
-  | python3 -c "import sys,json; print(json.load(sys.stdin)['_id'])")"
-echo "  File uploaded: $FILE_ID"
+# --- Create volvox assembly with annotations using file paths ---
 
 VOLVOX_ID="$(rand_hex_id)"
 echo "Adding volvox assembly with features (id=$VOLVOX_ID)..."
@@ -107,7 +110,9 @@ curl -sf \
     \"typeName\": \"AddAssemblyAndFeaturesFromFileChange\",
     \"assembly\": \"$VOLVOX_ID\",
     \"assemblyName\": \"volvox\",
-    \"sequenceSource\": { \"type\": \"chunked\", \"fa\": \"$FILE_ID\" }
+    \"gff3Path\": \"$GFF3_FILE\",
+    \"fastaPath\": \"$FASTA_FILE\",
+    \"faiPath\": \"$FAI_FILE\"
   }" \
   "$API_BASE/changes" > /dev/null
 echo "  volvox assembly created."

@@ -27,7 +27,6 @@ import React, { useEffect, useState } from 'react'
 import type { ChangeManager } from '../ChangeManager'
 import type { ApolloSessionModel } from '../session'
 import {
-  apolloFetch,
   createFetchErrorMessage,
   getBaseURL,
   getUserId,
@@ -61,7 +60,7 @@ export function ManageUsers({
   useEffect(() => {
     async function getUsers() {
       const uri = new URL('users', baseURL).href
-      const response = await apolloFetch(uri, { method: 'GET' })
+      const response = await fetch(uri)
       if (!response.ok) {
         const newErrorMessage = await createFetchErrorMessage(
           response,

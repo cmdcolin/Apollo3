@@ -13,7 +13,7 @@ export interface SerializedAddFeaturesFromFileChangeBase extends SerializedAssem
 }
 
 export interface AddFeaturesFromFileChangeDetails {
-  fileId: string
+  gff3Path: string
   parseOptions?: { bufferSize: number }
 }
 
@@ -52,8 +52,8 @@ export class AddFeaturesFromFileChange extends FromFileBaseChange {
   toJSON(): SerializedAddFeaturesFromFileChange {
     const { assembly, changes, deleteExistingFeatures, typeName } = this
     if (changes.length === 1) {
-      const [{ fileId }] = changes
-      return { typeName, assembly, fileId, deleteExistingFeatures }
+      const [{ gff3Path }] = changes
+      return { typeName, assembly, gff3Path, deleteExistingFeatures }
     }
     return { typeName, assembly, changes, deleteExistingFeatures }
   }
@@ -66,18 +66,18 @@ export class AddFeaturesFromFileChange extends FromFileBaseChange {
     }
 
     for (const change of changes) {
-      const { fileId, parseOptions } = change
-      const fileRow = await backend.fileRepository.findById(fileId)
-      if (!fileRow) {
-        throw new Error(`File "${fileId}" not found`)
-      }
-      logger.debug?.(`FileId "${fileId}", checksum "${fileRow.checksum}"`)
+      const { gff3Path, parseOptions } = change
+      logger.debug?.(`Reading GFF3 from "${gff3Path}"`)
 
+      const { createReadStream } = await import('node:fs')
+      const { Readable } = await import('node:stream')
+      const gff3Stream = Readable.toWeb(
+        createReadStream(gff3Path),
+      ) as ReadableStream<Uint8Array>
       const { bufferSize = 10_000 } = parseOptions ?? {}
-      const featureStream = backend.filesService.parseGFF3(
-        backend.filesService.getFileStream(fileRow),
-        { bufferSize },
-      )
+      const featureStream = backend.parseGFF3(gff3Stream, {
+        bufferSize,
+      })
       let featureCount = 0
       for await (const gff3Feature of featureStream) {
         await this.addFeatureIntoDb(gff3Feature, backend)

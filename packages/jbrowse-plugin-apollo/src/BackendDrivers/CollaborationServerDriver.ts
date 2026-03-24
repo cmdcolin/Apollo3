@@ -15,7 +15,7 @@ import { type Region, getSession } from '@jbrowse/core/util'
 
 import type { SubmitOpts } from '../ChangeManager'
 import type { ApolloSessionModel } from '../session'
-import { apolloFetch, createFetchErrorMessage, getBaseURL } from '../util'
+import { createFetchErrorMessage, getBaseURL } from '../util'
 
 import { BackendDriver, type RefNameAliases } from './BackendDriver'
 
@@ -58,7 +58,7 @@ export class CollaborationServerDriver extends BackendDriver {
     url.search = searchParams.toString()
     const uri = url.toString()
 
-    const response = await apolloFetch(uri)
+    const response = await fetch(uri)
     if (!response.ok) {
       const errorMessage = await createFetchErrorMessage(
         response,
@@ -100,7 +100,7 @@ export class CollaborationServerDriver extends BackendDriver {
       end: String(end),
     }).toString()
 
-    const response = await apolloFetch(url.toString())
+    const response = await fetch(url.toString())
     if (!response.ok) {
       const errorMessage = await createFetchErrorMessage(
         response,
@@ -122,7 +122,7 @@ export class CollaborationServerDriver extends BackendDriver {
       end: String(end),
     }).toString()
 
-    const response = await apolloFetch(url.toString())
+    const response = await fetch(url.toString())
     if (!response.ok) {
       return []
     }
@@ -185,7 +185,7 @@ export class CollaborationServerDriver extends BackendDriver {
     start: number,
     stop: number,
   ) {
-    const response = await apolloFetch(uri)
+    const response = await fetch(uri)
     if (!response.ok) {
       let errorMessage
       try {
@@ -220,7 +220,7 @@ export class CollaborationServerDriver extends BackendDriver {
     url.search = searchParams.toString()
     const uri = url.toString()
 
-    const response = await apolloFetch(uri)
+    const response = await fetch(uri)
     if (!response.ok) {
       let errorMessage
       try {
@@ -291,7 +291,7 @@ export class CollaborationServerDriver extends BackendDriver {
       `[apollo-debug] CollaborationServerDriver.getRegions: fetching ${uri}`,
     )
 
-    const response = await apolloFetch(uri)
+    const response = await fetch(uri)
     console.warn(
       `[apollo-debug] CollaborationServerDriver.getRegions: response status=${response.status}`,
     )
@@ -322,9 +322,13 @@ export class CollaborationServerDriver extends BackendDriver {
   async getAnalysisTools() {
     const baseURL = this.getBaseURL()
     const url = new URL('analysis/tools', baseURL)
-    const response = await apolloFetch(url.toString())
+    const response = await fetch(url.toString())
     if (!response.ok) {
-      return []
+      const errorMessage = await createFetchErrorMessage(
+        response,
+        'Failed to fetch analysis tools',
+      )
+      throw new Error(errorMessage)
     }
     return response.json() as Promise<
       {
@@ -343,7 +347,7 @@ export class CollaborationServerDriver extends BackendDriver {
   }) {
     const baseURL = this.getBaseURL()
     const url = new URL('analysis/jobs', baseURL)
-    const response = await apolloFetch(url.toString(), {
+    const response = await fetch(url.toString(), {
       method: 'POST',
       body: JSON.stringify(params),
       headers: { 'Content-Type': 'application/json' },
@@ -361,7 +365,7 @@ export class CollaborationServerDriver extends BackendDriver {
   async getAnalysisJob(jobId: string) {
     const baseURL = this.getBaseURL()
     const url = new URL(`analysis/jobs/${jobId}`, baseURL)
-    const response = await apolloFetch(url.toString())
+    const response = await fetch(url.toString())
     if (!response.ok) {
       const errorMessage = await createFetchErrorMessage(
         response,
@@ -393,7 +397,7 @@ export class CollaborationServerDriver extends BackendDriver {
   ) {
     const baseURL = this.getBaseURL()
     const url = new URL('changes', baseURL).href
-    const response = await apolloFetch(url, {
+    const response = await fetch(url, {
       method: 'POST',
       body: JSON.stringify(change.toJSON()),
       headers: { 'Content-Type': 'application/json' },

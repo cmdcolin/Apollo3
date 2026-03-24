@@ -1,7 +1,6 @@
 import { createReadStream, existsSync } from 'node:fs'
 import path from 'node:path'
 
-import type { DecodedJWT } from '@apollo-annotation/shared'
 import {
   BadRequestException,
   Body,
@@ -19,8 +18,8 @@ import {
   StreamableFile,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import type { Request } from 'express'
 
+import type { RequestWithUser } from '../utils/request-with-user.js'
 import { Role } from '../utils/role/role.enum.js'
 import { Roles } from '../utils/roles.guard.js'
 
@@ -70,9 +69,9 @@ export class AnalysisController {
       params: Record<string, unknown>
       assemblyIds: string[]
     },
-    @Req() request: Request,
+    @Req() request: RequestWithUser,
   ) {
-    const user = request.user as DecodedJWT | undefined
+    const { user } = request
     return this.service.createDatabase({
       ...body,
       createdBy: user?.email,
@@ -90,9 +89,9 @@ export class AnalysisController {
       name: string
       params: Record<string, unknown>
     },
-    @Req() request: Request,
+    @Req() request: RequestWithUser,
   ) {
-    const user = request.user as DecodedJWT | undefined
+    const { user } = request
     return this.service.buildDatabase({
       ...body,
       createdBy: user?.email,
@@ -121,9 +120,9 @@ export class AnalysisController {
       assemblyId?: string
       params: Record<string, unknown>
     },
-    @Req() request: Request,
+    @Req() request: RequestWithUser,
   ) {
-    const user = request.user as DecodedJWT | undefined
+    const { user } = request
     return this.service.submitJob({
       ...body,
       createdBy: user?.email,
@@ -131,8 +130,8 @@ export class AnalysisController {
   }
 
   @Get('jobs')
-  getMyJobs(@Req() request: Request) {
-    const user = request.user as DecodedJWT | undefined
+  getMyJobs(@Req() request: RequestWithUser) {
+    const { user } = request
     if (user?.email) {
       return this.service.getJobsByUser(user.email)
     }

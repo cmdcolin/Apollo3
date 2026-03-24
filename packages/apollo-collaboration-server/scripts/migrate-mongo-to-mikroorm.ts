@@ -234,7 +234,7 @@ async function migrate() {
       row.description = a.description
     }
     if (a.externalLocation) {
-      row.sequenceSource = { type: 'external', ...a.externalLocation }
+      row.sequenceSource = { type: 'fasta', ...a.externalLocation }
     } else if (a.fileIds) {
       const ids = a.fileIds as Record<string, unknown>
       const converted: Record<string, string> = {}
@@ -242,9 +242,11 @@ async function migrate() {
         converted[key] = objectIdToString(val)
       }
       if ('fai' in converted) {
-        row.sequenceSource = { type: 'indexed', ...converted }
+        row.sequenceSource = { type: 'fasta', ...converted }
       } else {
-        row.sequenceSource = { type: 'chunked', ...converted }
+        console.warn(
+          `  Assembly "${a.name}" used chunked storage — FASTA must be re-imported`,
+        )
       }
     }
     if (a.checks) {
@@ -267,7 +269,6 @@ async function migrate() {
       description: r.description,
       aliases: r.aliases,
       length: r.length,
-      chunkSize: r.chunkSize ?? 256 * 1024,
       status: r.status,
       user: r.user,
     })
@@ -276,49 +277,19 @@ async function migrate() {
   em.clear()
   console.log(`  ${refSeqs.length} refSeqs migrated`)
 
-  // --- RefSeqChunks (batched - can be very large) ---
-  console.log('Migrating refSeqChunks...')
-  const chunksCursor = mongoDb.collection('refseqchunks').find()
-  let chunkCount = 0
-  const BATCH_SIZE = 500
-  let batch: Record<string, unknown>[] = []
-
-  for await (const c of chunksCursor) {
-    batch.push(c)
-    if (batch.length >= BATCH_SIZE) {
-      for (const doc of batch) {
-        em.create('RefSeqChunkEntity', {
-          _id: objectIdToString(doc._id),
-          refSeq: objectIdToString(doc.refSeq),
-          n: doc.n as number,
-          sequence: doc.sequence as string,
-          status: doc.status as number | undefined,
-          user: doc.user as string | undefined,
-        })
-      }
-      await em.flush()
-      em.clear()
-      chunkCount += batch.length
-      batch = []
-      process.stdout.write(`\r  ${chunkCount} chunks...`)
-    }
+  // RefSeqChunk storage has been removed. Assemblies that used chunked
+  // sequence storage will need their FASTA re-imported after migration.
+  // The "chunked" sequenceSource entries are preserved above; the admin
+  // should re-add the assembly FASTA using the CLI or UI.
+  const chunkCount = await mongoDb.collection('refseqchunks').countDocuments()
+  if (chunkCount > 0) {
+    console.log(
+      `  Skipping ${chunkCount} refSeqChunks (chunked storage removed).`,
+    )
+    console.log(
+      '  Assemblies that used chunked storage will need FASTA re-imported.',
+    )
   }
-  if (batch.length > 0) {
-    for (const doc of batch) {
-      em.create('RefSeqChunkEntity', {
-        _id: objectIdToString(doc._id),
-        refSeq: objectIdToString(doc.refSeq),
-        n: doc.n as number,
-        sequence: doc.sequence as string,
-        status: doc.status as number | undefined,
-        user: doc.user as string | undefined,
-      })
-    }
-    await em.flush()
-    em.clear()
-    chunkCount += batch.length
-  }
-  console.log(`\r  ${chunkCount} refSeqChunks migrated`)
 
   // --- Features (with tree flattening, batched) ---
   console.log('Migrating features...')
@@ -511,7 +482,7 @@ async function migrate() {
   console.log(`  Checks: ${checks.length}`)
   console.log(`  Assemblies: ${assemblies.length}`)
   console.log(`  RefSeqs: ${refSeqs.length}`)
-  console.log(`  RefSeqChunks: ${chunkCount}`)
+  console.log(`  RefSeqChunks: ${chunkCount} (skipped, storage removed)`)
   console.log(`  Features: ${featureCount}`)
   console.log(`  CheckResults: ${checkResults.length}`)
   console.log(`  Changes: ${changeCount}`)

@@ -147,6 +147,8 @@ start_servers() {
     JBROWSE_STATIC_DIR="$SCRIPT_DIR/.jbrowse" \
     PLUGIN_LOCATION="/jbrowse/apollo-plugin.js" \
     FEATURE_TYPE_ONTOLOGY_LOCATION="/jbrowse/so-v3.1.json" \
+    TIBERIUS_PATH="${TIBERIUS_PATH:-$SCRIPT_DIR/test_data/mock_tiberius.py}" \
+    TIBERIUS_MODEL_CFG="${TIBERIUS_MODEL_CFG:-human}" \
     GUEST_USER_ROLE=admin LOG_LEVELS=error,warn,log NODE_ENV=development node dist/main.js \
     >> "$LOG_FILE" 2>&1 &
   echo $! >> "$PID_FILE"

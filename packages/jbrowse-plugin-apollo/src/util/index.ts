@@ -39,15 +39,27 @@ export function getRole(session: ApolloSessionModel) {
   return (readConfObject(pluginConfiguration, 'role') as string) || undefined
 }
 
+export function isAuthenticated(session: ApolloSessionModel) {
+  const role = getRole(session)
+  return Boolean(role) && role !== 'none'
+}
+
 export function isReadOnly(session: ApolloSessionModel) {
   const pluginConfiguration = getPluginConfiguration(session)
   return readConfObject(pluginConfiguration, 'readOnly') as boolean
+}
+
+export function canEdit(session: ApolloSessionModel) {
+  return isAuthenticated(session) && !isReadOnly(session)
 }
 
 export function isAnalysisToolAvailable(
   session: ApolloSessionModel,
   toolName: string,
 ) {
+  if (!isAuthenticated(session)) {
+    return false
+  }
   const pluginConfiguration = getPluginConfiguration(session)
   const tools = readConfObject(
     pluginConfiguration,
@@ -59,10 +71,6 @@ export function isAnalysisToolAvailable(
 export function getUserId(session: ApolloSessionModel) {
   const pluginConfiguration = getPluginConfiguration(session)
   return (readConfObject(pluginConfiguration, 'userId') as string) || undefined
-}
-
-export function apolloFetch(url: string | URL, init?: RequestInit) {
-  return fetch(url, { ...init, credentials: 'same-origin' })
 }
 
 export * from './loadAssemblyIntoClient'

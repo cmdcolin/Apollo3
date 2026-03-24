@@ -12,7 +12,6 @@ export const RefSeqEntity = defineEntity({
     description: p.string().nullable(),
     aliases: p.json<string[]>().nullable(),
     length: p.integer(),
-    chunkSize: p.integer().default(256 * 1024),
     user: p.string().nullable(),
   },
   indexes: [{ properties: ['assembly'] }],

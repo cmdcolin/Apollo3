@@ -19,6 +19,8 @@ import type { LinearGenomeViewModel } from '@jbrowse/plugin-linear-genome-view'
 import AddIcon from '@mui/icons-material/Add'
 
 import { CreateApolloAnnotation } from '../components/CreateApolloAnnotation'
+import type { ApolloSessionModel } from '../session'
+import { canEdit } from '../util'
 
 function simpleFeatureToGFF3Feature(
   feature: Feature,
@@ -141,7 +143,10 @@ export function annotationFromJBrowseFeature(
           const assembly = self.getAssembly()
           const region = self.getFirstRegion()
           const feature = self.contextMenuFeature
-          if (!feature) {
+          if (
+            !feature ||
+            !canEdit(session as unknown as ApolloSessionModel)
+          ) {
             return superContextMenuItems()
           }
           return [

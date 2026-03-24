@@ -66,13 +66,12 @@ CASCADE delete — the database enforces relationships automatically.
 AssemblyEntity
   - RefSeqEntity (FK → assembly, CASCADE)
     - FeatureEntity (FK → refSeq, CASCADE; FK → parent, CASCADE)
-    - RefSeqChunkEntity (FK → refSeq, CASCADE)
     - CheckResultEntity (FK → refSeq, CASCADE)
   - ExportEntity (FK → assembly, CASCADE)
 ```
 
 Deleting an assembly: one `DELETE` statement. The database removes all refSeqs,
-features, chunks, check results, and exports automatically.
+features, check results, and exports automatically.
 
 ## Unaffected Systems
 

@@ -28,7 +28,7 @@ import type {
   InMemoryFileDriver,
 } from '../BackendDrivers'
 import type { ApolloSessionModel } from '../session'
-import { apolloFetch, createFetchErrorMessage, getBaseURL } from '../util'
+import { createFetchErrorMessage, getBaseURL } from '../util'
 
 import { Dialog } from './Dialog'
 
@@ -89,7 +89,7 @@ export function DownloadGFF3({ handleClose, session }: DownloadGFF3Props) {
     })
     url.search = searchParams.toString()
     const uri = url.toString()
-    const response = await apolloFetch(uri, { method: 'GET' })
+    const response = await fetch(uri)
     if (!response.ok) {
       const newErrorMessage = await createFetchErrorMessage(
         response,
@@ -109,7 +109,7 @@ export function DownloadGFF3({ handleClose, session }: DownloadGFF3Props) {
     exportURL.search = exportSearchParams.toString()
     const exportUri = exportURL.toString()
 
-    const exportResponse = await apolloFetch(exportUri, { method: 'GET' })
+    const exportResponse = await fetch(exportUri)
     if (!exportResponse.ok) {
       const newErrorMessage = await createFetchErrorMessage(
         exportResponse,

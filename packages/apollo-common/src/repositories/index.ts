@@ -33,10 +33,6 @@ export type {
   JBrowseConfigRepository,
   JBrowseConfigRow,
 } from './JBrowseConfigRepository.js'
-export type {
-  RefSeqChunkRepository,
-  RefSeqChunkRow,
-} from './RefSeqChunkRepository.js'
 export type { RefSeqRepository, RefSeqRow } from './RefSeqRepository.js'
 export type {
   TextSearchAdapterConfigRepository,

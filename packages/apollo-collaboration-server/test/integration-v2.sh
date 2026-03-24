@@ -77,32 +77,24 @@ done
 
 # --- Health ---
 echo ""
-echo "[1/12] Health check"
+echo "[1/11] Health check"
 HEALTH=$(curl -sf "$BASE_URL/health" | json_field "['status']")
 assert_eq "health status" "ok" "$HEALTH"
 
 # --- Auth ---
 echo ""
-echo "[2/12] Authentication"
+echo "[2/11] Authentication"
 TOKEN=$(curl -s -X POST "$BASE_URL/auth/root" \
   -H 'Content-Type: application/json' \
   -d '{"username":"root_user","password":"password"}' | json_field "['token']")
 assert_ge "token length" 10 "${#TOKEN}"
 
-# --- Upload file ---
-echo ""
-echo "[3/12] File upload"
-UPLOAD_RESULT=$(curl -s -X POST "$BASE_URL/files?type=text/x-gff3" \
-  -H "Authorization: Bearer $TOKEN" \
-  -F "file=@$SCRIPT_DIR/data/tiny.fasta.gff3")
-FILE_ID=$(echo "$UPLOAD_RESULT" | json_field "['_id']")
-FILE_TYPE=$(echo "$UPLOAD_RESULT" | json_field "['type']")
-assert_ge "file ID length" 10 "${#FILE_ID}"
-assert_eq "file type" "text/x-gff3" "$FILE_TYPE"
-
 # --- Create assembly ---
 echo ""
-echo "[4/12] Create assembly via change"
+echo "[3/11] Create assembly via change (using file paths)"
+GFF3_PATH="$SCRIPT_DIR/data/tiny.fasta.gff3"
+FASTA_PATH="$SCRIPT_DIR/data/tiny.fasta"
+FAI_PATH="$SCRIPT_DIR/data/tiny.fasta.fai"
 CHANGE_RESULT=$(curl -s -X POST "$BASE_URL/changes" \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
@@ -110,7 +102,9 @@ CHANGE_RESULT=$(curl -s -X POST "$BASE_URL/changes" \
     \"typeName\": \"AddAssemblyAndFeaturesFromFileChange\",
     \"assembly\": \"test_assembly_1\",
     \"assemblyName\": \"tiny_test\",
-    \"sequenceSource\": {\"type\": \"chunked\", \"fa\": \"$FILE_ID\"}
+    \"gff3Path\": \"$GFF3_PATH\",
+    \"fastaPath\": \"$FASTA_PATH\",
+    \"faiPath\": \"$FAI_PATH\"
   }")
 CHANGE_ID=$(echo "$CHANGE_RESULT" | json_field "['_id']")
 CHANGE_TYPE=$(echo "$CHANGE_RESULT" | json_field "['typeName']")
@@ -119,7 +113,7 @@ assert_eq "change typeName" "AddAssemblyAndFeaturesFromFileChange" "$CHANGE_TYPE
 
 # --- Verify assemblies ---
 echo ""
-echo "[5/12] Verify assemblies"
+echo "[4/11] Verify assemblies"
 ASM_COUNT=$(curl -sf "$BASE_URL/assemblies" -H "Authorization: Bearer $TOKEN" | json_len)
 ASM_NAME=$(curl -sf "$BASE_URL/assemblies" -H "Authorization: Bearer $TOKEN" | json_field "[0]['name']")
 ASM_STATUS=$(curl -sf "$BASE_URL/assemblies" -H "Authorization: Bearer $TOKEN" | json_field "[0]['status']")
@@ -129,7 +123,7 @@ assert_eq "assembly status (activated)" "0" "$ASM_STATUS"
 
 # --- Verify refSeqs ---
 echo ""
-echo "[6/12] Verify reference sequences"
+echo "[5/11] Verify reference sequences"
 REFSEQS=$(curl -sf "$BASE_URL/refSeqs" -H "Authorization: Bearer $TOKEN")
 RS_COUNT=$(echo "$REFSEQS" | json_len)
 RS_NAMES=$(echo "$REFSEQS" | python3 -c "import sys,json; print(','.join(sorted(r['name'] for r in json.load(sys.stdin))))")
@@ -140,7 +134,7 @@ assert_eq "refSeq status (all activated)" "{0}" "$RS_STATUS"
 
 # --- Verify features ---
 echo ""
-echo "[7/12] Verify features"
+echo "[6/11] Verify features"
 FEATURES=$(curl -sf "$BASE_URL/features" -H "Authorization: Bearer $TOKEN")
 F_COUNT=$(echo "$FEATURES" | json_len)
 F_WITH_PARENTS=$(echo "$FEATURES" | python3 -c "
@@ -152,14 +146,14 @@ assert_eq "features with parents" "7" "$F_WITH_PARENTS"
 
 # --- Verify changes ---
 echo ""
-echo "[8/12] Verify changes"
+echo "[7/11] Verify changes"
 CHANGES=$(curl -sf "$BASE_URL/changes" -H "Authorization: Bearer $TOKEN")
 CH_COUNT=$(echo "$CHANGES" | json_len)
 assert_eq "change count" "1" "$CH_COUNT"
 
 # --- Sequence ---
 echo ""
-echo "[9/12] Sequence retrieval"
+echo "[8/11] Sequence retrieval"
 # Get the first refSeq ID (ctgA)
 CTGA_ID=$(echo "$REFSEQS" | python3 -c "import sys,json; rs=json.load(sys.stdin); print(next(r['_id'] for r in rs if r['name']=='ctgA'))")
 SEQ_RESULT=$(curl -sf "$BASE_URL/sequence?refSeq=$CTGA_ID&start=0&end=10" -H "Authorization: Bearer $TOKEN")
@@ -172,7 +166,7 @@ assert_eq "sequence length for 20-30" "10" "$SEQ_LEN2"
 
 # --- Export ---
 echo ""
-echo "[10/12] GFF3 export"
+echo "[9/11] GFF3 export"
 EXPORT_ID=$(curl -sf "$BASE_URL/export/getID?assembly=test_assembly_1" -H "Authorization: Bearer $TOKEN" | json_field "['exportID']")
 assert_ge "export ID length" 5 "${#EXPORT_ID}"
 
@@ -191,7 +185,7 @@ assert_eq "FASTA sequence count" "3" "$FASTA_SEQS"
 
 # --- Feature queries ---
 echo ""
-echo "[11/12] Feature queries"
+echo "[10/11] Feature queries"
 # getFeatures by range
 RANGE_FEATURES=$(curl -sf "$BASE_URL/features/getFeatures?refSeq=$CTGA_ID&start=0&end=50" -H "Authorization: Bearer $TOKEN")
 RF_COUNT=$(echo "$RANGE_FEATURES" | python3 -c "import sys,json; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "error")
@@ -208,7 +202,7 @@ assert_ge "search for gene" 1 "$SEARCH_COUNT"
 
 # --- JBrowse config ---
 echo ""
-echo "[12/12] JBrowse config"
+echo "[11/11] JBrowse config"
 JBROWSE=$(curl -s -w "\n%{http_code}" "$BASE_URL/jbrowse/config.json" -H "Authorization: Bearer $TOKEN")
 JB_HTTP_CODE=$(echo "$JBROWSE" | tail -1)
 JB_BODY=$(echo "$JBROWSE" | sed '$d')

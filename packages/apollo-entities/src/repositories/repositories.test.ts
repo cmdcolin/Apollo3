@@ -10,7 +10,6 @@ import { MikroOrmCounterRepository } from './MikroOrmCounterRepository.js'
 import { MikroOrmFeatureRepository } from './MikroOrmFeatureRepository.js'
 import { MikroOrmFileRepository } from './MikroOrmFileRepository.js'
 import { MikroOrmJBrowseConfigRepository } from './MikroOrmJBrowseConfigRepository.js'
-import { MikroOrmRefSeqChunkRepository } from './MikroOrmRefSeqChunkRepository.js'
 import { MikroOrmRefSeqRepository } from './MikroOrmRefSeqRepository.js'
 import { MikroOrmTextSearchAdapterConfigRepository } from './MikroOrmTextSearchAdapterConfigRepository.js'
 import { MikroOrmTrackConfigRepository } from './MikroOrmTrackConfigRepository.js'
@@ -96,7 +95,7 @@ describe('MikroOrmAssemblyRepository', () => {
       name: 'external',
 
       sequenceSource: {
-        type: 'external',
+        type: 'fasta',
         fa: 'https://example.com/genome.fa',
         fai: 'https://example.com/genome.fa.fai',
         gzi: 'https://example.com/genome.fa.gzi',
@@ -122,7 +121,7 @@ describe('MikroOrmRefSeqRepository', () => {
       assembly: 'asm-1',
       name: 'ctgA',
       length: 50000,
-      chunkSize: 20000,
+
     })
     expect(created.name).toBe('ctgA')
 
@@ -144,21 +143,21 @@ describe('MikroOrmRefSeqRepository', () => {
       assembly: 'asm-1',
       name: 'ctgA',
       length: 50000,
-      chunkSize: 20000,
+
     })
     await refSeqRepo.create({
       _id: 'rs-2',
       assembly: 'asm-1',
       name: 'ctgB',
       length: 30000,
-      chunkSize: 20000,
+
     })
     await refSeqRepo.create({
       _id: 'rs-3',
       assembly: 'asm-2',
       name: 'chrI',
       length: 100000,
-      chunkSize: 20000,
+
     })
 
     expect(await refSeqRepo.findByAssembly('asm-1')).toHaveLength(2)
@@ -176,14 +175,14 @@ describe('MikroOrmRefSeqRepository', () => {
       assembly: 'asm-1',
       name: 'ctgA',
       length: 50000,
-      chunkSize: 20000,
+
     })
     await refSeqRepo.create({
       _id: 'rs-2',
       assembly: 'asm-1',
       name: 'ctgB',
       length: 30000,
-      chunkSize: 20000,
+
     })
 
     expect(await refSeqRepo.findAll()).toHaveLength(2)
@@ -200,7 +199,7 @@ describe('MikroOrmRefSeqRepository', () => {
       assembly: 'asm-1',
       name: 'ctgA',
       length: 50000,
-      chunkSize: 20000,
+
     })
 
     const found = await refSeqRepo.findByNameAndAssembly('ctgA', 'asm-1')
@@ -223,7 +222,7 @@ describe('MikroOrmRefSeqRepository', () => {
       assembly: 'asm-1',
       name: 'ctgA',
       length: 50000,
-      chunkSize: 20000,
+
     })
 
     const updated = await refSeqRepo.updateById('rs-1', {
@@ -244,14 +243,14 @@ describe('MikroOrmRefSeqRepository', () => {
       assembly: 'asm-1',
       name: 'ctgA',
       length: 50000,
-      chunkSize: 20000,
+
     })
     await refSeqRepo.create({
       _id: 'rs-2',
       assembly: 'asm-1',
       name: 'ctgB',
       length: 30000,
-      chunkSize: 20000,
+
     })
 
     expect(await refSeqRepo.deleteByAssembly('asm-1')).toBe(2)
@@ -270,102 +269,17 @@ describe('MikroOrmRefSeqRepository', () => {
         assembly: 'asm-1',
         name: 'ctgA',
         length: 50000,
-        chunkSize: 20000,
+  
       },
       {
         _id: 'rs-2',
         assembly: 'asm-1',
         name: 'ctgB',
         length: 30000,
-        chunkSize: 20000,
+  
       },
     ])
     expect(created).toHaveLength(2)
-  })
-})
-
-describe('MikroOrmRefSeqChunkRepository', () => {
-  async function setupRefSeq(em: ReturnType<typeof orm.em.fork>) {
-    await new MikroOrmAssemblyRepository(em).create({
-      _id: 'asm-1',
-      name: 'volvox',
-    })
-    await new MikroOrmRefSeqRepository(em).create({
-      _id: 'rs-1',
-      assembly: 'asm-1',
-      name: 'ctgA',
-      length: 50000,
-      chunkSize: 20000,
-    })
-  }
-
-  it('should create and find chunks by refSeq', async () => {
-    const em = orm.em.fork()
-    await setupRefSeq(em)
-    const chunkRepo = new MikroOrmRefSeqChunkRepository(em)
-
-    await chunkRepo.create({
-      _id: 'chunk-0',
-      refSeq: 'rs-1',
-      n: 0,
-      sequence: 'ATCGATCG',
-    })
-    await chunkRepo.create({
-      _id: 'chunk-1',
-      refSeq: 'rs-1',
-      n: 1,
-      sequence: 'GCTAGCTA',
-    })
-
-    expect(await chunkRepo.findByRefSeq('rs-1')).toHaveLength(2)
-  })
-
-  it('should find chunks by refSeq and range', async () => {
-    const em = orm.em.fork()
-    await setupRefSeq(em)
-    const chunkRepo = new MikroOrmRefSeqChunkRepository(em)
-
-    for (let i = 0; i < 5; i++) {
-      await chunkRepo.create({
-        _id: `chunk-${i}`,
-        refSeq: 'rs-1',
-        n: i,
-        sequence: `SEQ${i}`,
-      })
-    }
-
-    const rangeChunks = await chunkRepo.findByRefSeqAndRange('rs-1', 1, 3)
-    expect(rangeChunks).toHaveLength(3)
-    expect(rangeChunks[0].n).toBe(1)
-    expect(rangeChunks[1].n).toBe(2)
-    expect(rangeChunks[2].n).toBe(3)
-  })
-
-  it('should create many chunks', async () => {
-    const em = orm.em.fork()
-    await setupRefSeq(em)
-    const chunkRepo = new MikroOrmRefSeqChunkRepository(em)
-
-    const created = await chunkRepo.createMany([
-      { _id: 'chunk-0', refSeq: 'rs-1', n: 0, sequence: 'AAAA' },
-      { _id: 'chunk-1', refSeq: 'rs-1', n: 1, sequence: 'CCCC' },
-      { _id: 'chunk-2', refSeq: 'rs-1', n: 2, sequence: 'GGGG' },
-    ])
-    expect(created).toHaveLength(3)
-  })
-
-  it('should delete chunks by refSeq ids', async () => {
-    const em = orm.em.fork()
-    await setupRefSeq(em)
-    const chunkRepo = new MikroOrmRefSeqChunkRepository(em)
-
-    await chunkRepo.create({
-      _id: 'chunk-0',
-      refSeq: 'rs-1',
-      n: 0,
-      sequence: 'AAAA',
-    })
-    expect(await chunkRepo.deleteByRefSeqs(['rs-1'])).toBe(1)
   })
 })
 
@@ -380,7 +294,7 @@ describe('MikroOrmFeatureRepository', () => {
       assembly: 'asm-1',
       name: 'ctgA',
       length: 50000,
-      chunkSize: 20000,
+
     })
   }
 
@@ -1008,7 +922,7 @@ describe('MikroOrmCheckResultRepository', () => {
       assembly: 'asm-1',
       name: 'ctgA',
       length: 50000,
-      chunkSize: 20000,
+
     })
   }
 
@@ -1426,11 +1340,10 @@ describe('MikroOrmJBrowseConfigRepository', () => {
 })
 
 describe('End-to-end: assembly with features and sequence', () => {
-  it('should store and retrieve a complete assembly with features and chunks', async () => {
+  it('should store and retrieve a complete assembly with features', async () => {
     const em = orm.em.fork()
     const asmRepo = new MikroOrmAssemblyRepository(em)
     const refSeqRepo = new MikroOrmRefSeqRepository(em)
-    const chunkRepo = new MikroOrmRefSeqChunkRepository(em)
     const featureRepo = new MikroOrmFeatureRepository(em)
 
     await asmRepo.create({ _id: 'asm-1', name: 'volvox' })
@@ -1439,12 +1352,7 @@ describe('End-to-end: assembly with features and sequence', () => {
       assembly: 'asm-1',
       name: 'ctgA',
       length: 16,
-      chunkSize: 8,
     })
-    await chunkRepo.createMany([
-      { _id: 'c0', refSeq: 'rs-1', n: 0, sequence: 'ATCGATCG' },
-      { _id: 'c1', refSeq: 'rs-1', n: 1, sequence: 'GCTAGCTA' },
-    ])
 
     await featureRepo.create({
       _id: 'gene-1',
@@ -1492,49 +1400,16 @@ describe('End-to-end: assembly with features and sequence', () => {
     expect(refSeqs).toHaveLength(1)
     expect(refSeqs[0].name).toBe('ctgA')
 
-    // Verify sequence chunks with range query
-    const chunks = await chunkRepo.findByRefSeqAndRange('rs-1', 0, 1)
-    expect(chunks).toHaveLength(2)
-    expect(chunks.map((c) => c.sequence).join('')).toBe('ATCGATCGGCTAGCTA')
-
     // Verify features
     expect(await featureRepo.findByRange('rs-1', 0, 16)).toHaveLength(4)
     expect(await featureRepo.findRootsByRange('rs-1', 0, 16)).toHaveLength(1)
     expect(await featureRepo.findDescendants('gene-1')).toHaveLength(3)
-
-    // Simulate SequenceService.getSequenceV2 logic
-    const refSeq = (await refSeqRepo.findById('rs-1'))!
-    const start = 3
-    const end = 12
-    const startChunk = Math.floor(start / refSeq.chunkSize)
-    const endChunk = Math.floor(end / refSeq.chunkSize)
-    const rangeChunks = await chunkRepo.findByRefSeqAndRange(
-      'rs-1',
-      startChunk,
-      endChunk,
-    )
-    const seq: string[] = []
-    for (const chunk of rangeChunks) {
-      const { n, sequence } = chunk
-      if (n === startChunk || n === endChunk) {
-        seq.push(
-          sequence.slice(
-            n === startChunk ? start - n * refSeq.chunkSize : undefined,
-            n === endChunk ? end - n * refSeq.chunkSize : undefined,
-          ),
-        )
-      } else {
-        seq.push(sequence)
-      }
-    }
-    expect(seq.join('')).toBe('GATCGGCTA')
   })
 
   it('should handle assembly deletion cascade', async () => {
     const em = orm.em.fork()
     const asmRepo = new MikroOrmAssemblyRepository(em)
     const refSeqRepo = new MikroOrmRefSeqRepository(em)
-    const chunkRepo = new MikroOrmRefSeqChunkRepository(em)
     const featureRepo = new MikroOrmFeatureRepository(em)
 
     await asmRepo.create({ _id: 'asm-1', name: 'volvox' })
@@ -1543,13 +1418,6 @@ describe('End-to-end: assembly with features and sequence', () => {
       assembly: 'asm-1',
       name: 'ctgA',
       length: 1000,
-      chunkSize: 500,
-    })
-    await chunkRepo.create({
-      _id: 'c0',
-      refSeq: 'rs-1',
-      n: 0,
-      sequence: 'AAAA',
     })
     await featureRepo.create({
       _id: 'f1',
@@ -1561,13 +1429,11 @@ describe('End-to-end: assembly with features and sequence', () => {
 
     // Simulate DeleteAssemblyChange cleanup order
     await featureRepo.deleteByRefSeqs(['rs-1'])
-    await chunkRepo.deleteByRefSeqs(['rs-1'])
     await refSeqRepo.deleteByAssembly('asm-1')
     await asmRepo.deleteById('asm-1')
 
     expect(await asmRepo.findById('asm-1')).toBeUndefined()
     expect(await refSeqRepo.findByAssembly('asm-1')).toHaveLength(0)
-    expect(await chunkRepo.findByRefSeq('rs-1')).toHaveLength(0)
     expect(await featureRepo.findByRange('rs-1', 0, 2000)).toHaveLength(0)
   })
 })

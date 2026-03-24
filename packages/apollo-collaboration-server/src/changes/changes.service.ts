@@ -10,10 +10,11 @@ import {
   type DecodedJWT,
   makeUserSessionId,
 } from '@apollo-annotation/shared'
+import { type GFF3Feature, GFFTransformer } from '@gmod/gff'
 import { Inject, Injectable, Logger } from '@nestjs/common'
+import { TransformStream } from 'node:stream/web'
 
 import { ChecksService } from '../checks/checks.service.js'
-import { FilesService } from '../files/files.service.js'
 import { MessagesGateway } from '../messages/messages.gateway.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
 import { PluginsService } from '../plugins/plugins.service.js'
@@ -23,7 +24,6 @@ import type { FindChangeDto } from './dto/find-change.dto.js'
 @Injectable()
 export class ChangesService {
   constructor(
-    @Inject(FilesService) private readonly filesService: FilesService,
     @Inject(PluginsService) private readonly pluginsService: PluginsService,
     @Inject(MessagesGateway) private readonly messagesGateway: MessagesGateway,
     @Inject(DatabaseService) private readonly db: DatabaseService,
@@ -39,13 +39,26 @@ export class ChangesService {
       featureRepository: scope.feature,
       assemblyRepository: scope.assembly,
       refSeqRepository: scope.refSeq,
-      refSeqChunkRepository: scope.refSeqChunk,
       checkRepository: scope.checkConfig,
       checkResultRepository: scope.check,
-      fileRepository: scope.file,
       userRepository: scope.user,
       jbrowseConfigRepository: scope.jbrowseConfig,
-      filesService: this.filesService,
+      parseGFF3(
+        stream: ReadableStream<Uint8Array>,
+        options?: { bufferSize?: number },
+      ): ReadableStream<GFF3Feature> {
+        return stream.pipeThrough(
+          new TransformStream(
+            new GFFTransformer({
+              parseSequences: false,
+              parseComments: false,
+              parseDirectives: false,
+              parseFeatures: true,
+              ...options,
+            }),
+          ),
+        )
+      },
       pluginsService: this.pluginsService,
       user,
     }

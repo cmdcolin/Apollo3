@@ -42,7 +42,7 @@ pnpm build:client
 if [ ! -f "$JBROWSE_DIR/index.html" ]; then
   echo '[start] Installing JBrowse web app...'
   cd "$PLUGIN_DIR"
-  pnpm setup
+  pnpm run setup
   cd "$COLLAB_DIR"
 fi
 

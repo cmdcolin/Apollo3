@@ -5,7 +5,6 @@ export interface RefSeqRow {
   description?: string
   aliases?: string[]
   length: number
-  chunkSize: number
   user?: string
 }
 

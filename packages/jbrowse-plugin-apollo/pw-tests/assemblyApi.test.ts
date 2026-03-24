@@ -6,7 +6,6 @@ import {
   addAssemblyViaApi,
   deleteAssemblies,
   getGuestToken,
-  uploadFileViaApi,
 } from './helpers.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -17,12 +16,8 @@ test.afterEach(async () => {
   await deleteAssemblies()
 })
 
-test('Upload and create assembly via API', async () => {
-  const file = await uploadFileViaApi(GFF_PATH, 'text/x-gff3')
-  expect(file._id).toBeTruthy()
-  expect(file.checksum).toBeTruthy()
-
-  const assemblyId = await addAssemblyViaApi('test-assembly', file._id)
+test('Create assembly via API using file paths', async () => {
+  const assemblyId = await addAssemblyViaApi('test-assembly', GFF_PATH)
   expect(assemblyId).toBeTruthy()
 
   // Verify assembly appears in config

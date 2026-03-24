@@ -13,7 +13,6 @@ import { FeatureEntity } from './entities/FeatureEntity.js'
 import { FileEntity } from './entities/FileEntity.js'
 import { JBrowseConfigEntity } from './entities/JBrowseConfigEntity.js'
 import { OrganismEntity } from './entities/OrganismEntity.js'
-import { RefSeqChunkEntity } from './entities/RefSeqChunkEntity.js'
 import { RefSeqEntity } from './entities/RefSeqEntity.js'
 import { TextSearchAdapterConfigEntity } from './entities/TextSearchAdapterConfigEntity.js'
 import { TrackConfigEntity } from './entities/TrackConfigEntity.js'
@@ -33,7 +32,6 @@ const allEntities = [
   FeatureEntity,
   FileEntity,
   JBrowseConfigEntity,
-  RefSeqChunkEntity,
   RefSeqEntity,
   TextSearchAdapterConfigEntity,
   TrackConfigEntity,

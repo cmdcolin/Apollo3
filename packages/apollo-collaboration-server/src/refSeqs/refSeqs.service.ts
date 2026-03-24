@@ -21,7 +21,6 @@ export class RefSeqsService {
       description: createRefSeqDto.description,
       assembly: createRefSeqDto.assembly,
       length: Number(createRefSeqDto.length),
-      chunkSize: 262_144,
     })
   }
 
