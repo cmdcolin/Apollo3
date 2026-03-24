@@ -11,7 +11,6 @@ import { CounterEntity } from '../entities/CounterEntity.js'
 import { ExportEntity } from '../entities/ExportEntity.js'
 import { FeatureEntity } from '../entities/FeatureEntity.js'
 import { FileEntity } from '../entities/FileEntity.js'
-import { JBrowseConfigEntity } from '../entities/JBrowseConfigEntity.js'
 import { OrganismEntity } from '../entities/OrganismEntity.js'
 import { RefSeqEntity } from '../entities/RefSeqEntity.js'
 import { UserEntity } from '../entities/UserEntity.js'
@@ -28,7 +27,6 @@ const allEntities = [
   ExportEntity,
   FeatureEntity,
   FileEntity,
-  JBrowseConfigEntity,
   OrganismEntity,
   RefSeqEntity,
   UserEntity,

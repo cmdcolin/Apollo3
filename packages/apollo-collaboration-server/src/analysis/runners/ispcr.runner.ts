@@ -19,7 +19,7 @@ export interface IsPcrProduct {
   sequence: string
 }
 
-function parseIsPcrFasta(output: string): IsPcrProduct[] {
+export function parseIsPcrFasta(output: string): IsPcrProduct[] {
   const products: IsPcrProduct[] = []
   const lines = output.split('\n')
   let current: Partial<IsPcrProduct> | null = null

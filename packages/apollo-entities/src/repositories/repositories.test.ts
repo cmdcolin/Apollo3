@@ -9,7 +9,6 @@ import { MikroOrmCheckResultRepository } from './MikroOrmCheckResultRepository.j
 import { MikroOrmCounterRepository } from './MikroOrmCounterRepository.js'
 import { MikroOrmFeatureRepository } from './MikroOrmFeatureRepository.js'
 import { MikroOrmFileRepository } from './MikroOrmFileRepository.js'
-import { MikroOrmJBrowseConfigRepository } from './MikroOrmJBrowseConfigRepository.js'
 import { MikroOrmRefSeqRepository } from './MikroOrmRefSeqRepository.js'
 import { MikroOrmTextSearchAdapterConfigRepository } from './MikroOrmTextSearchAdapterConfigRepository.js'
 import { MikroOrmTrackConfigRepository } from './MikroOrmTrackConfigRepository.js'
@@ -1289,53 +1288,6 @@ describe('MikroOrmUserRepository', () => {
     expect(await repo.deleteByEmail('alice@example.com')).toBe(true)
     expect(await repo.findByEmail('alice@example.com')).toBeUndefined()
     expect(await repo.deleteByEmail('alice@example.com')).toBe(false)
-  })
-})
-
-describe('MikroOrmJBrowseConfigRepository', () => {
-  it('should upsert and find a config', async () => {
-    const repo = new MikroOrmJBrowseConfigRepository(orm.em.fork())
-
-    expect(await repo.findOne()).toBeUndefined()
-
-    const created = await repo.upsert({
-      _id: 'cfg-1',
-      config: { assemblies: [], tracks: [] },
-    })
-    expect(created._id).toBe('cfg-1')
-    expect(created.config).toEqual({ assemblies: [], tracks: [] })
-
-    const found = await repo.findOne()
-    expect(found).toBeDefined()
-    expect(found!._id).toBe('cfg-1')
-  })
-
-  it('should upsert to update existing config', async () => {
-    const repo = new MikroOrmJBrowseConfigRepository(orm.em.fork())
-    await repo.upsert({
-      _id: 'cfg-1',
-      config: { assemblies: [] },
-    })
-
-    await repo.upsert({
-      _id: 'cfg-1',
-      config: { assemblies: [{ name: 'volvox' }] },
-    })
-
-    const found = await repo.findOne()
-    expect(found).toBeDefined()
-    expect(found!.config).toEqual({ assemblies: [{ name: 'volvox' }] })
-  })
-
-  it('should delete all configs', async () => {
-    const repo = new MikroOrmJBrowseConfigRepository(orm.em.fork())
-    await repo.upsert({
-      _id: 'cfg-1',
-      config: { assemblies: [] },
-    })
-
-    await repo.deleteAll()
-    expect(await repo.findOne()).toBeUndefined()
   })
 })
 

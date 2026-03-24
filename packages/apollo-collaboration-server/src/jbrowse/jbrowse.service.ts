@@ -2,8 +2,6 @@ import type { AssemblyRow } from '@apollo-annotation/common'
 import type { DecodedJWT } from '@apollo-annotation/shared'
 import { Inject, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import merge from 'deepmerge'
-
 import { AnalysisService } from '../analysis/analysis.service.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
 import { PermissionService } from '../permissions/permission.service.js'
@@ -228,11 +226,6 @@ export class JBrowseService {
     return this.db.assembly.findByIds(accessibleIds)
   }
 
-  async getJBrowseConfig() {
-    const row = await this.db.jbrowseConfig.findOne()
-    return row?.config
-  }
-
   async getConfig(user: DecodedJWT | undefined, assemblyIds?: string[]) {
     const configuration = await this.getConfiguration(user)
     const plugins = this.getPlugins()
@@ -264,7 +257,7 @@ export class JBrowseService {
       await this.db.textSearchAdapterConfig.findByAssemblyIds(assemblyIds)
     const storedAdapterConfigs = storedTextSearchAdapters.map((a) => a.config)
 
-    const generatedConfig = {
+    return {
       configuration,
       assemblies: assemblyConfigs,
       tracks: [...apolloTracks, ...storedTrackConfigs],
@@ -275,11 +268,5 @@ export class JBrowseService {
       plugins,
       defaultSession: this.getDefaultSession(),
     }
-
-    const storedGlobalConfig = await this.getJBrowseConfig()
-    if (!storedGlobalConfig) {
-      return generatedConfig
-    }
-    return merge(generatedConfig, storedGlobalConfig)
   }
 }

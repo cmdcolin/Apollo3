@@ -30,7 +30,7 @@ interface PslHit {
   score: number
 }
 
-function parsePsl(pslText: string) {
+export function parsePsl(pslText: string) {
   const lines = pslText.split('\n')
   const hits: PslHit[] = []
   for (const line of lines) {

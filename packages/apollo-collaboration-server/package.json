@@ -17,7 +17,7 @@
     "start:debug": "echo '[start] Building (esbuild)...' && pnpm dev:build && echo '[start] Starting server...' && NODE_ENV=development node --inspect --watch-path dist dist/main.js",
     "start:no-watch": "echo '[start] Building (esbuild)...' && pnpm dev:build && echo '[start] Starting server...' && NODE_ENV=development node dist/main.js",
     "start:prod": "NODE_ENV=production node dist/main.js",
-    "test": "jest",
+    "test": "NODE_OPTIONS='--experimental-vm-modules' jest",
     "test:cli:start": "ALLOW_ROOT_USER=true ROOT_USER_PASSWORD=pass LOG_LEVELS=error,warn pnpm start",
     "test:cov": "jest --coverage",
     "test:watch": "jest --watch"
@@ -27,16 +27,27 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
+    "extensionsToTreatAsEsm": [
+      ".ts"
+    ],
     "moduleFileExtensions": [
       "js",
       "json",
       "ts"
     ],
+    "moduleNameMapper": {
+      "^(\\.{1,2}/.*)\\.js$": "$1"
+    },
     "rootDir": "src",
     "testEnvironment": "node",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
+      "^.+\\.ts$": [
+        "ts-jest",
+        {
+          "useESM": true
+        }
+      ]
     }
   },
   "dependencies": {
@@ -61,7 +72,6 @@
     "@nestjs/terminus": "^10.0.1",
     "@nestjs/websockets": "^10.1.0",
     "cookie-parser": "^1.4.7",
-    "deepmerge": "^4.3.1",
     "express": "^4.18.0",
     "express-session": "^1.17.3",
     "generic-filehandle2": "^2.0.0",

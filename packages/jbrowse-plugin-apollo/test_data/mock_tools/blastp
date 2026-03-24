@@ -1,0 +1,5 @@
+#!/bin/bash
+# Mock blastp for Apollo e2e tests.
+cat <<'EOF'
+{"BlastOutput2":[{"report":{"program":"blastp","version":"BLASTP 2.13.0+","results":{"search":{"query_id":"Query_1","query_title":"test","query_len":50,"hits":[],"stat":{"db_num":1,"db_len":50000}}}}}]}
+EOF

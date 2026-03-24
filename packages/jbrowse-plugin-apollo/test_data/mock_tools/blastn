@@ -1,0 +1,6 @@
+#!/bin/bash
+# Mock blastn for Apollo e2e tests.
+# Returns a minimal valid BLAST JSON output regardless of input.
+cat <<'EOF'
+{"BlastOutput2":[{"report":{"program":"blastn","version":"BLASTN 2.13.0+","results":{"search":{"query_id":"Query_1","query_title":"test","query_len":50,"hits":[{"num":1,"description":[{"id":"lcl|ctgA","accession":"ctgA","title":"ctgA","taxid":0,"sciname":""}],"len":50000,"hsps":[{"num":1,"bit_score":92.8,"score":50,"evalue":2e-19,"identity":50,"positive":50,"gaps":0,"align_len":50,"query_from":1,"query_to":50,"hit_from":1001,"hit_to":1050,"qseq":"ATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCG","hseq":"ATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCG","midline":"||||||||||||||||||||||||||||||||||||||||||||||||||"}]}],"stat":{"db_num":1,"db_len":50000}}}}}]}
+EOF

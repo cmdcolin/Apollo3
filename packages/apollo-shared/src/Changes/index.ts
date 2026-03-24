@@ -2,13 +2,11 @@ import { AddAssemblyAliasesChange } from './AddAssemblyAliasesChange.js'
 import { AddAssemblyAndFeaturesFromFileChange } from './AddAssemblyAndFeaturesFromFileChange.js'
 import { AddAssemblyFromFileChange } from './AddAssemblyFromFileChange.js'
 import { AddFeatureChange } from './AddFeatureChange.js'
-import { AddFeaturesFromFileChange } from './AddFeaturesFromFileChange.js'
 import { AddRefSeqAliasesChange } from './AddRefSeqAliasesChange.js'
 import { DeleteAssemblyChange } from './DeleteAssemblyChange.js'
 import { DeleteFeatureChange } from './DeleteFeatureChange.js'
 import { DeleteUserChange } from './DeleteUserChange.js'
 import { FeatureAttributeChange } from './FeatureAttributeChange.js'
-import { ImportJBrowseConfigChange } from './ImportJBrowseConfigChange.js'
 import { LocationEndChange } from './LocationEndChange.js'
 import { LocationStartChange } from './LocationStartChange.js'
 import { MergeExonsChange } from './MergeExonsChange.js'
@@ -28,12 +26,10 @@ export const changes = {
   AddAssemblyAndFeaturesFromFileChange,
   AddAssemblyFromFileChange,
   AddFeatureChange,
-  AddFeaturesFromFileChange,
   DeleteAssemblyChange,
   DeleteFeatureChange,
   DeleteUserChange,
   FeatureAttributeChange,
-  ImportJBrowseConfigChange,
   LocationEndChange,
   LocationStartChange,
   MergeExonsChange,
@@ -55,12 +51,10 @@ export const changes = {
 export * from './AddAssemblyAndFeaturesFromFileChange.js'
 export * from './AddAssemblyFromFileChange.js'
 export * from './AddFeatureChange.js'
-export * from './AddFeaturesFromFileChange.js'
 export * from './DeleteAssemblyChange.js'
 export * from './DeleteFeatureChange.js'
 export * from './DeleteUserChange.js'
 export * from './FeatureAttributeChange.js'
-export * from './ImportJBrowseConfigChange.js'
 export * from './LocationEndChange.js'
 export * from './LocationStartChange.js'
 export * from './MergeExonsChange.js'

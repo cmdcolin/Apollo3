@@ -38,7 +38,6 @@ import type { ChangeManager } from '../ChangeManager'
 import { LoginDialog } from '../components/LoginDialog'
 import type ApolloPluginConfigurationSchema from '../config'
 import { addTopLevelMenus } from '../menus/topLevelMenu'
-import { addTopLevelAdminMenus } from '../menus/topLevelMenuAdmin'
 import type { ApolloRootModel } from '../types'
 import {
   createFetchErrorMessage,
@@ -295,9 +294,6 @@ export function extendSession(
         if (isAbstractMenuManager(rootModel)) {
           const readOnly = isReadOnly(apolloSession)
           addTopLevelMenus(rootModel, readOnly)
-          if (role === 'admin') {
-            addTopLevelAdminMenus(rootModel)
-          }
         }
         await self.updateLastChangeSequenceNumber()
         self.addSocketListeners()

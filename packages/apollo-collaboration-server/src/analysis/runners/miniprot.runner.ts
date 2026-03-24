@@ -22,7 +22,7 @@ interface MiniprotAlignment {
   attributes: Record<string, string>
 }
 
-function parseGff3(gff3Text: string) {
+export function parseGff3(gff3Text: string) {
   const lines = gff3Text.split('\n')
   const alignments: MiniprotAlignment[] = []
   for (const line of lines) {
@@ -56,7 +56,7 @@ function parseGff3(gff3Text: string) {
   return alignments
 }
 
-function groupIntoGeneModels(alignments: MiniprotAlignment[]) {
+export function groupIntoGeneModels(alignments: MiniprotAlignment[]) {
   const groups: Record<string, MiniprotAlignment[]> = {}
   for (const aln of alignments) {
     const parentId = aln.attributes.Parent ?? aln.attributes.ID ?? ''

@@ -1,0 +1,21 @@
+#!/bin/bash
+# Mock makeblastdb for Apollo e2e tests.
+# Handles -version check and -out stub file creation.
+if [[ "${1:-}" == "-version" ]]; then
+  echo "makeblastdb: 2.13.0+"
+  exit 0
+fi
+# Parse -out argument to create stub files (blastn checks dbPath exists)
+out=""
+while [[ $# -gt 0 ]]; do
+  if [[ "$1" == "-out" ]]; then
+    out="$2"
+    shift 2
+  else
+    shift
+  fi
+done
+if [[ -n "$out" ]]; then
+  touch "${out}.nin"
+fi
+exit 0

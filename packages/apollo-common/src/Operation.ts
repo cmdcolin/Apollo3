@@ -8,7 +8,6 @@ import type {
   CheckRepository,
   CheckResultRepository,
   FeatureRepository,
-  JBrowseConfigRepository,
   RefSeqRepository,
   UserRepository,
 } from './repositories/index.js'
@@ -21,7 +20,6 @@ export interface ServerDataStore {
   checkRepository: CheckRepository
   checkResultRepository: CheckResultRepository
   userRepository: UserRepository
-  jbrowseConfigRepository: JBrowseConfigRepository
   parseGFF3(
     stream: ReadableStream<Uint8Array>,
     parseOptions?: { bufferSize?: number },

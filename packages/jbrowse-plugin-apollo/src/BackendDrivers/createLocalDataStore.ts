@@ -12,7 +12,6 @@ export function createLocalDataStore(em: EntityManager): ServerDataStore {
     MikroOrmCheckRepository,
     MikroOrmCheckResultRepository,
     MikroOrmFeatureRepository,
-    MikroOrmJBrowseConfigRepository,
     MikroOrmRefSeqRepository,
     MikroOrmUserRepository,
   } = electronRequire(
@@ -27,7 +26,6 @@ export function createLocalDataStore(em: EntityManager): ServerDataStore {
     checkRepository: new MikroOrmCheckRepository(em),
     checkResultRepository: new MikroOrmCheckResultRepository(em),
     userRepository: new MikroOrmUserRepository(em),
-    jbrowseConfigRepository: new MikroOrmJBrowseConfigRepository(em),
     parseGFF3() {
       throw new Error('GFF3 parsing not available in desktop mode')
     },

@@ -9,7 +9,6 @@ import type {
   CounterRepository,
   FeatureRepository,
   FileRepository,
-  JBrowseConfigRepository,
   OrganismRepository,
   RefSeqRepository,
   TextSearchAdapterConfigRepository,
@@ -27,7 +26,6 @@ import {
   MikroOrmCounterRepository,
   MikroOrmFeatureRepository,
   MikroOrmFileRepository,
-  MikroOrmJBrowseConfigRepository,
   MikroOrmOrganismRepository,
   MikroOrmRefSeqRepository,
   MikroOrmTextSearchAdapterConfigRepository,
@@ -50,7 +48,6 @@ export interface TransactionScope {
   check: CheckResultRepository
   file: FileRepository
   user: UserRepository
-  jbrowseConfig: JBrowseConfigRepository
   trackConfig: TrackConfigRepository
   textSearchAdapterConfig: TextSearchAdapterConfigRepository
   counter: CounterRepository
@@ -79,7 +76,6 @@ export class DatabaseService {
   readonly check: CheckResultRepository
   readonly counter: CounterRepository
   readonly checkConfig: CheckRepository
-  readonly jbrowseConfig: JBrowseConfigRepository
   readonly trackConfig: TrackConfigRepository
   readonly textSearchAdapterConfig: TextSearchAdapterConfigRepository
   readonly changeLog: ChangeRepository
@@ -98,7 +94,6 @@ export class DatabaseService {
     this.check = new MikroOrmCheckResultRepository(em)
     this.counter = new MikroOrmCounterRepository(em)
     this.checkConfig = new MikroOrmCheckRepository(em)
-    this.jbrowseConfig = new MikroOrmJBrowseConfigRepository(em)
     this.trackConfig = new MikroOrmTrackConfigRepository(em)
     this.textSearchAdapterConfig =
       new MikroOrmTextSearchAdapterConfigRepository(em)
@@ -119,7 +114,6 @@ export class DatabaseService {
         check: new MikroOrmCheckResultRepository(txEm),
         file: new MikroOrmFileRepository(txEm),
         user: new MikroOrmUserRepository(txEm),
-        jbrowseConfig: new MikroOrmJBrowseConfigRepository(txEm),
         trackConfig: new MikroOrmTrackConfigRepository(txEm),
         textSearchAdapterConfig: new MikroOrmTextSearchAdapterConfigRepository(
           txEm,

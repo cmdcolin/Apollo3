@@ -1,0 +1,15 @@
+#!/bin/bash
+# Mock isPcr for Apollo e2e tests.
+# With no args: print usage-like text and exit non-zero (isInstalled check).
+# With args: write FASTA output to stdout (isPcr uses 'stdout' as output arg).
+if [[ $# -eq 0 ]]; then
+  echo "isPcr - In-silico PCR" >&2
+  echo "usage: isPcr <target> <forward_primer> <reverse_primer> <output>" >&2
+  exit 1
+fi
+# Output goes to stdout when 'stdout' is among the args
+cat <<'EOF'
+>ctgA:1000+2000 1001
+ATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCG
+EOF
+exit 0

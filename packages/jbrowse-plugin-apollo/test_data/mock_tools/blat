@@ -1,0 +1,14 @@
+#!/bin/bash
+# Mock blat for Apollo e2e tests.
+# With no args: print usage-like text and exit non-zero (isInstalled check).
+# With args: write PSL output to the last argument (output file).
+if [[ $# -eq 0 ]]; then
+  echo "blat - Standalone BLAT v36 fast sequence search command line tool" >&2
+  exit 1
+fi
+# Last argument is the output PSL file
+output="${@: -1}"
+cat > "$output" <<'EOF'
+50	0	0	0	0	0	0	0	+	testQuery	50	0	50	ctgA	50000	1000	1050	1	50,	0,	1000,
+EOF
+exit 0

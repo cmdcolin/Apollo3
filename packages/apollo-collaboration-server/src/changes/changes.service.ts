@@ -42,7 +42,6 @@ export class ChangesService {
       checkRepository: scope.checkConfig,
       checkResultRepository: scope.check,
       userRepository: scope.user,
-      jbrowseConfigRepository: scope.jbrowseConfig,
       parseGFF3(
         stream: ReadableStream<Uint8Array>,
         options?: { bufferSize?: number },

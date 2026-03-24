@@ -1,0 +1,8 @@
+#!/bin/bash
+# Mock faToTwoBit for Apollo e2e tests.
+# Creates an empty stub output file at the last argument position.
+output="${@: -1}"
+if [[ -n "$output" ]]; then
+  touch "$output"
+fi
+exit 0

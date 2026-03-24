@@ -1,0 +1,22 @@
+#!/bin/bash
+# Mock miniprot for Apollo e2e tests.
+# --version check: print version and exit 0.
+# -d flag: build index (create stub .mpi file).
+# --gff flag: run alignment (print minimal GFF3 to stdout).
+if [[ "${1:-}" == "--version" ]]; then
+  echo "miniprot-0.11-r234"
+  exit 0
+fi
+if [[ "${1:-}" == "-d" ]]; then
+  output="$2"
+  touch "$output"
+  exit 0
+fi
+# Alignment mode: output minimal GFF3
+cat <<'EOF'
+##gff-version 3
+ctgA	miniprot	mRNA	1000	2000	.	+	.	ID=MP000001;Identity=0.95;Target=testProt 1 100
+ctgA	miniprot	CDS	1000	1200	.	+	0	Parent=MP000001
+ctgA	miniprot	CDS	1500	2000	.	+	0	Parent=MP000001
+EOF
+exit 0
