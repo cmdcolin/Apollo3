@@ -42,11 +42,11 @@ backend uses MikroORM with multi-database support (SQLite, PostgreSQL, MongoDB).
 
 5. **Add Assembly UI redesign** — The browser "Add Assembly" dialog needs
    updating after the sequence storage simplification. Sequence files are now
-   referenced by server-accessible path or URL (not uploaded). The dialog
-   should accept paths/URLs for FASTA+index files instead of file uploads.
-   GFF3 feature import also takes a server path. The CLI already supports the
-   new workflow; the browser UI currently falls back to an error with
-   instructions to use the CLI.
+   referenced by server-accessible path or URL (not uploaded). The dialog should
+   accept paths/URLs for FASTA+index files instead of file uploads. GFF3 feature
+   import also takes a server path. The CLI already supports the new workflow;
+   the browser UI currently falls back to an error with instructions to use the
+   CLI.
 
 ### P2 — Bug Fixes
 
@@ -129,3 +129,4 @@ backend uses MikroORM with multi-database support (SQLite, PostgreSQL, MongoDB).
 
 - Import genbank format
 - Edit small bacterial genomes and plasmids
+- Launch tasks to microservice or even AWS lambda

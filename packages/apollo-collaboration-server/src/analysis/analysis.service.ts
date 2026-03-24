@@ -34,6 +34,14 @@ export class AnalysisService {
 
   private readonly logger = new Logger(AnalysisService.name)
 
+  getRunner(tool: string) {
+    return this.runners.get(tool)
+  }
+
+  getRunners() {
+    return this.runners
+  }
+
   async getTools() {
     const results: {
       tool: string

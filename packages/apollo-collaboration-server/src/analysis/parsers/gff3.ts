@@ -57,17 +57,22 @@ export function groupIntoGeneModels(alignments: MiniprotAlignment[]) {
     }
     groups[key].push(aln)
   }
-  return Object.values(groups).map((features) => {
-    const mrna = features.find((f) => f.type === 'mRNA')
-    const cds = features.filter((f) => f.type === 'CDS')
-    return {
-      seqName: mrna?.seqName ?? cds[0]?.seqName ?? '',
-      start: mrna?.start ?? Math.min(...cds.map((c) => c.start)),
-      end: mrna?.end ?? Math.max(...cds.map((c) => c.end)),
-      strand: mrna?.strand ?? cds[0]?.strand ?? '.',
-      identity: mrna?.attributes.Identity ?? '',
-      target: mrna?.attributes.Target ?? '',
-      exonCount: cds.length,
-    }
-  })
+  return Object.values(groups)
+    .map((features) => {
+      const mrna = features.find((f) => f.type === 'mRNA')
+      const cds = features.filter((f) => f.type === 'CDS')
+      if (!mrna && cds.length === 0) {
+        return null
+      }
+      return {
+        seqName: mrna?.seqName ?? cds[0]?.seqName ?? '',
+        start: mrna?.start ?? Math.min(...cds.map((c) => c.start)),
+        end: mrna?.end ?? Math.max(...cds.map((c) => c.end)),
+        strand: mrna?.strand ?? cds[0]?.strand ?? '.',
+        identity: mrna?.attributes.Identity ?? '',
+        target: mrna?.attributes.Target ?? '',
+        exonCount: cds.length,
+      }
+    })
+    .filter((m) => m !== null)
 }

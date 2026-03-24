@@ -83,6 +83,17 @@ describe('groupIntoGeneModels', () => {
     expect(models).toHaveLength(2)
   })
 
+  it('drops groups with no mRNA and no CDS', () => {
+    // A feature type that is neither mRNA nor CDS ends up in a group with
+    // no usable coordinates — it should be filtered out rather than
+    // producing Infinity/-Infinity start/end values.
+    const alignments = parseGff3(
+      'ctgA\tminiprot\tgene\t1000\t2000\t.\t+\t.\tID=G1',
+    )
+    const models = groupIntoGeneModels(alignments)
+    expect(models).toHaveLength(0)
+  })
+
   it('falls back to CDS coords when no mRNA feature', () => {
     const alignments = parseGff3(
       [

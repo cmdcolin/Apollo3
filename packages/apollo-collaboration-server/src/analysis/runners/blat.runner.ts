@@ -4,8 +4,8 @@ import path from 'node:path'
 import { Inject, Injectable, Logger } from '@nestjs/common'
 
 import { DatabaseService } from '../../mikro-orm/database.service.js'
+import { buildTwoBitDb } from '../build-twobit-db.js'
 import { parsePsl } from '../parsers/psl.js'
-import { extractAssemblyFasta } from '../fasta-extract.js'
 import { runCommand } from '../run-command.js'
 import type { AnalysisRunner, BuildDbContext, RunContext } from '../runner.js'
 
@@ -71,23 +71,7 @@ export class BlatRunner implements AnalysisRunner {
     }
   }
 
-  async buildDb(context: BuildDbContext) {
-    const dbDir = path.resolve(DB_DIR)
-    await mkdir(dbDir, { recursive: true })
-
-    const fastaPath = path.join(dbDir, `${context.dbName}.fa`)
-    const twoBitPath = path.join(dbDir, `${context.dbName}.2bit`)
-
-    this.logger.log(
-      `Extracting FASTA for assembly ${context.assemblyId} → ${fastaPath}`,
-    )
-    const refSeqs = await context.db.refSeq.findByAssembly(context.assemblyId)
-    await extractAssemblyFasta(context.assemblyId, fastaPath, context.sequenceService, refSeqs)
-
-    this.logger.log(`Running faToTwoBit → ${twoBitPath}`)
-    await runCommand('faToTwoBit', [fastaPath, twoBitPath])
-
-    await rm(fastaPath, { force: true })
-    return { dbPath: twoBitPath }
+  buildDb(context: BuildDbContext) {
+    return buildTwoBitDb(context, this.logger)
   }
 }

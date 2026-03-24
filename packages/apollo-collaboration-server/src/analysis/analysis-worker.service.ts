@@ -10,36 +10,20 @@ import {
 import { DatabaseService } from '../mikro-orm/database.service.js'
 import { SequenceService } from '../sequence/sequence.service.js'
 
+import { AnalysisService } from './analysis.service.js'
 import type { AnalysisRunner } from './runner.js'
-import { BlatRunner } from './runners/blat.runner.js'
-import { IsPcrRunner } from './runners/ispcr.runner.js'
-import { LocalBlastRunner } from './runners/local-blast.runner.js'
-import { MiniprotRunner } from './runners/miniprot.runner.js'
-import { TiberiusRunner } from './runners/tiberius.runner.js'
 
 const POLL_INTERVAL = 5000
 const JOB_RETENTION_MS = 86_400_000
 
 @Injectable()
 export class AnalysisWorkerService implements OnModuleInit, OnModuleDestroy {
-  private readonly runners = new Map<string, AnalysisRunner>()
-
   constructor(
     @Inject(DatabaseService) private readonly db: DatabaseService,
     @Inject(MikroORM) private readonly orm: MikroORM,
     @Inject(SequenceService) private readonly sequenceService: SequenceService,
-    @Inject(LocalBlastRunner) localBlast: LocalBlastRunner,
-    @Inject(IsPcrRunner) ispcr: IsPcrRunner,
-    @Inject(BlatRunner) blat: BlatRunner,
-    @Inject(MiniprotRunner) miniprot: MiniprotRunner,
-    @Inject(TiberiusRunner) tiberius: TiberiusRunner,
+    @Inject(AnalysisService) private readonly analysisService: AnalysisService,
   ) {
-    this.runners.set(localBlast.tool, localBlast)
-    this.runners.set(ispcr.tool, ispcr)
-    this.runners.set(blat.tool, blat)
-    this.runners.set(miniprot.tool, miniprot)
-    this.runners.set(tiberius.tool, tiberius)
-
     this.maxConcurrent = Number(process.env.ANALYSIS_MAX_CONCURRENT_JOBS ?? '2')
     this.jobTimeoutMs =
       Number(process.env.ANALYSIS_JOB_TIMEOUT_MINUTES ?? '5') * 60_000
@@ -55,7 +39,7 @@ export class AnalysisWorkerService implements OnModuleInit, OnModuleDestroy {
       }
     })
 
-    for (const [tool, runner] of this.runners) {
+    for (const [tool, runner] of this.analysisService.getRunners()) {
       const installed = await runner.isInstalled()
       if (installed) {
         this.logger.log(`${tool}: available`)
@@ -86,10 +70,6 @@ export class AnalysisWorkerService implements OnModuleInit, OnModuleDestroy {
     for (const [, controller] of this.activeAborts) {
       controller.abort()
     }
-  }
-
-  getAvailableTools() {
-    return [...this.runners.keys()]
   }
 
   private async tick() {
@@ -147,7 +127,7 @@ export class AnalysisWorkerService implements OnModuleInit, OnModuleDestroy {
     }
 
     const [job] = pending
-    const runner = this.runners.get(job.tool)
+    const runner = this.analysisService.getRunner(job.tool)
     if (!runner) {
       this.logger.error(`No runner for tool "${job.tool}"`)
       await this.db.analysisJob.updateById(job._id, {
