@@ -86,7 +86,7 @@ export class JBrowseService {
       }
     }
     const readOnly = role === Role.ReadOnly
-    const tools = await this.analysisService.getTools()
+    const tools = readOnly ? [] : await this.analysisService.getTools()
     const availableAnalysisTools = tools
       .filter((t) => t.installed)
       .map((t) => t.tool)
@@ -250,7 +250,8 @@ export class JBrowseService {
       this.getApolloTextSearchAdapter(a),
     )
 
-    const storedTracks = await this.db.trackConfig.findByAssemblyIds(assemblyIds)
+    const storedTracks =
+      await this.db.trackConfig.findByAssemblyIds(assemblyIds)
     const storedTrackConfigs = storedTracks.map((t) => t.config)
 
     const storedTextSearchAdapters =

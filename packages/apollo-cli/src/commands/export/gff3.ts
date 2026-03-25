@@ -8,7 +8,6 @@ import {
   convertAssemblyNameToId,
   createFetchErrorMessage,
   idReader,
-  localhostToAddress,
 } from '../../utils.js'
 
 export default class Get extends BaseCommand<typeof Get> {
@@ -51,7 +50,7 @@ export default class Get extends BaseCommand<typeof Get> {
       this.error(`Invalid assembly name or id: ${args.assembly}`)
     }
 
-    const url = new URL(localhostToAddress(`${access.address}/export/getID`))
+    const url = new URL(`${access.address}/export/getID`)
     const searchParams = new URLSearchParams({
       assembly: assemblyId,
     })
@@ -73,7 +72,7 @@ export default class Get extends BaseCommand<typeof Get> {
 
     const { exportID } = (await response.json()) as { exportID: string }
 
-    const exportURL = new URL(localhostToAddress(`${access.address}/export`))
+    const exportURL = new URL(`${access.address}/export`)
 
     const params: Record<string, string> = {
       exportID,

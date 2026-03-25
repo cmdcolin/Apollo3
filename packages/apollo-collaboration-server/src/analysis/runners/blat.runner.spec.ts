@@ -17,7 +17,8 @@ match\tmis-\trep.\tN's\tQ gap\tQ gap\tT gap\tT gap\tstrand\tQ name\tQ size\tQ st
   })
 
   it('parses a single valid PSL line', () => {
-    const line = '50\t0\t0\t0\t0\t0\t0\t0\t+\tquery1\t50\t0\t50\tctgA\t50000\t1000\t1050\t1\t50,\t0,\t1000,'
+    const line =
+      '50\t0\t0\t0\t0\t0\t0\t0\t+\tquery1\t50\t0\t50\tctgA\t50000\t1000\t1050\t1\t50,\t0,\t1000,'
     const hits = parsePsl(line)
     expect(hits).toHaveLength(1)
     const hit = hits[0]
@@ -42,7 +43,8 @@ match\tmis-\trep.\tN's\tQ gap\tQ gap\tT gap\tT gap\tstrand\tQ name\tQ size\tQ st
 
   it('computes identity correctly with mismatches', () => {
     // 40 matches, 10 mismatches → identity = 40/50 * 100 = 80
-    const line = '40\t10\t0\t0\t0\t0\t0\t0\t+\tq\t50\t0\t50\tctgA\t50000\t1000\t1050\t1\t50,\t0,\t1000,'
+    const line =
+      '40\t10\t0\t0\t0\t0\t0\t0\t+\tq\t50\t0\t50\tctgA\t50000\t1000\t1050\t1\t50,\t0,\t1000,'
     const hits = parsePsl(line)
     expect(hits[0].identity).toBeCloseTo(80)
     expect(hits[0].score).toBe(30)
@@ -67,13 +69,15 @@ match\tmis-\trep.\tN's\tQ gap\tQ gap\tT gap\tT gap\tstrand\tQ name\tQ size\tQ st
   })
 
   it('handles minus strand alignments', () => {
-    const line = '50\t0\t0\t0\t0\t0\t0\t0\t-\tq\t50\t0\t50\tctgA\t50000\t1000\t1050\t1\t50,\t0,\t1000,'
+    const line =
+      '50\t0\t0\t0\t0\t0\t0\t0\t-\tq\t50\t0\t50\tctgA\t50000\t1000\t1050\t1\t50,\t0,\t1000,'
     const hits = parsePsl(line)
     expect(hits[0].strand).toBe('-')
   })
 
   it('parses multiple block alignments', () => {
-    const line = '90\t0\t0\t0\t0\t0\t1\t10\t+\tq\t100\t0\t100\tctgA\t50000\t1000\t1100\t2\t50,40,\t0,60,\t1000,1060,'
+    const line =
+      '90\t0\t0\t0\t0\t0\t1\t10\t+\tq\t100\t0\t100\tctgA\t50000\t1000\t1100\t2\t50,40,\t0,60,\t1000,1060,'
     const hits = parsePsl(line)
     expect(hits[0].blockCount).toBe(2)
     expect(hits[0].blockSizes).toEqual([50, 40])

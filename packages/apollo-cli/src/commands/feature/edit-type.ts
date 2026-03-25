@@ -9,7 +9,6 @@ import {
   getAssemblyFromRefseq,
   getFeatureById,
   idReader,
-  localhostToAddress,
 } from '../../utils.js'
 
 export default class Get extends BaseCommand<typeof Get> {
@@ -85,7 +84,7 @@ It must be a valid sequence ontology term although but the valifdity of the new 
       newType: flags.type,
     }
 
-    const url = new URL(localhostToAddress(`${access.address}/changes`))
+    const url = new URL(`${access.address}/changes`)
 
     const auth = {
       method: 'POST',

@@ -12,7 +12,7 @@ import { Agent, type RequestInit, fetch } from 'undici'
 
 import { ConfigError } from './ApolloConf.js'
 import { BaseCommand } from './baseCommand.js'
-import { createFetchErrorMessage, localhostToAddress } from './utils.js'
+import { createFetchErrorMessage } from './utils.js'
 
 interface ProgressTransformOptions extends TransformOptions {
   progressBar: SingleBar
@@ -82,7 +82,7 @@ export abstract class FileCommand extends BaseCommand<typeof FileCommand> {
     }
 
     const fileName = path.basename(file)
-    const url = new URL(localhostToAddress(`${address}/files`))
+    const url = new URL(`${address}/files`)
     url.searchParams.set('name', fileName)
     url.searchParams.set('type', type)
     progressBar.start(size, 0)

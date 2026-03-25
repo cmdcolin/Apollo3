@@ -2,11 +2,7 @@ import { Flags } from '@oclif/core'
 import { type Response, fetch } from 'undici'
 
 import { BaseCommand } from '../../baseCommand.js'
-import {
-  createFetchErrorMessage,
-  getRefseqId,
-  localhostToAddress,
-} from '../../utils.js'
+import { createFetchErrorMessage, getRefseqId } from '../../utils.js'
 
 export default class Get extends BaseCommand<typeof Get> {
   static description =
@@ -86,7 +82,7 @@ export default class Get extends BaseCommand<typeof Get> {
     start: number,
     end: number,
   ): Promise<Response> {
-    const url = new URL(localhostToAddress(`${address}/features/getFeatures`))
+    const url = new URL(`${address}/features/getFeatures`)
     const searchParams = new URLSearchParams({
       refSeq,
       start: start.toString(),

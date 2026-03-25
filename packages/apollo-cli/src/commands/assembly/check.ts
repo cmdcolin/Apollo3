@@ -7,31 +7,23 @@ import {
   createFetchErrorMessage,
   getAssembly,
   idReader,
-  localhostToAddress,
 } from '../../utils.js'
 
 async function setChecks(
   address: string,
   accessToken: string,
-  assembly: string,
-  checkId: string[],
+  assemblyId: string,
+  checks: string[],
 ): Promise<Response> {
-  const check: { _id: string; checks: string[]; name: string } = {
-    _id: assembly,
-    checks: checkId,
-    name: '',
-  }
-
-  const auth = {
-    method: 'POST',
-    body: JSON.stringify(check),
+  const url = new URL(`${address}/assemblies/${assemblyId}`)
+  const response = await fetch(url, {
+    method: 'PATCH',
+    body: JSON.stringify({ checks }),
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
-  }
-  const url = new URL(localhostToAddress(`${address}/assemblies/checks`))
-  const response = await fetch(url, auth)
+  })
   if (!response.ok) {
     const errorMessage = await createFetchErrorMessage(
       response,
@@ -53,7 +45,7 @@ async function getCheckTypes(
       'Content-Type': 'application/json',
     },
   }
-  const url = new URL(localhostToAddress(`${address}/checks/types`))
+  const url = new URL(`${address}/checks/types`)
   const response = await fetch(url, auth)
   if (!response.ok) {
     const errorMessage = await createFetchErrorMessage(

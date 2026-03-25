@@ -1,12 +1,10 @@
 import { randomBytes } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
 
-import {
-  Inject,
-  Injectable,
-  Logger,
-  NotFoundException,
-  UnprocessableEntityException,
-} from '@nestjs/common'
+import type { SequenceSource } from '@apollo-annotation/common'
+import { TwoBitFile } from '@gmod/twobit'
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common'
+import { LocalFile, RemoteFile } from 'generic-filehandle2'
 
 import { ChecksService } from '../checks/checks.service.js'
 import { FeaturesService } from '../features/features.service.js'
@@ -15,6 +13,54 @@ import { RefSeqsService } from '../refSeqs/refSeqs.service.js'
 
 import type { CreateAssemblyDto } from './dto/create-assembly.dto.js'
 import type { UpdateAssemblyDto } from './dto/update-assembly.dto.js'
+
+function openFilehandle(pathOrUrl: string) {
+  if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) {
+    return new RemoteFile(pathOrUrl)
+  }
+  return new LocalFile(pathOrUrl)
+}
+
+async function readSequencesFromFai(faiPath: string) {
+  let content: string
+  if (faiPath.startsWith('http://') || faiPath.startsWith('https://')) {
+    const res = await fetch(faiPath)
+    content = await res.text()
+  } else {
+    content = await readFile(faiPath, 'utf8')
+  }
+  return content
+    .trim()
+    .split('\n')
+    .filter((line) => line.length > 0)
+    .filter((line) => line.includes('\t'))
+    .map((line) => {
+      const tabIdx = line.indexOf('\t')
+      const name = line.slice(0, tabIdx)
+      const length = Number(line.slice(tabIdx + 1).split('\t')[0])
+      return { name, length }
+    })
+}
+
+async function readSequencesFromTwobit(twobitPath: string) {
+  const twobit = new TwoBitFile({ filehandle: openFilehandle(twobitPath) })
+  const names = await twobit.getSequenceNames()
+  const sequences: { name: string; length: number }[] = []
+  for (const name of names) {
+    const length = await twobit.getSequenceSize(name)
+    if (length !== undefined) {
+      sequences.push({ name, length })
+    }
+  }
+  return sequences
+}
+
+async function readSequencesFromSource(source: SequenceSource) {
+  if (source.type === 'twobit') {
+    return readSequencesFromTwobit(source.twobit)
+  }
+  return readSequencesFromFai(source.fai)
+}
 
 @Injectable()
 export class AssembliesService {
@@ -30,15 +76,33 @@ export class AssembliesService {
   async create(createAssemblyDto: CreateAssemblyDto) {
     const defaultChecks = await this.db.checkConfig.findDefaults()
     const defaultCheckIds = defaultChecks.map((c) => c._id)
-    return this.db.assembly.create({
-      _id: randomBytes(12).toString('hex'),
+    const assemblyId = randomBytes(12).toString('hex')
+    const assembly = await this.db.assembly.create({
+      _id: assemblyId,
       name: createAssemblyDto.name,
       displayName: createAssemblyDto.displayName,
       description: createAssemblyDto.description,
       aliases: createAssemblyDto.aliases,
       checks: defaultCheckIds,
       organism: createAssemblyDto.organism,
+      sequenceSource: createAssemblyDto.sequenceSource,
+      visibility: createAssemblyDto.visibility,
     })
+
+    if (createAssemblyDto.sequenceSource) {
+      const sequences = await readSequencesFromSource(
+        createAssemblyDto.sequenceSource,
+      )
+      for (const { length, name } of sequences) {
+        await this.refSeqsService.create({
+          assembly: assemblyId,
+          name,
+          length: String(length),
+        })
+      }
+    }
+
+    return assembly
   }
 
   async updateChecks(_id: string, checks: string[]) {

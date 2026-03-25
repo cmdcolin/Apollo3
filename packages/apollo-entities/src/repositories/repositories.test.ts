@@ -120,7 +120,6 @@ describe('MikroOrmRefSeqRepository', () => {
       assembly: 'asm-1',
       name: 'ctgA',
       length: 50000,
-
     })
     expect(created.name).toBe('ctgA')
 
@@ -142,21 +141,18 @@ describe('MikroOrmRefSeqRepository', () => {
       assembly: 'asm-1',
       name: 'ctgA',
       length: 50000,
-
     })
     await refSeqRepo.create({
       _id: 'rs-2',
       assembly: 'asm-1',
       name: 'ctgB',
       length: 30000,
-
     })
     await refSeqRepo.create({
       _id: 'rs-3',
       assembly: 'asm-2',
       name: 'chrI',
       length: 100000,
-
     })
 
     expect(await refSeqRepo.findByAssembly('asm-1')).toHaveLength(2)
@@ -174,14 +170,12 @@ describe('MikroOrmRefSeqRepository', () => {
       assembly: 'asm-1',
       name: 'ctgA',
       length: 50000,
-
     })
     await refSeqRepo.create({
       _id: 'rs-2',
       assembly: 'asm-1',
       name: 'ctgB',
       length: 30000,
-
     })
 
     expect(await refSeqRepo.findAll()).toHaveLength(2)
@@ -198,7 +192,6 @@ describe('MikroOrmRefSeqRepository', () => {
       assembly: 'asm-1',
       name: 'ctgA',
       length: 50000,
-
     })
 
     const found = await refSeqRepo.findByNameAndAssembly('ctgA', 'asm-1')
@@ -221,7 +214,6 @@ describe('MikroOrmRefSeqRepository', () => {
       assembly: 'asm-1',
       name: 'ctgA',
       length: 50000,
-
     })
 
     const updated = await refSeqRepo.updateById('rs-1', {
@@ -242,14 +234,12 @@ describe('MikroOrmRefSeqRepository', () => {
       assembly: 'asm-1',
       name: 'ctgA',
       length: 50000,
-
     })
     await refSeqRepo.create({
       _id: 'rs-2',
       assembly: 'asm-1',
       name: 'ctgB',
       length: 30000,
-
     })
 
     expect(await refSeqRepo.deleteByAssembly('asm-1')).toBe(2)
@@ -268,14 +258,12 @@ describe('MikroOrmRefSeqRepository', () => {
         assembly: 'asm-1',
         name: 'ctgA',
         length: 50000,
-  
       },
       {
         _id: 'rs-2',
         assembly: 'asm-1',
         name: 'ctgB',
         length: 30000,
-  
       },
     ])
     expect(created).toHaveLength(2)
@@ -293,7 +281,6 @@ describe('MikroOrmFeatureRepository', () => {
       assembly: 'asm-1',
       name: 'ctgA',
       length: 50000,
-
     })
   }
 
@@ -740,14 +727,14 @@ describe('MikroOrmChangeRepository', () => {
     const repo = new MikroOrmChangeRepository(orm.em.fork())
     const created = await repo.create({
       assembly: 'asm-1',
-      typeName: 'AddAssemblyAndFeaturesFromFileChange',
+      typeName: 'AddAssemblyFromFileChange',
       changedIds: [],
       changes: { assemblyName: 'volvox' },
       user: 'testuser@example.com',
       sequence: 1,
     })
     expect(created._id).toBeDefined()
-    expect(created.typeName).toBe('AddAssemblyAndFeaturesFromFileChange')
+    expect(created.typeName).toBe('AddAssemblyFromFileChange')
     expect(created.sequence).toBe(1)
 
     const all = await repo.findAll({})
@@ -759,7 +746,7 @@ describe('MikroOrmChangeRepository', () => {
     const repo = new MikroOrmChangeRepository(orm.em.fork())
     await repo.create({
       assembly: 'asm-1',
-      typeName: 'AddAssemblyAndFeaturesFromFileChange',
+      typeName: 'AddAssemblyFromFileChange',
       changedIds: [],
       changes: {},
       user: 'user1@example.com',
@@ -921,7 +908,6 @@ describe('MikroOrmCheckResultRepository', () => {
       assembly: 'asm-1',
       name: 'ctgA',
       length: 50000,
-
     })
   }
 

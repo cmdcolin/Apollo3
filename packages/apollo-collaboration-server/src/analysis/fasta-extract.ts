@@ -8,7 +8,12 @@ export async function extractAssemblyFasta(
   assemblyId: string,
   outputPath: string,
   sequenceService: SequenceService,
-  refSeqs: { _id: string; name: string; description?: string; length: number }[],
+  refSeqs: {
+    _id: string
+    name: string
+    description?: string
+    length: number
+  }[],
 ) {
   if (refSeqs.length === 0) {
     throw new Error(`Assembly "${assemblyId}" has no reference sequences`)

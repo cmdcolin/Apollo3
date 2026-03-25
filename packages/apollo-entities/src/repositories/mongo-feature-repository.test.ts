@@ -38,14 +38,12 @@ describe('MongoFeatureRepository', () => {
       assembly: 'asm-1',
       name: 'ctgA',
       length: 50000,
-
     })
     await new MikroOrmRefSeqRepository(em).create({
       _id: 'rs-2',
       assembly: 'asm-1',
       name: 'ctgB',
       length: 30000,
-
     })
   }
 

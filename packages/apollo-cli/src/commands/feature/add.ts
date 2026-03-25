@@ -10,7 +10,7 @@ import { ObjectId } from 'bson'
 import { type Response, fetch } from 'undici'
 
 import { BaseCommand } from '../../baseCommand.js'
-import { createFetchErrorMessage, localhostToAddress } from '../../utils.js'
+import { createFetchErrorMessage } from '../../utils.js'
 
 interface BaseFeatureJSON {
   min: number
@@ -418,7 +418,7 @@ To add multiple features, features with more details, or features with children,
     },
   ): Promise<Response> {
     const { address, accessToken } = await this.getAccess()
-    const url = new URL(localhostToAddress(`${address}/${endpoint}`))
+    const url = new URL(`${address}/${endpoint}`)
     const optionsWithAuth = {
       ...options,
       headers: {

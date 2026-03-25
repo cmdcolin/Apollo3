@@ -63,6 +63,10 @@ export class UsersService {
     return this.db.user.updateById(id, { role })
   }
 
+  async remove(id: string) {
+    return this.db.user.deleteById(id)
+  }
+
   async getCount() {
     return this.db.user.count()
   }

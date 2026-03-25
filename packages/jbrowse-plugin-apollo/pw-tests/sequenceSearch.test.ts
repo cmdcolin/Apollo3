@@ -14,7 +14,11 @@ import { expect, test } from '@playwright/test'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { addAssemblyViaApi, deleteAssemblies, getGuestToken } from './helpers.js'
+import {
+  addAssemblyViaApi,
+  deleteAssemblies,
+  getGuestToken,
+} from './helpers.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -153,8 +157,9 @@ test('blastn: build DB, submit job, verify results contain hits', async () => {
   const results = await waitForJobReady(jobId)
 
   // The mock blastn always returns one hit on ctgA
-  const report = (results as { report?: { results?: { search?: { hits?: unknown[] } } } })
-    .report
+  const report = (
+    results as { report?: { results?: { search?: { hits?: unknown[] } } } }
+  ).report
   expect(report?.results?.search?.hits?.length).toBeGreaterThan(0)
 })
 

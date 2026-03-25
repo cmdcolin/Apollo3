@@ -12,8 +12,8 @@ driver (SQLite, PostgreSQL, MongoDB).
 
 ## Why it exists
 
-The default `MikroOrmFeatureRepository` uses recursive CTEs (SQL `WITH
-RECURSIVE`) for tree traversal operations like `findDescendants` and
+The default `MikroOrmFeatureRepository` uses recursive CTEs (SQL
+`WITH RECURSIVE`) for tree traversal operations like `findDescendants` and
 `findRootParentsOfMany`. These are efficient but require a SQL backend.
 
 `MongoFeatureRepository` provides the same operations using iterative BFS:
@@ -23,13 +23,13 @@ of features.
 
 ## Operations
 
-| Method                 | Strategy                                              |
-| ---------------------- | ----------------------------------------------------- |
-| `findDescendants`      | Iterative BFS downward via `parent` field             |
-| `deleteDescendants`    | BFS to collect IDs, then bulk `nativeDelete`          |
-| `searchText`           | Load all features for refSeqs, filter in JS           |
-| `findByIndexedId`      | Load all features, check attributes in JS             |
-| `findRootParentsOfMany`| Walk parent chains upward in batches                  |
+| Method                  | Strategy                                     |
+| ----------------------- | -------------------------------------------- |
+| `findDescendants`       | Iterative BFS downward via `parent` field    |
+| `deleteDescendants`     | BFS to collect IDs, then bulk `nativeDelete` |
+| `searchText`            | Load all features for refSeqs, filter in JS  |
+| `findByIndexedId`       | Load all features, check attributes in JS    |
+| `findRootParentsOfMany` | Walk parent chains upward in batches         |
 
 ## Performance considerations
 

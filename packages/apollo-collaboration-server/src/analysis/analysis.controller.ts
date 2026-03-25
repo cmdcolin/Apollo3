@@ -173,7 +173,12 @@ export class AnalysisController {
 
     const fileUploadFolder =
       this.configService.get('FILE_UPLOAD_FOLDER', { infer: true }) ?? ''
-    const filePath = path.join(fileUploadFolder, 'analysis-jobs', jobId, filename)
+    const filePath = path.join(
+      fileUploadFolder,
+      'analysis-jobs',
+      jobId,
+      filename,
+    )
 
     if (!existsSync(filePath)) {
       throw new NotFoundException('File not found')

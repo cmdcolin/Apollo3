@@ -54,6 +54,7 @@ const config = {
   bundle: true,
   globalName: 'JBrowsePluginApollo',
   metafile: true,
+  external: ['node:fs', 'node:stream', 'node:path', 'node:url'],
   plugins: [globalExternals(createGlobalMap(globals)), rebuildLogPlugin],
   ...(isWatch || isDev
     ? { outfile: 'dist/jbrowse-plugin-apollo.umd.development.js' }

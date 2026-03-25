@@ -6,7 +6,6 @@ import {
   convertAssemblyNameToId,
   createFetchErrorMessage,
   idReader,
-  localhostToAddress,
 } from '../../utils.js'
 
 export default class Get extends BaseCommand<typeof Get> {
@@ -63,9 +62,7 @@ export default class Get extends BaseCommand<typeof Get> {
       this.exit(0)
     }
 
-    const url = new URL(
-      localhostToAddress(`${access.address}/features/getByIndexedId`),
-    )
+    const url = new URL(`${access.address}/features/getByIndexedId`)
     const searchParams = new URLSearchParams({ id })
     if (assemblyIds) {
       searchParams.append('assemblies', assemblyIds.join(','))

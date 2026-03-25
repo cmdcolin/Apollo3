@@ -7,11 +7,6 @@ import type {
   ApolloAssemblySnapshot,
   CheckResultSnapshot,
 } from '@apollo-annotation/mst'
-import type {
-  SerializedAddAssemblyAndFeaturesFromFileChange,
-  SerializedAddAssemblyFromFileChange,
-  SerializedDeleteAssemblyChange,
-} from '@apollo-annotation/shared'
 import { Agent, type RequestInit, type Response, fetch } from 'undici'
 
 import { ApolloConf, ConfigError } from './ApolloConf.js'
@@ -63,29 +58,13 @@ export function basicCheckConfig(configFile: string, profileName: string) {
   checkProfileExists(profileName, config)
 }
 
-/**
- * @deprecated Use this function while we wait to resolve the TypeError when using localhost in fetch.
- */
-export function localhostToAddress(url: string) {
-  /** This is hacked function that should become redundant: On my MacOS (?)
-   * localhost must be converted to address otherwise fetch throws TypeError
-   * */
-  return url.replace('//localhost', '127.0.0.1')
-}
-
 export async function deleteAssembly(
   address: string,
   accessToken: string,
   assemblyId: string,
 ): Promise<void> {
-  const body: SerializedDeleteAssemblyChange = {
-    typeName: 'DeleteAssemblyChange',
-    assembly: assemblyId,
-  }
-
   const auth: RequestInit = {
-    method: 'POST',
-    body: JSON.stringify(body),
+    method: 'DELETE',
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
@@ -93,7 +72,7 @@ export async function deleteAssembly(
     dispatcher: new Agent({ headersTimeout: 60 * 60 * 1000 }),
   }
 
-  const url = new URL(localhostToAddress(`${address}/changes`))
+  const url = new URL(`${address}/assemblies/${assemblyId}`)
   const response = await fetch(url, auth)
   if (!response.ok) {
     const errorMessage = await createFetchErrorMessage(
@@ -256,7 +235,7 @@ export async function getFeatureById(
   accessToken: string,
   id: string,
 ): Promise<Response> {
-  const url = new URL(localhostToAddress(`${address}/features/${id}`))
+  const url = new URL(`${address}/features/${id}`)
   const auth: RequestInit = {
     headers: {
       authorization: `Bearer ${accessToken}`,
@@ -291,7 +270,7 @@ export async function queryApollo(
       'Content-Type': 'application/json',
     },
   }
-  const url = new URL(localhostToAddress(`${address}/${endpoint}`))
+  const url = new URL(`${address}/${endpoint}`)
   const response = await fetch(url, auth)
   if (!response.ok) {
     const errorMessage = await createFetchErrorMessage(
@@ -359,66 +338,6 @@ export const waitFor = <T>(
   })
 
   return promise
-}
-
-export async function submitAssembly(
-  address: string,
-  accessToken: string,
-  body:
-    | SerializedAddAssemblyFromFileChange
-    | SerializedAddAssemblyAndFeaturesFromFileChange,
-  force: boolean,
-): Promise<object> {
-  let assemblies = await queryApollo(address, accessToken, 'assemblies')
-  for (const x of (await assemblies.json()) as {
-    name: string
-    _id: string
-  }[]) {
-    const addedAssemblies = 'changes' in body ? body.changes : [body]
-    for (const addedAssembly of addedAssemblies) {
-      if (x.name === addedAssembly.assemblyName) {
-        if (force) {
-          await deleteAssembly(address, accessToken, x._id)
-        } else {
-          throw new Error(
-            `Error: Assembly "${addedAssembly.assemblyName}" already exists`,
-          )
-        }
-      }
-    }
-  }
-
-  const auth: RequestInit = {
-    method: 'POST',
-    body: JSON.stringify(body),
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    dispatcher: new Agent({ headersTimeout: 60 * 60 * 1000 }),
-  }
-  const url = new URL(localhostToAddress(`${address}/changes`))
-  const response = await fetch(url, auth)
-  if (!response.ok) {
-    const errorMessage = await createFetchErrorMessage(
-      response,
-      'submitAssembly failed',
-    )
-    throw new Error(errorMessage)
-  }
-  assemblies = await queryApollo(address, accessToken, 'assemblies')
-  for (const x of (await assemblies.json()) as {
-    name: string
-    _id: string
-  }[]) {
-    const addedAssemblies = 'changes' in body ? body.changes : [body]
-    for (const addedAssembly of addedAssemblies) {
-      if (x.name === addedAssembly.assemblyName) {
-        return x
-      }
-    }
-  }
-  throw new Error(`Failed to retrieve assembly from ${body.assembly}`)
 }
 
 export async function readStdin() {

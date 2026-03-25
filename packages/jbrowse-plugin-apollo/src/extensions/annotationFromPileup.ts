@@ -186,10 +186,7 @@ export function annotationFromPileup(pluggableElement: PluggableElementType) {
           const assembly = self.getAssembly()
           const region = self.getFirstRegion()
           const feature = self.contextMenuFeature
-          if (
-            !feature ||
-            !canEdit(session as unknown as ApolloSessionModel)
-          ) {
+          if (!feature || !canEdit(session as unknown as ApolloSessionModel)) {
             return superContextMenuItems()
           }
           return [

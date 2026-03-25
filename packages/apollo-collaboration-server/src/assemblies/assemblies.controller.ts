@@ -1,10 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
-  Head,
   Inject,
   Logger,
+  NotFoundException,
   Param,
   Patch,
   Post,
@@ -14,11 +15,8 @@ import { Role } from '../utils/role/role.enum.js'
 import { Roles } from '../utils/roles.guard.js'
 
 import { AssembliesService } from './assemblies.service.js'
-
-interface AssemblyDocument {
-  _id: string
-  checks: string[]
-}
+import type { CreateAssemblyDto } from './dto/create-assembly.dto.js'
+import type { UpdateAssemblyDto } from './dto/update-assembly.dto.js'
 
 @Roles(Role.ReadOnly)
 @Controller('assemblies')
@@ -29,18 +27,10 @@ export class AssembliesController {
   ) {}
   private readonly logger = new Logger(AssembliesController.name)
 
-  @Head('checks')
-  checksHead() {
-    return ''
-  }
-
-  @Post('checks')
+  @Post()
   @Roles(Role.Admin)
-  updateChecks(@Body() updatedChecks: AssemblyDocument) {
-    return this.assembliesService.updateChecks(
-      updatedChecks._id,
-      updatedChecks.checks,
-    )
+  createAssembly(@Body() body: CreateAssemblyDto) {
+    return this.assembliesService.create(body)
   }
 
   @Get()
@@ -53,14 +43,33 @@ export class AssembliesController {
     return this.assembliesService.findOne(id)
   }
 
-  @Patch(':id/organism')
+  @Patch(':id')
   @Roles(Role.Admin)
-  updateOrganism(
+  async updateAssembly(
     @Param('id') id: string,
-    @Body() body: { organism: string | null },
+    @Body() body: UpdateAssemblyDto,
   ) {
+    if (body.checks) {
+      await this.assembliesService.updateChecks(id, body.checks)
+    }
     return this.assembliesService.update(id, {
+      displayName: body.displayName,
+      description: body.description,
+      aliases: body.aliases,
       organism: body.organism ?? undefined,
+      visibility: body.visibility,
+      sequenceSource: body.sequenceSource,
     })
+  }
+
+  @Delete(':id')
+  @Roles(Role.Admin)
+  async deleteAssembly(@Param('id') id: string) {
+    const deleted = await this.assembliesService.remove(id)
+    if (!deleted) {
+      throw new NotFoundException(`Assembly with id "${id}" not found`)
+    }
+    this.logger.debug(`Assembly "${id}" deleted.`)
+    return { message: `Assembly "${id}" deleted successfully` }
   }
 }

@@ -67,6 +67,7 @@ export interface ApolloSession extends AbstractSessionModel {
   apolloDataStore: ClientDataStoreType & { changeManager: ChangeManager }
   apolloSelectedFeature?: AnnotationFeature
   apolloSetSelectedFeature(feature?: AnnotationFeature): void
+  menus(): { label: string; menuItems: unknown[] }[]
 }
 
 export interface HoveredFeature {
@@ -430,9 +431,9 @@ export function extendSession(
     }))
 
     .views((self) => {
-      const superMenus = (
-        self as unknown as AbstractSessionModel
-      ).menus.bind(self as unknown as AbstractSessionModel)
+      const superMenus = (self as unknown as ApolloSession).menus.bind(
+        self as unknown as ApolloSession,
+      )
       const superTrackActionMenuItems = (
         self as unknown as AbstractSessionModel
       ).getTrackActionMenuItems
@@ -504,51 +505,51 @@ export function extendSession(
                   label: 'Download GFF3',
                   icon: DownloadIcon,
                   onClick: (session: ApolloSessionModel) => {
-                    ;(
-                      session as unknown as AbstractSessionModel
-                    ).queueDialog((doneCallback) => [
-                      DownloadGFF3,
-                      {
-                        session,
-                        handleClose: () => {
-                          doneCallback()
+                    ;(session as unknown as AbstractSessionModel).queueDialog(
+                      (doneCallback) => [
+                        DownloadGFF3,
+                        {
+                          session,
+                          handleClose: () => {
+                            doneCallback()
+                          },
                         },
-                      },
-                    ])
+                      ],
+                    )
                   },
                 },
                 {
                   label: 'Change log',
                   icon: TrackChangesIcon,
                   onClick: (session: ApolloSessionModel) => {
-                    ;(
-                      session as unknown as AbstractSessionModel
-                    ).queueDialog((doneCallback) => [
-                      ViewChangeLog,
-                      {
-                        session,
-                        handleClose: () => {
-                          doneCallback()
+                    ;(session as unknown as AbstractSessionModel).queueDialog(
+                      (doneCallback) => [
+                        ViewChangeLog,
+                        {
+                          session,
+                          handleClose: () => {
+                            doneCallback()
+                          },
                         },
-                      },
-                    ])
+                      ],
+                    )
                   },
                 },
                 {
                   label: 'Check results',
                   icon: FactCheckIcon,
                   onClick: (session: ApolloSessionModel) => {
-                    ;(
-                      session as unknown as AbstractSessionModel
-                    ).queueDialog((doneCallback) => [
-                      ViewCheckResults,
-                      {
-                        session,
-                        handleClose: () => {
-                          doneCallback()
+                    ;(session as unknown as AbstractSessionModel).queueDialog(
+                      (doneCallback) => [
+                        ViewCheckResults,
+                        {
+                          session,
+                          handleClose: () => {
+                            doneCallback()
+                          },
                         },
-                      },
-                    ])
+                      ],
+                    )
                   },
                 },
               ],
@@ -557,17 +558,17 @@ export function extendSession(
               label: 'Log out',
               icon: LogoutIcon,
               onClick: (session: ApolloSessionModel) => {
-                ;(
-                  session as unknown as AbstractSessionModel
-                ).queueDialog((doneCallback) => [
-                  LogOut,
-                  {
-                    session,
-                    handleClose: () => {
-                      doneCallback()
+                ;(session as unknown as AbstractSessionModel).queueDialog(
+                  (doneCallback) => [
+                    LogOut,
+                    {
+                      session,
+                      handleClose: () => {
+                        doneCallback()
+                      },
                     },
-                  },
-                ])
+                  ],
+                )
               },
             },
           ]

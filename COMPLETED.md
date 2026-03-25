@@ -191,8 +191,8 @@ that transpiles all five workspace packages in parallel in ~3s.
 ## Simplification
 
 - **Remove chunked RefSeqChunk storage & unify sequence sources** — Sequence
-  data is no longer stored in the database. All sequences are referenced by
-  path or URL, read on demand via `@gmod/indexedfasta` or `@gmod/twobit`.
+  data is no longer stored in the database. All sequences are referenced by path
+  or URL, read on demand via `@gmod/indexedfasta` or `@gmod/twobit`.
 
   **What was removed:**
   - `RefSeqChunkEntity`, `MikroOrmRefSeqChunkRepository`,
@@ -205,23 +205,23 @@ that transpiles all five workspace packages in parallel in ~3s.
     `upload-fasta`, `upload-gff3`) — replaced by two
   - File-upload-based sequence storage — FASTA files are no longer uploaded to
     the server; paths are provided instead
-  - `fileRepository` and `filesService` from `ServerDataStore` interface —
-    the change protocol no longer does file I/O
-  - `getDecompressedFileContents`, gzip compression in file storage — files
-    are now stored as-is (no automatic gzip on upload)
+  - `fileRepository` and `filesService` from `ServerDataStore` interface — the
+    change protocol no longer does file I/O
+  - `getDecompressedFileContents`, gzip compression in file storage — files are
+    now stored as-is (no automatic gzip on upload)
 
   **What was added/simplified:**
   - Unified `SequenceSource` type — two variants:
     `{ type: 'fasta'; fa: string; fai: string; gzi?: string }` and
-    `{ type: 'twobit'; twobit: string }`. Values are local paths or URLs.
-    The server auto-detects local vs remote via protocol prefix.
+    `{ type: 'twobit'; twobit: string }`. Values are local paths or URLs. The
+    server auto-detects local vs remote via protocol prefix.
   - `SequenceService.buildAdapter()` — single method that opens any sequence
     source as the right adapter (`IndexedFasta`, `BgzipIndexedFasta`, or
     `TwoBitFile`) using a unified `openFilehandle()` helper
-  - `ExportService` — uses `SequenceService` for FASTA export instead of
-    reading chunks or streaming raw files
-  - `ServerDataStore` interface — simplified to just repositories +
-    `parseGFF3` stream transformer + `pluginsService`. No file I/O.
+  - `ExportService` — uses `SequenceService` for FASTA export instead of reading
+    chunks or streaming raw files
+  - `ServerDataStore` interface — simplified to just repositories + `parseGFF3`
+    stream transformer + `pluginsService`. No file I/O.
   - GFF3 annotation import reads from a server-accessible path (`gff3Path`)
     instead of uploading to the file store
   - `AddAssemblyFromFileChange` — collapsed from five handler methods
@@ -229,12 +229,13 @@ that transpiles all five workspace packages in parallel in ~3s.
     `executeOnServerChunked`, `executeOnServerUploadFasta`,
     `executeOnServerUploadGff3`) to a single `getSequenceSizes()` that works
     with any adapter
-  - CLI `add-from-fasta` — simplified from ~160 lines (upload detection,
-    file ID management, editable flag) to ~60 lines (just provide paths)
-  - CLI `add-from-gff` — now requires separate FASTA+index files via
-    `--fasta` flag, matching standard bioinformatics workflows
+  - CLI `add-from-fasta` — simplified from ~160 lines (upload detection, file ID
+    management, editable flag) to ~60 lines (just provide paths)
+  - CLI `add-from-gff` — now requires separate FASTA+index files via `--fasta`
+    flag, matching standard bioinformatics workflows
   - MongoDB migration script updated to skip chunk migration with a warning
   - Added `@gmod/twobit` support for `.2bit` sequence files
+
 - **Remove pending import status** — Removed `status` field from all entities.
   Transactions provide atomicity. Kept `user` field for attribution.
 - **Remove InternetAccount from Apollo plugin** — Removed the
@@ -242,17 +243,17 @@ that transpiles all five workspace packages in parallel in ~3s.
   `baseURL`, `role`, and `userId` in the ApolloPlugin configuration returned by
   `config.json`. WebSocket connection and change sequence tracking moved to the
   session model. All API calls use plain `fetch` with
-  `credentials: 'same-origin'` (cookie auth). Components read `baseURL`,
-  `role`, and `userId` from the plugin config via utility functions.
-  Multi-account selection UI removed (single server per deployment).
+  `credentials: 'same-origin'` (cookie auth). Components read `baseURL`, `role`,
+  and `userId` from the plugin config via utility functions. Multi-account
+  selection UI removed (single server per deployment).
 
 ## Collaboration & Workflow
 
-- **Per-assembly permissions** — `AssemblyPermissionEntity` maps user →
-  assembly → role. `PermissionService` checks global admin → per-assembly
-  permission → public visibility. Assemblies have `public`/`private`
-  visibility. `PermissionsController` provides admin API for managing
-  per-assembly roles. Track access follows assembly permissions.
+- **Per-assembly permissions** — `AssemblyPermissionEntity` maps user → assembly
+  → role. `PermissionService` checks global admin → per-assembly permission →
+  public visibility. Assemblies have `public`/`private` visibility.
+  `PermissionsController` provides admin API for managing per-assembly roles.
+  Track access follows assembly permissions.
 
 ## Export/Import
 
@@ -281,11 +282,12 @@ new tool requires only creating a runner class and registering it in the module.
   - `DELETE /analysis/jobs/:id` — cancel
   - `GET /analysis/jobs/:id/files/:filename` — serve output files
   - Database CRUD endpoints for tool-specific databases
-- Generic `AnalysisJobEntity` — `tool` field + JSON `params`/`results`/`metadata`
-  columns, no per-tool schema
+- Generic `AnalysisJobEntity` — `tool` field + JSON
+  `params`/`results`/`metadata` columns, no per-tool schema
 - Plugin config: `availableAnalysisTools: string[]` array (set by server from
   `getTools()`) replaces per-tool boolean flags
-- `isAnalysisToolAvailable(session, toolName)` utility for conditional menu items
+- `isAnalysisToolAvailable(session, toolName)` utility for conditional menu
+  items
 - `CollaborationServerDriver` — generic `getAnalysisTools()`,
   `submitAnalysisJob()`, `getAnalysisJob()` methods
 - Admin jobs page — unified table showing all analysis jobs with tool column
@@ -300,12 +302,12 @@ new tool requires only creating a runner class and registering it in the module.
 
 ### Tiberius Runner
 
-- Auto-detection of `tiberius.py` via `TIBERIUS_PATH` env var, `apollo-tools.json`
-  config file, PATH lookup, or common filesystem locations
+- Auto-detection of `tiberius.py` via `TIBERIUS_PATH` env var,
+  `apollo-tools.json` config file, PATH lookup, or common filesystem locations
 - Model config listing from `$TIBERIUS_DIR/model_cfg/*.yaml`
 - Region size validation, sequence fetch, temp FASTA, process spawn (with
-  optional `--singularity` flag), GTF coordinate rewriting (relative → absolute),
-  track config creation
+  optional `--singularity` flag), GTF coordinate rewriting (relative →
+  absolute), track config creation
 - `RunTiberius` dialog — rubber-band menu item, species model autocomplete,
   Singularity checkbox, progress polling, track display on completion
 - **Files**: `analysis/runners/tiberius.runner.ts`, `analysis/gtf-rewriter.ts`,

@@ -105,7 +105,12 @@ export class ExportService {
 
   private async writeFasta(
     fh: import('node:fs/promises').FileHandle,
-    refSeqs: { _id: string; name: string; description?: string; length: number }[],
+    refSeqs: {
+      _id: string
+      name: string
+      description?: string
+      length: number
+    }[],
     fastaWidth: number,
   ) {
     await fh.write('##FASTA\n')

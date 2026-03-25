@@ -4,7 +4,6 @@ import {
   Controller,
   Delete,
   Get,
-  Head,
   Inject,
   Logger,
   Param,
@@ -37,11 +36,6 @@ export class FilesController {
   @Get()
   findAll() {
     return this.filesService.findAll()
-  }
-
-  @Head()
-  filesHead() {
-    return ''
   }
 
   /**

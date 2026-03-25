@@ -8,7 +8,6 @@ import {
   createFetchErrorMessage,
   getFeatureById,
   idReader,
-  localhostToAddress,
 } from '../../utils.js'
 
 async function deleteFeature(
@@ -29,7 +28,7 @@ async function deleteFeature(
       attributes: feature.attributes,
     },
   }
-  const url = new URL(localhostToAddress(`${address}/changes`))
+  const url = new URL(`${address}/changes`)
   const auth = {
     method: 'POST',
     body: JSON.stringify(changeJson),

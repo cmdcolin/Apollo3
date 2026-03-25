@@ -965,6 +965,7 @@ function getContextMenuItems(
         contextMenuItemsForFeature.push(
           {
             label: 'Merge transcript',
+            disabled: !admin,
             onClick: () => {
               ;(session as unknown as AbstractSessionModel).queueDialog(
                 (doneCallback) => [

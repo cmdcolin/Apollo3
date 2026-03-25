@@ -41,7 +41,10 @@ export class RefSeqsService {
 
   async update(id: string, updateRefSeqDto: UpdateRefSeqDto) {
     return this.db.refSeq.updateById(id, {
-      ...updateRefSeqDto,
+      name: updateRefSeqDto.name,
+      description: updateRefSeqDto.description,
+      aliases: updateRefSeqDto.aliases,
+      assembly: updateRefSeqDto.assembly,
       length:
         updateRefSeqDto.length === undefined
           ? undefined

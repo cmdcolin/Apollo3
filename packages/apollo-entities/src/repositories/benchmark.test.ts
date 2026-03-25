@@ -123,12 +123,7 @@ describe('Benchmark: import simulation with and without transactions', () => {
     const em = orm.em.fork()
 
     const start = performance.now()
-    await simulateImport(
-      em,
-      'no-tx',
-      REF_SEQ_COUNT,
-      FEATURES_PER_RS,
-    )
+    await simulateImport(em, 'no-tx', REF_SEQ_COUNT, FEATURES_PER_RS)
     const elapsed = performance.now() - start
 
     console.log(
@@ -142,12 +137,7 @@ describe('Benchmark: import simulation with and without transactions', () => {
 
     const start = performance.now()
     await em.begin()
-    await simulateImport(
-      em,
-      'tx',
-      REF_SEQ_COUNT,
-      FEATURES_PER_RS,
-    )
+    await simulateImport(em, 'tx', REF_SEQ_COUNT, FEATURES_PER_RS)
     await em.commit()
     const elapsed = performance.now() - start
 

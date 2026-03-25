@@ -52,6 +52,7 @@ function useCurrentUser() {
 type Page =
   | 'organisms'
   | 'assemblies'
+  | 'add-assembly'
   | 'sequence-search'
   | 'changes'
   | 'users'
@@ -73,6 +74,12 @@ const fileMenuItems: {
   { label: 'Recent Changes', href: '/ui/changes/', value: 'changes' },
   { label: 'Users', href: '/admin/users/', value: 'users', admin: true },
   { label: 'Analysis Jobs', href: '/admin/jobs/', value: 'jobs', admin: true },
+  {
+    label: 'Add Assembly',
+    href: '/admin/add-assembly/',
+    value: 'add-assembly',
+    admin: true,
+  },
 ]
 
 function NavBar({ current, user }: { current?: Page; user?: UserInfo }) {

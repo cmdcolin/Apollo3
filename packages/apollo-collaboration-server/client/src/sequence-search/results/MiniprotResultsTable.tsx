@@ -61,9 +61,7 @@ export function MiniprotResultsTable({
       headerName: 'Location',
       width: 220,
       sortable: false,
-      renderCell: (
-        p: GridRenderCellParams<GeneModel & { id: number }>,
-      ) => (
+      renderCell: (p: GridRenderCellParams<GeneModel & { id: number }>) => (
         <GenomeLink
           refName={p.row.seqName}
           start={p.row.start}

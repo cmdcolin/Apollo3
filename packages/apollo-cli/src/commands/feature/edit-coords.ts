@@ -12,7 +12,6 @@ import {
   getAssemblyFromRefseq,
   getFeatureById,
   idReader,
-  localhostToAddress,
 } from '../../utils.js'
 
 export default class Get extends BaseCommand<typeof Get> {
@@ -149,7 +148,7 @@ To get the identifier of the feature to edit consider using `apollo feature get`
         throw new Error(`Unexpected coordinate name: "${coord}"`)
       }
 
-      const url = new URL(localhostToAddress(`${access.address}/changes`))
+      const url = new URL(`${access.address}/changes`)
       const auth = {
         method: 'POST',
         body: JSON.stringify(body),

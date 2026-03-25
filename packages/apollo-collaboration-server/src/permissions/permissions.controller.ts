@@ -8,7 +8,6 @@ import {
   Inject,
   NotFoundException,
   Param,
-  Patch,
   Put,
 } from '@nestjs/common'
 
@@ -21,10 +20,6 @@ import { PermissionService } from './permission.service.js'
 interface SetPermissionBody {
   userId: string
   role: 'admin' | 'user' | 'readOnly'
-}
-
-interface SetVisibilityBody {
-  visibility: 'public' | 'private'
 }
 
 @Roles(Role.Admin)
@@ -86,19 +81,5 @@ export class PermissionsController {
       throw new NotFoundException('Permission not found')
     }
     return { success: true }
-  }
-
-  @Patch(':id/visibility')
-  async setVisibility(
-    @Param('id') assemblyId: string,
-    @Body() body: SetVisibilityBody,
-  ) {
-    const assembly = await this.db.assembly.findById(assemblyId)
-    if (!assembly) {
-      throw new NotFoundException(`Assembly ${assemblyId} not found`)
-    }
-    return this.db.assembly.updateById(assemblyId, {
-      visibility: body.visibility,
-    })
   }
 }

@@ -17,9 +17,7 @@ function openFilehandle(pathOrUrl: string) {
 
 @Injectable()
 export class SequenceService {
-  constructor(
-    @Inject(DatabaseService) private readonly db: DatabaseService,
-  ) {}
+  constructor(@Inject(DatabaseService) private readonly db: DatabaseService) {}
 
   private readonly logger = new Logger(SequenceService.name)
 

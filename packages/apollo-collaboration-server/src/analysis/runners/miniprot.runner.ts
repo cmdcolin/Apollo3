@@ -73,7 +73,12 @@ export class MiniprotRunner implements AnalysisRunner {
       `Extracting FASTA for assembly ${context.assemblyId} → ${fastaPath}`,
     )
     const refSeqs = await context.db.refSeq.findByAssembly(context.assemblyId)
-    await extractAssemblyFasta(context.assemblyId, fastaPath, context.sequenceService, refSeqs)
+    await extractAssemblyFasta(
+      context.assemblyId,
+      fastaPath,
+      context.sequenceService,
+      refSeqs,
+    )
 
     this.logger.log(`Running miniprot -d → ${indexPath}`)
     await runCommand('miniprot', ['-d', indexPath, fastaPath])

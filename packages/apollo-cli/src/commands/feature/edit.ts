@@ -5,11 +5,7 @@ import { Flags } from '@oclif/core'
 import { fetch } from 'undici'
 
 import { BaseCommand } from '../../baseCommand.js'
-import {
-  createFetchErrorMessage,
-  localhostToAddress,
-  readStdin,
-} from '../../utils.js'
+import { createFetchErrorMessage, readStdin } from '../../utils.js'
 
 export default class Get extends BaseCommand<typeof Get> {
   static summary = 'Edit features using an appropiate json input'
@@ -64,7 +60,7 @@ export default class Get extends BaseCommand<typeof Get> {
     for (const change of json) {
       const str = JSON.stringify(change)
 
-      const url = new URL(localhostToAddress(`${access.address}/changes`))
+      const url = new URL(`${access.address}/changes`)
       const auth = {
         method: 'POST',
         body: str,

@@ -9,7 +9,7 @@ import { fetch } from 'undici'
 
 import { ApolloConf, KEYS, optionDesc } from '../ApolloConf.js'
 import { BaseCommand } from '../baseCommand.js'
-import { createFetchErrorMessage, localhostToAddress } from '../utils.js'
+import { createFetchErrorMessage } from '../utils.js'
 
 export default class ApolloConfig extends BaseCommand<typeof ApolloConfig> {
   static summary = 'Get or set apollo configuration options'
@@ -199,7 +199,7 @@ export default class ApolloConfig extends BaseCommand<typeof ApolloConfig> {
   }
 
   private async getLoginTypes(address: string): Promise<string[]> {
-    const response = await fetch(localhostToAddress(`${address}/auth/types`))
+    const response = await fetch(`${address}/auth/types`)
     if (!response.ok) {
       const errorMessage = await createFetchErrorMessage(
         response,

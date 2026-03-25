@@ -328,7 +328,7 @@ function runBenchmarks(
   for (let i = 0; i < ITERATIONS; i++) {
     cleanup()
     const ms = cliShellTimed(
-      `${apollo} assembly add-from-gff ${gffFile} -a bench_asm -f ${P}`,
+      `${apollo} assembly assembly-add-TODO ${gffFile} -a bench_asm -f ${P}`,
     )
     importTimes.push(ms)
     process.stdout.write(`    iteration ${i + 1}: ${formatMs(ms)}\n`)
@@ -342,7 +342,9 @@ function runBenchmarks(
 
   // Ensure assembly exists for remaining tests
   cleanup()
-  cliShell(`${apollo} assembly add-from-gff ${gffFile} -a bench_asm -f ${P}`)
+  cliShell(
+    `${apollo} assembly assembly-add-TODO ${gffFile} -a bench_asm -f ${P}`,
+  )
 
   // 2: Feature get (all features)
   console.log(`  [${label}] Feature get...`)
@@ -397,7 +399,9 @@ function runBenchmarks(
   console.log(`  [${label}] Assembly delete...`)
   const deleteTimes: number[] = []
   for (let i = 0; i < ITERATIONS; i++) {
-    cliShell(`${apollo} assembly add-from-gff ${gffFile} -a bench_del -f ${P}`)
+    cliShell(
+      `${apollo} assembly assembly-add-TODO ${gffFile} -a bench_del -f ${P}`,
+    )
     const ms = cliShellTimed(`${apollo} assembly delete -a bench_del ${P}`)
     deleteTimes.push(ms)
     process.stdout.write(`    iteration ${i + 1}: ${formatMs(ms)}\n`)

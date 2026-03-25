@@ -1,9 +1,19 @@
-import { Controller, Get, Inject, Logger, Param, Query } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Logger,
+  Param,
+  Patch,
+  Query,
+} from '@nestjs/common'
 
 import { Role } from '../utils/role/role.enum.js'
 import { Roles } from '../utils/roles.guard.js'
 
 import type { FindRefSeqDto } from './dto/find-refSeq.dto.js'
+import type { UpdateRefSeqDto } from './dto/update-refSeq.dto.js'
 import { RefSeqsService } from './refSeqs.service.js'
 
 @Roles(Role.ReadOnly)
@@ -22,7 +32,13 @@ export class RefSeqsController {
   }
 
   @Get(':refseqid')
-  getFeature(@Param('refseqid') refseqid: string) {
+  findOne(@Param('refseqid') refseqid: string) {
     return this.refSeqsService.findOne(refseqid)
+  }
+
+  @Patch(':refseqid')
+  @Roles(Role.Admin)
+  update(@Param('refseqid') refseqid: string, @Body() body: UpdateRefSeqDto) {
+    return this.refSeqsService.update(refseqid, body)
   }
 }

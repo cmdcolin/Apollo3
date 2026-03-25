@@ -9,7 +9,6 @@ import {
   getAssemblyFromRefseq,
   getFeatureById,
   idReader,
-  localhostToAddress,
 } from '../../utils.js'
 
 export default class EditAttibute extends BaseCommand<typeof EditAttibute> {
@@ -134,7 +133,7 @@ terms to non-existing terms'
       newAttributes,
     }
 
-    const url = new URL(localhostToAddress(`${access.address}/changes`))
+    const url = new URL(`${access.address}/changes`)
     const auth = {
       method: 'POST',
       body: JSON.stringify(changeJson),

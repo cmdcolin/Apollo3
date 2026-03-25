@@ -11,7 +11,6 @@ import {
   createFetchErrorMessage,
   getFeatureById,
   idReader,
-  localhostToAddress,
   queryApollo,
 } from '../../utils.js'
 
@@ -142,7 +141,7 @@ to retrive the parent ID of interest and to populate the child feature with attr
 
       parentFeatureId: _id,
     }
-    const url = new URL(localhostToAddress(`${address}/changes`))
+    const url = new URL(`${address}/changes`)
     const auth = {
       method: 'POST',
       body: JSON.stringify(change),

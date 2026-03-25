@@ -1,5 +1,9 @@
 import { readConfObject } from '@jbrowse/core/configuration'
-import { type IAnyStateTreeNode, type Instance, getRoot } from '@jbrowse/mobx-state-tree'
+import {
+  type IAnyStateTreeNode,
+  type Instance,
+  getRoot,
+} from '@jbrowse/mobx-state-tree'
 
 import type ApolloPluginConfigurationSchema from '../config'
 import type { ApolloRootModel } from '../types'
@@ -53,10 +57,11 @@ export function canEdit(session: IAnyStateTreeNode) {
 }
 
 export function isAnalysisToolAvailable(
-  session: ApolloSessionModel,
+  session: IAnyStateTreeNode,
   toolName: string,
 ) {
-  if (!isAuthenticated(session)) {
+  const role = getRole(session)
+  if (role !== 'user' && role !== 'admin') {
     return false
   }
   const pluginConfiguration = getPluginConfiguration(session)

@@ -12,6 +12,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { parseStringSync } from '@gmod/gff'
+import { gff3LineToSnapshot } from '@apollo-annotation/shared'
+
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '..')
 const COLLAB_DIR = path.join(REPO_ROOT, 'packages/apollo-collaboration-server')
@@ -86,12 +89,6 @@ async function apiPatch(token: string, endpoint: string, body: unknown) {
     throw new Error(`PATCH /${endpoint} failed: ${res.status} ${text}`)
   }
   return res.json()
-}
-
-function randomHexId() {
-  const bytes = new Uint8Array(12)
-  crypto.getRandomValues(bytes)
-  return [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
 async function main() {
@@ -172,26 +169,57 @@ async function main() {
     const token = await getToken()
     log('Authenticated as root.')
 
-    // Create volvox assembly using file paths
-    const volvoxId = randomHexId()
-    log(`Adding volvox assembly (id=${volvoxId})...`)
-    await apiPost(token, 'changes', {
-      typeName: 'AddAssemblyAndFeaturesFromFileChange',
-      assembly: volvoxId,
-      assemblyName: 'volvox',
-      gff3Path: GFF3_FILE,
-      fastaPath: FASTA_FILE,
-      faiPath: FAI_FILE,
-    })
-    log('  volvox assembly created.')
-
-    // Set public visibility
-    log('Setting visibility to public...')
-    await apiPatch(token, `assemblies/${volvoxId}/visibility`, {
+    // Create assembly — server reads FASTA index to populate refSeqs
+    log('Creating volvox assembly...')
+    const volvoxAssembly = (await apiPost(token, 'assemblies', {
+      name: 'volvox',
       visibility: 'public',
-    })
+      sequenceSource: {
+        type: 'fasta',
+        fa: FASTA_FILE,
+        fai: FAI_FILE,
+      },
+    })) as { _id: string }
+    const volvoxId = volvoxAssembly._id
+    log(`  assembly created: ${volvoxId}`)
 
-    // Create organism
+    // Load features from GFF3 — client parses file, posts via changes bus
+    log('Loading features from GFF3...')
+    const refSeqsRes = await fetch(`${API_BASE}/refSeqs?assembly=${volvoxId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    })
+    const refSeqs = (await refSeqsRes.json()) as { _id: string; name: string }[]
+    const refSeqIdMap = new Map(refSeqs.map((rs) => [rs.name, rs._id]))
+    const gff3Text = fs.readFileSync(GFF3_FILE, 'utf8')
+    const features = parseStringSync(gff3Text, { parseSequences: false })
+    let featureCount = 0
+    for (const featureGroup of features) {
+      if (!Array.isArray(featureGroup) || featureGroup.length === 0) {
+        continue
+      }
+      const line = featureGroup[0]
+      if (!line?.seq_id || !line.type) {
+        continue
+      }
+      const refSeqId = refSeqIdMap.get(line.seq_id)
+      if (!refSeqId) {
+        continue
+      }
+      const snapshot = gff3LineToSnapshot(line, refSeqId)
+      await apiPost(token, 'changes', {
+        typeName: 'AddFeatureChange',
+        assembly: volvoxId,
+        changedIds: [snapshot._id],
+        addedFeature: snapshot,
+      })
+      featureCount++
+    }
+    log(`  ${featureCount} top-level features loaded.`)
+
+    // Create organism and assign to assembly
     log('Creating Volvox carteri organism...')
     const organism = (await apiPost(token, 'organisms', {
       genus: 'Volvox',
@@ -201,9 +229,8 @@ async function main() {
     })) as { _id: string }
     log(`  organism created: ${organism._id}`)
 
-    // Assign organism to assembly
-    log('Assigning assembly to organism...')
-    await apiPatch(token, `assemblies/${volvoxId}/organism`, {
+    log('Assigning organism to assembly...')
+    await apiPatch(token, `assemblies/${volvoxId}`, {
       organism: organism._id,
     })
 
@@ -493,7 +520,6 @@ async function main() {
     log('  Waiting for local BLAST DB builds to complete...')
     await new Promise((r) => setTimeout(r, 5000))
     log(`  ${localBlastDbs.length} local BLAST databases built.`)
-
   } finally {
     // Checkpoint WAL before killing server
     try {

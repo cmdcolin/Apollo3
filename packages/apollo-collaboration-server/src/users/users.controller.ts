@@ -1,4 +1,15 @@
-import { Controller, Get, Inject, Logger, Param, Req } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Inject,
+  Logger,
+  NotFoundException,
+  Param,
+  Patch,
+  Req,
+} from '@nestjs/common'
 
 import type { RequestWithUser } from '../utils/request-with-user.js'
 import { Role } from '../utils/role/role.enum.js'
@@ -50,5 +61,27 @@ export class UsersController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.usersService.findById(id)
+  }
+
+  @Patch(':id')
+  async updateRole(
+    @Param('id') id: string,
+    @Body() body: { role: 'admin' | 'user' | 'readOnly' | 'none' },
+  ) {
+    const user = await this.usersService.updateRole(id, body.role)
+    if (!user) {
+      throw new NotFoundException(`User with id "${id}" not found`)
+    }
+    return user
+  }
+
+  @Delete(':id')
+  async deleteUser(@Param('id') id: string) {
+    const user = await this.usersService.findById(id)
+    if (!user) {
+      throw new NotFoundException(`User with id "${id}" not found`)
+    }
+    await this.usersService.remove(id)
+    return { message: `User "${id}" deleted successfully` }
   }
 }

@@ -10,7 +10,6 @@ import {
   getAssemblyFromRefseq,
   getFeatureById,
   getRefseqId,
-  localhostToAddress,
 } from '../../utils.js'
 
 export default class Copy extends BaseCommand<typeof Copy> {
@@ -137,7 +136,7 @@ the database or by name and assembly or by identifier.'
       },
       copyFeature: true,
     }
-    const url = new URL(localhostToAddress(`${address}/changes`))
+    const url = new URL(`${address}/changes`)
     const auth = {
       method: 'POST',
       body: JSON.stringify(change),

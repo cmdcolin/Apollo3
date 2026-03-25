@@ -38,20 +38,7 @@ void describe('Test Docker', () => {
     assert.ok(p.stdout.includes('COMMANDS'))
   })
 
-  void globalThis.itName('Add assembly', () => {
-    const configFile = '/root/.config/apollo-cli/config.yml'
-    new Shell(
-      `${apollo} assembly add-from-gff --config-file ${configFile} data/tiny.fasta.gff3 -a vv1 -f`,
-    )
-    let p = new Shell(
-      `${apollo} assembly get --config-file ${configFile} -a vv1`,
-    )
-    assert.ok(p.stdout.includes('vv1'))
-
-    new Shell(`${apollo} assembly delete --config-file ${configFile} -a vv1`)
-    p = new Shell(`${apollo} assembly get --config-file ${configFile} -a vv1`)
-    assert.deepStrictEqual(p.stdout.trim(), '[]')
-  })
+  // TODO: 'Add assembly' test removed — assembly creation via file paths has been removed
 
   void globalThis.itName('Missing config', () => {
     let p = new Shell(

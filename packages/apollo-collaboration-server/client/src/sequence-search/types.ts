@@ -105,34 +105,36 @@ export const BLAST_PROGRAMS = [
 
 export const PROTEIN_PROGRAMS = new Set(['blastp', 'blastx'])
 
-export const NCBI_DATABASES: Record<string, { value: string; label: string }[]> =
-  {
-    blastn: [
-      { value: 'nt', label: 'nt (nucleotide collection)' },
-      { value: 'refseq_rna', label: 'refseq_rna' },
-      { value: 'refseq_genomic', label: 'refseq_genomic' },
-    ],
-    blastp: [
-      { value: 'nr', label: 'nr (non-redundant protein)' },
-      { value: 'refseq_protein', label: 'refseq_protein' },
-      { value: 'swissprot', label: 'swissprot' },
-      { value: 'pdb', label: 'pdb' },
-    ],
-    blastx: [
-      { value: 'nr', label: 'nr (non-redundant protein)' },
-      { value: 'refseq_protein', label: 'refseq_protein' },
-      { value: 'swissprot', label: 'swissprot' },
-    ],
-    tblastn: [
-      { value: 'nt', label: 'nt (nucleotide collection)' },
-      { value: 'refseq_rna', label: 'refseq_rna' },
-      { value: 'refseq_genomic', label: 'refseq_genomic' },
-    ],
-    tblastx: [
-      { value: 'nt', label: 'nt (nucleotide collection)' },
-      { value: 'refseq_rna', label: 'refseq_rna' },
-    ],
-  }
+export const NCBI_DATABASES: Record<
+  string,
+  { value: string; label: string }[]
+> = {
+  blastn: [
+    { value: 'nt', label: 'nt (nucleotide collection)' },
+    { value: 'refseq_rna', label: 'refseq_rna' },
+    { value: 'refseq_genomic', label: 'refseq_genomic' },
+  ],
+  blastp: [
+    { value: 'nr', label: 'nr (non-redundant protein)' },
+    { value: 'refseq_protein', label: 'refseq_protein' },
+    { value: 'swissprot', label: 'swissprot' },
+    { value: 'pdb', label: 'pdb' },
+  ],
+  blastx: [
+    { value: 'nr', label: 'nr (non-redundant protein)' },
+    { value: 'refseq_protein', label: 'refseq_protein' },
+    { value: 'swissprot', label: 'swissprot' },
+  ],
+  tblastn: [
+    { value: 'nt', label: 'nt (nucleotide collection)' },
+    { value: 'refseq_rna', label: 'refseq_rna' },
+    { value: 'refseq_genomic', label: 'refseq_genomic' },
+  ],
+  tblastx: [
+    { value: 'nt', label: 'nt (nucleotide collection)' },
+    { value: 'refseq_rna', label: 'refseq_rna' },
+  ],
+}
 
 export const BLAT_QUERY_TYPES = [
   { value: 'dna', label: 'DNA' },
@@ -152,7 +154,8 @@ export const TOOL_DESCRIPTIONS: Record<string, string> = {
   blat: 'Fast genome alignment using UCSC BLAT. Best for high-identity same-species queries.',
   miniprot:
     'Align protein sequences to a genome to find gene models, including intron–exon structure.',
-  ispcr: 'In-silico PCR: predict amplification products from a primer pair against a genome database.',
+  ispcr:
+    'In-silico PCR: predict amplification products from a primer pair against a genome database.',
 }
 
 export const TAB_TOOLS = ['local-blast', 'blat', 'miniprot', 'ispcr']

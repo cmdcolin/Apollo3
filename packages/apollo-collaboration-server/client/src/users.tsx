@@ -1,6 +1,9 @@
 import Alert from '@mui/material/Alert'
+import Button from '@mui/material/Button'
 import Container from '@mui/material/Container'
+import MenuItem from '@mui/material/MenuItem'
 import Paper from '@mui/material/Paper'
+import Select from '@mui/material/Select'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
@@ -24,12 +27,20 @@ interface User {
 
 function UsersPage() {
   const [users, setUsers] = useState<User[]>([])
+  const [currentUser, setCurrentUser] = useState<User>()
   const [error, setError] = useState<string>()
 
   const load = useCallback(async () => {
     try {
       setError(undefined)
-      setUsers(await fetchJson<User[]>('/users'))
+      const [allUsers, me] = await Promise.all([
+        fetchJson<User[]>('/users'),
+        fetchJson<User>('/users/me').catch(() => {
+          // non-critical
+        }),
+      ])
+      setUsers(allUsers)
+      setCurrentUser(me)
     } catch (error_) {
       setError(error_ instanceof Error ? error_.message : String(error_))
     }
@@ -38,6 +49,44 @@ function UsersPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  async function handleRoleChange(userId: string, newRole: string) {
+    try {
+      setError(undefined)
+      const res = await fetch(`/users/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole }),
+      })
+      if (!res.ok) {
+        throw new Error(`Failed: ${res.status}`)
+      }
+      setUsers((prev) =>
+        prev.map((u) => (u._id === userId ? { ...u, role: newRole } : u)),
+      )
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : String(error_))
+    }
+  }
+
+  async function handleDelete(userId: string) {
+    if (!globalThis.confirm('Delete this user?')) {
+      return
+    }
+    try {
+      setError(undefined)
+      const res = await fetch(`/users/${userId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        throw new Error(`Failed: ${res.status}`)
+      }
+      setUsers((prev) => prev.filter((u) => u._id !== userId))
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : String(error_))
+    }
+  }
+
+  const isSelf = (userId: string) =>
+    currentUser?.email === users.find((u) => u._id === userId)?.email
 
   return (
     <AdminNav current="users">
@@ -61,6 +110,7 @@ function UsersPage() {
                 <TableCell>Email</TableCell>
                 <TableCell>Role</TableCell>
                 <TableCell>Created</TableCell>
+                <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -68,16 +118,43 @@ function UsersPage() {
                 <TableRow key={u._id} hover>
                   <TableCell>{u.username}</TableCell>
                   <TableCell>{u.email}</TableCell>
-                  <TableCell>{u.role}</TableCell>
+                  <TableCell>
+                    <Select
+                      size="small"
+                      value={u.role}
+                      disabled={isSelf(u._id)}
+                      onChange={(e) => {
+                        void handleRoleChange(u._id, e.target.value)
+                      }}
+                      sx={{ minWidth: 120 }}
+                    >
+                      <MenuItem value="admin">Admin</MenuItem>
+                      <MenuItem value="user">User</MenuItem>
+                      <MenuItem value="readOnly">Read Only</MenuItem>
+                      <MenuItem value="none">None</MenuItem>
+                    </Select>
+                  </TableCell>
                   <TableCell>
                     {u.createdAt ? new Date(u.createdAt).toLocaleString() : ''}
+                  </TableCell>
+                  <TableCell align="right">
+                    <Button
+                      size="small"
+                      color="error"
+                      disabled={isSelf(u._id)}
+                      onClick={() => {
+                        void handleDelete(u._id)
+                      }}
+                    >
+                      Delete
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
               {users.length === 0 && !error && (
                 <TableRow>
                   <TableCell
-                    colSpan={4}
+                    colSpan={5}
                     align="center"
                     sx={{ color: 'text.secondary' }}
                   >

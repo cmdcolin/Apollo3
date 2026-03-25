@@ -16,7 +16,6 @@ import {
   type UserCredentials,
   basicCheckConfig,
   createFetchErrorMessage,
-  localhostToAddress,
   waitFor,
 } from '../utils.js'
 
@@ -151,7 +150,7 @@ need to execute this command again unless the token has expired. To setup a new 
     address: string,
     password: string,
   ): Promise<UserCredentials> {
-    const url = localhostToAddress(`${address}/auth/root`)
+    const url = `${address}/auth/root`
     const response = await fetch(url, {
       headers: { 'Content-Type': 'application/json' },
       method: 'POST',
@@ -172,7 +171,7 @@ need to execute this command again unless the token has expired. To setup a new 
   }
 
   private async startGuestLogin(address: string): Promise<UserCredentials> {
-    const url = localhostToAddress(`${address}/auth/login?type=guest`)
+    const url = `${address}/auth/login?type=guest`
     const response = await fetch(url, {
       headers: { 'Content-Type': 'application/json' },
     })

@@ -2,7 +2,11 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
-import { DataGrid, type GridColDef, type GridRenderCellParams } from '@mui/x-data-grid'
+import {
+  DataGrid,
+  type GridColDef,
+  type GridRenderCellParams,
+} from '@mui/x-data-grid'
 
 import {
   GenomeLink,
@@ -35,8 +39,14 @@ export function BlatResultsTable({
   }
 
   const columns: GridColDef<PslHit>[] = [
-    { field: 'qName', headerName: 'Query', width: 160, renderCell: (p: GridRenderCellParams<PslHit, string>) => (
-        <span style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{p.value}</span>
+    {
+      field: 'qName',
+      headerName: 'Query',
+      width: 160,
+      renderCell: (p: GridRenderCellParams<PslHit, string>) => (
+        <span style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+          {p.value}
+        </span>
       ),
     },
     { field: 'strand', headerName: 'Strand', width: 70 },
@@ -53,7 +63,8 @@ export function BlatResultsTable({
       headerName: 'Query range',
       width: 120,
       sortable: false,
-      valueGetter: (_value: unknown, row: PslHit) => `${row.qStart}–${row.qEnd}`,
+      valueGetter: (_value: unknown, row: PslHit) =>
+        `${row.qStart}–${row.qEnd}`,
     },
     {
       field: 'location',

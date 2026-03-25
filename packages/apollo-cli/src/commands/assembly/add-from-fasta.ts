@@ -1,125 +1,114 @@
-import * as fs from 'node:fs'
-import path from 'node:path'
+import { Flags } from '@oclif/core'
+import { Agent, fetch } from 'undici'
 
-import type { SerializedAddAssemblyFromFileChange } from '@apollo-annotation/shared'
-import { Args, Flags } from '@oclif/core'
-import { ObjectId } from 'bson'
+import { BaseCommand } from '../../baseCommand.js'
+import { createFetchErrorMessage } from '../../utils.js'
 
-import { FileCommand } from '../../fileCommand.js'
-import { submitAssembly } from '../../utils.js'
+export default class AddFromFasta extends BaseCommand<typeof AddFromFasta> {
+  static summary = 'Add an assembly from a FASTA or 2bit sequence file'
+  static description = `Creates an assembly whose reference sequences are derived from the
+provided sequence source. For FASTA files, the server reads the FAI index to
+populate sequence names and lengths. For 2bit files, the header is read instead.
 
-export default class AddFasta extends FileCommand {
-  static summary = 'Add a new assembly from fasta input'
-  static description = `Add new assembly from an indexed FASTA or TwoBit file.
-The input can be:
-  * A local bgzip'd FASTA with .fai and .gzi indexes
-  * A local plain FASTA with .fai index
-  * A remote (URL) bgzip'd FASTA with .fai and .gzi indexes
-  * A local .2bit file
-
-Files must be accessible to the Apollo server.`
+Paths may be local file paths (accessible to the server) or HTTP/HTTPS URLs.`
 
   static examples = [
     {
-      description: 'From local bgzip FASTA (indexes auto-detected):',
-      command: '<%= config.bin %> <%= command.id %> genome.fa.gz -a myAssembly',
-    },
-    {
-      description: 'From local plain FASTA with index:',
-      command: '<%= config.bin %> <%= command.id %> genome.fa -a myAssembly',
-    },
-    {
-      description: 'From remote bgzip FASTA:',
+      description: 'Add assembly from indexed FASTA:',
       command:
-        '<%= config.bin %> <%= command.id %> https://.../genome.fa.gz -a myAssembly',
+        '<%= config.bin %> <%= command.id %> -a myAssembly -f genome.fa -i genome.fa.fai',
+    },
+    {
+      description: 'Add assembly from bgzip-compressed FASTA:',
+      command:
+        '<%= config.bin %> <%= command.id %> -a myAssembly -f genome.fa.gz -i genome.fa.gz.fai -z genome.fa.gz.gzi',
+    },
+    {
+      description: 'Add assembly from remote FASTA URLs:',
+      command:
+        '<%= config.bin %> <%= command.id %> -a myAssembly -f https://example.com/genome.fa.gz -i https://example.com/genome.fa.gz.fai -z https://example.com/genome.fa.gz.gzi',
+    },
+    {
+      description: 'Add assembly from 2bit file:',
+      command:
+        '<%= config.bin %> <%= command.id %> -a myAssembly -t genome.2bit',
     },
   ]
-
-  static args = {
-    input: Args.string({
-      description:
-        'Input FASTA file (local path or URL). Indexes are auto-detected at <input>.fai and <input>.gzi unless overridden with --fai/--gzi.',
-      required: true,
-    }),
-  }
 
   static flags = {
     assembly: Flags.string({
       char: 'a',
-      description: 'Name for this assembly. Use the file name if omitted',
+      description: 'Assembly name',
+      required: true,
     }),
-    force: Flags.boolean({
+    fasta: Flags.string({
       char: 'f',
-      description: 'Delete existing assembly, if it exists',
+      description: 'FASTA file path or URL',
+      exclusive: ['twobit'],
     }),
     fai: Flags.string({
-      description: 'Path or URL to .fai index file',
+      char: 'i',
+      description: 'FAI index path or URL (defaults to --fasta value + ".fai")',
+      exclusive: ['twobit'],
     }),
     gzi: Flags.string({
-      description: 'Path or URL to .gzi index file (for bgzip FASTA)',
+      char: 'z',
+      description:
+        'GZI index path or URL (required for bgzip-compressed FASTA)',
+      exclusive: ['twobit'],
+    }),
+    twobit: Flags.string({
+      char: 't',
+      description: '2bit file path or URL',
+      exclusive: ['fasta', 'fai', 'gzi'],
+    }),
+    public: Flags.boolean({
+      char: 'p',
+      description: 'Make the assembly publicly visible',
+      default: false,
     }),
   }
 
-  public async run(): Promise<void> {
-    const { args, flags } = await this.parse(AddFasta)
-
+  public async run() {
+    const { flags } = await this.parse(AddFromFasta)
     const access = await this.getAccess()
 
-    const assemblyName = flags.assembly ?? path.basename(args.input)
-    const isRemote = isValidHttpUrl(args.input)
-
-    const fai = flags.fai ?? `${args.input}.fai`
-    const gzi = flags.gzi ?? `${args.input}.gzi`
-
-    if (!isRemote && !fs.existsSync(args.input)) {
-      this.error(`Input file "${args.input}" does not exist`)
-    }
-    if (!isRemote && !fs.existsSync(fai)) {
-      this.error(
-        `Index file "${fai}" does not exist. Create it with: samtools faidx ${args.input}`,
-      )
-    }
-
-    const hasGzi = isRemote
-      ? await urlExists(gzi)
-      : fs.existsSync(gzi)
-
-    const body: SerializedAddAssemblyFromFileChange = {
-      assemblyName,
-      typeName: 'AddAssemblyFromFileChange',
-      sequenceSource: {
+    let sequenceSource
+    if (flags.twobit) {
+      sequenceSource = { type: 'twobit', twobit: flags.twobit }
+    } else if (flags.fasta) {
+      sequenceSource = {
         type: 'fasta',
-        fa: args.input,
-        fai,
-        gzi: hasGzi ? gzi : undefined,
-      },
-      assembly: new ObjectId().toHexString(),
+        fa: flags.fasta,
+        fai: flags.fai ?? `${flags.fasta}.fai`,
+        ...(flags.gzi !== undefined && { gzi: flags.gzi }),
+      }
+    } else {
+      this.error('Provide either --fasta or --twobit')
     }
 
-    const rec = await submitAssembly(
-      access.address,
-      access.accessToken,
-      body,
-      flags.force,
-    )
-    this.log(JSON.stringify(rec, null, 2))
-  }
-}
-
-function isValidHttpUrl(x: string) {
-  try {
-    const url = new URL(x)
-    return url.protocol === 'http:' || url.protocol === 'https:'
-  } catch {
-    return false
-  }
-}
-
-async function urlExists(url: string) {
-  try {
-    const res = await fetch(url, { method: 'HEAD' })
-    return res.ok
-  } catch {
-    return false
+    const url = new URL(`${access.address}/assemblies`)
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${access.accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: flags.assembly,
+        sequenceSource,
+        ...(flags.public && { visibility: 'public' }),
+      }),
+      dispatcher: new Agent({ headersTimeout: 60 * 60 * 1000 }),
+    })
+    if (!response.ok) {
+      const errorMessage = await createFetchErrorMessage(
+        response,
+        'add-from-fasta failed',
+      )
+      this.error(errorMessage)
+    }
+    const assembly = (await response.json()) as { _id: string; name: string }
+    this.log(JSON.stringify(assembly, null, 2))
   }
 }

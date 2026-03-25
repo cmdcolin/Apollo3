@@ -8,7 +8,6 @@ import {
   convertAssemblyNameToId,
   createFetchErrorMessage,
   idReader,
-  localhostToAddress,
   queryApollo,
 } from '../../utils.js'
 
@@ -18,7 +17,7 @@ async function searchFeatures(
   assemblies: string[],
   term: string,
 ): Promise<Response> {
-  const url = new URL(localhostToAddress(`${address}/features/searchFeatures`))
+  const url = new URL(`${address}/features/searchFeatures`)
   const searchParams = new URLSearchParams({
     assemblies: assemblies.join(','),
     term,

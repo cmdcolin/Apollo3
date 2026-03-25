@@ -165,9 +165,7 @@ export function RunTiberius({
       setStatus('running')
       pollStatus(result._id)
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : String(error),
-      )
+      setErrorMessage(error instanceof Error ? error.message : String(error))
       setStatus('failed')
     }
   }

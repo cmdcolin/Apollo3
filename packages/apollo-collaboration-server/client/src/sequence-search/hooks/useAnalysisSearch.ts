@@ -110,5 +110,16 @@ export function useAnalysisSearch(): SearchState {
     )
   }, [jobId])
 
-  return { submitting, jobId, status, tool, assemblyId, params, results, error, submit, cancel }
+  return {
+    submitting,
+    jobId,
+    status,
+    tool,
+    assemblyId,
+    params,
+    results,
+    error,
+    submit,
+    cancel,
+  }
 }

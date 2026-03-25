@@ -15,7 +15,8 @@ describe('parseGff3', () => {
   })
 
   it('parses a single feature', () => {
-    const line = 'ctgA\tminiprot\tmRNA\t1000\t2000\t.\t+\t.\tID=MP000001;Identity=0.95;Target=prot1 1 100'
+    const line =
+      'ctgA\tminiprot\tmRNA\t1000\t2000\t.\t+\t.\tID=MP000001;Identity=0.95;Target=prot1 1 100'
     const alignments = parseGff3(line)
     expect(alignments).toHaveLength(1)
     expect(alignments[0].seqName).toBe('ctgA')
@@ -40,7 +41,8 @@ describe('parseGff3', () => {
   })
 
   it('URL-decodes attribute values', () => {
-    const line = 'ctgA\tminiprot\tmRNA\t1\t100\t.\t+\t.\tID=MP1;Note=some%20name'
+    const line =
+      'ctgA\tminiprot\tmRNA\t1\t100\t.\t+\t.\tID=MP1;Note=some%20name'
     const alignments = parseGff3(line)
     expect(alignments[0].attributes['Note']).toBe('some name')
   })

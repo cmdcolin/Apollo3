@@ -111,9 +111,7 @@ export function BlastResultsTable({
     const desc = hit.description[0] as BlastHitDescription | undefined
     const [topHsp] = hit.hsps
     const identPct =
-      topHsp.align_len > 0
-        ? (topHsp.identity / topHsp.align_len) * 100
-        : 0
+      topHsp.align_len > 0 ? (topHsp.identity / topHsp.align_len) * 100 : 0
     return {
       id: hit.num,
       num: hit.num,
@@ -253,7 +251,9 @@ export function BlastResultsTable({
             pageSizeOptions={[25, 50, 100]}
             initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
             onRowClick={({ id }) => {
-              setExpandedId(expandedId === (id as number) ? null : (id as number))
+              setExpandedId(
+                expandedId === (id as number) ? null : (id as number),
+              )
             }}
             sx={{
               border: 'none',

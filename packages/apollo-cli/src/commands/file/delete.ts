@@ -6,7 +6,6 @@ import {
   createFetchErrorMessage,
   filterJsonList,
   idReader,
-  localhostToAddress,
   queryApollo,
 } from '../../utils.js'
 
@@ -72,7 +71,7 @@ async function deleteFile(
     },
   }
 
-  const url = new URL(localhostToAddress(`${address}/files/${fileId}`))
+  const url = new URL(`${address}/files/${fileId}`)
   const response: Response = await fetch(url, auth)
   if (!response.ok && response.status != 404) {
     const errorMessage = await createFetchErrorMessage(

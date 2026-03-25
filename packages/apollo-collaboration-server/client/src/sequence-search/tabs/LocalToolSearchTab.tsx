@@ -288,7 +288,12 @@ function NcbiBlastLink({
         method="POST"
         target="_blank"
         rel="noopener noreferrer"
-        sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-end' }}
+        sx={{
+          display: 'flex',
+          gap: 2,
+          flexWrap: 'wrap',
+          alignItems: 'flex-end',
+        }}
       >
         <input type="hidden" name="PAGE_TYPE" value="BlastSearch" />
         <input type="hidden" name="PROGRAM" value={program} />

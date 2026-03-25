@@ -2,11 +2,7 @@ import { Flags } from '@oclif/core'
 import { fetch } from 'undici'
 
 import { BaseCommand } from '../../baseCommand.js'
-import {
-  createFetchErrorMessage,
-  idReader,
-  localhostToAddress,
-} from '../../utils.js'
+import { createFetchErrorMessage, idReader } from '../../utils.js'
 
 export default class Get extends BaseCommand<typeof Get> {
   static summary = 'Get features given their identifiers'
@@ -58,7 +54,7 @@ export default class Get extends BaseCommand<typeof Get> {
     token: string,
     featureId: string,
   ): Promise<object> {
-    const url = new URL(localhostToAddress(`${address}/features/${featureId}`))
+    const url = new URL(`${address}/features/${featureId}`)
     const auth = {
       headers: {
         authorization: `Bearer ${token}`,

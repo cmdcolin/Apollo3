@@ -1,16 +1,17 @@
 import * as fs from 'node:fs'
 
-import type { SerializedRefSeqAliasesChange } from '@apollo-annotation/shared'
 import { Args, Flags } from '@oclif/core'
 import { Agent, type RequestInit, type Response, fetch } from 'undici'
 
 import { ConfigError } from '../../ApolloConf.js'
 import { BaseCommand } from '../../baseCommand.js'
-import {
-  createFetchErrorMessage,
-  localhostToAddress,
-  queryApollo,
-} from '../../utils.js'
+import { createFetchErrorMessage, queryApollo } from '../../utils.js'
+
+interface RefSeqRow {
+  _id: string
+  name: string
+  assembly: string
+}
 
 export default class AddRefNameAlias extends BaseCommand<
   typeof AddRefNameAlias
@@ -52,12 +53,14 @@ export default class AddRefNameAlias extends BaseCommand<
     const filehandle = await fs.promises.open(args['input-file'])
     const fileContent = await filehandle.readFile({ encoding: 'utf8' })
     await filehandle.close()
-    const lines = fileContent.split('\n')
+    const lines = fileContent
+      .split('\n')
+      .filter((line) => line.trim().length > 0)
 
-    const refNameAliases = []
+    const aliasesByRefName = new Map<string, string[]>()
     for (const line of lines) {
       const [refName, ...aliases] = line.split('\t')
-      refNameAliases.push({ refName, aliases })
+      aliasesByRefName.set(refName, aliases)
     }
 
     const assemblies: Response = await queryApollo(
@@ -65,40 +68,47 @@ export default class AddRefNameAlias extends BaseCommand<
       access.accessToken,
       'assemblies',
     )
-    const json = (await assemblies.json()) as object[]
-    const assembly = json.find((x) => 'name' in x && x.name === flags.assembly)
-    const assemblyId = assembly && '_id' in assembly ? assembly._id : undefined
+    const json = (await assemblies.json()) as { _id: string; name: string }[]
+    const assembly = json.find((x) => x.name === flags.assembly)
 
-    if (!assemblyId) {
+    if (!assembly) {
       this.error(`Assembly ${flags.assembly} not found`)
     }
 
-    const change: SerializedRefSeqAliasesChange = {
-      typeName: 'AddRefSeqAliasesChange',
-      assembly: assemblyId as string,
-      refSeqAliases: refNameAliases,
-    }
+    const refSeqsRes: Response = await queryApollo(
+      access.address,
+      access.accessToken,
+      `refSeqs?assembly=${assembly._id}`,
+    )
+    const refSeqs = (await refSeqsRes.json()) as RefSeqRow[]
 
-    const auth: RequestInit = {
-      method: 'POST',
-      body: JSON.stringify(change),
-      headers: {
-        Authorization: `Bearer ${access.accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      dispatcher: new Agent({ headersTimeout: 60 * 60 * 1000 }),
-    }
-    const url = new URL(localhostToAddress(`${access.address}/changes`))
-    const response = await fetch(url, auth)
-    if (!response.ok) {
-      const errorMessage = await createFetchErrorMessage(
-        response,
-        'Failed to add reference name aliases',
-      )
-      throw new ConfigError(errorMessage)
+    let updated = 0
+    for (const refSeq of refSeqs) {
+      const aliases = aliasesByRefName.get(refSeq.name)
+      if (aliases) {
+        const url = new URL(`${access.address}/refSeqs/${refSeq._id}`)
+        const auth: RequestInit = {
+          method: 'PATCH',
+          body: JSON.stringify({ aliases }),
+          headers: {
+            Authorization: `Bearer ${access.accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          dispatcher: new Agent({ headersTimeout: 60 * 60 * 1000 }),
+        }
+        const response = await fetch(url, auth)
+        if (!response.ok) {
+          const errorMessage = await createFetchErrorMessage(
+            response,
+            `Failed to add aliases for refSeq "${refSeq.name}"`,
+          )
+          throw new ConfigError(errorMessage)
+        }
+        updated++
+      }
     }
     this.log(
-      `Reference name aliases added successfully to assembly ${flags.assembly}`,
+      `Reference name aliases added successfully to ${updated} sequences in assembly ${flags.assembly}`,
     )
   }
 }

@@ -3,21 +3,23 @@ import Autocomplete from '@mui/material/Autocomplete'
 import Box from '@mui/material/Box'
 import Breadcrumbs from '@mui/material/Breadcrumbs'
 import Button from '@mui/material/Button'
+import Checkbox from '@mui/material/Checkbox'
 import Chip from '@mui/material/Chip'
 import Container from '@mui/material/Container'
 import FormControl from '@mui/material/FormControl'
+import FormControlLabel from '@mui/material/FormControlLabel'
 import InputLabel from '@mui/material/InputLabel'
 import Link from '@mui/material/Link'
 import MenuItem from '@mui/material/MenuItem'
 import Paper from '@mui/material/Paper'
 import Select from '@mui/material/Select'
-import TextField from '@mui/material/TextField'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
 import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
+import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useCallback, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -30,6 +32,8 @@ interface Assembly {
   name: string
   displayName?: string
   description?: string
+  aliases?: string[]
+  checks?: string[]
   organism?: string
   visibility?: 'public' | 'private'
 }
@@ -158,7 +162,7 @@ function PermissionsSection({
   async function handleVisibilityChange(newVisibility: 'public' | 'private') {
     try {
       setPermError(undefined)
-      await fetch(`/assemblies/${assemblyId}/visibility`, {
+      await fetch(`/assemblies/${assemblyId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ visibility: newVisibility }),
@@ -291,6 +295,339 @@ function PermissionsSection({
           </Button>
         </Box>
       ) : null}
+    </>
+  )
+}
+
+interface CheckType {
+  _id: string
+  name: string
+  version: number
+  causes: string[]
+  isDefault: boolean
+}
+
+interface CheckResult {
+  _id: string
+  name: string
+  cause: string
+  featureId: string
+  start: number
+  end: number
+  message: string
+  ignored: boolean
+}
+
+function ChecksSection({
+  assemblyId,
+  assembly,
+  currentUser,
+  onUpdated,
+}: {
+  assemblyId: string
+  assembly: Assembly
+  currentUser?: User
+  onUpdated: (updated: Assembly) => void
+}) {
+  const [checkTypes, setCheckTypes] = useState<CheckType[]>([])
+  const [checkResults, setCheckResults] = useState<CheckResult[]>([])
+  const [enabledChecks, setEnabledChecks] = useState<string[]>(
+    assembly.checks ?? [],
+  )
+  const [checksError, setChecksError] = useState<string>()
+  const [saving, setSaving] = useState(false)
+
+  const isAdmin = currentUser?.role === 'admin'
+
+  const loadChecks = useCallback(async () => {
+    try {
+      setChecksError(undefined)
+      const [types, results] = await Promise.all([
+        fetchJson<CheckType[]>('/checks/types').catch(() => [] as CheckType[]),
+        fetchJson<CheckResult[]>(`/checks?assembly=${assemblyId}`).catch(
+          () => [] as CheckResult[],
+        ),
+      ])
+      setCheckTypes(types)
+      setCheckResults(results)
+    } catch (error_) {
+      setChecksError(error_ instanceof Error ? error_.message : String(error_))
+    }
+  }, [assemblyId])
+
+  useEffect(() => {
+    void loadChecks()
+  }, [loadChecks])
+
+  useEffect(() => {
+    setEnabledChecks(assembly.checks ?? [])
+  }, [assembly.checks])
+
+  async function handleSaveChecks() {
+    try {
+      setSaving(true)
+      setChecksError(undefined)
+      const res = await fetch(`/assemblies/${assemblyId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ checks: enabledChecks }),
+      })
+      if (!res.ok) {
+        throw new Error(`Failed: ${res.status}`)
+      }
+      onUpdated({ ...assembly, checks: enabledChecks })
+    } catch (error_) {
+      setChecksError(error_ instanceof Error ? error_.message : String(error_))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function handleToggleCheck(name: string, checked: boolean) {
+    if (checked) {
+      setEnabledChecks([...enabledChecks, name])
+    } else {
+      setEnabledChecks(enabledChecks.filter((c) => c !== name))
+    }
+  }
+
+  return (
+    <>
+      <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>
+        Checks
+      </Typography>
+
+      {checksError ? (
+        <Alert severity="error" sx={{ mb: 1 }}>
+          {checksError}
+        </Alert>
+      ) : null}
+
+      {isAdmin && checkTypes.length > 0 ? (
+        <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            Enabled Checks
+          </Typography>
+          {checkTypes.map((ct) => (
+            <FormControlLabel
+              key={ct._id}
+              control={
+                <Checkbox
+                  checked={enabledChecks.includes(ct.name)}
+                  onChange={(_e, checked) => {
+                    handleToggleCheck(ct.name, checked)
+                  }}
+                />
+              }
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {ct.name}
+                  {ct.isDefault ? (
+                    <Chip label="default" size="small" variant="outlined" />
+                  ) : null}
+                </Box>
+              }
+            />
+          ))}
+          <Box sx={{ mt: 1 }}>
+            <Button
+              variant="contained"
+              size="small"
+              disabled={saving}
+              onClick={() => {
+                void handleSaveChecks()
+              }}
+            >
+              Save
+            </Button>
+          </Box>
+        </Paper>
+      ) : null}
+
+      <Typography variant="subtitle2" sx={{ mb: 1 }}>
+        Check Results
+      </Typography>
+      <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell>Check</TableCell>
+              <TableCell>Cause</TableCell>
+              <TableCell>Feature ID</TableCell>
+              <TableCell>Message</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {checkResults.map((cr) => (
+              <TableRow key={cr._id} hover>
+                <TableCell>{cr.name}</TableCell>
+                <TableCell>{cr.cause}</TableCell>
+                <TableCell>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
+                  >
+                    {cr.featureId}
+                  </Typography>
+                </TableCell>
+                <TableCell>{cr.message}</TableCell>
+              </TableRow>
+            ))}
+            {checkResults.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={4}
+                  align="center"
+                  sx={{ color: 'text.secondary' }}
+                >
+                  No issues found
+                </TableCell>
+              </TableRow>
+            ) : null}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </>
+  )
+}
+
+function AdminActionsSection({
+  assemblyId,
+  assembly,
+  currentUser,
+  onDeleted,
+  onUpdated,
+}: {
+  assemblyId: string
+  assembly: Assembly
+  currentUser?: User
+  onDeleted: () => void
+  onUpdated: (updated: Assembly) => void
+}) {
+  const [aliasesText, setAliasesText] = useState(
+    (assembly.aliases ?? []).join(', '),
+  )
+  const [actionError, setActionError] = useState<string>()
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  if (currentUser?.role !== 'admin') {
+    return null
+  }
+
+  async function handleSaveAliases() {
+    try {
+      setActionError(undefined)
+      const aliases = aliasesText
+        .split(',')
+        .map((a) => a.trim())
+        .filter((a) => a.length > 0)
+      const res = await fetch(`/assemblies/${assemblyId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aliases }),
+      })
+      if (!res.ok) {
+        throw new Error(`Failed: ${res.status}`)
+      }
+      onUpdated({ ...assembly, aliases })
+    } catch (error_) {
+      setActionError(error_ instanceof Error ? error_.message : String(error_))
+    }
+  }
+
+  async function handleDelete() {
+    try {
+      setActionError(undefined)
+      const res = await fetch(`/assemblies/${assemblyId}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) {
+        throw new Error(`Failed: ${res.status}`)
+      }
+      onDeleted()
+    } catch (error_) {
+      setActionError(error_ instanceof Error ? error_.message : String(error_))
+    }
+  }
+
+  return (
+    <>
+      <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>
+        Assembly Aliases
+      </Typography>
+      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 3 }}>
+        <TextField
+          size="small"
+          label="Aliases (comma-separated)"
+          value={aliasesText}
+          onChange={(e) => {
+            setAliasesText(e.target.value)
+          }}
+          sx={{ minWidth: 350 }}
+        />
+        <Button
+          variant="contained"
+          size="small"
+          onClick={() => {
+            void handleSaveAliases()
+          }}
+        >
+          Save
+        </Button>
+      </Box>
+
+      {actionError ? (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {actionError}
+        </Alert>
+      ) : null}
+
+      <Typography variant="h6" sx={{ mt: 3, mb: 1, color: 'error.main' }}>
+        Danger Zone
+      </Typography>
+      <Paper variant="outlined" sx={{ p: 2, borderColor: 'error.main' }}>
+        <Typography variant="body2" sx={{ mb: 1 }}>
+          Deleting an assembly permanently removes all its data including
+          features, reference sequences, and check results.
+        </Typography>
+        {confirmDelete ? (
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <Typography variant="body2" color="error">
+              Are you sure?
+            </Typography>
+            <Button
+              variant="contained"
+              color="error"
+              size="small"
+              onClick={() => {
+                void handleDelete()
+              }}
+            >
+              Yes, delete permanently
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => {
+                setConfirmDelete(false)
+              }}
+            >
+              Cancel
+            </Button>
+          </Box>
+        ) : (
+          <Button
+            variant="outlined"
+            color="error"
+            size="small"
+            onClick={() => {
+              setConfirmDelete(true)
+            }}
+          >
+            Delete Assembly
+          </Button>
+        )}
+      </Paper>
     </>
   )
 }
@@ -499,10 +836,31 @@ function AssemblyDetailPage() {
             </TableContainer>
 
             {assemblyId ? (
-              <PermissionsSection
-                assemblyId={assemblyId}
-                currentUser={currentUser}
-              />
+              <>
+                <ChecksSection
+                  assemblyId={assemblyId}
+                  assembly={assembly}
+                  currentUser={currentUser}
+                  onUpdated={(updated) => {
+                    setAssembly(updated)
+                  }}
+                />
+                <PermissionsSection
+                  assemblyId={assemblyId}
+                  currentUser={currentUser}
+                />
+                <AdminActionsSection
+                  assemblyId={assemblyId}
+                  assembly={assembly}
+                  currentUser={currentUser}
+                  onDeleted={() => {
+                    globalThis.location.href = '/ui/assemblies/'
+                  }}
+                  onUpdated={(updated) => {
+                    setAssembly(updated)
+                  }}
+                />
+              </>
             ) : null}
           </>
         ) : null}

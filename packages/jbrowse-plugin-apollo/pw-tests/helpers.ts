@@ -1,6 +1,7 @@
-import { existsSync, readFileSync } from 'node:fs'
-import path from 'node:path'
+import { readFileSync } from 'node:fs'
 
+import { gff3LineToSnapshot } from '@apollo-annotation/shared'
+import { parseStringSync } from '@gmod/gff'
 import { type Page, expect } from '@playwright/test'
 
 const API_BASE = 'http://127.0.0.1:3999'
@@ -42,65 +43,6 @@ export async function uploadFileViaApi(filePath: string, fileType: string) {
   return data
 }
 
-export function resolveTestDataFasta(gffPath: string) {
-  const dir = path.dirname(gffPath)
-  let base = path.basename(gffPath)
-  for (const ext of ['.gff3.gz', '.gff3']) {
-    if (base.endsWith(ext)) {
-      base = base.slice(0, -ext.length)
-      break
-    }
-  }
-  const fastaPath = path.join(dir, `${base}.fa`)
-  const faiPath = `${fastaPath}.fai`
-  if (!existsSync(fastaPath)) {
-    throw new Error(
-      `FASTA file not found: ${fastaPath}. Extract FASTA from GFF3 and run samtools faidx.`,
-    )
-  }
-  if (!existsSync(faiPath)) {
-    throw new Error(
-      `FAI index not found: ${faiPath}. Run: samtools faidx ${fastaPath}`,
-    )
-  }
-  return { fastaPath, faiPath }
-}
-
-export async function addAssemblyViaApi(
-  assemblyName: string,
-  gff3Path: string,
-) {
-  const token = await getGuestToken()
-  const assemblyId = [...Array(24)]
-    .map(() => Math.floor(Math.random() * 16).toString(16))
-    .join('')
-
-  const { fastaPath, faiPath } = resolveTestDataFasta(gff3Path)
-
-  console.log(`[api] Creating assembly "${assemblyName}" (id=${assemblyId})...`)
-  const res = await fetch(`${API_BASE}/changes`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      typeName: 'AddAssemblyAndFeaturesFromFileChange',
-      assembly: assemblyId,
-      assemblyName,
-      gff3Path,
-      fastaPath,
-      faiPath,
-    }),
-  })
-  if (!res.ok) {
-    const body = await res.text()
-    throw new Error(`Add assembly failed: ${res.status} ${body}`)
-  }
-  console.log(`[api] Assembly created: ${assemblyName}`)
-  return assemblyId
-}
-
 export async function deleteAssemblies() {
   console.log('[cleanup] Deleting all assemblies...')
   const token = await getGuestToken()
@@ -111,13 +53,9 @@ export async function deleteAssemblies() {
   const res = await fetch(`${API_BASE}/assemblies`, { headers })
   const assemblies = (await res.json()) as { _id: string }[]
   for (const assembly of assemblies) {
-    const delRes = await fetch(`${API_BASE}/changes`, {
-      method: 'POST',
+    const delRes = await fetch(`${API_BASE}/assemblies/${assembly._id}`, {
+      method: 'DELETE',
       headers,
-      body: JSON.stringify({
-        typeName: 'DeleteAssemblyChange',
-        assembly: assembly._id,
-      }),
     })
     if (!delRes.ok) {
       console.log(
@@ -132,15 +70,10 @@ export async function deleteAssemblies() {
     console.log(
       `[cleanup] WARNING: ${remaining.length} assemblies still remain after cleanup`,
     )
-    // Retry once
     for (const assembly of remaining) {
-      await fetch(`${API_BASE}/changes`, {
-        method: 'POST',
+      await fetch(`${API_BASE}/assemblies/${assembly._id}`, {
+        method: 'DELETE',
         headers,
-        body: JSON.stringify({
-          typeName: 'DeleteAssemblyChange',
-          assembly: assembly._id,
-        }),
       })
     }
   }
@@ -231,37 +164,90 @@ export async function selectFromApolloMenu(page: Page, path: string[]) {
     .click()
 }
 
+export async function addAssemblyViaApi(
+  assemblyName: string,
+  gffPath: string,
+): Promise<string> {
+  const token = await getGuestToken()
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  }
+  const faPath = gffPath.replace(/\.gff3$/, '.fa')
+  const faiPath = `${faPath}.fai`
+  const res = await fetch(`${API_BASE}/assemblies`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      name: assemblyName,
+      sequenceSource: { type: 'fasta', fa: faPath, fai: faiPath },
+    }),
+  })
+  if (!res.ok) {
+    const body = await res.text()
+    throw new Error(`POST /assemblies failed: ${res.status} ${body}`)
+  }
+  const assembly = (await res.json()) as { _id: string }
+  return assembly._id
+}
+
 export async function addAssemblyFromGff(
   page: Page,
   assemblyName: string,
   gffPath: string,
   launch = true,
-) {
-  console.log(`[addAssembly] Starting for "${assemblyName}"...`)
-  await addAssemblyViaApi(assemblyName, gffPath)
+): Promise<void> {
+  const token = await getGuestToken()
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  }
 
-  // Reload to pick up the new assembly in config.json
-  console.log('[addAssembly] Reloading to pick up new assembly...')
-  await page.goto('/jbrowse/')
+  const assemblyId = await addAssemblyViaApi(assemblyName, gffPath)
 
-  await expect(page.getByRole('button', { name: 'Apollo' })).toBeEnabled({
-    timeout: 15_000,
+  const refSeqsRes = await fetch(`${API_BASE}/refSeqs?assembly=${assemblyId}`, {
+    headers,
   })
+  const refSeqs = (await refSeqsRes.json()) as { _id: string; name: string }[]
+  const refSeqIdMap = new Map(refSeqs.map((rs) => [rs.name, rs._id]))
 
-  console.log('[addAssembly] App ready')
+  const gff3Text = readFileSync(gffPath, 'utf8')
+  const features = parseStringSync(gff3Text, { parseSequences: false })
 
+  for (const featureGroup of features) {
+    if (!Array.isArray(featureGroup) || featureGroup.length === 0) {
+      continue
+    }
+    const line = featureGroup[0]
+    if (!line.seq_id || !line.type) {
+      continue
+    }
+    const refSeqId = refSeqIdMap.get(line.seq_id)
+    if (!refSeqId) {
+      continue
+    }
+    const snapshot = gff3LineToSnapshot(line, refSeqId)
+    await fetch(`${API_BASE}/changes`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        typeName: 'AddFeatureChange',
+        assembly: assemblyId,
+        changedIds: [snapshot._id],
+        addedFeature: snapshot,
+      }),
+    })
+  }
+
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Apollo' })).toBeEnabled({
+    timeout: 20_000,
+  })
   if (launch) {
-    // The authenticated config includes a defaultSession with a LinearGenomeView,
-    // so a view may already be open. Click "Launch view" only if present.
     const launchButton = page.getByRole('button', { name: 'Launch view' })
     if (await launchButton.isVisible({ timeout: 3_000 }).catch(() => false)) {
-      console.log('[addAssembly] Clicking Launch view...')
       await launchButton.click()
     }
-    await expect(page.getByText('Select assembly to view')).toBeVisible({
-      timeout: 15_000,
-    })
-    console.log('[addAssembly] View ready')
   }
 }
 

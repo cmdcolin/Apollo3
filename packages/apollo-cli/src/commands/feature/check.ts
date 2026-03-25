@@ -10,7 +10,6 @@ import {
   convertAssemblyNameToId,
   createFetchErrorMessage,
   idReader,
-  localhostToAddress,
   queryApollo,
 } from '../../utils.js'
 
@@ -114,7 +113,7 @@ async function getChecks(
   address: string,
   token: string,
 ): Promise<CheckResultSnapshot[]> {
-  const url = new URL(localhostToAddress(`${address}/checks`))
+  const url = new URL(`${address}/checks`)
   const auth = {
     headers: {
       authorization: `Bearer ${token}`,

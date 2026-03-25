@@ -102,3 +102,12 @@ instead using standard cookie and JWT workflows.
 **Bug fixes.** Found and fixed 3 pre-existing bugs on origin/main: check results
 being iterated as features, a refSeq delete that deleted the wrong scope, and a
 user location endpoint that sent garbled data on every update.
+
+**API simplification.** The REST API was consolidated from a mix of ad-hoc
+routes into clean CRUD patterns. Assembly routes went from 6 to 5 by merging
+single-purpose PATCH endpoints into one unified update route. Six JBrowse plugin
+dialogs (AddAssembly, ManageChecks, ManageUsers, etc.) were deleted and replaced
+by lightweight Vite admin pages. The CLI was cleaned up by removing a deprecated
+`localhostToAddress` hack from 24 files and adding a `--features-only` flag for
+loading GFF3 annotations without sequence data. Integration tests now cover the
+full workflow end-to-end.

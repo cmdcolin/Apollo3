@@ -45,9 +45,7 @@ export function IsPcrResultsTable({
       headerName: 'Location',
       width: 220,
       sortable: false,
-      renderCell: (
-        p: GridRenderCellParams<IsPcrProduct & { id: number }>,
-      ) => (
+      renderCell: (p: GridRenderCellParams<IsPcrProduct & { id: number }>) => (
         <GenomeLink
           refName={p.row.seqName}
           start={p.row.start}

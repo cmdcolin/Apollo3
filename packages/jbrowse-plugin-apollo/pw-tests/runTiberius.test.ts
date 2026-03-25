@@ -79,7 +79,7 @@ test('Tiberius: gene prediction creates and shows a GTF track', async ({
   await page.getByRole('button', { name: 'Show Track' }).click()
 
   // The dialog closes and the Tiberius FeatureTrack label should appear
-  await expect(
-    page.getByText(/^Tiberius:/, { exact: false }),
-  ).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByText(/^Tiberius:/, { exact: false })).toBeVisible({
+    timeout: 10_000,
+  })
 })

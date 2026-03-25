@@ -9,7 +9,6 @@ import {
   createFetchErrorMessage,
   getRefseqId,
   idReader,
-  localhostToAddress,
   queryApollo,
 } from '../../utils.js'
 
@@ -20,7 +19,7 @@ async function getSequence(
   start: number,
   end: number,
 ): Promise<Response> {
-  const url = new URL(localhostToAddress(`${address}/sequence`))
+  const url = new URL(`${address}/sequence`)
   const searchParams = new URLSearchParams({
     refSeq,
     start: start.toString(),

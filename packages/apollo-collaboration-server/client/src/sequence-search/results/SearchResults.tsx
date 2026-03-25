@@ -68,9 +68,7 @@ export function SearchResults({
 
       {results && tool === 'miniprot' ? (
         <MiniprotResultsTable
-          geneModels={
-            (results as { geneModels: GeneModel[] }).geneModels ?? []
-          }
+          geneModels={(results as { geneModels: GeneModel[] }).geneModels ?? []}
           gff3={String((results as { gff3: string }).gff3 ?? '')}
           assemblyName={assemblyName}
         />

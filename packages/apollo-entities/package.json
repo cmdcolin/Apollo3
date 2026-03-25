@@ -9,7 +9,8 @@
   "type": "module",
   "main": "./dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "pnpm clean && tsc --build",
+    "clean": "tsc --build --clean",
     "test": "NODE_OPTIONS='--experimental-vm-modules' jest",
     "test:ci": "NODE_OPTIONS='--experimental-vm-modules' jest --coverage"
   },

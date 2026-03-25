@@ -11,12 +11,7 @@ import {
 import { homedir } from 'node:os'
 import path from 'node:path'
 
-import {
-  Inject,
-  Injectable,
-  Logger,
-  type OnModuleInit,
-} from '@nestjs/common'
+import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
 import { SequenceService } from '../../sequence/sequence.service.js'
@@ -90,8 +85,7 @@ export class TiberiusRunner implements AnalysisRunner, OnModuleInit {
     }
 
     const { params } = context.job
-    const refSeqId =
-      typeof params.refSeqId === 'string' ? params.refSeqId : ''
+    const refSeqId = typeof params.refSeqId === 'string' ? params.refSeqId : ''
     const refSeqName =
       typeof params.refSeqName === 'string' ? params.refSeqName : ''
     const start = Number(params.start ?? 0)
@@ -121,11 +115,7 @@ export class TiberiusRunner implements AnalysisRunner, OnModuleInit {
     const fileUploadFolder = this.configService.get('FILE_UPLOAD_FOLDER', {
       infer: true,
     })!
-    const jobDir = path.join(
-      fileUploadFolder,
-      'analysis-jobs',
-      context.job._id,
-    )
+    const jobDir = path.join(fileUploadFolder, 'analysis-jobs', context.job._id)
     mkdirSync(jobDir, { recursive: true })
 
     const inputPath = path.join(jobDir, 'input.fasta')
