@@ -89,15 +89,12 @@ function useSetupActive() {
   const [active, setActive] = useState(false)
 
   useEffect(() => {
-    const params = new URLSearchParams(globalThis.location.search)
-    if (params.get('setup') === 'active') {
-      fetch('/auth/setup-active', { headers: jsonHeaders })
-        .then((r) => r.json())
-        .then((data) => {
-          setActive(data.active === true)
-        })
-        .catch(() => {})
-    }
+    fetch('/auth/setup-active', { headers: jsonHeaders })
+      .then((r) => r.json())
+      .then((data) => {
+        setActive(data.active === true)
+      })
+      .catch(() => {})
   }, [])
 
   return active
