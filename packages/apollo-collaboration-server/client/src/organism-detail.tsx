@@ -41,7 +41,7 @@ function getOrganismId() {
   if (parts.length >= 3 && parts[0] === 'ui' && parts[1] === 'organisms') {
     return parts[2]
   }
-  return undefined
+  return
 }
 
 function OrganismDetailPage() {

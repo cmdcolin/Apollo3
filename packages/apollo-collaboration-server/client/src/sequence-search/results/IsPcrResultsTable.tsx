@@ -10,8 +10,8 @@ import {
 
 import {
   GenomeLink,
-  buildJBrowseUrl,
   type JBrowseFeature,
+  buildJBrowseUrl,
 } from '../helpers/index.js'
 import type { IsPcrProduct } from '../types.js'
 
@@ -72,7 +72,7 @@ export function IsPcrResultsTable({
         }}
       >
         <Typography variant="h6">
-          isPCR — {products.length} product{products.length !== 1 ? 's' : ''}
+          isPCR — {products.length} product{products.length === 1 ? '' : 's'}
         </Typography>
         {products.length > 0 && assemblyName ? (
           <Button size="small" variant="outlined" onClick={handleViewAll}>

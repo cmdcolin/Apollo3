@@ -1,14 +1,24 @@
-import type { JWTPayload } from '@apollo-annotation/shared'
-import { assemblyChannel } from '@apollo-annotation/shared'
+import { type JWTPayload, assemblyChannel } from '@apollo-annotation/shared'
 import { MikroORM, RequestContext } from '@mikro-orm/core'
 import { Inject, Injectable, Logger } from '@nestjs/common'
-import type { OnGatewayConnection, OnGatewayInit } from '@nestjs/websockets'
-import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets'
 import { JwtService } from '@nestjs/jwt'
+import {
+  type OnGatewayConnection,
+  type OnGatewayInit,
+  WebSocketGateway,
+  WebSocketServer,
+} from '@nestjs/websockets'
 import type { Server, Socket } from 'socket.io'
 
-import { PermissionService } from '../permissions/permission.service.js'
+import {
+  PermissionService,
+  type UserInfo,
+} from '../permissions/permission.service.js'
 import { AUTH_COOKIE_NAME } from '../utils/strategies/jwt.strategy.js'
+
+interface SocketData {
+  user: UserInfo & { id: string }
+}
 
 function extractTokenFromCookie(cookieHeader: string) {
   const prefix = `${AUTH_COOKIE_NAME}=`
@@ -18,7 +28,7 @@ function extractTokenFromCookie(cookieHeader: string) {
       return trimmed.slice(prefix.length)
     }
   }
-  return undefined
+  return
 }
 
 @WebSocketGateway({
@@ -61,7 +71,7 @@ export class MessagesGateway implements OnGatewayInit, OnGatewayConnection {
   }
 
   async handleConnection(client: Socket) {
-    const { user } = client.data as { user: { id: string; role?: string } }
+    const { user } = client.data as SocketData
     await RequestContext.create(this.orm.em, async () => {
       const assemblyIds =
         await this.permissionService.getAccessibleAssemblyIds(user)
@@ -86,9 +96,7 @@ export class MessagesGateway implements OnGatewayInit, OnGatewayConnection {
     await RequestContext.create(this.orm.em, async () => {
       const sockets = await this.server.fetchSockets()
       for (const socket of sockets) {
-        const { user } = socket.data as {
-          user: { id: string; role?: string }
-        }
+        const { user } = socket.data as SocketData
         if (user.id !== userId) {
           continue
         }

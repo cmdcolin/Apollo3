@@ -294,7 +294,7 @@ export function getContextMenuItemsForFeature(
   const menuItems: MenuItem[] = []
   const role = displayRole ?? 'admin'
   const admin = role === 'admin'
-  const readOnly = display.readOnly
+  const { readOnly } = display
   const [region] = regions
   const sourceAssemblyId = display.getAssemblyId(region.assemblyName)
   const currentAssemblyId = display.getAssemblyId(region.assemblyName)

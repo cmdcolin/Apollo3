@@ -94,7 +94,7 @@ export class TiberiusRunner implements AnalysisRunner, OnModuleInit {
       typeof params.modelCfg === 'string'
         ? params.modelCfg
         : this.config.modelCfg
-    const useSingularity = this.config.useSingularity
+    const { useSingularity } = this.config
     const assemblyId = context.job.assemblyId ?? ''
 
     const regionSize = end - start

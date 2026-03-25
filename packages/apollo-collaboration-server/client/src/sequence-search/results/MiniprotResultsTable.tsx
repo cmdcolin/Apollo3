@@ -11,9 +11,9 @@ import { useState } from 'react'
 
 import {
   GenomeLink,
+  type JBrowseFeature,
   buildJBrowseUrl,
   copyToClipboard,
-  type JBrowseFeature,
 } from '../helpers/index.js'
 import type { GeneModel } from '../types.js'
 
@@ -90,7 +90,7 @@ export function MiniprotResultsTable({
         >
           <Typography variant="h6">
             miniprot — {geneModels.length} gene model
-            {geneModels.length !== 1 ? 's' : ''}
+            {geneModels.length === 1 ? '' : 's'}
           </Typography>
           {geneModels.length > 0 && assemblyName ? (
             <Button size="small" variant="outlined" onClick={handleViewAll}>

@@ -29,9 +29,12 @@ describe('parseIsPcrFasta', () => {
   })
 
   it('parses multiple products', () => {
-    const output =
-      ['>ctgA:100+200 101', 'ATCG', '>ctgB:300+400 101', 'GCTA'].join('\n') +
-      '\n'
+    const output = `${[
+      '>ctgA:100+200 101',
+      'ATCG',
+      '>ctgB:300+400 101',
+      'GCTA',
+    ].join('\n')}\n`
     const products = parseIsPcrFasta(output)
     expect(products).toHaveLength(2)
     expect(products[0].seqName).toBe('ctgA')

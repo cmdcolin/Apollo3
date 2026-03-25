@@ -28,23 +28,21 @@ export class ApolloMikroOrmModule {
             if (dbType === 'sqlite') {
               const conn = orm.em.getConnection()
               await conn.execute('PRAGMA foreign_keys = ON')
-              if (connectionUrl !== ':memory:') {
+              if (connectionUrl === ':memory:') {
+                this.logger.log('SQLite in-memory mode, foreign keys enabled')
+              } else {
                 await conn.execute('PRAGMA journal_mode = WAL')
                 await conn.execute('PRAGMA synchronous = NORMAL')
                 await conn.execute('PRAGMA busy_timeout = 5000')
                 this.logger.log(
                   'SQLite foreign keys enabled, WAL mode set, busy_timeout=5000ms',
                 )
-              } else {
-                this.logger.log('SQLite in-memory mode, foreign keys enabled')
               }
             }
             this.logger.log('MikroORM initialized, updating schema...')
-            if (dbType === 'sqlite' && connectionUrl === ':memory:') {
-              await orm.schema.create()
-            } else {
-              await orm.schema.update()
-            }
+            await (dbType === 'sqlite' && connectionUrl === ':memory:'
+              ? orm.schema.create()
+              : orm.schema.update())
             this.logger.log('Schema updated')
             return orm
           },

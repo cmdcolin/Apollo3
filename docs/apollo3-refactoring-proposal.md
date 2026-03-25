@@ -36,9 +36,9 @@ operations go from 30+ lines of nested-document tree navigation down to a few
 targeted row updates. It also means the database itself enforces data
 relationships via foreign keys and cascade deletes, rather than relying on
 application code to keep things consistent (e.g. the manually maintained
-`allIds` arrays on every gene). See [From MongoDB to Relational
-Databases](#from-mongodb-to-relational-databases) for the full rationale and
-tradeoff analysis.
+`allIds` arrays on every gene). See
+[From MongoDB to Relational Databases](#from-mongodb-to-relational-databases)
+for the full rationale and tradeoff analysis.
 
 **Simplified developer setup.** On origin/main, the dev container configures a
 MongoDB replica set (required because MongoDB transactions only work with
@@ -88,16 +88,16 @@ UI page with per-gene lookup.
 largest win (20x) came from discovering that on origin/main, every
 `GET /features/getFeatures` call deletes and re-computes all quality check
 results for every feature in the viewport — even when nothing has changed. Code
-citations from origin/main proving this are included in [Performance Fix
-Discovered During Migration](#performance-fix-discovered-during-migration) and
-[Performance Optimization Report](#performance-optimization-report).
+citations from origin/main proving this are included in
+[Performance Fix Discovered During Migration](#performance-fix-discovered-during-migration)
+and [Performance Optimization Report](#performance-optimization-report).
 
 **Security.** Fixed 7 pre-existing vulnerabilities including an open redirect
 for OAuth token theft, missing cookie security flags, and a WebSocket CORS
-wildcard. Code citations from origin/main are included in [Authentication &
-Security Audit](#authentication--security-audit). Also significantly simplified
-the auth setup by not using InternetAccounts and instead using standard cookie
-and JWT workflows.
+wildcard. Code citations from origin/main are included in
+[Authentication & Security Audit](#authentication--security-audit). Also
+significantly simplified the auth setup by not using InternetAccounts and
+instead using standard cookie and JWT workflows.
 
 **Bug fixes.** Found and fixed 3 pre-existing bugs on origin/main: check results
 being iterated as features, a refSeq delete that deleted the wrong scope, and a
@@ -106,43 +106,43 @@ user location endpoint that sent garbled data on every update.
 # From MongoDB to Relational Databases
 
 This branch migrates Apollo3 from MongoDB to MikroORM, supporting SQLite,
-PostgreSQL, and MongoDB from a single codebase. A [migration
-script](../packages/apollo-collaboration-server/scripts/migrate-mongo-to-mikroorm.ts)
+PostgreSQL, and MongoDB from a single codebase. A
+[migration script](../packages/apollo-collaboration-server/scripts/migrate-mongo-to-mikroorm.ts)
 exists for existing MongoDB deployments.
 
 ## At a Glance
 
 ### Data model and editing
 
-| Area | MongoDB (current) | Relational (proposed) |
-|----|----|----|
-| Editing a single feature | Load entire gene doc, modify, write back | Update one row |
-| Two users editing same gene | Second save may overwrite first user's changes | No conflict — separate rows |
-| Data integrity | Application-enforced | Database-enforced (FKs, cascades, transactions) |
-| Feature lookup by ID | Scan `allIds` arrays across all genes | Direct primary key lookup |
-| Document/row size limits | 16MB per gene document | None |
+| Area                        | MongoDB (current)                              | Relational (proposed)                           |
+| --------------------------- | ---------------------------------------------- | ----------------------------------------------- |
+| Editing a single feature    | Load entire gene doc, modify, write back       | Update one row                                  |
+| Two users editing same gene | Second save may overwrite first user's changes | No conflict — separate rows                     |
+| Data integrity              | Application-enforced                           | Database-enforced (FKs, cascades, transactions) |
+| Feature lookup by ID        | Scan `allIds` arrays across all genes          | Direct primary key lookup                       |
+| Document/row size limits    | 16MB per gene document                         | None                                            |
 
 ### Deployment and operations
 
-| Area | MongoDB (current) | Relational (proposed) |
-|----|----|----|
-| Desktop deployment | Not possible (MongoDB requires a server) | Fully self-contained with SQLite |
-| Server deployment | 2 MongoDB containers in replica set, 4 volumes, init scripts | 1 PostgreSQL container, or 0 with SQLite |
-| Developer setup | Install + configure MongoDB replica set | `pnpm install && pnpm start` |
-| CI setup | MongoDB service container + replica set init | Nothing needed (SQLite) |
-| Hosting footprint | Replica set (multi-container) | Potentially a nano instance (SQLite) or single PostgreSQL container |
-| Backups | `mongodump` | Copy one file (SQLite) or `pg_dump` |
+| Area               | MongoDB (current)                                            | Relational (proposed)                                               |
+| ------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------- |
+| Desktop deployment | Not possible (MongoDB requires a server)                     | Fully self-contained with SQLite                                    |
+| Server deployment  | 2 MongoDB containers in replica set, 4 volumes, init scripts | 1 PostgreSQL container, or 0 with SQLite                            |
+| Developer setup    | Install + configure MongoDB replica set                      | `pnpm install && pnpm start`                                        |
+| CI setup           | MongoDB service container + replica set init                 | Nothing needed (SQLite)                                             |
+| Hosting footprint  | Replica set (multi-container)                                | Potentially a nano instance (SQLite) or single PostgreSQL container |
+| Backups            | `mongodump`                                                  | Copy one file (SQLite) or `pg_dump`                                 |
 
 ### Code and maintenance
 
-| Area | MongoDB (current) | Relational (proposed) |
-|----|----|----|
-| Code complexity | Nested tree navigation; 30+ lines per operation | 5-10 lines per operation |
-| Schema definitions | Mongoose + `apollo-schemas` package | 13 entity definitions in `apollo-entities` |
-| Dependencies | 5 packages (mongoose, etc.) | One ORM (`@mikro-orm/*`) |
-| Schema migrations | None (implicit) | Timestamped, committed, reversible |
-| Real-time collaboration | Unchanged (WebSockets) |  |
-| Undo/redo | Unchanged (TypeScript) |  |
+| Area                    | MongoDB (current)                               | Relational (proposed)                      |
+| ----------------------- | ----------------------------------------------- | ------------------------------------------ |
+| Code complexity         | Nested tree navigation; 30+ lines per operation | 5-10 lines per operation                   |
+| Schema definitions      | Mongoose + `apollo-schemas` package             | 13 entity definitions in `apollo-entities` |
+| Dependencies            | 5 packages (mongoose, etc.)                     | One ORM (`@mikro-orm/*`)                   |
+| Schema migrations       | None (implicit)                                 | Timestamped, committed, reversible         |
+| Real-time collaboration | Unchanged (WebSockets)                          |                                            |
+| Undo/redo               | Unchanged (TypeScript)                          |                                            |
 
 ## Why Migrate
 
@@ -291,14 +291,14 @@ limit. `ON DELETE CASCADE` on parent FK handles child cleanup.
 
 ### Practical comparison
 
-| Scenario | MongoDB | Relational |
-|----|----|----|
-| Edit one exon | Load entire gene, modify, write back | Update one row |
-| Two users edit different exons | Second save may overwrite first user's changes | No conflict — separate rows |
-| Look up feature by ID | Scan `allIds` arrays | Primary key lookup |
-| Delete a gene | One delete (whole doc) | One delete (CASCADE removes children) |
-| Large gene (thousands of exons) | May hit 16MB limit | No limit |
-| Add/remove child | Update parent's `allIds` + save | Insert/delete one row |
+| Scenario                        | MongoDB                                        | Relational                            |
+| ------------------------------- | ---------------------------------------------- | ------------------------------------- |
+| Edit one exon                   | Load entire gene, modify, write back           | Update one row                        |
+| Two users edit different exons  | Second save may overwrite first user's changes | No conflict — separate rows           |
+| Look up feature by ID           | Scan `allIds` arrays                           | Primary key lookup                    |
+| Delete a gene                   | One delete (whole doc)                         | One delete (CASCADE removes children) |
+| Large gene (thousands of exons) | May hit 16MB limit                             | No limit                              |
+| Add/remove child                | Update parent's `allIds` + save                | Insert/delete one row                 |
 
 ## Relationship Enforcement
 
@@ -339,7 +339,7 @@ pre-computed results. Result: **20x speedup** (74s → 3.65s for 1000 genes).
 **features.service.ts** — `findByRange()` calls `checkFeature()` in a loop on
 every returned feature:
 
-``` typescript
+```typescript
 async findByRange(searchDto: FeatureRangeSearchDto) {
   const featureDocs = await this.operationsService
     .executeOperation<GetFeaturesOperation>({ ... })
@@ -354,7 +354,7 @@ async findByRange(searchDto: FeatureRangeSearchDto) {
 **checks.service.ts** — `checkFeature()` deletes and re-inserts results per
 feature per check:
 
-``` typescript
+```typescript
 async checkFeature(doc: FeatureDocument, checkTimestamps = true) {
   const checks = await this.getChecksForAssembly(doc)
   for (const check of checks) {
@@ -396,8 +396,8 @@ coordinate changes would make the system defensively correct.
 The most common read: "get all features overlapping this viewport."
 
 - **MongoDB**: One query returns complete nested gene trees.
-- **Relational**: Two steps: (1) find root features by range (indexed,
-  fast), (2) load all descendants via recursive CTE.
+- **Relational**: Two steps: (1) find root features by range (indexed, fast),
+  (2) load all descendants via recursive CTE.
 
 `findDescendantsOfMany` already batches all roots into one CTE query. A
 `root_id` denormalization column has been proposed but introduces a sync burden
@@ -412,7 +412,7 @@ architectural changes.
 ### Tradeoff summary
 
 | Operation                     | Status     | Notes                                    |
-|-------------------------------|------------|------------------------------------------|
+| ----------------------------- | ---------- | ---------------------------------------- |
 | Gene tree loading             | Acceptable | Recursive CTEs batch efficiently         |
 | Gene/assembly deletion        | **Fixed**  | `ON DELETE CASCADE` on all FKs           |
 | Bulk queries (search, export) | **Fixed**  | Batched `IN` filters                     |
@@ -473,11 +473,11 @@ for auditability.
 
 ## Multi-Database Repository Factory
 
-| `DB_BACKEND` | Feature Repository | Tree Strategy |
-|----|----|----|
-| `sqlite` (default) | `MikroOrmFeatureRepository` | Recursive CTEs |
-| `postgresql` | `MikroOrmFeatureRepository` | Recursive CTEs |
-| `mongo` | `MongoFeatureRepository` | Iterative BFS via generic EntityManager |
+| `DB_BACKEND`       | Feature Repository          | Tree Strategy                           |
+| ------------------ | --------------------------- | --------------------------------------- |
+| `sqlite` (default) | `MikroOrmFeatureRepository` | Recursive CTEs                          |
+| `postgresql`       | `MikroOrmFeatureRepository` | Recursive CTEs                          |
+| `mongo`            | `MongoFeatureRepository`    | Iterative BFS via generic EntityManager |
 
 All other repositories use `MikroOrm*Repository` implementations with the
 generic `EntityManager` API (works with any driver).
@@ -505,7 +505,7 @@ Split at the transcript level: each transcript becomes its own document (exons
 still nested inside). Reduces blast radius — editing exon_1 no longer loads
 unrelated mRNA_2.
 
-**Remaining problems**: Two annotators editing different exons in the *same*
+**Remaining problems**: Two annotators editing different exons in the _same_
 transcript still conflict. No Electron/desktop support. Replica set still
 required. `allIds` still needed at the transcript level.
 
@@ -523,13 +523,13 @@ Passport/JWT/session code.
 
 **Why problematic for Apollo3**:
 
-| Issue | Impact |
-|----|----|
-| No MikroORM driver | Would need to replace the ORM entirely, losing SQLite/PostgreSQL portability |
-| Vendor lock-in | Proprietary to Google Cloud; no standard SQL; pricing subject to change |
-| No offline/Electron | Requires network to Google servers — same hard constraint as MongoDB |
+| Issue                | Impact                                                                                        |
+| -------------------- | --------------------------------------------------------------------------------------------- |
+| No MikroORM driver   | Would need to replace the ORM entirely, losing SQLite/PostgreSQL portability                  |
+| Vendor lock-in       | Proprietary to Google Cloud; no standard SQL; pricing subject to change                       |
+| No offline/Electron  | Requires network to Google servers — same hard constraint as MongoDB                          |
 | No WebSocket support | Cloud Functions don't support persistent connections; would need to rearchitect collaboration |
-| Still document-based | No FKs, no cascades, no joins, no standard query language |
+| Still document-based | No FKs, no cascades, no joins, no standard query language                                     |
 
 **Viable hybrid**: Use Firebase Authentication (standalone) while keeping
 MikroORM for data. This captures the auth simplification without database
@@ -591,7 +591,7 @@ Good for development and small teams (\< 10 users).
 nginx serves static files with zero-copy `sendfile()`. NestJS handles API and
 WebSocket only. See [`deploy/nginx/`](../deploy/nginx/).
 
-``` bash
+```bash
 cd deploy/nginx && cp .env.example .env && docker compose up -d
 ```
 
@@ -601,10 +601,10 @@ Same role as nginx. See `.github/workflows/deploy/` for Apache configuration.
 
 ### Static file performance
 
-| Server | Mechanism | Notes |
-|----|----|----|
-| nginx | `sendfile()` — zero-copy | Multi-process, excellent throughput |
-| Apache | `sendfile()` via `mod_mpm_event` | Multi-threaded, excellent throughput |
+| Server  | Mechanism                                 | Notes                                     |
+| ------- | ----------------------------------------- | ----------------------------------------- |
+| nginx   | `sendfile()` — zero-copy                  | Multi-process, excellent throughput       |
+| Apache  | `sendfile()` via `mod_mpm_event`          | Multi-threaded, excellent throughput      |
 | Node.js | `fs.createReadStream()` with byte offsets | Single-threaded, adequate for small teams |
 
 Use nginx/Apache when: BAM/CRAM \> 1GB, 10+ concurrent users, or production.
@@ -624,18 +624,18 @@ always proxied (dynamically generated from track/assembly records in DB).
 
 ## Database
 
-| Backend | Use case | Config |
-|----|----|----|
-| SQLite | Dev, desktop, small deployments | Default (no config) |
-| PostgreSQL | Production collaborative | `DB_BACKEND=postgresql DB_CONNECTION_URL=postgresql://...` |
-| MongoDB | Existing deployments migrating from origin/main | `DB_BACKEND=mongo DB_CONNECTION_URL=mongodb://...` |
+| Backend    | Use case                                        | Config                                                     |
+| ---------- | ----------------------------------------------- | ---------------------------------------------------------- |
+| SQLite     | Dev, desktop, small deployments                 | Default (no config)                                        |
+| PostgreSQL | Production collaborative                        | `DB_BACKEND=postgresql DB_CONNECTION_URL=postgresql://...` |
+| MongoDB    | Existing deployments migrating from origin/main | `DB_BACKEND=mongo DB_CONNECTION_URL=mongodb://...`         |
 
 ## Environment Variables
 
 ### Required
 
 | Variable             | Description                                    |
-|----------------------|------------------------------------------------|
+| -------------------- | ---------------------------------------------- |
 | `URL`                | Public URL (e.g. `https://apollo.example.com`) |
 | `NAME`               | Instance name shown in UI                      |
 | `FILE_UPLOAD_FOLDER` | Directory for uploaded files                   |
@@ -644,7 +644,7 @@ always proxied (dynamically generated from track/assembly records in DB).
 ### Secrets
 
 | Variable         | Description                          |
-|------------------|--------------------------------------|
+| ---------------- | ------------------------------------ |
 | `JWT_SECRET`     | JWT signing secret (min 32 chars)    |
 | `SESSION_SECRET` | Session cookie secret (min 32 chars) |
 
@@ -654,18 +654,18 @@ If not set, the server auto-generates random secrets and persists them to
 
 ### Optional
 
-| Variable | Description |
-|----|----|
-| `JBROWSE_STATIC_DIR` | JBrowse static files (single-server only) |
-| `DB_BACKEND` | `sqlite` / `postgresql` / `mongo` |
-| `DB_CONNECTION_URL` | Database connection string |
-| `ALLOW_GUEST_USER` | Allow unauthenticated guest (default: false) |
-| `GUEST_USER_ROLE` | Guest role: `admin` / `user` / `readOnly` |
-| `DEFAULT_NEW_USER_ROLE` | New user role: `admin` / `user` / `readOnly` / `none` |
-| `GOOGLE_CLIENT_ID` / `_SECRET` | Google OAuth |
-| `MICROSOFT_CLIENT_ID` / `_SECRET` | Microsoft OAuth |
-| `ALLOW_ROOT_USER` | Enable root password login |
-| `ROOT_USER_PASSWORD` | Root admin password |
+| Variable                          | Description                                           |
+| --------------------------------- | ----------------------------------------------------- |
+| `JBROWSE_STATIC_DIR`              | JBrowse static files (single-server only)             |
+| `DB_BACKEND`                      | `sqlite` / `postgresql` / `mongo`                     |
+| `DB_CONNECTION_URL`               | Database connection string                            |
+| `ALLOW_GUEST_USER`                | Allow unauthenticated guest (default: false)          |
+| `GUEST_USER_ROLE`                 | Guest role: `admin` / `user` / `readOnly`             |
+| `DEFAULT_NEW_USER_ROLE`           | New user role: `admin` / `user` / `readOnly` / `none` |
+| `GOOGLE_CLIENT_ID` / `_SECRET`    | Google OAuth                                          |
+| `MICROSOFT_CLIENT_ID` / `_SECRET` | Microsoft OAuth                                       |
+| `ALLOW_ROOT_USER`                 | Enable root password login                            |
+| `ROOT_USER_PASSWORD`              | Root admin password                                   |
 
 ## First-Time Setup
 
@@ -716,12 +716,12 @@ access to another lab's private data — all on the same server.
 
 ## Summary of Changes
 
-| Change | Current (origin/main) | Proposed |
-|----|----|----|
-| Assembly/track storage | Single monolithic config document | Individual records with many-to-many relationships |
-| Access control | All users see everything | Per-assembly roles with public/private visibility |
-| Analysis tools | External tools, manual result transfer | Generic runner framework: local BLAST, NCBI BLAST, BLAT, miniprot, Tiberius |
-| Database | MongoDB (replica set required) | SQLite, PostgreSQL, or MongoDB via single codebase |
+| Change                 | Current (origin/main)                  | Proposed                                                                    |
+| ---------------------- | -------------------------------------- | --------------------------------------------------------------------------- |
+| Assembly/track storage | Single monolithic config document      | Individual records with many-to-many relationships                          |
+| Access control         | All users see everything               | Per-assembly roles with public/private visibility                           |
+| Analysis tools         | External tools, manual result transfer | Generic runner framework: local BLAST, NCBI BLAST, BLAT, miniprot, Tiberius |
+| Database               | MongoDB (replica set required)         | SQLite, PostgreSQL, or MongoDB via single codebase                          |
 
 # Performance Optimization Report
 
@@ -730,7 +730,7 @@ access to another lab's private data — all on the same server.
 ## Results
 
 | Operation                       | origin/main | Proposed | Speedup  |
-|---------------------------------|-------------|----------|----------|
+| ------------------------------- | ----------- | -------- | -------- |
 | Assembly import (5000 features) | 60s         | 8.06s    | **7.5x** |
 | Feature get (all)               | 74s         | 3.65s    | **20x**  |
 | Feature search                  | 4.5s        | 3.41s    | 1.3x     |
@@ -778,7 +778,7 @@ Fix: checks run after mutations only. GET returns pre-computed results.
 
 ## Reproduction
 
-``` bash
+```bash
 cd packages/apollo-cli && pnpm tsx src/test/benchmark.ts --synthetic
 ```
 
@@ -790,15 +790,15 @@ branch.
 
 ## Issues Found and Fixed
 
-| \# | Severity | Issue | Fix |
-|----|----|----|----|
-| 1 | CRITICAL | **Open redirect** — OAuth callback accepts arbitrary `redirect_uri`, allowing token theft via `redirect_uri=https://evil.com` | Validate origin against configured `URL` env var |
-| 2 | CRITICAL | **Missing Secure flag** — session cookie set without `secure: true` | `secure: true` when `NODE_ENV=production` |
-| 3 | HIGH | **WebSocket CORS wildcard** — `cors: { origin: '*' }` on WebSocket gateway | Locked to server's configured `URL` origin |
-| 4 | HIGH | **JWT logged in plaintext** — full token logged at DEBUG level | Log only email and role |
-| 5 | BUG | **OAuth client ID file-read** — file contents overwritten by file path (`microsoftClientID = clientIDFile?.trim()`) | Correctly read and trim file contents |
-| 6 | MEDIUM | **Session cookies lacked security options** — no `httpOnly`, `secure`, `sameSite`, `maxAge` | Added `httpOnly: true`, `secure: true`, `sameSite: 'lax'`, `maxAge: 24h` |
-| 7 | MEDIUM | **No minimum secret length** — single-char secrets accepted | Require 32+ characters for `JWT_SECRET` and `SESSION_SECRET` |
+| \#  | Severity | Issue                                                                                                                         | Fix                                                                      |
+| --- | -------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| 1   | CRITICAL | **Open redirect** — OAuth callback accepts arbitrary `redirect_uri`, allowing token theft via `redirect_uri=https://evil.com` | Validate origin against configured `URL` env var                         |
+| 2   | CRITICAL | **Missing Secure flag** — session cookie set without `secure: true`                                                           | `secure: true` when `NODE_ENV=production`                                |
+| 3   | HIGH     | **WebSocket CORS wildcard** — `cors: { origin: '*' }` on WebSocket gateway                                                    | Locked to server's configured `URL` origin                               |
+| 4   | HIGH     | **JWT logged in plaintext** — full token logged at DEBUG level                                                                | Log only email and role                                                  |
+| 5   | BUG      | **OAuth client ID file-read** — file contents overwritten by file path (`microsoftClientID = clientIDFile?.trim()`)           | Correctly read and trim file contents                                    |
+| 6   | MEDIUM   | **Session cookies lacked security options** — no `httpOnly`, `secure`, `sameSite`, `maxAge`                                   | Added `httpOnly: true`, `secure: true`, `sameSite: 'lax'`, `maxAge: 24h` |
+| 7   | MEDIUM   | **No minimum secret length** — single-char secrets accepted                                                                   | Require 32+ characters for `JWT_SECRET` and `SESSION_SECRET`             |
 
 ### Code citations (origin/main)
 
@@ -806,7 +806,7 @@ branch.
 query parameter directly through to the OAuth flow without validating it against
 the server's configured URL:
 
-``` typescript
+```typescript
 // authentication.controller.ts — handleLogin()
 const url = redirect_uri
   ? `${type}?${new URLSearchParams({ redirect_uri }).toString()}`
@@ -815,7 +815,7 @@ const url = redirect_uri
 **WebSocket CORS wildcard** — `messages.gateway.ts` accepts connections from any
 origin:
 
-``` typescript
+```typescript
 // messages.gateway.ts
 @WebSocketGateway({ cors: { origin: '*' } })
 ```
@@ -823,7 +823,7 @@ origin:
 **Session cookie without Secure flag** — `main.ts` configures express-session
 without cookie security options:
 
-``` typescript
+```typescript
 // main.ts
 app.use(
   session({
@@ -838,7 +838,7 @@ app.use(
 
 **JWT logged in plaintext** — `authentication.service.ts` logs the full token:
 
-``` typescript
+```typescript
 // authentication.service.ts
 this.logger.debug(
   `First time login successful. Apollo token: ${JSON.stringify(returnToken)}`,
@@ -921,15 +921,15 @@ everything. WebSocket and change tracking move to session model. `baseURL`,
 
 ## Code Simplification
 
-| Change | Current | Proposed |
-|----|----|----|
-| API separation | `getFeatures` returns `[features, checkResults]` tuple | Separate endpoints, parallel fetch |
-| Export service | 111-line monolith | Focused helpers (`writeGFF3Header`, `writeGFF3Features`, etc.) |
-| GFF3 export | Duplicate hierarchy assembly (~40 lines) | Shared `assembleFeatureTrees()` |
-| ServerDataStore | Anonymous function wrappers around `filesService` methods | Direct `filesService` reference |
-| findByFeatureIds | Set-based dedup after `SELECT DISTINCT` | DB handles it |
-| RefSeqsService.update | 12-line manual property mapping | Spread operator (4 lines) |
-| Dev Container | MongoDB extension + `mongosh` + port 27017 | PostgreSQL + port 5432 |
+| Change                | Current                                                   | Proposed                                                       |
+| --------------------- | --------------------------------------------------------- | -------------------------------------------------------------- |
+| API separation        | `getFeatures` returns `[features, checkResults]` tuple    | Separate endpoints, parallel fetch                             |
+| Export service        | 111-line monolith                                         | Focused helpers (`writeGFF3Header`, `writeGFF3Features`, etc.) |
+| GFF3 export           | Duplicate hierarchy assembly (~40 lines)                  | Shared `assembleFeatureTrees()`                                |
+| ServerDataStore       | Anonymous function wrappers around `filesService` methods | Direct `filesService` reference                                |
+| findByFeatureIds      | Set-based dedup after `SELECT DISTINCT`                   | DB handles it                                                  |
+| RefSeqsService.update | 12-line manual property mapping                           | Spread operator (4 lines)                                      |
+| Dev Container         | MongoDB extension + `mongosh` + port 27017                | PostgreSQL + port 5432                                         |
 
 ## API Simplification
 
@@ -938,15 +938,15 @@ patterns. The goal was fewer endpoints, each doing one thing well.
 
 ### Assembly routes: 6 → 5
 
-| Before | After |
-|--------|-------|
-| `POST /assemblies` | `POST /assemblies` (unchanged, now accepts all fields) |
-| `GET /assemblies` | `GET /assemblies` |
-| `GET /assemblies/:id` | `GET /assemblies/:id` |
-| `POST /assemblies/checks` | merged into `PATCH /assemblies/:id` |
-| `PATCH /assemblies/:id/visibility` | merged into `PATCH /assemblies/:id` |
-| `PATCH /assemblies/:id/organism` | merged into `PATCH /assemblies/:id` |
-| `DELETE /assemblies/:id` | `DELETE /assemblies/:id` |
+| Before                             | After                                                  |
+| ---------------------------------- | ------------------------------------------------------ |
+| `POST /assemblies`                 | `POST /assemblies` (unchanged, now accepts all fields) |
+| `GET /assemblies`                  | `GET /assemblies`                                      |
+| `GET /assemblies/:id`              | `GET /assemblies/:id`                                  |
+| `POST /assemblies/checks`          | merged into `PATCH /assemblies/:id`                    |
+| `PATCH /assemblies/:id/visibility` | merged into `PATCH /assemblies/:id`                    |
+| `PATCH /assemblies/:id/organism`   | merged into `PATCH /assemblies/:id`                    |
+| `DELETE /assemblies/:id`           | `DELETE /assemblies/:id`                               |
 
 The unified `PATCH` accepts any combination of `displayName`, `description`,
 `aliases`, `organism`, `visibility`, `checks`, and `sequenceSource`.
@@ -1007,13 +1007,13 @@ Three endpoint groups cover the full workflow:
 
 Five runners ship by default:
 
-| Runner | Description |
-|----|----|
+| Runner        | Description                                                                 |
+| ------------- | --------------------------------------------------------------------------- |
 | `local-blast` | blastn/blastp/blastx/tblastn/tblastx against a locally built BLAST database |
-| `blat` | Fast nucleotide/protein alignment against a local BLAT .2bit database |
-| `miniprot` | Protein-to-genome alignment via miniprot |
-| `ispcr` | In-silico PCR: amplicon prediction from a primer pair via UCSC isPcr |
-| `tiberius` | Gene prediction via Tiberius deep learning model |
+| `blat`        | Fast nucleotide/protein alignment against a local BLAT .2bit database       |
+| `miniprot`    | Protein-to-genome alignment via miniprot                                    |
+| `ispcr`       | In-silico PCR: amplicon prediction from a primer pair via UCSC isPcr        |
+| `tiberius`    | Gene prediction via Tiberius deep learning model                            |
 
 NCBI BLAST is not a server-side runner — the sequence search UI posts directly
 to blast.ncbi.nlm.nih.gov from the browser, giving users the full NCBI
@@ -1026,8 +1026,8 @@ columns, so no schema changes are needed when adding a new tool.
 
 ## Frontend
 
-A tabbed *Sequence Search* page shows one tab per available tool. Each tab has
-its own form and results renderer. Admins have a separate *Jobs* panel for
+A tabbed _Sequence Search_ page shows one tab per available tool. Each tab has
+its own form and results renderer. Admins have a separate _Jobs_ panel for
 building databases.
 
 ### Auth gating
@@ -1066,12 +1066,12 @@ query+filter pattern, and prevents indexing.
 
 ## Impact
 
-| Aspect | Current (origin/main) | Proposed |
-|----|----|----|
-| Query | `LIKE '%"id"%'` + in-memory filter (full table scan) | Indexed `WHERE featureId = ?` (O(log n)) |
-| Entity | `ids: p.json<string[]>()` | `featureId: p.string()` + index |
-| MST | `types.array(types.safeReference(...))` | `types.safeReference(...)` |
-| Repository | 121 lines, 17-line two-stage delete | 96 lines, 3-line direct delete |
+| Aspect     | Current (origin/main)                                | Proposed                                 |
+| ---------- | ---------------------------------------------------- | ---------------------------------------- |
+| Query      | `LIKE '%"id"%'` + in-memory filter (full table scan) | Indexed `WHERE featureId = ?` (O(log n)) |
+| Entity     | `ids: p.json<string[]>()`                            | `featureId: p.string()` + index          |
+| MST        | `types.array(types.safeReference(...))`              | `types.safeReference(...)`               |
+| Repository | 121 lines, 17-line two-stage delete                  | 96 lines, 3-line direct delete           |
 
 ## Also Done: Repository Instance Caching
 
@@ -1101,13 +1101,13 @@ redundant:
 
 ## What Moved Where
 
-| Concern | Current (origin/main) | Proposed |
-|----|----|----|
-| WebSocket management | `ApolloInternetAccount/model.ts` | Session model (`session.ts`) |
-| Change sequence tracking | `ApolloInternetAccount/model.ts` | Session model |
-| `baseURL`, `role`, `userId` | JWT token decode + `internetAccounts` config | `ApolloPlugin` config in `config.json` |
-| API calls | `internetAccount.getFetcher()` | `apolloFetch()` with `credentials: 'same-origin'` |
-| Multi-account UI | ~200 lines across 6 components | Deleted |
+| Concern                     | Current (origin/main)                        | Proposed                                          |
+| --------------------------- | -------------------------------------------- | ------------------------------------------------- |
+| WebSocket management        | `ApolloInternetAccount/model.ts`             | Session model (`session.ts`)                      |
+| Change sequence tracking    | `ApolloInternetAccount/model.ts`             | Session model                                     |
+| `baseURL`, `role`, `userId` | JWT token decode + `internetAccounts` config | `ApolloPlugin` config in `config.json`            |
+| API calls                   | `internetAccount.getFetcher()`               | `apolloFetch()` with `credentials: 'same-origin'` |
+| Multi-account UI            | ~200 lines across 6 components               | Deleted                                           |
 
 ## Login Flow (Proposed)
 
@@ -1120,7 +1120,7 @@ redundant:
 ## Impact
 
 | Metric                | Current (origin/main)               | Proposed    |
-|-----------------------|-------------------------------------|-------------|
+| --------------------- | ----------------------------------- | ----------- |
 | InternetAccount files | 6                                   | 0           |
 | Auth mechanisms       | Cookie + JWT + Authorization header | Cookie only |
 | Plugin bundle         | 1.57 MB                             | 1.56 MB     |
@@ -1149,26 +1149,26 @@ single edits this cost doesn't apply.
 
 ### Adding features
 
-| Operation | MongoDB | Flat rows | Verdict |
-|----|----|----|----|
-| New top-level gene | Create one nested doc | Flatten snapshot, batch insert | Roughly equal |
-| Add exon to existing mRNA | Load gene, insert child, update `allIds`, save whole doc | Insert one row with `parentId`. Existing rows untouched. | Simpler |
-| GFF3 import | One doc at a time, no transactions (16MB limit), OOM on large files | Flatten to rows, batch insert, full transaction support | Simpler, with transaction safety |
+| Operation                 | MongoDB                                                             | Flat rows                                                | Verdict                          |
+| ------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------- | -------------------------------- |
+| New top-level gene        | Create one nested doc                                               | Flatten snapshot, batch insert                           | Roughly equal                    |
+| Add exon to existing mRNA | Load gene, insert child, update `allIds`, save whole doc            | Insert one row with `parentId`. Existing rows untouched. | Simpler                          |
+| GFF3 import               | One doc at a time, no transactions (16MB limit), OOM on large files | Flatten to rows, batch insert, full transaction support  | Simpler, with transaction safety |
 
 ### Deleting features
 
-| Operation | MongoDB | Flat rows | Verdict |
-|----|----|----|----|
-| Delete top-level gene | Delete one document | `ON DELETE CASCADE` handles children | Equal |
-| Delete exon from mRNA | Load gene, find exon in tree, remove, update `allIds`, save | Delete one row | Simpler |
+| Operation             | MongoDB                                                     | Flat rows                            | Verdict |
+| --------------------- | ----------------------------------------------------------- | ------------------------------------ | ------- |
+| Delete top-level gene | Delete one document                                         | `ON DELETE CASCADE` handles children | Equal   |
+| Delete exon from mRNA | Load gene, find exon in tree, remove, update `allIds`, save | Delete one row                       | Simpler |
 
 ### Structural edits
 
-| Operation | MongoDB | Flat rows | Verdict |
-|----|----|----|----|
-| Split exon | Load gene, create two children, update `allIds`, save | Insert two rows, delete old row | Simpler |
-| Merge exons | Load gene, merge in memory, save | Update first exon bounds, delete second | Simpler |
-| Merge transcripts | All in-memory on one document, single save | Query children separately, reparent, delete. N+1 issue. | More complex (fixable with batch UPDATE) |
+| Operation         | MongoDB                                               | Flat rows                                               | Verdict                                  |
+| ----------------- | ----------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------- |
+| Split exon        | Load gene, create two children, update `allIds`, save | Insert two rows, delete old row                         | Simpler                                  |
+| Merge exons       | Load gene, merge in memory, save                      | Update first exon bounds, delete second                 | Simpler                                  |
+| Merge transcripts | All in-memory on one document, single save            | Query children separately, reparent, delete. N+1 issue. | More complex (fixable with batch UPDATE) |
 
 Merging transcripts is the clearest case where nested documents have an
 advantage — all children are already in memory. With flat rows, this requires
@@ -1181,15 +1181,15 @@ or `allIds` bookkeeping. Simpler in the flat model.
 
 ### Read operations
 
-| Operation | MongoDB | Flat rows | Verdict |
-|----|----|----|----|
-| Features in coordinate range | Returns full nested trees (loads more than needed) | Returns exactly matching features | More precise |
-| Find feature by ID | `findOne({allIds: id})` + tree walk | Primary key lookup | Simpler (direct indexed lookup vs array scan) |
-| Find all CDS on a chromosome | Load all genes, walk all trees | `WHERE type='CDS' AND refSeq=?` | Simpler (SQL filter vs in-memory traversal) |
-| Count features by type | Load all, count in app code | `GROUP BY type` | Simpler (database-level aggregation) |
-| Export to GFF3 | Data already nested | Rows map to GFF3 lines directly | Could be simpler |
-| Run validation checks | Data already nested | Fetch descendants + assemble tree (one extra step) | Harder (requires recursive query) |
-| Text search on attributes | `$text` index (ranked, stemmed) | `LIKE` on JSON column (no ranking, no stemming, false-positive risk) | Currently worse. Fixable with FTS5/tsvector, or a normalized `feature_attribute` table |
+| Operation                    | MongoDB                                            | Flat rows                                                            | Verdict                                                                                |
+| ---------------------------- | -------------------------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Features in coordinate range | Returns full nested trees (loads more than needed) | Returns exactly matching features                                    | More precise                                                                           |
+| Find feature by ID           | `findOne({allIds: id})` + tree walk                | Primary key lookup                                                   | Simpler (direct indexed lookup vs array scan)                                          |
+| Find all CDS on a chromosome | Load all genes, walk all trees                     | `WHERE type='CDS' AND refSeq=?`                                      | Simpler (SQL filter vs in-memory traversal)                                            |
+| Count features by type       | Load all, count in app code                        | `GROUP BY type`                                                      | Simpler (database-level aggregation)                                                   |
+| Export to GFF3               | Data already nested                                | Rows map to GFF3 lines directly                                      | Could be simpler                                                                       |
+| Run validation checks        | Data already nested                                | Fetch descendants + assemble tree (one extra step)                   | Harder (requires recursive query)                                                      |
+| Text search on attributes    | `$text` index (ranked, stemmed)                    | `LIKE` on JSON column (no ranking, no stemming, false-positive risk) | Currently worse. Fixable with FTS5/tsvector, or a normalized `feature_attribute` table |
 
 For targeted queries (by ID, by type, by range), the relational model benefits
 from standard database indexing. For operations that need the full gene tree
@@ -1273,17 +1273,17 @@ restoring the discipline Apollo2 had with Liquibase.
 
 ## NestJS Code Issues Found
 
-| Issue | Location | Fix |
-|----|----|----|
-| No DTO validation (invalid data reaches service layer) | 7 DTO files | Add `class-validator` decorators, enable `ValidationPipe` |
-| ChangesService has too many responsibilities | `changes.service.ts` | Extract WebSocket notification to EventEmitter2 |
-| Duplicated ServerDataStore factory | `changes.service.ts`, `operations.service.ts` | Extract to shared injectable |
-| Silent auth failures (generic 403) | `validation.guards.ts` | Throw `ForbiddenException` with message |
-| Duplicate OAuth guards | `google.guard.ts`, `microsoft.guard.ts` | Generic `OAuthGuard` factory |
-| Inefficient admin check on login | `authentication.service.ts` | `countByRole()` instead of `findAll()` |
+| Issue                                                  | Location                                      | Fix                                                       |
+| ------------------------------------------------------ | --------------------------------------------- | --------------------------------------------------------- |
+| No DTO validation (invalid data reaches service layer) | 7 DTO files                                   | Add `class-validator` decorators, enable `ValidationPipe` |
+| ChangesService has too many responsibilities           | `changes.service.ts`                          | Extract WebSocket notification to EventEmitter2           |
+| Duplicated ServerDataStore factory                     | `changes.service.ts`, `operations.service.ts` | Extract to shared injectable                              |
+| Silent auth failures (generic 403)                     | `validation.guards.ts`                        | Throw `ForbiddenException` with message                   |
+| Duplicate OAuth guards                                 | `google.guard.ts`, `microsoft.guard.ts`       | Generic `OAuthGuard` factory                              |
+| Inefficient admin check on login                       | `authentication.service.ts`                   | `countByRole()` instead of `findAll()`                    |
 
 Security issues (OAuth file-read bug, open redirect, etc.) are tracked in the
-*Authentication & Security Audit* section.
+_Authentication & Security Audit_ section.
 
 # Per-Gene History Tracking
 
@@ -1302,7 +1302,7 @@ database-specific syntax that breaks cross-DB portability.
 An indexed `geneId` column was added to `ChangeEntity`. Each feature change
 records its top-level gene's ID (resolved via `findRootParentsOfMany`).
 
-``` sql
+```sql
 SELECT * FROM change WHERE gene_id = ? ORDER BY sequence DESC
 ```
 
@@ -1310,12 +1310,12 @@ Standard indexed lookup, works identically in SQLite and PostgreSQL, O(log n).
 
 ### Comparison
 
-| Query | Apollo2 | Apollo3 (origin/main) | Apollo3 (proposed) |
-|----|----|----|----|
-| History of gene X | Direct audit table query | Full table scan of JSON | Indexed `WHERE geneId = ?` |
-| Changes by user Y | Scan | Indexed | Same |
-| Changes since time T | Scan | Indexed by `sequence` | Same |
-| Undo support | Limited (view-only) | Full (`getInverse()`) | Same |
+| Query                | Apollo2                  | Apollo3 (origin/main)   | Apollo3 (proposed)         |
+| -------------------- | ------------------------ | ----------------------- | -------------------------- |
+| History of gene X    | Direct audit table query | Full table scan of JSON | Indexed `WHERE geneId = ?` |
+| Changes by user Y    | Scan                     | Indexed                 | Same                       |
+| Changes since time T | Scan                     | Indexed by `sequence`   | Same                       |
+| Undo support         | Limited (view-only)      | Full (`getInverse()`)   | Same                       |
 
 ### What was implemented
 
@@ -1349,7 +1349,7 @@ previous states were.
 Map Apollo2 audit records to Apollo3 `ChangeEntity` rows:
 
 | Apollo2 field                          | Apollo3 mapping                          |
-|----------------------------------------|------------------------------------------|
+| -------------------------------------- | ---------------------------------------- |
 | Audit operation (INSERT/UPDATE/DELETE) | `typeName` (AddFeature/\*/DeleteFeature) |
 | User                                   | `user`                                   |
 | Timestamp                              | `createdAt` (preserved)                  |

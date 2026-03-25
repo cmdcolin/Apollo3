@@ -79,7 +79,7 @@ function getAssemblyId() {
   if (parts.length >= 3 && parts[0] === 'ui' && parts[1] === 'assemblies') {
     return parts[2]
   }
-  return undefined
+  return
 }
 
 function PermissionsSection({
@@ -190,9 +190,7 @@ function PermissionsSection({
           <Select
             value={visibility}
             onChange={(e) => {
-              void handleVisibilityChange(
-                e.target.value as 'public' | 'private',
-              )
+              void handleVisibilityChange(e.target.value)
             }}
           >
             <MenuItem value="public">Public</MenuItem>
@@ -653,7 +651,7 @@ function AssemblyDetailPage() {
           fetchJson<Assembly>(`/assemblies/${assemblyId}`),
           fetchJson<RefSeq[]>(`/refSeqs?assembly=${assemblyId}`),
           fetchJson<TrackConfig[]>(`/tracks?assembly=${assemblyId}`),
-          fetchJson<User>('/users/me').catch(() => undefined),
+          fetchJson<User>('/users/me').catch(() => {}),
         ],
       )
       setAssembly(assemblyData)

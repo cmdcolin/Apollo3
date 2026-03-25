@@ -4,8 +4,8 @@ import path from 'node:path'
 import { Inject, Injectable, Logger } from '@nestjs/common'
 
 import { DatabaseService } from '../../mikro-orm/database.service.js'
-import { groupIntoGeneModels, parseGff3 } from '../parsers/gff3.js'
 import { extractAssemblyFasta } from '../fasta-extract.js'
+import { groupIntoGeneModels, parseGff3 } from '../parsers/gff3.js'
 import { runCommand } from '../run-command.js'
 import type { AnalysisRunner, BuildDbContext, RunContext } from '../runner.js'
 

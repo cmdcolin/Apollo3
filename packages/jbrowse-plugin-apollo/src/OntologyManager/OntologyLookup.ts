@@ -126,7 +126,7 @@ export class OntologyLookup {
     const results: OntologyNode[] = []
     for (const id of expanded) {
       const node = nodeMap.get(id)
-      if (node && node.type === 'CLASS' && !isDeprecated(node)) {
+      if (node?.type === 'CLASS' && !isDeprecated(node)) {
         results.push(node)
       }
     }

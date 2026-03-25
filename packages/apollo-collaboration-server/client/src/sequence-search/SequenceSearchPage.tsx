@@ -8,13 +8,18 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { Nav } from '../Nav.js'
 import { fetchJson } from '../fetchUtil.js'
+
 import { AdminDatabasePanel } from './admin/AdminDatabasePanel.js'
 import { useAnalysisSearch } from './hooks/useAnalysisSearch.js'
 import { useCurrentUser } from './hooks/useCurrentUser.js'
 import { SearchResults } from './results/SearchResults.js'
 import { LocalToolSearchTab } from './tabs/LocalToolSearchTab.js'
-import { TAB_TOOLS, TOOL_LABELS } from './types.js'
-import type { AnalysisDb, Assembly } from './types.js'
+import {
+  type AnalysisDb,
+  type Assembly,
+  TAB_TOOLS,
+  TOOL_LABELS,
+} from './types.js'
 
 function getInitialAssembly() {
   const params = new URLSearchParams(globalThis.location.search)

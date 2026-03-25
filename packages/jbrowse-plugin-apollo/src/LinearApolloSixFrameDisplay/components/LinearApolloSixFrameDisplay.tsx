@@ -183,7 +183,7 @@ export const LinearApolloSixFrameDisplay = observer(
                         regionNumber: idx,
                       })?.offsetPx ?? 0) - lgv.offsetPx
                     const feature = checkResult.featureId
-                    if (!feature || !feature.parent?.looksLikeGene) {
+                    if (!feature?.parent?.looksLikeGene) {
                       return null
                     }
 

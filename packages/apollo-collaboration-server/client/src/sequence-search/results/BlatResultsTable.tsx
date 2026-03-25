@@ -10,8 +10,8 @@ import {
 
 import {
   GenomeLink,
-  buildJBrowseUrl,
   type JBrowseFeature,
+  buildJBrowseUrl,
 } from '../helpers/index.js'
 import type { PslHit } from '../types.js'
 
@@ -98,7 +98,7 @@ export function BlatResultsTable({
         }}
       >
         <Typography variant="h6">
-          BLAT — {hits.length} hit{hits.length !== 1 ? 's' : ''}
+          BLAT — {hits.length} hit{hits.length === 1 ? '' : 's'}
         </Typography>
         {hits.length > 0 && assemblyName ? (
           <Button size="small" variant="outlined" onClick={handleViewAll}>

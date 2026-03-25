@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 /* eslint-disable @typescript-eslint/unbound-method */
-import { type Region, type SessionWithAddTracks } from '@jbrowse/core/util'
+import type { Region, SessionWithAddTracks } from '@jbrowse/core/util'
 import {
   Autocomplete,
   Box,

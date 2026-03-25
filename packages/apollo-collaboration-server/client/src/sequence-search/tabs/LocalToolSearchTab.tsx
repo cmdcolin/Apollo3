@@ -14,13 +14,14 @@ import { useState } from 'react'
 import { blastQueryLabel, getFirstNcbiDb } from '../helpers/index.js'
 import type { SearchState } from '../hooks/useAnalysisSearch.js'
 import {
+  type AnalysisDb,
+  type Assembly,
   BLAST_PROGRAMS,
   BLAT_QUERY_TYPES,
   NCBI_DATABASES,
   TOOL_DESCRIPTIONS,
   TOOL_LABELS,
 } from '../types.js'
-import type { AnalysisDb, Assembly } from '../types.js'
 
 export function LocalToolSearchTab({
   tool,

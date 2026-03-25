@@ -1,3 +1,5 @@
+import { TransformStream } from 'node:stream/web'
+
 import {
   type Change as BaseChange,
   type ServerDataStore,
@@ -12,7 +14,6 @@ import {
 } from '@apollo-annotation/shared'
 import { type GFF3Feature, GFFTransformer } from '@gmod/gff'
 import { Inject, Injectable, Logger } from '@nestjs/common'
-import { TransformStream } from 'node:stream/web'
 
 import { ChecksService } from '../checks/checks.service.js'
 import { MessagesGateway } from '../messages/messages.gateway.js'

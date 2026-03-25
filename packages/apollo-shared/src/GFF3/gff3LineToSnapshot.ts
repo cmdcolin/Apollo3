@@ -23,7 +23,7 @@ export function gff3LineToSnapshot(
   if (line.attributes) {
     for (const [key, vals] of Object.entries(line.attributes)) {
       if (vals && vals.length > 0) {
-        attributes[key] = vals as string[]
+        attributes[key] = vals
       }
     }
   }
@@ -42,7 +42,7 @@ export function gff3LineToSnapshot(
     max: line.end ?? 0,
   }
   if (strand !== undefined) {
-    snapshot.strand = strand as 1 | -1
+    snapshot.strand = strand
   }
   if (Object.keys(attributes).length > 0) {
     snapshot.attributes = attributes

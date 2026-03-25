@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 import type { JWTPayload } from '@apollo-annotation/shared'
 import {
   type ExecutionContext,
@@ -26,9 +25,8 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   handleRequest(
     err: Error | undefined,
     user: JWTPayload | undefined,
-    info: unknown,
+    _info: unknown,
     context: ExecutionContext,
-    status?: unknown,
   ) {
     if (err) {
       throw err
@@ -44,6 +42,6 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       throw new UnauthorizedException()
     }
     this.activeUsers.touch(user.id)
-    return super.handleRequest(err, user, info, context, status)
+    return user
   }
 }

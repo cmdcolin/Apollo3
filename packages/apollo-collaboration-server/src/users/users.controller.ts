@@ -64,10 +64,7 @@ export class UsersController {
   }
 
   @Patch(':id')
-  async updateRole(
-    @Param('id') id: string,
-    @Body() body: { role: 'admin' | 'user' | 'readOnly' | 'none' },
-  ) {
+  async updateRole(@Param('id') id: string, @Body() body: { role: Role }) {
     const user = await this.usersService.updateRole(id, body.role)
     if (!user) {
       throw new NotFoundException(`User with id "${id}" not found`)

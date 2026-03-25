@@ -1,14 +1,15 @@
-export enum Role {
-  Admin = 'admin',
-  User = 'user',
-  ReadOnly = 'readOnly',
-  None = 'none',
-}
+export const Role = {
+  Admin: 'admin',
+  User: 'user',
+  ReadOnly: 'readOnly',
+  None: 'none',
+} as const
 
-// Define role inheritance
-export const RoleInheritance = {
-  none: [Role.None],
-  readOnly: [Role.None, Role.ReadOnly],
-  user: [Role.None, Role.ReadOnly, Role.User],
-  admin: [Role.None, Role.ReadOnly, Role.User, Role.Admin],
+export type Role = (typeof Role)[keyof typeof Role]
+
+export const RoleInheritance: Record<Role, Role[]> = {
+  [Role.None]: [Role.None],
+  [Role.ReadOnly]: [Role.None, Role.ReadOnly],
+  [Role.User]: [Role.None, Role.ReadOnly, Role.User],
+  [Role.Admin]: [Role.None, Role.ReadOnly, Role.User, Role.Admin],
 }

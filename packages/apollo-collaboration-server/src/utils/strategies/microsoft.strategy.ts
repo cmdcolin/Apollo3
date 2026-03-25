@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 
-import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common'
+import { Inject, Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { PassportStrategy } from '@nestjs/passport'
 import { HttpsProxyAgent } from 'https-proxy-agent'
@@ -31,8 +31,8 @@ export class MicrosoftStrategy extends PassportStrategy(Strategy) {
   private readonly logger = new Logger(MicrosoftStrategy.name)
 
   constructor(
-    @Inject(forwardRef(() => AuthenticationService))
-    private readonly authService: Readonly<AuthenticationService>,
+    @Inject(AuthenticationService)
+    private readonly authService: AuthenticationService,
     @Inject(ConfigService) configService: ConfigService<ConfigValues, true>,
   ) {
     let clientID = configService.get('MICROSOFT_CLIENT_ID', { infer: true })
@@ -62,11 +62,8 @@ export class MicrosoftStrategy extends PassportStrategy(Strategy) {
         clientSecret = fs.readFileSync(clientSecretFile, 'utf8').trim()
       }
       const urlString = configService.get('URL', { infer: true })
-      const callbackURI = new URL(urlString)
-      callbackURI.pathname = `${callbackURI.pathname}${
-        callbackURI.pathname.endsWith('/') ? '' : '/'
-      }auth/microsoft`
-      callbackURL = callbackURI.href
+      const base = urlString.endsWith('/') ? urlString : `${urlString}/`
+      callbackURL = new URL('auth/microsoft', base).href
     }
     super({
       clientID,

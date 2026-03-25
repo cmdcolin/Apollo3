@@ -156,7 +156,7 @@ export function OntologyTermMultiSelect({
 
     setLoading(true)
 
-    void getOntologyTerms({ input: inputValue }, (results) => {
+    getOntologyTerms({ input: inputValue }, (results) => {
       let newOptions: readonly TermValue[] = []
       if (value.length > 0) {
         newOptions = value

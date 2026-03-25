@@ -3,6 +3,7 @@ import {
   ConfigurationSchema,
   readConfObject,
 } from '@jbrowse/core/configuration'
+import { openLocation } from '@jbrowse/core/util/io'
 import {
   BlobLocation,
   LocalPathLocation,
@@ -18,8 +19,6 @@ import {
 import type ApolloPluginConfigurationSchema from '../config'
 import type { ApolloRootModel } from '../types'
 
-import { openLocation } from '@jbrowse/core/util/io'
-
 import {
   OntologyLookup,
   type OntologyNode,
@@ -28,8 +27,7 @@ import {
 import { type OboGraphDocument, parseOntology } from './obo-graph-parser'
 import { applyPrefixes, expandPrefixes } from './prefixes'
 
-export { isDeprecated } from './OntologyLookup'
-export type { OntologyNode }
+export { type OntologyNode, isDeprecated } from './OntologyLookup'
 
 export const OntologyRecordType = types
   .model('OntologyRecord', {
@@ -47,7 +45,7 @@ export const OntologyRecordType = types
   }))
   .actions((self) => ({
     loadOntology() {
-      const name = self.name
+      const { name } = self
       const source = getSnapshot(self.source)
       openLocation(source)
         .readFile('utf8')

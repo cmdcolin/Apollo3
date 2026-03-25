@@ -99,7 +99,7 @@ export class PermissionService {
       throw new ForbiddenException(`No access to assembly ${assemblyId}`)
     }
     const inherited = RoleInheritance[role]
-    if (!inherited?.includes(minRole)) {
+    if (!inherited.includes(minRole)) {
       this.logger.debug(
         `403 checkIfUserHasPermissionForAssembly: userId=${user?.id}, assemblyId=${assemblyId}, minRole=${minRole}, userAssemblyRole=${role} — insufficient permissions`,
       )

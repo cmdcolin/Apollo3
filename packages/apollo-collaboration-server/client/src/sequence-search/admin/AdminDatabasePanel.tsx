@@ -20,8 +20,13 @@ import Typography from '@mui/material/Typography'
 import { useCallback, useState } from 'react'
 
 import { AssemblyChip } from '../helpers/index.js'
-import { BLAST_PROGRAMS, TAB_TOOLS, TOOL_LABELS } from '../types.js'
-import type { AnalysisDb, Assembly } from '../types.js'
+import {
+  type AnalysisDb,
+  type Assembly,
+  BLAST_PROGRAMS,
+  TAB_TOOLS,
+  TOOL_LABELS,
+} from '../types.js'
 
 export function AdminDatabasePanel({
   assemblies,

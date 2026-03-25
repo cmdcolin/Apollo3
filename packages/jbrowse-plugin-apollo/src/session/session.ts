@@ -15,9 +15,9 @@ import type PluginManager from '@jbrowse/core/PluginManager'
 import type { AssemblyModel } from '@jbrowse/core/assemblyManager/assembly'
 import { getConf, readConfObject } from '@jbrowse/core/configuration'
 import type { BaseTrackConfig } from '@jbrowse/core/pluggableElementTypes'
-import {
-  type AbstractSessionModel,
-  type SessionWithAddTracks,
+import type {
+  AbstractSessionModel,
+  SessionWithAddTracks,
 } from '@jbrowse/core/util'
 import {
   type Instance,
@@ -717,7 +717,7 @@ export function extendSession(
           continue
         }
         const assembly = apolloDataStore.assemblies.get(feature.assemblyId)
-        if (assembly && assembly.backendDriverType === 'InMemoryFileDriver') {
+        if (assembly?.backendDriverType === 'InMemoryFileDriver') {
           snap.apolloDataStore.checkResults[cr._id] = getSnapshot(cr)
         }
       }

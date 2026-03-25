@@ -111,10 +111,9 @@ sites across the CLI. The function was a workaround for a macOS fetch bug with
 
 ### Checks management UI in admin panel
 
-Added `ChecksSection` to the assembly-detail page
-(`/ui/assemblies/:id`). Shows available check types with toggle checkboxes
-(admin only) and a table of check results (all users). Saves via
-`PATCH /assemblies/:id { checks: [...] }`.
+Added `ChecksSection` to the assembly-detail page (`/ui/assemblies/:id`). Shows
+available check types with toggle checkboxes (admin only) and a table of check
+results (all users). Saves via `PATCH /assemblies/:id { checks: [...] }`.
 
 ### `--features-only` flag for `add-from-gff`
 
@@ -125,6 +124,7 @@ loading annotations without sequence data.
 ### Restored `integration-v2.sh` steps 6–10
 
 The integration test now covers the full workflow:
+
 - Load features from GFF3 via inline Node script
 - Verify features exist on first refSeq
 - Verify changes were recorded
@@ -141,5 +141,6 @@ selection or inline organism creation. GFF3 feature loading deferred to CLI.
 
 Deleted components that are now handled by the admin panel or the simplified
 API:
+
 - `AddAssembly.tsx`, `AddAssemblyAliases.tsx`, `AddRefSeqAliases.tsx`
 - `DeleteAssembly.tsx`, `ManageChecks.tsx`, `ManageUsers.tsx`

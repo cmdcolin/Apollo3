@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config'
 
 import { DatabaseService } from '../mikro-orm/database.service.js'
 import { GUEST_USER_EMAIL, GUEST_USER_NAME } from '../utils/constants.js'
-import type { Role } from '../utils/role/role.enum.js'
+import { Role } from '../utils/role/role.enum.js'
 
 import type { CreateUserDto } from './dto/create-user.dto.js'
 
@@ -55,11 +55,11 @@ export class UsersService {
       _id: randomBytes(12).toString('hex'),
       email: user.email,
       username: user.username,
-      role: user.role ?? 'none',
+      role: user.role ?? Role.None,
     })
   }
 
-  async updateRole(id: string, role: 'admin' | 'user' | 'readOnly' | 'none') {
+  async updateRole(id: string, role: Role) {
     return this.db.user.updateById(id, { role })
   }
 

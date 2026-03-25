@@ -25,9 +25,9 @@ describe('parseGff3', () => {
     expect(alignments[0].start).toBe(1000)
     expect(alignments[0].end).toBe(2000)
     expect(alignments[0].strand).toBe('+')
-    expect(alignments[0].attributes['ID']).toBe('MP000001')
-    expect(alignments[0].attributes['Identity']).toBe('0.95')
-    expect(alignments[0].attributes['Target']).toBe('prot1 1 100')
+    expect(alignments[0].attributes.ID).toBe('MP000001')
+    expect(alignments[0].attributes.Identity).toBe('0.95')
+    expect(alignments[0].attributes.Target).toBe('prot1 1 100')
   })
 
   it('parses multiple features', () => {
@@ -44,7 +44,7 @@ describe('parseGff3', () => {
     const line =
       'ctgA\tminiprot\tmRNA\t1\t100\t.\t+\t.\tID=MP1;Note=some%20name'
     const alignments = parseGff3(line)
-    expect(alignments[0].attributes['Note']).toBe('some name')
+    expect(alignments[0].attributes.Note).toBe('some name')
   })
 })
 

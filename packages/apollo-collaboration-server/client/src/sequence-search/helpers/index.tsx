@@ -24,8 +24,8 @@ export function getFirstNcbiDb(
 }
 
 export function copyToClipboard(text: string) {
-  void navigator.clipboard.writeText(text).catch((err: unknown) => {
-    console.error('Clipboard write failed', err)
+  void navigator.clipboard.writeText(text).catch((error: unknown) => {
+    console.error('Clipboard write failed', error)
   })
 }
 

@@ -11,15 +11,15 @@ import { useState } from 'react'
 
 import {
   GenomeLink,
-  buildJBrowseUrl,
   type JBrowseFeature,
+  buildJBrowseUrl,
 } from '../helpers/index.js'
-import type {
-  BlastHit,
-  BlastHitDescription,
-  BlastSearchResult,
+import {
+  type BlastHit,
+  type BlastHitDescription,
+  type BlastSearchResult,
+  PROTEIN_PROGRAMS,
 } from '../types.js'
-import { PROTEIN_PROGRAMS } from '../types.js'
 
 function HitAlignment({ hit }: { hit: BlastHit }) {
   const desc = hit.description[0] as BlastHitDescription | undefined
@@ -215,7 +215,7 @@ export function BlastResultsTable({
       >
         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
           <Typography variant="h6">
-            {hits.length} hit{hits.length !== 1 ? 's' : ''}
+            {hits.length} hit{hits.length === 1 ? '' : 's'}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {program}
@@ -262,7 +262,7 @@ export function BlastResultsTable({
               cursor: 'pointer',
             }}
           />
-          {expandedId !== null ? (
+          {expandedId === null ? null : (
             <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
               {rows
                 .filter((r) => r.id === expandedId)
@@ -270,7 +270,7 @@ export function BlastResultsTable({
                   <HitAlignment key={r.id} hit={r.hit} />
                 ))}
             </Box>
-          ) : null}
+          )}
           <Box sx={{ p: 1.5 }}>
             <Typography variant="caption" color="text.secondary">
               Click a row to expand alignment details.

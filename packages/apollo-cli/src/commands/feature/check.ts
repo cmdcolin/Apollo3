@@ -76,10 +76,11 @@ Use `apollo assembly check` for managing which checks should be applied to an as
       let keep = false
       if (flags['feature-id'] === undefined) {
         keep = true
-      } else if (chk.featureId !== undefined) {
-        if (keepFeatures.has(chk.featureId.toString())) {
-          keep = true
-        }
+      } else if (
+        chk.featureId !== undefined &&
+        keepFeatures.has(chk.featureId.toString())
+      ) {
+        keep = true
       }
       if (keep && refseqId.has(chk.refSeq)) {
         results.push(chk)

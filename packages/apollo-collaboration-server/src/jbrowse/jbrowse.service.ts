@@ -2,6 +2,7 @@ import type { AssemblyRow } from '@apollo-annotation/common'
 import type { DecodedJWT } from '@apollo-annotation/shared'
 import { Inject, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+
 import { AnalysisService } from '../analysis/analysis.service.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
 import { PermissionService } from '../permissions/permission.service.js'
@@ -29,7 +30,7 @@ export class JBrowseService {
   ) {}
 
   async getConfiguration(user: DecodedJWT | undefined) {
-    const role = user?.role as Role | undefined
+    const role = user?.role
     const userId = user?.id
     const userSessionId =
       userId && user?.iat ? `${userId}-${user.iat}` : undefined

@@ -2,7 +2,7 @@ import { createReadStream } from 'node:fs'
 import { open, unlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { Readable } from 'node:stream'
+import type { Readable } from 'node:stream'
 
 import { assembleFeatureTrees } from '@apollo-annotation/common'
 import { annotationFeatureToGFF3 } from '@apollo-annotation/shared'

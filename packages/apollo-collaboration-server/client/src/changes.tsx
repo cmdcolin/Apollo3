@@ -241,7 +241,7 @@ function RecentChangesPage() {
 
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           Showing {changes.length} changes (page {page})
-          {total !== undefined ? ` of ${total} total` : ''}
+          {total === undefined ? '' : ` of ${total} total`}
         </Typography>
 
         <ChangeTable changes={changes} />
@@ -250,9 +250,9 @@ function RecentChangesPage() {
           page={page}
           setPage={setPage}
           hasMore={
-            total !== undefined
-              ? page * pageSize < total
-              : changes.length >= pageSize
+            total === undefined
+              ? changes.length >= pageSize
+              : page * pageSize < total
           }
           total={total}
         />

@@ -104,7 +104,7 @@ refSeqs are derived from the GFF3 seq_ids and coordinates.`
         tmpdir(),
         `apollo-gff3-${Date.now()}-${Math.random().toString(36).slice(2)}.fai`,
       )
-      fs.writeFileSync(tempFai, faiLines.join('\n') + '\n')
+      fs.writeFileSync(tempFai, `${faiLines.join('\n')}\n`)
       sequenceSource = { type: 'fasta', fa: '/dev/null', fai: tempFai }
     } else {
       const faPath = flags.fasta ?? flags.gff3.replace(/\.gff3$/, '.fa')

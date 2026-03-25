@@ -12,8 +12,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { parseStringSync } from '@gmod/gff'
 import { gff3LineToSnapshot } from '@apollo-annotation/shared'
+import { parseStringSync } from '@gmod/gff'
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '..')
@@ -552,7 +552,7 @@ async function main() {
   log(`\nDemo database saved to demo-data/demo.sqlite (${sizeKB}KB)`)
 }
 
-main().catch((err) => {
-  console.error(err)
+main().catch((error) => {
+  console.error(error)
   process.exit(1)
 })

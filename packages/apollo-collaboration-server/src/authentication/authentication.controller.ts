@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/require-await */
 import {
   BadRequestException,
   Body,
@@ -75,10 +74,6 @@ export class AuthenticationController {
     @Query('type') type: string,
     @Query('redirect_uri') redirect_uri?: string,
   ) {
-    const params = new URLSearchParams({ type })
-    if (redirect_uri) {
-      params.set('redirect_uri', redirect_uri)
-    }
     if (['google', 'microsoft', 'guest'].includes(type)) {
       const url = redirect_uri
         ? `${type}?${new URLSearchParams({ redirect_uri }).toString()}`
@@ -91,7 +86,7 @@ export class AuthenticationController {
   @Get('google')
   @Redirect()
   @UseGuards(GoogleAuthGuard)
-  async handleRedirect(
+  handleRedirect(
     @Req() req: RequestWithUserToken,
     @Res({ passthrough: true }) res: Response,
   ) {
@@ -102,7 +97,7 @@ export class AuthenticationController {
   @Get('microsoft')
   @Redirect()
   @UseGuards(MicrosoftAuthGuard)
-  async microsoftHandleRedirect(
+  microsoftHandleRedirect(
     @Req() req: RequestWithUserToken,
     @Res({ passthrough: true }) res: Response,
   ) {
@@ -118,7 +113,7 @@ export class AuthenticationController {
     const result = await this.authService.guestLogin()
     res.cookie(AUTH_COOKIE_NAME, result.token, COOKIE_OPTIONS)
     if (redirectUri) {
-      res.redirect(redirectUri)
+      res.redirect(this.authService.getSafeRedirectUrl(redirectUri))
     } else {
       res.json(result)
     }

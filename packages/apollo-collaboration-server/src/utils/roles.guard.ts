@@ -9,8 +9,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
-import type { Request } from 'express'
 
+import type { RequestWithUser } from './request-with-user.js'
 import { Role, RoleInheritance } from './role/role.enum.js'
 
 export const IS_PUBLIC_KEY = 'isPublic'
@@ -41,17 +41,17 @@ export class RolesGuard implements CanActivate {
         context.getClass(),
       ]) ?? Role.Admin
 
-    const request = context.switchToHttp().getRequest<Request>()
-    const user = request.user as { role?: string } | undefined
-    if (!user?.role) {
+    const request = context.switchToHttp().getRequest<RequestWithUser>()
+    const { user } = request
+    if (!user) {
       this.logger.debug(
         `401 Unauthorized: ${request.method} ${request.url} — no user/role in request`,
       )
       throw new UnauthorizedException()
     }
 
-    const inherited = RoleInheritance[user.role as keyof typeof RoleInheritance]
-    if (!inherited?.includes(requiredRole)) {
+    const inherited = RoleInheritance[user.role]
+    if (!inherited.includes(requiredRole)) {
       this.logger.debug(
         `403 Forbidden: ${request.method} ${request.url} — user.role=${user.role}, requiredRole=${requiredRole}`,
       )

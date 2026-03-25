@@ -52,11 +52,8 @@ export class GoogleStrategy extends PassportStrategy(Strategy) {
         clientSecret = fs.readFileSync(clientSecretFile, 'utf8').trim()
       }
       const urlString = configService.get('URL', { infer: true })
-      const callbackURI = new URL(urlString)
-      callbackURI.pathname = `${callbackURI.pathname}${
-        callbackURI.pathname.endsWith('/') ? '' : '/'
-      }auth/google`
-      callbackURL = callbackURI.href
+      const base = urlString.endsWith('/') ? urlString : `${urlString}/`
+      callbackURL = new URL('auth/google', base).href
     }
     super({
       clientID,

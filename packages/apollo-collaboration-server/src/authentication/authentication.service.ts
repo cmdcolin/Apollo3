@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-condition */
-
 import { randomBytes } from 'node:crypto'
 import fs from 'node:fs/promises'
 
@@ -26,6 +24,8 @@ import {
 import { Role } from '../utils/role/role.enum.js'
 import type { Profile as MicrosoftProfile } from '../utils/strategies/microsoft.strategy.js'
 
+import { safeRedirectUrl } from './redirect.js'
+
 export interface RequestWithUserToken extends Request {
   user: { token: string }
 }
@@ -38,7 +38,9 @@ interface ConfigValues {
   GOOGLE_CLIENT_ID_FILE?: string
   ALLOW_GUEST_USER: boolean
   DEFAULT_NEW_USER_ROLE: Role
-  ROOT_USER_PASSWORD: string
+  ALLOW_ROOT_USER: boolean
+  ROOT_USER_PASSWORD?: string
+  ROOT_USER_PASSWORD_FILE?: string
 }
 
 const ROOT_USER_NAME = 'root'
@@ -105,36 +107,43 @@ export class AuthenticationService {
     return users.some(
       (u) =>
         u.role === Role.Admin &&
-        u.email !== 'root_user' &&
-        u.email !== 'guest_user',
+        u.email !== ROOT_USER_EMAIL &&
+        u.email !== GUEST_USER_EMAIL,
     )
   }
 
+  getSafeRedirectUrl(redirectUri: string) {
+    const serverUrl = this.configService.get('URL', { infer: true })
+    const serverOrigin = new URL(serverUrl).origin
+    let inputOrigin: string | undefined
+    try {
+      inputOrigin = new URL(redirectUri).origin
+    } catch {
+      // invalid URL — will fall back to server root
+    }
+    const result = safeRedirectUrl(serverUrl, redirectUri)
+    if (inputOrigin && inputOrigin !== serverOrigin) {
+      this.logger.warn(
+        `Blocked redirect to external origin: ${inputOrigin} (expected ${serverOrigin})`,
+      )
+    }
+    return result.toString()
+  }
+
   handleRedirect(req: RequestWithUserToken) {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!req.user) {
       throw new BadRequestException()
     }
-
-    const { redirect_uri } = (
-      req.authInfo as { state: { redirect_uri: string } }
-    ).state
-
-    const serverOrigin = new URL(this.configService.get('URL', { infer: true }))
-      .origin
-    let url: URL
-    try {
-      url = new URL(redirect_uri)
-    } catch {
-      throw new BadRequestException('Invalid redirect_uri')
-    }
-    if (url.origin !== serverOrigin) {
-      this.logger.warn(
-        `Blocked redirect to external origin: ${url.origin} (expected ${serverOrigin})`,
-      )
-      url = new URL(serverOrigin)
-    }
-    const searchParams = new URLSearchParams({ access_token: req.user.token })
-    url.search = searchParams.toString()
+    const authInfo = req.authInfo as
+      | { state?: { redirect_uri?: string } }
+      | undefined
+    const redirectUri = authInfo?.state?.redirect_uri
+    const serverUrl = this.configService.get('URL', { infer: true })
+    const url = redirectUri
+      ? safeRedirectUrl(serverUrl, redirectUri)
+      : new URL(new URL(serverUrl).origin)
+    url.searchParams.set('access_token', req.user.token)
     return { url: url.toString() }
   }
 
@@ -173,6 +182,12 @@ export class AuthenticationService {
     }
     if (allowGuestUser) {
       loginTypes.push('guest')
+    }
+    const allowRootUser = this.configService.get('ALLOW_ROOT_USER', {
+      infer: true,
+    })
+    if (allowRootUser) {
+      loginTypes.push('root')
     }
     return loginTypes
   }
@@ -219,7 +234,21 @@ export class AuthenticationService {
   }
 
   async rootLogin(password: string) {
-    if (password === this.configService.get('ROOT_USER_PASSWORD')) {
+    if (!this.configService.get('ALLOW_ROOT_USER', { infer: true })) {
+      throw new UnauthorizedException('Root user login is disabled')
+    }
+    let rootPassword = this.configService.get('ROOT_USER_PASSWORD', {
+      infer: true,
+    })
+    if (!rootPassword) {
+      const passwordFile = this.configService.get('ROOT_USER_PASSWORD_FILE', {
+        infer: true,
+      })
+      if (passwordFile) {
+        rootPassword = (await fs.readFile(passwordFile, 'utf8')).trim()
+      }
+    }
+    if (rootPassword && password === rootPassword) {
       return this.logIn(ROOT_USER_NAME, ROOT_USER_EMAIL)
     }
     throw new UnauthorizedException('Invalid password for ROOT user')
@@ -250,7 +279,7 @@ export class AuthenticationService {
         role: newUserRole,
       }
       user = await this.usersService.addNew(newUser)
-    } else if (user.role === 'none' && this.setupActive && !isGuestUser) {
+    } else if (user.role === Role.None && this.setupActive && !isGuestUser) {
       await this.usersService.updateRole(user._id, Role.Admin)
       user = { ...user, role: Role.Admin }
       this.consumeSetup()

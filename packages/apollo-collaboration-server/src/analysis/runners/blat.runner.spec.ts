@@ -29,7 +29,7 @@ match\tmis-\trep.\tN's\tQ gap\tQ gap\tT gap\tT gap\tstrand\tQ name\tQ size\tQ st
     expect(hit.qStart).toBe(0)
     expect(hit.qEnd).toBe(50)
     expect(hit.tName).toBe('ctgA')
-    expect(hit.tSize).toBe(50000)
+    expect(hit.tSize).toBe(50_000)
     expect(hit.tStart).toBe(1000)
     expect(hit.tEnd).toBe(1050)
     expect(hit.strand).toBe('+')

@@ -8,12 +8,13 @@ import Typography from '@mui/material/Typography'
 
 import type { SearchState } from '../hooks/useAnalysisSearch.js'
 import {
-  TOOL_LABELS,
   type BlastSearchResult,
   type GeneModel,
   type IsPcrProduct,
   type PslHit,
+  TOOL_LABELS,
 } from '../types.js'
+
 import { BlastResultsTable } from './BlastResultsTable.js'
 import { BlatResultsTable } from './BlatResultsTable.js'
 import { IsPcrResultsTable } from './IsPcrResultsTable.js'
@@ -27,7 +28,7 @@ export function SearchResults({
   assemblyName: string
 }) {
   const tool = search.tool ?? ''
-  const results = search.results
+  const { results } = search
 
   return (
     <>
