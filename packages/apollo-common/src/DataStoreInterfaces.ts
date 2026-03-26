@@ -8,8 +8,6 @@ import type {
 } from '@apollo-annotation/mst'
 import type { GFF3Feature } from '@gmod/gff'
 import type { Region } from '@jbrowse/core/util'
-import type { LoggerService } from '@nestjs/common'
-
 
 import type {
   AssemblyRepository,
@@ -58,34 +56,4 @@ export interface ServerDataStore {
     ): unknown
   }
   user: string
-}
-
-export interface SerializedOperation {
-  typeName: string
-}
-
-export interface OperationOptions {
-  logger: LoggerService
-}
-
-export abstract class Operation implements SerializedOperation {
-  protected logger: LoggerService
-  abstract typeName: string
-
-  constructor(json: SerializedOperation, options?: OperationOptions) {
-    this.logger = options?.logger ?? console
-  }
-
-  abstract toJSON(): SerializedOperation
-
-  async execute(backend: ServerDataStore) {
-    const initialResult = await this.executeOnServer(backend)
-    return backend.pluginsService.evaluateExtensionPoint(
-      `${this.typeName}-transformResults`,
-      initialResult,
-      { operation: this, backend },
-    )
-  }
-
-  abstract executeOnServer(backend: ServerDataStore): Promise<unknown>
 }
