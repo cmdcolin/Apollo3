@@ -39,7 +39,7 @@ export const AttributeKeySelector = observer(function AttributeKeySelector({
     gffKeys,
   ) as Record<string, string | undefined>
   const firstKey = Object.keys(reservedKeys).at(0) ?? customKeyName
-  const [selectedKey, setSelectedKey] = useState<string>(firstKey)
+  const [selectedKey, setSelectedKey] = useState(firstKey)
   const [customKey, setCustomKey] = useState<string>()
   const isCustom = selectedKey === customKeyName
 

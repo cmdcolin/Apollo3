@@ -29,8 +29,8 @@ function makeChange(
   })
 }
 
-describe('SplitTranscriptChange.makeSplitTranscripts', () => {
-  it('splits a transcript with children on each side of the split point', () => {
+void describe('SplitTranscriptChange.makeSplitTranscripts', () => {
+  void it('splits a transcript with children on each side of the split point', () => {
     const change = makeChange()
     const transcript: AnnotationFeatureSnapshot = {
       _id: 'tx-1',
@@ -74,12 +74,12 @@ describe('SplitTranscriptChange.makeSplitTranscripts', () => {
 
     // exon-1 midpoint 25 <= 50 → goes left; exon-2 midpoint 80 > 50 → goes right
     assert.ok(left.children?.['exon-1'])
-    assert.ok(!left.children?.['exon-2'])
+    assert.ok(!left.children['exon-2'])
     assert.ok(right.children?.['exon-2'])
-    assert.ok(!right.children?.['exon-1'])
+    assert.ok(!right.children['exon-1'])
   })
 
-  it('uses splitPoint as fallback bounds when one side has no children', () => {
+  void it('uses splitPoint as fallback bounds when one side has no children', () => {
     const change = makeChange()
     const transcript: AnnotationFeatureSnapshot = {
       _id: 'tx-1',
@@ -114,7 +114,7 @@ describe('SplitTranscriptChange.makeSplitTranscripts', () => {
     assert.equal(right.children, undefined)
   })
 
-  it('handles a transcript with no children', () => {
+  void it('handles a transcript with no children', () => {
     const change = makeChange()
     const transcript: AnnotationFeatureSnapshot = {
       _id: 'tx-1',
@@ -139,7 +139,7 @@ describe('SplitTranscriptChange.makeSplitTranscripts', () => {
     assert.equal(right.children, undefined)
   })
 
-  it('assigns new IDs to the split transcripts', () => {
+  void it('assigns new IDs to the split transcripts', () => {
     const change = makeChange()
     const transcript: AnnotationFeatureSnapshot = {
       _id: 'tx-1',
@@ -160,7 +160,7 @@ describe('SplitTranscriptChange.makeSplitTranscripts', () => {
     assert.equal(right._id, 'tx-right')
   })
 
-  it('removes gff_id and gff_name from split transcripts', () => {
+  void it('removes gff_id and gff_name from split transcripts', () => {
     const change = makeChange()
     const transcript: AnnotationFeatureSnapshot = {
       _id: 'tx-1',
@@ -191,7 +191,7 @@ describe('SplitTranscriptChange.makeSplitTranscripts', () => {
     assert.deepEqual(right.attributes?.note, ['some note'])
   })
 
-  it('preserves other feature fields (type, strand, etc.) in split transcripts', () => {
+  void it('preserves other feature fields (type, strand, etc.) in split transcripts', () => {
     const change = makeChange()
     const transcript: AnnotationFeatureSnapshot = {
       _id: 'tx-1',
@@ -215,7 +215,7 @@ describe('SplitTranscriptChange.makeSplitTranscripts', () => {
     assert.equal(right.strand, 1)
   })
 
-  it('partitions children by midpoint, not by boundary', () => {
+  void it('partitions children by midpoint, not by boundary', () => {
     // A child whose midpoint is exactly at the split point goes left (<=)
     const change = makeChange()
     const transcript: AnnotationFeatureSnapshot = {
@@ -252,13 +252,13 @@ describe('SplitTranscriptChange.makeSplitTranscripts', () => {
     // midpoint 50 <= 50 → goes left
     assert.ok(left.children?.['exon-at'])
     assert.ok(right.children?.['exon-right'])
-    assert.ok(!left.children?.['exon-right'])
-    assert.ok(!right.children?.['exon-at'])
+    assert.ok(!left.children['exon-right'])
+    assert.ok(!right.children['exon-at'])
   })
 })
 
-describe('SplitTranscriptChange.toJSON', () => {
-  it('serializes single change without wrapping array', () => {
+void describe('SplitTranscriptChange.toJSON', () => {
+  void it('serializes single change without wrapping array', () => {
     const transcript: AnnotationFeatureSnapshot = {
       _id: 'tx-1',
       refSeq: 'rs-1',
@@ -284,8 +284,8 @@ describe('SplitTranscriptChange.toJSON', () => {
   })
 })
 
-describe('SplitTranscriptChange.getInverse', () => {
-  it('returns an UndoSplitTranscriptChange with reversed ids and restore info', () => {
+void describe('SplitTranscriptChange.getInverse', () => {
+  void it('returns an UndoSplitTranscriptChange with reversed ids and restore info', () => {
     const transcript: AnnotationFeatureSnapshot = {
       _id: 'tx-1',
       refSeq: 'rs-1',
@@ -315,8 +315,8 @@ describe('SplitTranscriptChange.getInverse', () => {
   })
 })
 
-describe('UndoSplitTranscriptChange.getInverse', () => {
-  it('returns a SplitTranscriptChange that can redo the split', () => {
+void describe('UndoSplitTranscriptChange.getInverse', () => {
+  void it('returns a SplitTranscriptChange that can redo the split', () => {
     const transcript: AnnotationFeatureSnapshot = {
       _id: 'tx-1',
       refSeq: 'rs-1',
@@ -362,7 +362,7 @@ describe('UndoSplitTranscriptChange.getInverse', () => {
     assert.equal(redoChange.splitPoint, 50)
   })
 
-  it('throws when the transcript has no children', () => {
+  void it('throws when the transcript has no children', () => {
     const transcript: AnnotationFeatureSnapshot = {
       _id: 'tx-1',
       refSeq: 'rs-1',

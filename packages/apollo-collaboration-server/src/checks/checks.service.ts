@@ -37,7 +37,7 @@ export class ChecksService {
   async find({ assembly }: { assembly?: string }) {
     if (assembly) {
       const refSeqs = await this.refSeqsService.findAll({ assembly })
-      const refSeqIds = refSeqs.map((refSeq) => String(refSeq._id))
+      const refSeqIds = refSeqs.map((refSeq) => refSeq._id)
       return this.db.check.findByRefSeqIds(refSeqIds)
     }
     return this.db.check.findByRefSeqIds([])
@@ -62,7 +62,7 @@ export class ChecksService {
     return this.db.checkConfig.findByIds(assembly.checks)
   }
 
-  async checkFeature(featureId: string, checkTimestamps = true) {
+  async checkFeature(featureId: string) {
     const featureRow = await this.db.feature.findById(featureId)
     if (!featureRow) {
       this.logger.warn(`Feature ${featureId} not found for check`)
@@ -77,10 +77,7 @@ export class ChecksService {
     if (trees.length === 0) {
       return
     }
-    const tree = trees[0]
-    if (!tree) {
-      return
-    }
+    const [tree] = trees
     const allIds = collectAllIds(tree)
     const snapshot = tree as AnnotationFeatureSnapshot
 
@@ -88,9 +85,6 @@ export class ChecksService {
     for (const check of checks) {
       await this.db.check.deleteByFeatureIdsAndName(allIds, check.name)
       const c = checkRegistry.getCheck(check.name)
-      if (!c) {
-        throw new Error(`Check "${check.name}" not registered`)
-      }
       const result = await c.checkFeature(
         snapshot,
         (start: number, end: number) => {

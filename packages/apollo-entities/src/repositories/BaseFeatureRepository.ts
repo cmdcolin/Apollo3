@@ -104,7 +104,7 @@ export abstract class BaseFeatureRepository implements FeatureRepository {
   constructor(protected readonly em: EntityManager) {}
 
   async findAll() {
-    const entities = await this.em.find(FeatureEntity, {})
+    const entities = await this.em.find(FeatureEntity, {}, {})
     return entities.map((e) => entityToRow(e))
   }
 
@@ -143,31 +143,43 @@ export abstract class BaseFeatureRepository implements FeatureRepository {
     if (ids.length === 0) {
       return []
     }
-    const entities = await this.em.find(FeatureEntity, { _id: { $in: ids } })
+    const entities = await this.em.find(
+      FeatureEntity,
+      { _id: { $in: ids } },
+      {},
+    )
     return entities.map((e) => entityToRow(e))
   }
 
   async findByRange(refSeqId: string, start: number, end: number) {
-    const entities = await this.em.find(FeatureEntity, {
-      refSeq: refSeqId,
-      min: { $lte: end },
-      max: { $gte: start },
-    })
+    const entities = await this.em.find(
+      FeatureEntity,
+      {
+        refSeq: refSeqId,
+        min: { $lte: end },
+        max: { $gte: start },
+      },
+      {},
+    )
     return entities.map((e) => entityToRow(e))
   }
 
   async findRootsByRange(refSeqId: string, start: number, end: number) {
-    const entities = await this.em.find(FeatureEntity, {
-      refSeq: refSeqId,
-      parent: null,
-      min: { $lte: end },
-      max: { $gte: start },
-    })
+    const entities = await this.em.find(
+      FeatureEntity,
+      {
+        refSeq: refSeqId,
+        parent: null,
+        min: { $lte: end },
+        max: { $gte: start },
+      },
+      {},
+    )
     return entities.map((e) => entityToRow(e))
   }
 
   async findChildren(parentId: string) {
-    const entities = await this.em.find(FeatureEntity, { parent: parentId })
+    const entities = await this.em.find(FeatureEntity, { parent: parentId }, {})
     return entities.map((e) => entityToRow(e))
   }
 

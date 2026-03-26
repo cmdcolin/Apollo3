@@ -61,7 +61,7 @@ export class MikroOrmTrackConfigRepository implements TrackConfigRepository {
       { assemblies: assemblyId },
       POPULATE,
     )
-    return entities.map(toRow)
+    return entities.map((x) => toRow(x))
   }
 
   async findByAssemblyIds(assemblyIds: string[]) {
@@ -73,12 +73,12 @@ export class MikroOrmTrackConfigRepository implements TrackConfigRepository {
       { assemblies: { $in: assemblyIds } },
       POPULATE,
     )
-    return entities.map(toRow)
+    return entities.map((x) => toRow(x))
   }
 
   async findAll() {
     const entities = await this.em.find(TrackConfigEntity, {}, POPULATE)
-    return entities.map(toRow)
+    return entities.map((x) => toRow(x))
   }
 
   async create(row: TrackConfigRow) {

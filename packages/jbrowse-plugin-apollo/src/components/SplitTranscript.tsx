@@ -3,6 +3,7 @@
 import type {
   AnnotationFeature,
   AnnotationFeatureSnapshot,
+  Children,
 } from '@apollo-annotation/mst'
 import { SplitTranscriptChange } from '@apollo-annotation/shared'
 import { getSnapshot } from '@jbrowse/mobx-state-tree'
@@ -46,12 +47,13 @@ function getSortedExons(
   session: ApolloSessionModel,
 ): AnnotationFeature[] {
   const exons: AnnotationFeature[] = []
-  if (transcript.children) {
+  const transcriptChildren = transcript.children as Children
+  if (transcriptChildren) {
     const { featureTypeOntology } = session.apolloDataStore.ontologyManager
     if (!featureTypeOntology) {
       return exons
     }
-    for (const [, child] of transcript.children) {
+    for (const [, child] of transcriptChildren) {
       if (featureTypeOntology.isTypeOf(child.type, 'exon')) {
         exons.push(child)
       }
@@ -96,7 +98,7 @@ export function SplitTranscript({
 }: SplitTranscriptProps) {
   const [errorMessage, setErrorMessage] = useState('')
   const splitPoints = getSplitPoints(sourceFeature, session)
-  const [selectedSplitIdx, setSelectedSplitIdx] = useState<number | undefined>(
+  const [selectedSplitIdx, setSelectedSplitIdx] = useState(
     splitPoints.length > 0 ? 0 : undefined,
   )
 

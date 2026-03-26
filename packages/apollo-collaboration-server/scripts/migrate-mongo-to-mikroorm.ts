@@ -1,30 +1,139 @@
 /**
- * Migration script: MongoDB (Mongoose) -> MikroORM (SQLite/PostgreSQL)
+ * Migration script: MongoDB (Mongoose) -\> MikroORM (SQLite/PostgreSQL)
  *
  * Usage:
- *   npx ts-node scripts/migrate-mongo-to-mikroorm.ts \
+ *   node --experimental-strip-types scripts/migrate-mongo-to-mikroorm.ts \
  *     --mongo-uri "mongodb://localhost:27017/apollo" \
  *     --db-backend sqlite \
  *     --db-connection-url apollo3.sqlite
  *
  * Or with PostgreSQL:
- *   npx ts-node scripts/migrate-mongo-to-mikroorm.ts \
+ *   node --experimental-strip-types scripts/migrate-mongo-to-mikroorm.ts \
  *     --mongo-uri "mongodb://localhost:27017/apollo" \
  *     --db-backend postgresql \
  *     --db-connection-url "postgresql://user:pass@localhost:5432/apollo3"
  */
 
-/* eslint-disable @typescript-eslint/no-require-imports */
+import { createMikroOrmConfig } from '@apollo-annotation/entities'
 import { MikroORM } from '@mikro-orm/core'
 import { MongoClient } from 'mongodb'
-
-import { createMikroOrmConfig } from '@apollo-annotation/entities'
 
 interface MigrationArgs {
   mongoUri: string
   dbBackend: 'sqlite' | 'postgresql'
   dbConnectionUrl: string
 }
+
+interface MongoFileDoc {
+  _id: unknown
+  basename: string
+  checksum: string
+  type: string
+}
+
+interface MongoUserDoc {
+  _id: unknown
+  username: string
+  email: string
+  role: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+interface MongoCheckDoc {
+  _id: unknown
+  name: string
+  causes: unknown
+  isDefault: boolean
+  version: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+interface MongoAssemblyDoc {
+  _id: unknown
+  name: string
+  status: string
+  user: string
+  displayName?: string
+  aliases?: string[]
+  description?: string
+  externalLocation?: Record<string, unknown>
+  fileIds?: Record<string, unknown>
+  checks?: unknown[]
+}
+
+interface MongoRefSeqDoc {
+  _id: unknown
+  assembly: unknown
+  name: string
+  description?: string
+  aliases?: string[]
+  length: number
+  status: string
+  user: string
+}
+
+interface MongoFeatureDoc {
+  _id: unknown
+  refSeq: unknown
+  createdAt?: Date
+  updatedAt?: Date
+  type: string
+  min: number
+  max: number
+  strand?: 1 | -1
+  phase?: 0 | 1 | 2
+  attributes?: Map<string, string[]> | Record<string, string[]>
+  status?: number
+  user?: string
+  children?: Map<string, MongoFeatureDoc> | Record<string, MongoFeatureDoc>
+}
+
+interface MongoCheckResultDoc {
+  _id: unknown
+  name?: string
+  cause: string
+  ids?: unknown[]
+  refSeq: unknown
+  start: number
+  end: number
+  ignored?: boolean
+  message: string
+}
+
+interface MongoChangeDoc {
+  _id: unknown
+  assembly?: unknown
+  typeName: string
+  changedIds: string[]
+  changes: unknown
+  reverts?: unknown
+  user: string
+  sequence?: number
+  createdAt?: Date
+  updatedAt?: Date
+}
+
+interface MongoCounterDoc {
+  _id: unknown
+  id?: string
+  sequenceValue?: number
+}
+
+interface MongoJBrowseConfigDoc {
+  _id: unknown
+  __v?: unknown
+  [key: string]: unknown
+}
+
+interface MongoExportDoc {
+  _id: unknown
+  assembly: unknown
+  createdAt: Date
+}
+
+const BATCH_SIZE = 500
 
 function parseArgs(): MigrationArgs {
   const args = process.argv.slice(2)
@@ -33,18 +142,25 @@ function parseArgs(): MigrationArgs {
   let dbConnectionUrl = ''
 
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--mongo-uri') {
-      mongoUri = args[++i]
-    } else if (args[i] === '--db-backend') {
-      dbBackend = args[++i] as 'sqlite' | 'postgresql'
-    } else if (args[i] === '--db-connection-url') {
-      dbConnectionUrl = args[++i]
+    switch (args[i]) {
+      case '--mongo-uri': {
+        mongoUri = args[++i] ?? ''
+        break
+      }
+      case '--db-backend': {
+        dbBackend = (args[++i] ?? 'sqlite') as 'sqlite' | 'postgresql'
+        break
+      }
+      case '--db-connection-url': {
+        dbConnectionUrl = args[++i] ?? ''
+        break
+      }
     }
   }
 
   if (!mongoUri || !dbConnectionUrl) {
     console.error(
-      'Usage: npx ts-node scripts/migrate-mongo-to-mikroorm.ts --mongo-uri <uri> --db-backend <sqlite|postgresql> --db-connection-url <url>',
+      'Usage: node --experimental-strip-types scripts/migrate-mongo-to-mikroorm.ts --mongo-uri <uri> --db-backend <sqlite|postgresql> --db-connection-url <url>',
     )
     process.exit(1)
   }
@@ -80,7 +196,7 @@ interface FlatFeature {
 }
 
 function flattenFeature(
-  doc: Record<string, unknown>,
+  doc: MongoFeatureDoc,
   refSeq: string,
   parentId: string | undefined,
   createdAt: Date | undefined,
@@ -93,44 +209,39 @@ function flattenFeature(
     _id: id,
     parentId,
     refSeq,
-    type: doc.type as string,
-    min: doc.min as number,
-    max: doc.max as number,
+    type: doc.type,
+    min: doc.min,
+    max: doc.max,
     createdAt,
     updatedAt,
   }
 
-  if (doc.strand !== undefined && doc.strand !== null) {
-    feature.strand = doc.strand as 1 | -1
+  if (doc.strand !== undefined) {
+    feature.strand = doc.strand
   }
-  if (doc.phase !== undefined && doc.phase !== null) {
-    feature.phase = doc.phase as 0 | 1 | 2
+  if (doc.phase !== undefined) {
+    feature.phase = doc.phase
   }
   if (doc.attributes) {
-    const attrs = doc.attributes as
-      | Map<string, string[]>
-      | Record<string, string[]>
-    if (attrs instanceof Map) {
-      feature.attributes = Object.fromEntries(attrs)
-    } else {
-      feature.attributes = attrs
-    }
+    feature.attributes =
+      doc.attributes instanceof Map
+        ? Object.fromEntries(doc.attributes)
+        : doc.attributes
   }
-  if (doc.status !== undefined && doc.status !== null) {
-    feature.status = doc.status as number
+  if (doc.status !== undefined) {
+    feature.status = doc.status
   }
   if (doc.user) {
-    feature.user = doc.user as string
+    feature.user = doc.user
   }
 
   result.push(feature)
 
   if (doc.children) {
-    const children = doc.children as
-      | Map<string, Record<string, unknown>>
-      | Record<string, Record<string, unknown>>
     const entries =
-      children instanceof Map ? children.entries() : Object.entries(children)
+      doc.children instanceof Map
+        ? doc.children.entries()
+        : Object.entries(doc.children)
     for (const [, child] of entries) {
       const childFeatures = flattenFeature(
         child,
@@ -162,11 +273,11 @@ async function migrate() {
     allowGlobalContext: true,
   })
   await orm.schema.update()
-  const em = orm.em
+  const { em } = orm
 
   // --- Files ---
   console.log('Migrating files...')
-  const files = await mongoDb.collection('files').find().toArray()
+  const files = await mongoDb.collection<MongoFileDoc>('files').find().toArray()
   for (const f of files) {
     em.create('FileEntity', {
       _id: objectIdToString(f._id),
@@ -181,7 +292,7 @@ async function migrate() {
 
   // --- Users ---
   console.log('Migrating users...')
-  const users = await mongoDb.collection('users').find().toArray()
+  const users = await mongoDb.collection<MongoUserDoc>('users').find().toArray()
   for (const u of users) {
     em.create('UserEntity', {
       _id: objectIdToString(u._id),
@@ -198,11 +309,14 @@ async function migrate() {
 
   // --- Checks ---
   console.log('Migrating checks...')
-  const checks = await mongoDb.collection('checks').find().toArray()
+  const checks = await mongoDb
+    .collection<MongoCheckDoc>('checks')
+    .find()
+    .toArray()
   for (const c of checks) {
     em.create('CheckEntity', {
       _id: objectIdToString(c._id),
-      name: c.name ?? '',
+      name: c.name,
       causes: c.causes,
       isDefault: c.isDefault,
       version: c.version,
@@ -216,7 +330,10 @@ async function migrate() {
 
   // --- Assemblies ---
   console.log('Migrating assemblies...')
-  const assemblies = await mongoDb.collection('assemblies').find().toArray()
+  const assemblies = await mongoDb
+    .collection<MongoAssemblyDoc>('assemblies')
+    .find()
+    .toArray()
   for (const a of assemblies) {
     const row: Record<string, unknown> = {
       _id: objectIdToString(a._id),
@@ -236,9 +353,8 @@ async function migrate() {
     if (a.externalLocation) {
       row.sequenceSource = { type: 'fasta', ...a.externalLocation }
     } else if (a.fileIds) {
-      const ids = a.fileIds as Record<string, unknown>
       const converted: Record<string, string> = {}
-      for (const [key, val] of Object.entries(ids)) {
+      for (const [key, val] of Object.entries(a.fileIds)) {
         converted[key] = objectIdToString(val)
       }
       if ('fai' in converted) {
@@ -260,7 +376,10 @@ async function migrate() {
 
   // --- RefSeqs ---
   console.log('Migrating refSeqs...')
-  const refSeqs = await mongoDb.collection('refseqs').find().toArray()
+  const refSeqs = await mongoDb
+    .collection<MongoRefSeqDoc>('refseqs')
+    .find()
+    .toArray()
   for (const r of refSeqs) {
     em.create('RefSeqEntity', {
       _id: objectIdToString(r._id),
@@ -279,8 +398,6 @@ async function migrate() {
 
   // RefSeqChunk storage has been removed. Assemblies that used chunked
   // sequence storage will need their FASTA re-imported after migration.
-  // The "chunked" sequenceSource entries are preserved above; the admin
-  // should re-add the assembly FASTA using the CLI or UI.
   const chunkCount = await mongoDb.collection('refseqchunks').countDocuments()
   if (chunkCount > 0) {
     console.log(
@@ -293,14 +410,14 @@ async function migrate() {
 
   // --- Features (with tree flattening, batched) ---
   console.log('Migrating features...')
-  const featuresCursor = mongoDb.collection('features').find()
+  const featuresCursor = mongoDb.collection<MongoFeatureDoc>('features').find()
   let featureCount = 0
   let flatFeatures: FlatFeature[] = []
 
   for await (const doc of featuresCursor) {
     const refSeq = objectIdToString(doc.refSeq)
     const flattened = flattenFeature(
-      doc as unknown as Record<string, unknown>,
+      doc,
       refSeq,
       undefined,
       doc.createdAt,
@@ -361,7 +478,10 @@ async function migrate() {
 
   // --- CheckResults ---
   console.log('Migrating checkResults...')
-  const checkResults = await mongoDb.collection('checkresults').find().toArray()
+  const checkResults = await mongoDb
+    .collection<MongoCheckResultDoc>('checkresults')
+    .find()
+    .toArray()
   for (const cr of checkResults) {
     em.create('CheckResultEntity', {
       _id: objectIdToString(cr._id),
@@ -382,11 +502,11 @@ async function migrate() {
   // --- Changes (batched) ---
   console.log('Migrating changes...')
   const changesCursor = mongoDb
-    .collection('changes')
+    .collection<MongoChangeDoc>('changes')
     .find()
     .sort({ sequence: 1 })
   let changeCount = 0
-  let changeBatch: Record<string, unknown>[] = []
+  let changeBatch: MongoChangeDoc[] = []
 
   for await (const doc of changesCursor) {
     changeBatch.push(doc)
@@ -395,14 +515,14 @@ async function migrate() {
         em.create('ChangeEntity', {
           _id: objectIdToString(c._id),
           assembly: c.assembly ? objectIdToString(c.assembly) : undefined,
-          typeName: c.typeName as string,
-          changedIds: c.changedIds as string[],
+          typeName: c.typeName,
+          changedIds: c.changedIds,
           changes: c.changes,
           reverts: c.reverts ? objectIdToString(c.reverts) : undefined,
-          user: c.user as string,
-          sequence: c.sequence as number | undefined,
-          createdAt: c.createdAt as Date | undefined,
-          updatedAt: c.updatedAt as Date | undefined,
+          user: c.user,
+          sequence: c.sequence,
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
         })
       }
       await em.flush()
@@ -417,14 +537,14 @@ async function migrate() {
       em.create('ChangeEntity', {
         _id: objectIdToString(c._id),
         assembly: c.assembly ? objectIdToString(c.assembly) : undefined,
-        typeName: c.typeName as string,
-        changedIds: c.changedIds as string[],
+        typeName: c.typeName,
+        changedIds: c.changedIds,
         changes: c.changes,
         reverts: c.reverts ? objectIdToString(c.reverts) : undefined,
-        user: c.user as string,
-        sequence: c.sequence as number | undefined,
-        createdAt: c.createdAt as Date | undefined,
-        updatedAt: c.updatedAt as Date | undefined,
+        user: c.user,
+        sequence: c.sequence,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
       })
     }
     await em.flush()
@@ -435,7 +555,10 @@ async function migrate() {
 
   // --- Counters ---
   console.log('Migrating counters...')
-  const counters = await mongoDb.collection('counters').find().toArray()
+  const counters = await mongoDb
+    .collection<MongoCounterDoc>('counters')
+    .find()
+    .toArray()
   for (const c of counters) {
     em.create('CounterEntity', {
       _id: c.id ?? objectIdToString(c._id),
@@ -448,7 +571,10 @@ async function migrate() {
 
   // --- JBrowse Configs ---
   console.log('Migrating jbrowseConfigs...')
-  const configs = await mongoDb.collection('jbrowseconfigs').find().toArray()
+  const configs = await mongoDb
+    .collection<MongoJBrowseConfigDoc>('jbrowseconfigs')
+    .find()
+    .toArray()
   for (const c of configs) {
     const id = objectIdToString(c._id)
     const { _id, __v, ...rest } = c
@@ -463,7 +589,10 @@ async function migrate() {
 
   // --- Exports ---
   console.log('Migrating exports...')
-  const exports = await mongoDb.collection('exports').find().toArray()
+  const exports = await mongoDb
+    .collection<MongoExportDoc>('exports')
+    .find()
+    .toArray()
   for (const e of exports) {
     em.create('ExportEntity', {
       _id: objectIdToString(e._id),
@@ -494,7 +623,7 @@ async function migrate() {
   await mongoClient.close()
 }
 
-migrate().catch((error) => {
+migrate().catch((error: unknown) => {
   console.error('Migration failed:', error)
   process.exit(1)
 })

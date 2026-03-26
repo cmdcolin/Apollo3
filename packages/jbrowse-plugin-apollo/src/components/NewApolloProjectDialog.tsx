@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import type PluginManager from '@jbrowse/core/PluginManager'
 import { Dialog, FileSelector } from '@jbrowse/core/ui'
@@ -100,7 +98,11 @@ export function NewApolloProjectDialog({
     setError(undefined)
 
     try {
-      const { ipcRenderer } = globalThis.require('electron')
+      const { ipcRenderer } = globalThis.require('electron') as {
+        ipcRenderer: {
+          invoke: (channel: string, ...args: unknown[]) => Promise<string>
+        }
+      }
 
       const metadata: Record<string, unknown> = {
         apollo: true,
@@ -207,7 +209,7 @@ export function NewApolloProjectDialog({
 
         {error ? (
           <Typography color="error">
-            {error instanceof Error ? error.message : String(error)}
+            {error instanceof Error ? error.message : JSON.stringify(error)}
           </Typography>
         ) : null}
       </DialogContent>

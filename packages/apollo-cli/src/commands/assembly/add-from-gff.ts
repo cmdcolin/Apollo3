@@ -1,6 +1,6 @@
 import * as fs from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import path from 'node:path'
 
 import {
   type FeatureSnapshot,
@@ -88,8 +88,8 @@ refSeqs are derived from the GFF3 seq_ids and coordinates.`
         if (!Array.isArray(featureGroup) || featureGroup.length === 0) {
           continue
         }
-        const line = featureGroup[0]
-        if (line.seq_id && line.end !== null && line.end !== undefined) {
+        const [line] = featureGroup
+        if (line.seq_id && line.end != null) {
           const cur = seqLengths.get(line.seq_id) ?? 0
           if (line.end > cur) {
             seqLengths.set(line.seq_id, line.end)
@@ -100,7 +100,7 @@ refSeqs are derived from the GFF3 seq_ids and coordinates.`
       for (const [name, length] of seqLengths) {
         faiLines.push(`${name}\t${length}\t0\t80\t81`)
       }
-      const tempFai = join(
+      const tempFai = path.join(
         tmpdir(),
         `apollo-gff3-${Date.now()}-${Math.random().toString(36).slice(2)}.fai`,
       )
@@ -158,7 +158,7 @@ refSeqs are derived from the GFF3 seq_ids and coordinates.`
       if (!Array.isArray(featureGroup) || featureGroup.length === 0) {
         continue
       }
-      const line = featureGroup[0]
+      const [line] = featureGroup
       if (!line.seq_id || !line.type) {
         continue
       }

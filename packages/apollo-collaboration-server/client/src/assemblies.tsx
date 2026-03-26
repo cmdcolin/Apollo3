@@ -3,16 +3,13 @@ import Box from '@mui/material/Box'
 import Chip from '@mui/material/Chip'
 import Container from '@mui/material/Container'
 import Link from '@mui/material/Link'
-import Paper from '@mui/material/Paper'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
-import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  DataGrid,
+  type GridColDef,
+  type GridRenderCellParams,
+} from '@mui/x-data-grid'
+import { useCallback, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { Nav } from './Nav.js'
@@ -30,7 +27,6 @@ interface Assembly {
 function AssembliesPage() {
   const [assemblies, setAssemblies] = useState<Assembly[]>([])
   const [error, setError] = useState<string>()
-  const [search, setSearch] = useState('')
 
   const load = useCallback(async () => {
     try {
@@ -45,18 +41,58 @@ function AssembliesPage() {
     void load()
   }, [load])
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) {
-      return assemblies
-    }
-    const q = search.toLowerCase()
-    return assemblies.filter(
-      (a) =>
-        a.name.toLowerCase().includes(q) ||
-        (a.displayName?.toLowerCase().includes(q) ?? false) ||
-        (a.description?.toLowerCase().includes(q) ?? false),
-    )
-  }, [assemblies, search])
+  const columns: GridColDef<Assembly>[] = [
+    {
+      field: 'name',
+      headerName: 'Name',
+      flex: 1,
+      renderCell: (params) => (
+        <Link href={`/ui/assemblies/${params.row._id}`}>{params.value}</Link>
+      ),
+    },
+    { field: 'displayName', headerName: 'Display Name', flex: 1 },
+    { field: 'description', headerName: 'Description', flex: 1.5 },
+    {
+      field: 'organism',
+      headerName: 'Organism',
+      flex: 1,
+      renderCell: (params) =>
+        params.value ? (
+          <Link href={`/ui/organisms/${params.value}`}>{params.value}</Link>
+        ) : null,
+    },
+    {
+      field: 'visibility',
+      headerName: 'Visibility',
+      width: 120,
+      renderCell: (
+        params: GridRenderCellParams<Assembly, Assembly['visibility']>,
+      ) => {
+        const v = params.value ?? 'private'
+        return (
+          <Chip
+            label={v}
+            size="small"
+            color={v === 'public' ? 'success' : 'default'}
+            variant="outlined"
+          />
+        )
+      },
+    },
+    {
+      field: 'open',
+      headerName: 'Open',
+      width: 140,
+      sortable: false,
+      renderCell: (params) => (
+        <Link
+          href={`/jbrowse/?config=${encodeURIComponent(`/jbrowse/config.json?assemblies=${params.row._id}`)}`}
+        >
+          Open in JBrowse
+        </Link>
+      ),
+    },
+  ]
 
   return (
     <Nav current="assemblies">
@@ -69,80 +105,15 @@ function AssembliesPage() {
             {error}
           </Alert>
         )}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-          <TextField
-            size="small"
-            placeholder="Search assemblies..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value)
-            }}
-            sx={{ minWidth: 250 }}
+        <Box sx={{ height: 600 }}>
+          <DataGrid
+            rows={assemblies.map((a) => ({ ...a, id: a._id }))}
+            columns={columns}
+            density="compact"
+            pageSizeOptions={[25, 50, 100]}
+            initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
           />
-          <Typography variant="body2" color="text.secondary">
-            Showing {filtered.length} of {assemblies.length}
-          </Typography>
         </Box>
-        <TableContainer component={Paper} variant="outlined">
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Display Name</TableCell>
-                <TableCell>Description</TableCell>
-                <TableCell>Organism</TableCell>
-                <TableCell>Visibility</TableCell>
-                <TableCell>Open</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filtered.map((a) => (
-                <TableRow key={a._id} hover>
-                  <TableCell>
-                    <Link href={`/ui/assemblies/${a._id}`}>{a.name}</Link>
-                  </TableCell>
-                  <TableCell>{a.displayName ?? ''}</TableCell>
-                  <TableCell>{a.description ?? ''}</TableCell>
-                  <TableCell>
-                    {a.organism ? (
-                      <Link href={`/ui/organisms/${a.organism}`}>
-                        {a.organism}
-                      </Link>
-                    ) : (
-                      ''
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={a.visibility ?? 'private'}
-                      size="small"
-                      color={a.visibility === 'public' ? 'success' : 'default'}
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Link
-                      href={`/jbrowse/?config=${encodeURIComponent(`/jbrowse/config.json?assemblies=${a._id}`)}`}
-                    >
-                      Open in JBrowse
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filtered.length === 0 && !error && (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    align="center"
-                    sx={{ color: 'text.secondary' }}
-                  >
-                    {search ? 'No matching assemblies' : 'No assemblies found'}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
       </Container>
     </Nav>
   )

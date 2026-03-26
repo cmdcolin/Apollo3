@@ -1,4 +1,4 @@
-import type { AnnotationFeature } from '@apollo-annotation/mst'
+import type { AnnotationFeature, Children } from '@apollo-annotation/mst'
 import type { LinearGenomeViewModel } from '@jbrowse/plugin-linear-genome-view'
 
 type MinEdge = 'min'
@@ -40,9 +40,10 @@ function shrinkFeatures(
   const featureId = feature._id
   const oldLocation = feature[edge]
   const changes: LocationChange[] = [{ featureId, oldLocation, newLocation }]
-  const { parent, children } = feature
-  if (children) {
-    for (const [, child] of children) {
+  const { parent } = feature
+  const featureChildren = feature.children as Children
+  if (featureChildren) {
+    for (const [, child] of featureChildren) {
       if (child._id === childIdToSkip) {
         continue
       }
@@ -56,8 +57,9 @@ function shrinkFeatures(
   }
   if (parent && shrinkParent) {
     const siblings: AnnotationFeature[] = []
-    if (parent.children) {
-      for (const [, c] of parent.children) {
+    const parentChildren = parent.children as Children
+    if (parentChildren) {
+      for (const [, c] of parentChildren) {
         if (c._id === featureId) {
           continue
         }

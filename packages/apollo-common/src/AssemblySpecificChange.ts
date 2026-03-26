@@ -50,7 +50,7 @@ export abstract class AssemblySpecificChange extends Change {
         feature.children instanceof Map
           ? feature.children.values()
           : Object.values(feature.children)
-      for (const child of childrenIterable) {
+      for (const child of childrenIterable as Iterable<AnnotationFeatureSnapshot>) {
         const childIndexedIds = this.getIndexedIds(child, idsToIndex)
         indexedIds.push(...childIndexedIds)
       }

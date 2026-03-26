@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 
-import type { AnnotationFeature } from '@apollo-annotation/mst'
+import type { AnnotationFeature, Children } from '@apollo-annotation/mst'
 import {
   DeleteFeatureChange,
   LocationEndChange,
@@ -122,7 +122,8 @@ export function DeleteFeature({
       // No CDS - parent of this exon is a non-coding transcript
       return
     }
-    if (!sourceFeature.parent.children) {
+    const parentChildren = sourceFeature.parent.children as Children
+    if (!parentChildren) {
       throw new Error('Unable to find parent of CDS')
     }
     if (sourceFeature.parent.cdsLocations.length != 1) {
@@ -131,8 +132,8 @@ export function DeleteFeature({
 
     const _cdsLocations = sourceFeature.parent.cdsLocations.at(0) ?? []
     const cdsLocations = _cdsLocations.sort(({ min: a }, { min: b }) => a - b)
-    let cdsFeature
-    for (const child of sourceFeature.parent.children.values()) {
+    let cdsFeature: AnnotationFeature | undefined
+    for (const child of parentChildren.values()) {
       if (child.type === cdsLocations[0].type) {
         cdsFeature = child
         break
@@ -213,15 +214,13 @@ export function DeleteFeature({
   function trimParent(
     featureToDelete: AnnotationFeature,
   ): LocationChange | undefined {
-    if (
-      !featureToDelete.parent?.children ||
-      featureToDelete.parent.children.size === 1
-    ) {
+    const parentFeatureChildren = featureToDelete.parent?.children as Children
+    if (!parentFeatureChildren || parentFeatureChildren.size === 1) {
       // Do not resize if this parent has only one child (i.e. the feature being deleted)
       return
     }
-    const childrenByStart = []
-    for (const x of featureToDelete.parent.children.values()) {
+    const childrenByStart: AnnotationFeature[] = []
+    for (const x of parentFeatureChildren.values()) {
       if (!featureTypeOntology?.isTypeOf(x.type, 'CDS')) {
         // CDS has been already handled so don't use it to resize parent
         childrenByStart.push(x)
@@ -229,8 +228,8 @@ export function DeleteFeature({
     }
     childrenByStart.sort((a, b) => a.min - b.min)
 
-    const childrenByEnd = []
-    for (const x of featureToDelete.parent.children.values()) {
+    const childrenByEnd: AnnotationFeature[] = []
+    for (const x of parentFeatureChildren.values()) {
       if (!featureTypeOntology?.isTypeOf(x.type, 'CDS')) {
         // CDS has been already handled so don't use it to resize parent
         childrenByEnd.push(x)
@@ -346,40 +345,43 @@ export function DeleteFeature({
         locationChanges.push(txChange)
         // Parent transcript has changed. See if we need to resize the parent gene
         const gene = sourceFeature.parent?.parent
-        if (gene?.children) {
-          if (txChange.typeName === 'LocationStartChange') {
-            let newGeneStart = txChange.newLocation
-            for (const [, tx] of gene.children) {
-              if (tx._id != txChange.featureId && tx.min < newGeneStart) {
-                // Reset to longest child (tx)
-                newGeneStart = tx.min
+        if (gene) {
+          const geneChildren = gene.children as Children
+          if (geneChildren) {
+            if (txChange.typeName === 'LocationStartChange') {
+              let newGeneStart = txChange.newLocation
+              for (const [, tx] of geneChildren) {
+                if (tx._id != txChange.featureId && tx.min < newGeneStart) {
+                  // Reset to longest child (tx)
+                  newGeneStart = tx.min
+                }
               }
-            }
-            if (newGeneStart != gene.min) {
-              locationChanges.push({
-                typeName: txChange.typeName,
-                changedId: gene._id,
-                featureId: gene._id,
-                oldLocation: gene.min,
-                newLocation: newGeneStart,
-              })
-            }
-          } else {
-            let newGeneEnd = txChange.newLocation
-            for (const [, tx] of gene.children) {
-              if (tx._id != txChange.featureId && tx.max > newGeneEnd) {
-                // Reset to longest child (tx)
-                newGeneEnd = tx.max
+              if (newGeneStart != gene.min) {
+                locationChanges.push({
+                  typeName: txChange.typeName,
+                  changedId: gene._id,
+                  featureId: gene._id,
+                  oldLocation: gene.min,
+                  newLocation: newGeneStart,
+                })
               }
-            }
-            if (newGeneEnd != gene.max) {
-              locationChanges.push({
-                typeName: txChange.typeName,
-                changedId: gene._id,
-                featureId: gene._id,
-                oldLocation: gene.max,
-                newLocation: newGeneEnd,
-              })
+            } else {
+              let newGeneEnd = txChange.newLocation
+              for (const [, tx] of geneChildren) {
+                if (tx._id != txChange.featureId && tx.max > newGeneEnd) {
+                  // Reset to longest child (tx)
+                  newGeneEnd = tx.max
+                }
+              }
+              if (newGeneEnd != gene.max) {
+                locationChanges.push({
+                  typeName: txChange.typeName,
+                  changedId: gene._id,
+                  featureId: gene._id,
+                  oldLocation: gene.max,
+                  newLocation: newGeneEnd,
+                })
+              }
             }
           }
         }

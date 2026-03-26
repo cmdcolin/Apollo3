@@ -71,9 +71,7 @@ if (!newVersion) {
 }
 
 let m: string | undefined = message
-if (m === undefined) {
-  m = `Tag release v${newVersion}`
-}
+m ??= `Tag release v${newVersion}`
 
 exec('pnpm', ['-r', '--no-private', 'exec', 'npm', 'version', strategy])
 exec('git', ['add', '--force', 'packages/**/package.json'])

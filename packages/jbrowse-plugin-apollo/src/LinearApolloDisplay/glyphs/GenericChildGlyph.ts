@@ -1,4 +1,4 @@
-import type { AnnotationFeature } from '@apollo-annotation/mst'
+import type { AnnotationFeature, Children } from '@apollo-annotation/mst'
 import type { MenuItem } from '@jbrowse/core/ui'
 import { alpha } from '@mui/material'
 
@@ -17,8 +17,9 @@ import type { Glyph } from './Glyph'
 
 function featuresForRow(feature: AnnotationFeature): AnnotationFeature[][] {
   const features = [[feature]]
-  if (feature.children) {
-    for (const [, child] of feature.children) {
+  const featureChildren = feature.children as Children
+  if (featureChildren) {
+    for (const [, child] of featureChildren) {
       features.push(...featuresForRow(child))
     }
   }

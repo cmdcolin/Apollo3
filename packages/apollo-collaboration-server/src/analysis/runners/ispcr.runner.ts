@@ -29,10 +29,14 @@ export class IsPcrRunner implements AnalysisRunner {
   }
 
   async run(context: RunContext) {
-    const forwardPrimer = String(context.job.params.forwardPrimer ?? '')
-    const reversePrimer = String(context.job.params.reversePrimer ?? '')
-    const maxSize = Number(context.job.params.maxSize ?? 4000)
-    const databaseId = String(context.job.params.databaseId ?? '')
+    const { params } = context.job
+    const forwardPrimer =
+      typeof params.forwardPrimer === 'string' ? params.forwardPrimer : ''
+    const reversePrimer =
+      typeof params.reversePrimer === 'string' ? params.reversePrimer : ''
+    const maxSize = typeof params.maxSize === 'number' ? params.maxSize : 4000
+    const databaseId =
+      typeof params.databaseId === 'string' ? params.databaseId : ''
 
     const analysisDb = await context.db.analysisDb.findById(databaseId)
     if (!analysisDb?.dbPath) {

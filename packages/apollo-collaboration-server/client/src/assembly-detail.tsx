@@ -26,6 +26,7 @@ import { createRoot } from 'react-dom/client'
 
 import { Nav } from './Nav.js'
 import { fetchJson } from './fetchUtil.js'
+import { type Organism, organismLabel } from './organism-utils.js'
 
 interface Assembly {
   _id: string
@@ -50,13 +51,6 @@ interface TrackConfig {
   _id: string
   trackId: string
   config: Record<string, unknown>
-}
-
-interface Organism {
-  _id: string
-  genus?: string
-  species?: string
-  commonName?: string
 }
 
 interface AssemblyPermission {
@@ -92,7 +86,7 @@ function PermissionsSection({
   const [permissions, setPermissions] = useState<AssemblyPermission[]>([])
   const [allUsers, setAllUsers] = useState<User[]>([])
   const [selectedUserId, setSelectedUserId] = useState('')
-  const [selectedRole, setSelectedRole] = useState<string>('readOnly')
+  const [selectedRole, setSelectedRole] = useState('readOnly')
   const [permError, setPermError] = useState<string>()
   const [visibility, setVisibility] = useState<'public' | 'private'>('private')
 
@@ -329,9 +323,7 @@ function ChecksSection({
 }) {
   const [checkTypes, setCheckTypes] = useState<CheckType[]>([])
   const [checkResults, setCheckResults] = useState<CheckResult[]>([])
-  const [enabledChecks, setEnabledChecks] = useState<string[]>(
-    assembly.checks ?? [],
-  )
+  const [enabledChecks, setEnabledChecks] = useState(assembly.checks ?? [])
   const [checksError, setChecksError] = useState<string>()
   const [saving, setSaving] = useState(false)
 
@@ -651,7 +643,7 @@ function AssemblyDetailPage() {
           fetchJson<Assembly>(`/assemblies/${assemblyId}`),
           fetchJson<RefSeq[]>(`/refSeqs?assembly=${assemblyId}`),
           fetchJson<TrackConfig[]>(`/tracks?assembly=${assemblyId}`),
-          fetchJson<User>('/users/me').catch(() => {}),
+          fetchJson<User>('/users/me').catch(() => null),
         ],
       )
       setAssembly(assemblyData)
@@ -724,11 +716,7 @@ function AssemblyDetailPage() {
             <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
               {organism ? (
                 <Chip
-                  label={
-                    `${organism.genus ?? ''} ${organism.species ?? ''}`.trim() ||
-                    organism.commonName ||
-                    'Unknown organism'
-                  }
+                  label={organismLabel(organism)}
                   size="small"
                   variant="outlined"
                   component="a"
@@ -805,9 +793,13 @@ function AssemblyDetailPage() {
                   {tracks.map((t) => (
                     <TableRow key={t._id} hover>
                       <TableCell>
-                        {(t.config.name as string) ?? t.trackId}
+                        {typeof t.config.name === 'string'
+                          ? t.config.name
+                          : t.trackId}
                       </TableCell>
-                      <TableCell>{(t.config.type as string) ?? ''}</TableCell>
+                      <TableCell>
+                        {typeof t.config.type === 'string' ? t.config.type : ''}
+                      </TableCell>
                       <TableCell>
                         <Typography
                           variant="body2"

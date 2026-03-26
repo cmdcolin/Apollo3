@@ -84,25 +84,33 @@ export class MikroOrmAssemblyRepository implements AssemblyRepository {
   }
 
   async findAll() {
-    const entities = await this.em.find(AssemblyEntity, {})
-    return entities.map(toRow)
+    const entities = await this.em.find(AssemblyEntity, {}, {})
+    return entities.map((x) => toRow(x))
   }
 
   async findByIds(ids: string[]) {
     if (ids.length === 0) {
       return []
     }
-    const entities = await this.em.find(AssemblyEntity, {
-      _id: { $in: ids },
-    })
-    return entities.map(toRow)
+    const entities = await this.em.find(
+      AssemblyEntity,
+      {
+        _id: { $in: ids },
+      },
+      {},
+    )
+    return entities.map((x) => toRow(x))
   }
 
   async findPublic() {
-    const entities = await this.em.find(AssemblyEntity, {
-      visibility: AssemblyVisibility.PUBLIC,
-    })
-    return entities.map(toRow)
+    const entities = await this.em.find(
+      AssemblyEntity,
+      {
+        visibility: AssemblyVisibility.PUBLIC,
+      },
+      {},
+    )
+    return entities.map((x) => toRow(x))
   }
 
   async findAllIds() {

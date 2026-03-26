@@ -24,12 +24,12 @@ export class MikroOrmCheckRepository implements CheckRepository {
       {},
       { orderBy: { name: 'asc' } },
     )
-    return entities.map(toRow)
+    return entities.map((x) => toRow(x))
   }
 
   async findDefaults() {
-    const entities = await this.em.find(CheckEntity, { isDefault: true })
-    return entities.map(toRow)
+    const entities = await this.em.find(CheckEntity, { isDefault: true }, {})
+    return entities.map((x) => toRow(x))
   }
 
   async findById(id: string) {
@@ -44,8 +44,8 @@ export class MikroOrmCheckRepository implements CheckRepository {
     if (ids.length === 0) {
       return []
     }
-    const entities = await this.em.find(CheckEntity, { _id: { $in: ids } })
-    return entities.map(toRow)
+    const entities = await this.em.find(CheckEntity, { _id: { $in: ids } }, {})
+    return entities.map((x) => toRow(x))
   }
 
   async findByName(name: string) {

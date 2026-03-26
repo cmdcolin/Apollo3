@@ -3,7 +3,11 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import type { AnnotationFeature, TranscriptPart } from '@apollo-annotation/mst'
+import type {
+  AnnotationFeature,
+  Children,
+  TranscriptPart,
+} from '@apollo-annotation/mst'
 import {
   LocationEndChange,
   LocationStartChange,
@@ -447,8 +451,8 @@ export const TranscriptWidgetEditLocation = observer(
       oldCDSLocation: number,
       isMin: boolean,
     ) => {
-      let cdsFeature
-      for (const [, child] of feature.children ?? []) {
+      let cdsFeature: AnnotationFeature | undefined
+      for (const [, child] of (feature.children as Children) ?? []) {
         if (!featureTypeOntology.isTypeOf(child.type, 'CDS')) {
           continue
         }
@@ -469,8 +473,8 @@ export const TranscriptWidgetEditLocation = observer(
       feature: AnnotationFeature,
       featureTypeOntology: OntologyRecord,
     ) => {
-      let cdsFeature
-      for (const [, child] of feature.children ?? []) {
+      let cdsFeature: AnnotationFeature | undefined
+      for (const [, child] of (feature.children as Children) ?? []) {
         if (!featureTypeOntology.isTypeOf(child.type, 'CDS')) {
           continue
         }
@@ -486,8 +490,8 @@ export const TranscriptWidgetEditLocation = observer(
       exonMax: number,
       featureTypeOntology: OntologyRecord,
     ) => {
-      let exonFeature
-      for (const [, child] of feature.children ?? []) {
+      let exonFeature: AnnotationFeature | undefined
+      for (const [, child] of (feature.children as Children) ?? []) {
         if (!featureTypeOntology.isTypeOf(child.type, 'exon')) {
           continue
         }
@@ -506,9 +510,9 @@ export const TranscriptWidgetEditLocation = observer(
       featureTypeOntology: OntologyRecord,
       isMin: boolean,
     ) => {
-      const mins = []
-      const maxs = []
-      for (const [, t] of gene.children?.entries() ?? []) {
+      const mins: number[] = []
+      const maxs: number[] = []
+      for (const [, t] of (gene.children as Children)?.entries() ?? []) {
         if (!featureTypeOntology.isTypeOf(t.type, 'transcript')) {
           continue
         }
@@ -739,7 +743,7 @@ export const TranscriptWidgetEditLocation = observer(
                 const startCodonGenomicLocation =
                   getCodonGenomicLocation(codonGenomicPos)
                 if (startCodonGenomicLocation !== cdsMin && strand === 1) {
-                  updateCDSLocation(
+                  void updateCDSLocation(
                     cdsMin,
                     startCodonGenomicLocation,
                     feature,
@@ -747,7 +751,7 @@ export const TranscriptWidgetEditLocation = observer(
                   )
                 }
                 if (startCodonGenomicLocation !== cdsMax && strand === -1) {
-                  updateCDSLocation(
+                  void updateCDSLocation(
                     cdsMax,
                     startCodonGenomicLocation,
                     feature,
@@ -959,7 +963,9 @@ export const TranscriptWidgetEditLocation = observer(
                   </Tooltip>
                   <Tooltip title="Trim">
                     <button
-                      onClick={trimTranslationSequence}
+                      onClick={() => {
+                        void trimTranslationSequence()
+                      }}
                       style={{ border: 'none', background: 'none', padding: 0 }}
                       disabled={changeInProgress}
                     >

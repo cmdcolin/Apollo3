@@ -16,14 +16,10 @@ Note that this command does not check the validity of the access token.'
     const { flags } = await this.parse(Status)
 
     let profileName = flags.profile
-    if (profileName === undefined) {
-      profileName = process.env.APOLLO_PROFILE ?? 'default'
-    }
+    profileName ??= process.env.APOLLO_PROFILE ?? 'default'
 
     let configFile = flags['config-file']
-    if (configFile === undefined) {
-      configFile = path.join(this.config.configDir, 'config.yml')
-    }
+    configFile ??= path.join(this.config.configDir, 'config.yml')
     basicCheckConfig(configFile, profileName)
 
     const config: ApolloConf = new ApolloConf(configFile)

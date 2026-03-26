@@ -24,14 +24,10 @@ export default class Logout extends BaseCommand<typeof Logout> {
     const { flags } = await this.parse(Logout)
 
     let profileName = flags.profile
-    if (profileName === undefined) {
-      profileName = process.env.APOLLO_PROFILE ?? 'default'
-    }
+    profileName ??= process.env.APOLLO_PROFILE ?? 'default'
 
     let configFile = flags['config-file']
-    if (configFile === undefined) {
-      configFile = path.join(this.config.configDir, 'config.yml')
-    }
+    configFile ??= path.join(this.config.configDir, 'config.yml')
     basicCheckConfig(configFile, profileName)
     const config: ApolloConf = new ApolloConf(configFile)
     config.delete(`${profileName}.${KEYS.accessToken}`)

@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/require-await */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
 import {
   type ChangeOptions,
@@ -8,7 +7,10 @@ import {
   type SerializedFeatureChange,
   type ServerDataStore,
 } from '@apollo-annotation/common'
-import type { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
+import type {
+  AnnotationFeatureSnapshot,
+  Children,
+} from '@apollo-annotation/mst'
 
 import { flattenFeatureSnapshot } from './AddFeatureChange.js'
 import { UndoSplitTranscriptChange } from './UndoSplitTranscriptChange.js'
@@ -237,10 +239,11 @@ export class SplitTranscriptChange extends FeatureChange {
       }
 
       // Update parent gene bounds
-      if (parentFeature.children) {
+      const parentChildren = parentFeature.children as Children
+      if (parentChildren) {
         let newMin = Infinity
         let newMax = -Infinity
-        for (const [, child] of parentFeature.children) {
+        for (const [, child] of parentChildren) {
           if (child.min < newMin) {
             newMin = child.min
           }

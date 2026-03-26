@@ -43,7 +43,7 @@ export class PluginsService {
           accumulator = callback(accumulator, props)
         } catch (error) {
           this.logger.error(
-            `Extension point "${extensionPointName}" callback failed: ${error}`,
+            `Extension point "${extensionPointName}" callback failed: ${String(error)}`,
           )
         }
       }

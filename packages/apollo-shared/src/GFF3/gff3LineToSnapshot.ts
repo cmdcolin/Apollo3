@@ -17,12 +17,12 @@ export function gff3LineToSnapshot(
   line: GFF3FeatureLineWithRefs,
   refSeqId: string,
 ): FeatureSnapshot {
-  const _id = `${Math.random}` //randomBytes(12).toString('hex')
+  const _id = `${Math.random()}` //randomBytes(12).toString('hex')
   const strand = line.strand === '+' ? 1 : line.strand === '-' ? -1 : undefined
   const attributes: Record<string, string[]> = {}
   if (line.attributes) {
     for (const [key, vals] of Object.entries(line.attributes)) {
-      if (vals && vals.length > 0) {
+      if (vals.length > 0) {
         attributes[key] = vals
       }
     }

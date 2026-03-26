@@ -125,7 +125,11 @@ export function AdminDatabasePanel({
                       size="small"
                     />
                   </TableCell>
-                  <TableCell>{String(db.params.program ?? '')}</TableCell>
+                  <TableCell>
+                    {typeof db.params.program === 'string'
+                      ? db.params.program
+                      : ''}
+                  </TableCell>
                   <TableCell>
                     <Chip
                       label={db.status}

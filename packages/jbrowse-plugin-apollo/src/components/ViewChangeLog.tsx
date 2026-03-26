@@ -16,12 +16,7 @@ import {
   Select,
   type SelectChangeEvent,
 } from '@mui/material'
-import {
-  DataGrid,
-  type GridColDef,
-  type GridRowsProp,
-  GridToolbar,
-} from '@mui/x-data-grid'
+import { DataGrid, type GridColDef, type GridRowsProp } from '@mui/x-data-grid'
 import React, { useEffect, useState } from 'react'
 
 import type { ApolloSessionModel } from '../session'
@@ -149,7 +144,7 @@ export function ViewChangeLog({ handleClose, session }: ViewChangeLogProps) {
           rows={displayGridData}
           columns={gridColumns}
           getRowId={(row) => row._id}
-          slots={{ toolbar: GridToolbar }}
+          showToolbar
           initialState={{
             sorting: { sortModel: [{ field: 'sequence', sort: 'desc' }] },
             columns: { columnVisibilityModel: { sequence: false } },

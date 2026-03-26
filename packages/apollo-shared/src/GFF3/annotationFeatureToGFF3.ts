@@ -93,8 +93,8 @@ export function annotationFeatureToGFF3(
   const locations = [{ start: feature.min, end: feature.max }]
 
   return locations.map((location) => ({
-    start: Number(location.start) + 1,
-    end: Number(location.end),
+    start: location.start + 1,
+    end: location.end,
     seq_id: refSeqNames
       ? (refSeqNames[feature.refSeq] ?? null)
       : feature.refSeq,

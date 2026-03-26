@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 /* eslint-disable unicorn/no-nested-ternary */
 
-import type { AnnotationFeature } from '@apollo-annotation/mst'
+import type { AnnotationFeature, Children } from '@apollo-annotation/mst'
 import type { AbstractSessionModel } from '@jbrowse/core/util'
 import { makeStyles } from '@jbrowse/core/util/tss-react'
 import { observer } from 'mobx-react'
@@ -120,7 +120,8 @@ export const Feature = observer(function Feature({
     tabularEditor: tabularEditorState,
   } = displayState
   const { featureCollapsed, filterText } = tabularEditorState
-  const { _id, children, max, min, strand, type } = feature
+  const { _id, max, min, strand, type } = feature
+  const children = feature.children as Children
   const expanded = !featureCollapsed.get(_id)
   const toggleExpanded = (e: React.MouseEvent) => {
     e.stopPropagation()

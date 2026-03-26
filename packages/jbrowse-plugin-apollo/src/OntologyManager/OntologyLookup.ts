@@ -153,7 +153,7 @@ export class OntologyLookup {
       if (node.meta?.synonyms) {
         let found = false
         for (const syn of node.meta.synonyms) {
-          if (syn.val?.toLowerCase().includes(lowerQuery)) {
+          if (syn.val.toLowerCase().includes(lowerQuery)) {
             results.push({ term: node, fieldName: 'Synonym' })
             found = true
             break
@@ -163,7 +163,7 @@ export class OntologyLookup {
           continue
         }
       }
-      if (node.meta?.definition?.val?.toLowerCase().includes(lowerQuery)) {
+      if (node.meta?.definition?.val.toLowerCase().includes(lowerQuery)) {
         results.push({ term: node, fieldName: 'Definition' })
       }
     }

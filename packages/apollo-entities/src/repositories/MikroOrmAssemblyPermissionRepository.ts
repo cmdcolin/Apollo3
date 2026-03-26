@@ -48,17 +48,25 @@ export class MikroOrmAssemblyPermissionRepository implements AssemblyPermissionR
   }
 
   async findByUser(userIdVal: string) {
-    const entities = await this.em.find(AssemblyPermissionEntity, {
-      user: userIdVal,
-    })
-    return entities.map(toRow)
+    const entities = await this.em.find(
+      AssemblyPermissionEntity,
+      {
+        user: userIdVal,
+      },
+      {},
+    )
+    return entities.map((x) => toRow(x))
   }
 
   async findByAssembly(assemblyIdVal: string) {
-    const entities = await this.em.find(AssemblyPermissionEntity, {
-      assembly: assemblyIdVal,
-    })
-    return entities.map(toRow)
+    const entities = await this.em.find(
+      AssemblyPermissionEntity,
+      {
+        assembly: assemblyIdVal,
+      },
+      {},
+    )
+    return entities.map((x) => toRow(x))
   }
 
   async findByUserAndAssembly(userIdVal: string, assemblyIdVal: string) {

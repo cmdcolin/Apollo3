@@ -153,7 +153,7 @@ const EditableBasicInformation = observer(function EditableBasicInformation({
     const terms = fetchValidDescendantTerms(feature, ontologyStore)
     if (!terms) {
       setTypeWarningText(
-        `Type "${feature?.type}" does not have any children in the ontology`,
+        `Type "${feature.type}" does not have any children in the ontology`,
       )
       return
     }

@@ -14,12 +14,7 @@ import {
   DialogContentText,
   Typography,
 } from '@mui/material'
-import {
-  DataGrid,
-  type GridColDef,
-  type GridRowsProp,
-  GridToolbar,
-} from '@mui/x-data-grid'
+import { DataGrid, type GridColDef, type GridRowsProp } from '@mui/x-data-grid'
 import React, { useEffect, useState } from 'react'
 
 import type { ApolloSessionModel } from '../session'
@@ -105,7 +100,8 @@ export function FeatureChangeLog({
       headerName: 'Time',
       width: 160,
       type: 'dateTime',
-      valueGetter: (value) => value && new Date(value),
+      valueGetter: (value: string | null | undefined) =>
+        value ? new Date(value) : null,
     },
   ]
 
@@ -160,7 +156,7 @@ export function FeatureChangeLog({
           rows={displayGridData}
           columns={gridColumns}
           getRowId={(row) => row._id}
-          slots={{ toolbar: GridToolbar }}
+          showToolbar
           initialState={{
             sorting: { sortModel: [{ field: 'sequence', sort: 'desc' }] },
             columns: { columnVisibilityModel: { sequence: false } },

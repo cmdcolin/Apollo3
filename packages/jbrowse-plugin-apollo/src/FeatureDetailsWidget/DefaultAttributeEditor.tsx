@@ -20,7 +20,7 @@ export const DefaultAttributeEditor = observer(function DefaultAttributeEditor({
   setAttribute,
   isNew = false,
 }: AttributeEditorProps) {
-  const [newValues, setNewValues] = useState<string[]>(
+  const [newValues, setNewValues] = useState(
     attributeValues && attributeValues.length > 0 ? attributeValues : [''],
   )
 

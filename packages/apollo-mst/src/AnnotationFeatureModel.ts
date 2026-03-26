@@ -304,8 +304,8 @@ export const AnnotationFeatureModel = types
         return false
       }
       const isGene =
-        featureTypeOntology.isTypeOf(self.type, 'gene') ||
-        featureTypeOntology.isTypeOf(self.type, 'pseudogene')
+        featureTypeOntology.isTypeOf(self.type, 'gene') === true ||
+        featureTypeOntology.isTypeOf(self.type, 'pseudogene') === true
       if (!isGene) {
         return false
       }
@@ -442,7 +442,7 @@ export type Children = IMSTMap<typeof AnnotationFeatureModel> | undefined
 interface AnnotationFeatureRaw extends Instance<
   typeof AnnotationFeatureModel
 > {}
-export interface AnnotationFeature extends AnnotationFeatureRaw {}
+export type AnnotationFeature = AnnotationFeatureRaw
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface AnnotationFeatureSnapshotRaw extends SnapshotIn<
   typeof AnnotationFeatureModel

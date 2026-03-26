@@ -63,7 +63,9 @@ export default class RefNameAliasAdapter
         )
         return refNameAliases
       } catch (error) {
-        console.warn(`[apollo-debug] ApolloRefNameAliasAdapter ERROR: ${error}`)
+        console.warn(
+          `[apollo-debug] ApolloRefNameAliasAdapter ERROR: ${String(error)}`,
+        )
         throw error
       }
     }

@@ -144,3 +144,18 @@ API:
 
 - `AddAssembly.tsx`, `AddAssemblyAliases.tsx`, `AddRefSeqAliases.tsx`
 - `DeleteAssembly.tsx`, `ManageChecks.tsx`, `ManageUsers.tsx`
+
+## Round 4: Test rewrite, organism inline editing
+
+### Rewrote `addAssembly.test.ts`
+
+All tests now target the `/admin/add-assembly/` page (text-input file paths)
+instead of the deleted JBrowse plugin `AddAssembly` dialog. The two previously
+skipped GFF3 tests are replaced with FASTA-path and 2bit-path tests. New
+coverage includes source-type switching and change-log verification.
+
+### Organism detail page: inline editing
+
+`/ui/organisms/:id` now includes admin-only sections for editing
+genus/species/commonName/description via `PATCH /organisms/:id`, and deleting
+the organism with a confirmation prompt via `DELETE /organisms/:id`.

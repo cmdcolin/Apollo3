@@ -33,7 +33,7 @@ export class JBrowseService {
     const role = user?.role
     const userId = user?.id
     const userSessionId =
-      userId && user?.iat ? `${userId}-${user.iat}` : undefined
+      userId && user.iat ? `${userId}-${user.iat}` : undefined
     const url = this.configService.get('URL', { infer: true })
     const feature_type_ontology_location =
       this.configService.get('FEATURE_TYPE_ONTOLOGY_LOCATION', {
@@ -134,7 +134,7 @@ export class JBrowseService {
 
   getAssemblyConfig(assembly: AssemblyRow) {
     const url = this.configService.get('URL', { infer: true })
-    const assemblyId = String(assembly._id)
+    const assemblyId = assembly._id
     const trackId = `sequenceConfigId-${assembly.name}`
     return {
       name: assemblyId,
@@ -142,7 +142,7 @@ export class JBrowseService {
         assembly.aliases && assembly.aliases.length > 0
           ? [...assembly.aliases]
           : [assembly.name],
-      displayName: assembly.displayName || assembly.name,
+      displayName: assembly.displayName ?? assembly.name,
       sequence: {
         trackId,
         type: 'ReferenceSequenceTrack',
@@ -180,7 +180,7 @@ export class JBrowseService {
     return {
       type: 'ApolloTrack',
       trackId,
-      name: `Annotations (${assembly.displayName || assembly.name})`,
+      name: `Annotations (${assembly.displayName ?? assembly.name})`,
       assemblyNames: [assembly._id],
       textSearching: {
         textSearchAdapter: {

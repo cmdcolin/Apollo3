@@ -1,5 +1,6 @@
 import type {
   AnnotationFeature,
+  Children,
   TranscriptPartCoding,
 } from '@apollo-annotation/mst'
 import type { BaseDisplayModel } from '@jbrowse/core/pluggableElementTypes'
@@ -45,7 +46,8 @@ export function selectFeatureAndOpenWidget(
   }
 
   let containsCDSOrExon = false
-  for (const [, child] of feature.children ?? []) {
+  const featureChildren = feature.children as Children
+  for (const [, child] of featureChildren ?? []) {
     if (
       featureTypeOntology.isTypeOf(child.type, 'CDS') ||
       featureTypeOntology.isTypeOf(child.type, 'exon')
@@ -136,8 +138,9 @@ export function getAdjacentExons(
     throw new Error('featureTypeOntology is undefined')
   }
 
-  let exons = []
-  for (const [, child] of transcript.children) {
+  const transcriptChildren = transcript.children as Children
+  let exons: AnnotationFeature[] = []
+  for (const [, child] of transcriptChildren ?? []) {
     if (featureTypeOntology.isTypeOf(child.type, 'exon')) {
       exons.push(child)
     }
@@ -243,7 +246,7 @@ export function isSelectedFeature(
   feature: AnnotationFeature,
   selectedFeature: AnnotationFeature | undefined,
 ) {
-  return Boolean(feature._id === selectedFeature?._id)
+  return feature._id === selectedFeature?._id
 }
 
 export function containsSelectedFeature(

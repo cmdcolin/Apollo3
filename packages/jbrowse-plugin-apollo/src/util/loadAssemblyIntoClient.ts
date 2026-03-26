@@ -30,9 +30,7 @@ export async function loadAssemblyIntoClient(
 
   let sequenceFeatureCount = 0
   let assembly = apolloDataStore.assemblies.get(assemblyId)
-  if (!assembly) {
-    assembly = apolloDataStore.addAssembly(assemblyId, 'InMemoryFileDriver')
-  }
+  assembly ??= apolloDataStore.addAssembly(assemblyId, 'InMemoryFileDriver')
 
   for (const seqLine of featuresAndSequences) {
     if (Array.isArray(seqLine)) {
@@ -51,9 +49,7 @@ export async function loadAssemblyIntoClient(
       sequenceFeatureCount++
       // sequence feature
       let ref = assembly.refSeqs.get(seqLine.id)
-      if (!ref) {
-        ref = assembly.addRefSeq(seqLine.id, seqLine.id, seqLine.description)
-      }
+      ref ??= assembly.addRefSeq(seqLine.id, seqLine.id, seqLine.description)
       if (seqLine.description && !ref.description) {
         ref.setDescription(seqLine.description)
       }

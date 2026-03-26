@@ -62,7 +62,10 @@ export class MessagesGateway implements OnGatewayInit, OnGatewayConnection {
       }
       try {
         const payload = this.jwtService.verify<JWTPayload>(token)
-        socket.data.user = { id: payload.id, role: payload.role }
+        ;(socket.data as SocketData).user = {
+          id: payload.id,
+          role: payload.role,
+        }
         next()
       } catch {
         next(new Error('Invalid token'))
@@ -102,7 +105,7 @@ export class MessagesGateway implements OnGatewayInit, OnGatewayConnection {
         }
         const assemblyIds =
           await this.permissionService.getAccessibleAssemblyIds(user)
-        const channels = new Set(assemblyIds.map(assemblyChannel))
+        const channels = new Set(assemblyIds.map((id) => assemblyChannel(id)))
         for (const room of socket.rooms) {
           if (room.startsWith('assembly:') && !channels.has(room)) {
             socket.leave(room)

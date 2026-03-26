@@ -1,5 +1,6 @@
 import type {
   AnnotationFeature,
+  Children,
   TranscriptPartCoding,
 } from '@apollo-annotation/mst'
 import type { BaseDisplayModel } from '@jbrowse/core/pluggableElementTypes'
@@ -159,7 +160,8 @@ function draw(
   const topLevelFeatureHeight = rowHeight
   const featureLabelSpacer = showFeatureLabels ? 2 : 1
   const textColor = theme.palette.text.primary
-  const { attributes, children, min, strand } = topLevelFeature
+  const children = topLevelFeature.children as Children
+  const { attributes, min, strand } = topLevelFeature
   if (!children) {
     return
   }
@@ -258,7 +260,8 @@ function draw(
     ) {
       continue
     }
-    const { children: childrenOfmRNA, cdsLocations } = child
+    const childrenOfmRNA = child.children as Children
+    const { cdsLocations } = child
     if (!childrenOfmRNA) {
       continue
     }
@@ -637,7 +640,8 @@ function onMouseUp(
     }
 
     let containsCDSOrExon = false
-    for (const [, child] of feature.children ?? []) {
+    const featureChildren = feature.children as Children
+    for (const [, child] of featureChildren ?? []) {
       if (
         featureTypeOntology.isTypeOf(child.type, 'CDS') ||
         featureTypeOntology.isTypeOf(child.type, 'exon')
@@ -683,12 +687,13 @@ function getDraggableFeatureInfo(
   const { lgv } = stateModel
   if (isTranscript) {
     const transcript = feature
-    if (!transcript.children) {
+    const transcriptChildren = transcript.children as Children
+    if (!transcriptChildren) {
       return
     }
     const exonChildren: AnnotationFeature[] = []
     const cdsChildren: AnnotationFeature[] = []
-    for (const child of transcript.children.values()) {
+    for (const child of transcriptChildren.values()) {
       const childIsExon = featureTypeOntology.isTypeOf(child.type, 'exon')
       const childIsCDS = featureTypeOntology.isTypeOf(child.type, 'CDS')
       if (childIsExon) {

@@ -19,11 +19,7 @@ import {
 import type ApolloPluginConfigurationSchema from '../config'
 import type { ApolloRootModel } from '../types'
 
-import {
-  OntologyLookup,
-  type OntologyNode,
-  isDeprecated,
-} from './OntologyLookup'
+import { OntologyLookup, type OntologyNode } from './OntologyLookup'
 import { type OboGraphDocument, parseOntology } from './obo-graph-parser'
 import { applyPrefixes, expandPrefixes } from './prefixes'
 

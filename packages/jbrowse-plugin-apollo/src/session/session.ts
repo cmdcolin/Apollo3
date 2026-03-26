@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import type { ClientDataStore as ClientDataStoreType } from '@apollo-annotation/common'
 import {
   Change,
+  type ClientDataStore as ClientDataStoreType,
   type SerializedChange,
   isFeatureChange,
 } from '@apollo-annotation/common'
@@ -120,7 +120,7 @@ export function extendSession(
             trackId,
             name: `Annotations (${
               // @ts-expect-error getConf types don't quite work here for some reason
-              getConf(assembly, 'displayName') || assembly.name
+              getConf(assembly, 'displayName') ?? assembly.name
             })`,
             assemblyNames: [assembly.name],
             textSearching: {

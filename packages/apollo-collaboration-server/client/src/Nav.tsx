@@ -34,7 +34,7 @@ function useCurrentUser() {
     fetch('/users/me', { headers: { Accept: 'application/json' } })
       .then((r) => {
         if (r.ok) {
-          return r.json()
+          return r.json() as Promise<UserInfo>
         }
         return null
       })
@@ -43,7 +43,9 @@ function useCurrentUser() {
           setUser(data)
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        /* ignore */
+      })
   }, [])
 
   return user
@@ -58,38 +60,83 @@ type Page =
   | 'users'
   | 'jobs'
 
-const fileMenuItems: {
+interface NavMenuItem {
   label: string
   href: string
   value: Page
-  admin?: boolean
-}[] = [
+}
+
+const fileMenuItems: NavMenuItem[] = [
   { label: 'Organisms', href: '/ui/organisms/', value: 'organisms' },
   { label: 'Assemblies', href: '/ui/assemblies/', value: 'assemblies' },
+  { label: 'Recent Changes', href: '/ui/changes/', value: 'changes' },
+]
+
+const toolsMenuItems: NavMenuItem[] = [
   {
     label: 'Sequence Search',
     href: '/ui/sequence-search/',
     value: 'sequence-search',
   },
-  { label: 'Recent Changes', href: '/ui/changes/', value: 'changes' },
-  { label: 'Users', href: '/admin/users/', value: 'users', admin: true },
-  { label: 'Analysis Jobs', href: '/admin/jobs/', value: 'jobs', admin: true },
+]
+
+const adminMenuItems: NavMenuItem[] = [
+  { label: 'Users', href: '/admin/users/', value: 'users' },
+  { label: 'Analysis Jobs', href: '/admin/jobs/', value: 'jobs' },
   {
     label: 'Add Assembly',
     href: '/admin/add-assembly/',
     value: 'add-assembly',
-    admin: true,
   },
 ]
 
-function NavBar({ current, user }: { current?: Page; user?: UserInfo }) {
+function NavMenu({
+  label,
+  items,
+  current,
+}: {
+  label: string
+  items: NavMenuItem[]
+  current?: Page
+}) {
   const [open, setOpen] = useState(false)
   const anchorRef = useRef<HTMLButtonElement>(null)
 
-  const visibleItems = fileMenuItems.filter(
-    (item) => !item.admin || user?.role === 'admin',
+  return (
+    <>
+      <Button
+        ref={anchorRef}
+        color="inherit"
+        size="small"
+        onClick={() => {
+          setOpen(true)
+        }}
+      >
+        {label}
+      </Button>
+      <Menu
+        anchorEl={anchorRef.current}
+        open={open}
+        onClose={() => {
+          setOpen(false)
+        }}
+      >
+        {items.map((item) => (
+          <MenuItem
+            key={item.value}
+            component="a"
+            href={item.href}
+            selected={item.value === current}
+          >
+            <ListItemText>{item.label}</ListItemText>
+          </MenuItem>
+        ))}
+      </Menu>
+    </>
   )
+}
 
+function NavBar({ current, user }: { current?: Page; user?: UserInfo }) {
   return (
     <AppBar position="static" color="secondary" sx={{ mb: 3 }}>
       <Toolbar variant="dense">
@@ -125,34 +172,11 @@ function NavBar({ current, user }: { current?: Page; user?: UserInfo }) {
         </Typography>
         {user ? (
           <>
-            <Button
-              ref={anchorRef}
-              color="inherit"
-              size="small"
-              onClick={() => {
-                setOpen(true)
-              }}
-            >
-              File
-            </Button>
-            <Menu
-              anchorEl={anchorRef.current}
-              open={open}
-              onClose={() => {
-                setOpen(false)
-              }}
-            >
-              {visibleItems.map((item) => (
-                <MenuItem
-                  key={item.value}
-                  component="a"
-                  href={item.href}
-                  selected={item.value === current}
-                >
-                  <ListItemText>{item.label}</ListItemText>
-                </MenuItem>
-              ))}
-            </Menu>
+            <NavMenu label="File" items={fileMenuItems} current={current} />
+            <NavMenu label="Tools" items={toolsMenuItems} current={current} />
+            {user.role === 'admin' ? (
+              <NavMenu label="Admin" items={adminMenuItems} current={current} />
+            ) : null}
           </>
         ) : null}
         <Box sx={{ flexGrow: 1 }} />

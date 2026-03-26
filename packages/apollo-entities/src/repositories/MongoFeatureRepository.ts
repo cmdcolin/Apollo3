@@ -14,7 +14,7 @@ import {
 /**
  * MongoDB-compatible feature repository using iterative BFS for tree
  * traversal instead of recursive CTEs. Uses only the generic EntityManager
- * API from @mikro-orm/core, so it works with any MikroORM driver.
+ * API from `@mikro-orm/core`, so it works with any MikroORM driver.
  */
 export class MongoFeatureRepository extends BaseFeatureRepository {
   async findDescendants(rootId: string) {
@@ -29,9 +29,13 @@ export class MongoFeatureRepository extends BaseFeatureRepository {
     const allDescendants: FeatureRow[] = []
     let currentParentIds = rootIds
     while (currentParentIds.length > 0) {
-      const children = await this.em.find(FeatureEntity, {
-        parent: { $in: currentParentIds },
-      })
+      const children = await this.em.find(
+        FeatureEntity,
+        {
+          parent: { $in: currentParentIds },
+        },
+        {},
+      )
       if (children.length === 0) {
         break
       }
@@ -81,9 +85,13 @@ export class MongoFeatureRepository extends BaseFeatureRepository {
       return []
     }
 
-    const entities = await this.em.find(FeatureEntity, {
-      refSeq: { $in: refSeqIds },
-    })
+    const entities = await this.em.find(
+      FeatureEntity,
+      {
+        refSeq: { $in: refSeqIds },
+      },
+      {},
+    )
 
     const matchingIds: string[] = []
     const parentMap = new Map<string, string | undefined>()
@@ -104,15 +112,21 @@ export class MongoFeatureRepository extends BaseFeatureRepository {
     const rootIds = new Set<string>()
     for (const matchId of matchingIds) {
       let current = matchId
-      while (parentMap.get(current) !== undefined) {
-        current = parentMap.get(current)!
+      let parent = parentMap.get(current)
+      while (parent !== undefined) {
+        current = parent
+        parent = parentMap.get(current)
       }
       rootIds.add(current)
     }
 
-    const rootEntities = await this.em.find(FeatureEntity, {
-      _id: { $in: [...rootIds] },
-    })
+    const rootEntities = await this.em.find(
+      FeatureEntity,
+      {
+        _id: { $in: [...rootIds] },
+      },
+      {},
+    )
     return rootEntities.map((e) => entityToRow(e))
   }
 
@@ -123,7 +137,7 @@ export class MongoFeatureRepository extends BaseFeatureRepository {
       filter.refSeq = { $in: refSeqIds }
     }
 
-    const entities = await this.em.find(FeatureEntity, filter)
+    const entities = await this.em.find(FeatureEntity, filter, {})
 
     const verifiedIds: string[] = []
     const parentMap = new Map<string, string | undefined>()
@@ -147,15 +161,21 @@ export class MongoFeatureRepository extends BaseFeatureRepository {
     const rootIds = new Set<string>()
     for (const matchId of verifiedIds) {
       let current = matchId
-      while (parentMap.get(current) !== undefined) {
-        current = parentMap.get(current)!
+      let parent = parentMap.get(current)
+      while (parent !== undefined) {
+        current = parent
+        parent = parentMap.get(current)
       }
       rootIds.add(current)
     }
 
-    const rootEntities = await this.em.find(FeatureEntity, {
-      _id: { $in: [...rootIds] },
-    })
+    const rootEntities = await this.em.find(
+      FeatureEntity,
+      {
+        _id: { $in: [...rootIds] },
+      },
+      {},
+    )
     return rootEntities.map((e) => entityToRow(e))
   }
 
@@ -176,9 +196,13 @@ export class MongoFeatureRepository extends BaseFeatureRepository {
     const resolved = new Map<string, InferEntity<typeof FeatureEntity>>()
     let currentIds = ids
     while (currentIds.length > 0) {
-      const entities = await this.em.find(FeatureEntity, {
-        _id: { $in: currentIds },
-      })
+      const entities = await this.em.find(
+        FeatureEntity,
+        {
+          _id: { $in: currentIds },
+        },
+        {},
+      )
       const nextParentIds: string[] = []
       for (const entity of entities) {
         if (entity.parent?._id) {

@@ -17,23 +17,9 @@ import { createRoot } from 'react-dom/client'
 
 import { AdminNav } from './Nav.js'
 import { fetchJson } from './fetchUtil.js'
-
-interface Organism {
-  _id: string
-  genus?: string
-  species?: string
-  commonName?: string
-}
+import { type Organism, organismLabel } from './organism-utils.js'
 
 type SourceType = 'fasta' | 'twobit'
-
-function organismLabel(o: Organism) {
-  const sci = `${o.genus ?? ''} ${o.species ?? ''}`.trim()
-  if (sci && o.commonName) {
-    return `${sci} (${o.commonName})`
-  }
-  return sci || o.commonName || o._id
-}
 
 function AddAssemblyPage() {
   const [name, setName] = useState('')

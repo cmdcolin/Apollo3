@@ -30,8 +30,7 @@ export const FilterFeatures = observer(function FilterFeatures({
   session,
 }: FilterFeaturesProps) {
   const [type, setType] = useState('')
-  const [selectedFeatureTypes, setSelectedFeatureTypes] =
-    useState<string[]>(featureTypes)
+  const [selectedFeatureTypes, setSelectedFeatureTypes] = useState(featureTypes)
   const handleChange = (value: string): void => {
     setType(value)
   }

@@ -46,8 +46,8 @@ export class MikroOrmUserRepository implements UserRepository {
   }
 
   async findAll() {
-    const entities = await this.em.find(UserEntity, {})
-    return entities.map(toRow)
+    const entities = await this.em.find(UserEntity, {}, {})
+    return entities.map((x) => toRow(x))
   }
 
   async count() {

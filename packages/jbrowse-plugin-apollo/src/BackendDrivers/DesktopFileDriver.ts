@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/require-await */
+import type * as Fs from 'node:fs'
+
 import {
   type AssemblySpecificChange,
   type Change,
@@ -35,16 +37,14 @@ export class DesktopFileDriver extends BackendDriver {
       file: string
     }
 
-    const fs = getElectronRequire()('node:fs') as typeof import('fs')
+    const fs = getElectronRequire()('node:fs') as typeof Fs
     const fileContents = await fs.promises.readFile(file, 'utf8')
     return loadAssemblyIntoClient(assemblyName, fileContents, this.clientStore)
   }
 
   async getAssembly(assemblyName: string) {
     let assembly = this.clientStore.assemblies.get(assemblyName)
-    if (!assembly) {
-      assembly = await this.loadAssembly(assemblyName)
-    }
+    assembly ??= await this.loadAssembly(assemblyName)
     return assembly
   }
 
@@ -170,7 +170,7 @@ export class DesktopFileDriver extends BackendDriver {
 
     const gff3Contents = formatSync(gff3Items)
 
-    const fs = getElectronRequire()('node:fs') as typeof import('fs')
+    const fs = getElectronRequire()('node:fs') as typeof Fs
     await fs.promises.writeFile(file, gff3Contents, 'utf8')
 
     const results = new ValidationResultSet()

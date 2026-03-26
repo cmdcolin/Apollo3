@@ -12,10 +12,7 @@ export interface SerializedFeatureChange extends SerializedAssemblySpecificChang
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function isFeatureChange(thing: any): thing is FeatureChange {
-  return (
-    isAssemblySpecificChange(thing) &&
-    (thing as FeatureChange).changedIds !== undefined
-  )
+  return isAssemblySpecificChange(thing) && 'changedIds' in (thing as object)
 }
 
 export abstract class FeatureChange extends AssemblySpecificChange {

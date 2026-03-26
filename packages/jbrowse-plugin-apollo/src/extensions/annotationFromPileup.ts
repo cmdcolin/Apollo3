@@ -103,9 +103,7 @@ export function annotationFromPileup(pluggableElement: PluggableElementType) {
             case 'M':
             case '=':
             case 'X': {
-              if (currentExonStart === undefined) {
-                currentExonStart = position
-              }
+              currentExonStart ??= position
               position += len
               break
             }

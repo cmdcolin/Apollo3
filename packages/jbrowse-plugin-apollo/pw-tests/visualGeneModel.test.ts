@@ -31,7 +31,7 @@ test('Shows correct gene model', async ({ page }) => {
     await closeDrawer.click()
   }
 
-  await page.waitForTimeout(2000)
+  await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {})
 
   const canvas = page.locator('canvas[data-testid="overlayCanvas"]')
   await expect(canvas).toHaveScreenshot('gene-model.png', {

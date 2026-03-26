@@ -63,12 +63,6 @@ function shell(cmd: string, cwd?: string) {
   }).trim()
 }
 
-function shellTimed(cmd: string, cwd?: string) {
-  const start = performance.now()
-  shell(cmd, cwd)
-  return performance.now() - start
-}
-
 function median(values: number[]) {
   const sorted = [...values].sort((a, b) => a - b)
   const mid = Math.floor(sorted.length / 2)
@@ -106,28 +100,28 @@ function downloadData() {
     !fs.existsSync(gff) &&
     !fs.existsSync(chr22Gff)
   ) {
-    console.log('Downloading GENCODE v49 GFF3 (124MB)...')
+    console.warn('Downloading GENCODE v49 GFF3 (124MB)...')
     shell(`curl -L -o ${gffGz} '${GENCODE_GFF3_URL}'`)
   }
 
   if (!fs.existsSync(gff) && !fs.existsSync(chr22Gff) && fs.existsSync(gffGz)) {
-    console.log('Decompressing GFF3...')
+    console.warn('Decompressing GFF3...')
     shell(`gunzip -k ${gffGz}`)
   }
 
   if (!fs.existsSync(chr22Gff) && fs.existsSync(gff)) {
-    console.log('Extracting chr22 features...')
+    console.warn('Extracting chr22 features...')
     shell(`(grep '^#' ${gff}; grep '^chr22\t' ${gff}) > ${chr22Gff}`)
     const lineCount = shell(`wc -l < ${chr22Gff}`)
-    console.log(`chr22 subset: ${lineCount} lines`)
+    console.warn(`chr22 subset: ${lineCount} lines`)
   }
 
   if (
     !fs.existsSync(fastaGz) &&
     !fs.existsSync(path.join(DATA_DIR, 'GRCh38.chr22.fa'))
   ) {
-    console.log('Downloading GRCh38 FASTA (900MB)...')
-    console.log('(This is large. For quick testing, use --synthetic instead)')
+    console.warn('Downloading GRCh38 FASTA (900MB)...')
+    console.warn('(This is large. For quick testing, use --synthetic instead)')
     shell(`curl -L -o ${fastaGz} '${GENCODE_FASTA_URL}'`)
   }
 
@@ -141,7 +135,7 @@ function generateSyntheticData() {
   }
 
   fs.mkdirSync(DATA_DIR, { recursive: true })
-  console.log('Generating synthetic dataset (1000 genes, ~5000 features)...')
+  console.warn('Generating synthetic dataset (1000 genes, ~5000 features)...')
 
   const lines: string[] = [
     '##gff-version 3',
@@ -169,7 +163,7 @@ function generateSyntheticData() {
 
   lines.push('###', '##FASTA', ...fastaLines)
   fs.writeFileSync(outputPath, `${lines.join('\n')}\n`)
-  console.log(`Generated ${outputPath}`)
+  console.warn(`Generated ${outputPath}`)
   return outputPath
 }
 
@@ -306,7 +300,7 @@ function runBenchmarks(
     return performance.now() - start
   }
 
-  console.log(
+  console.warn(
     `\n  [${label}] Starting benchmarks with ${ITERATIONS} iterations each...`,
   )
 
@@ -323,7 +317,7 @@ function runBenchmarks(
   }
 
   // 1: Assembly import
-  console.log(`  [${label}] Assembly import...`)
+  console.warn(`  [${label}] Assembly import...`)
   const importTimes: number[] = []
   for (let i = 0; i < ITERATIONS; i++) {
     cleanup()
@@ -347,7 +341,7 @@ function runBenchmarks(
   )
 
   // 2: Feature get (all features)
-  console.log(`  [${label}] Feature get...`)
+  console.warn(`  [${label}] Feature get...`)
   const getTimes: number[] = []
   for (let i = 0; i < ITERATIONS; i++) {
     const ms = cliShellTimed(
@@ -364,7 +358,7 @@ function runBenchmarks(
   })
 
   // 3: Feature search
-  console.log(`  [${label}] Feature search...`)
+  console.warn(`  [${label}] Feature search...`)
   const searchTimes: number[] = []
   for (let i = 0; i < ITERATIONS; i++) {
     const ms = cliShellTimed(
@@ -381,7 +375,7 @@ function runBenchmarks(
   })
 
   // 4: GFF3 export
-  console.log(`  [${label}] GFF3 export...`)
+  console.warn(`  [${label}] GFF3 export...`)
   const exportTimes: number[] = []
   for (let i = 0; i < ITERATIONS; i++) {
     const ms = cliShellTimed(`${apollo} export gff3 bench_asm ${P} > /dev/null`)
@@ -396,7 +390,7 @@ function runBenchmarks(
   })
 
   // 5: Assembly delete (with cascade)
-  console.log(`  [${label}] Assembly delete...`)
+  console.warn(`  [${label}] Assembly delete...`)
   const deleteTimes: number[] = []
   for (let i = 0; i < ITERATIONS; i++) {
     cliShell(
@@ -467,9 +461,9 @@ function buildMarkdownTable(
 
 // --- Main ---
 
-async function main() {
-  console.log('Apollo3 Performance Benchmark')
-  console.log('=============================\n')
+function main() {
+  console.warn('Apollo3 Performance Benchmark')
+  console.warn('=============================\n')
 
   // Prepare data
   let gffFile: string
@@ -480,10 +474,9 @@ async function main() {
   } else if (skipDownload) {
     const chr22 = path.join(DATA_DIR, 'gencode.v49.chr22.gff3')
     if (!fs.existsSync(chr22)) {
-      console.error(
+      throw new Error(
         `Expected ${chr22} but --skip-download was set. Run without --skip-download first.`,
       )
-      process.exit(1)
     }
     gffFile = chr22
     datasetName = 'GENCODE v49 chr22'
@@ -493,10 +486,10 @@ async function main() {
   }
 
   const featureCount = shell(`grep -c $'\t' ${gffFile} || true`)
-  console.log(`Dataset: ${datasetName} (${featureCount} feature lines)\n`)
+  console.warn(`Dataset: ${datasetName} (${featureCount} feature lines)\n`)
 
   // Build MikroORM branch
-  console.log('Building MikroORM branch server...')
+  console.warn('Building MikroORM branch server...')
   shell('pnpm tsc -b', MIKRO_ORM_DIR)
   shell('pnpm build:shared', MIKRO_ORM_DIR)
   shell(
@@ -505,15 +498,15 @@ async function main() {
   )
 
   // Start MikroORM server
-  console.log('Starting MikroORM server on port 3999...')
+  console.warn('Starting MikroORM server on port 3999...')
   const mikroServer = startServer(MIKRO_ORM_DIR, MIKRO_ORM_PORT, false)
   try {
     waitForServer(MIKRO_ORM_PORT)
   } catch (error) {
     killServer(mikroServer)
-    throw new Error(`MikroORM server failed to start: ${error}`)
+    throw new Error(`MikroORM server failed to start: ${String(error)}`)
   }
-  console.log('MikroORM server ready.')
+  console.warn('MikroORM server ready.')
 
   configureProfile('benchMikro', MIKRO_ORM_PORT, CLI_DIR)
   const mikroResults = runBenchmarks(
@@ -528,14 +521,14 @@ async function main() {
   let mainResults: BenchmarkResult[] | null = null
   if (compareMode) {
     if (!fs.existsSync(MAIN_DIR)) {
-      console.log(`\nCloning main branch to ${MAIN_DIR}...`)
+      console.warn(`\nCloning main branch to ${MAIN_DIR}...`)
       shell(
         `git clone ${MIKRO_ORM_DIR} ${MAIN_DIR} --branch main --single-branch`,
       )
       shell('pnpm install', MAIN_DIR)
     }
 
-    console.log('\nBuilding main branch server...')
+    console.warn('\nBuilding main branch server...')
     try {
       shell('pnpm tsc -b', MAIN_DIR)
       shell('pnpm build:shared', MAIN_DIR)
@@ -544,22 +537,22 @@ async function main() {
         path.join(MAIN_DIR, 'packages/apollo-collaboration-server'),
       )
     } catch (error) {
-      console.warn(`Main branch build failed: ${error}`)
+      console.warn(`Main branch build failed: ${String(error)}`)
       console.warn('Skipping MongoDB comparison.')
     }
 
-    if (!mainResults) {
-      console.log('Starting main branch server on port 4999...')
+    {
+      console.warn('Starting main branch server on port 4999...')
       const mainServer = startServer(MAIN_DIR, MAIN_PORT, true)
       try {
         waitForServer(MAIN_PORT)
-        console.log('Main branch server ready.')
+        console.warn('Main branch server ready.')
 
         const mainCliDir = path.join(MAIN_DIR, 'packages/apollo-cli')
         configureProfile('benchMain', MAIN_PORT, mainCliDir)
         mainResults = runBenchmarks('benchMain', gffFile, 'MongoDB', mainCliDir)
       } catch (error) {
-        console.warn(`Main branch server failed: ${error}`)
+        console.warn(`Main branch server failed: ${String(error)}`)
       } finally {
         killServer(mainServer)
       }
@@ -568,14 +561,16 @@ async function main() {
 
   // Report
   const md = buildMarkdownTable(mikroResults, mainResults, datasetName)
-  console.log(`\n${md}`)
+  console.warn(`\n${md}`)
 
   const resultsFile = path.join(MIKRO_ORM_DIR, 'docs/benchmark-results.md')
   fs.writeFileSync(resultsFile, md)
-  console.log(`Results saved to ${resultsFile}`)
+  console.warn(`Results saved to ${resultsFile}`)
 }
 
-main().catch((error) => {
+try {
+  main()
+} catch (error: unknown) {
   console.error('Benchmark failed:', error)
   // Try to kill any stray servers
   try {
@@ -588,5 +583,5 @@ main().catch((error) => {
   } catch {
     /* */
   }
-  process.exit(1)
-})
+  throw error
+}

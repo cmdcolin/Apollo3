@@ -10,5 +10,5 @@ export async function fetchJson<T>(url: string): Promise<T> {
     const body = await res.text()
     throw new Error(`${res.status} ${res.statusText}: ${body}`)
   }
-  return res.json()
+  return res.json() as Promise<T>
 }

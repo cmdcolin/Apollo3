@@ -1,3 +1,4 @@
+import type { ServerResponse } from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -133,7 +134,7 @@ const validationSchema = Joi.object({
       serveRoot: '/',
       serveStaticOptions: {
         fallthrough: true,
-        setHeaders(res, filePath) {
+        setHeaders(res: ServerResponse, filePath: string) {
           if (filePath.includes('/assets/')) {
             res.setHeader(
               'Cache-Control',

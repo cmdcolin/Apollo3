@@ -49,7 +49,7 @@ export class MikroOrmOrganismRepository implements OrganismRepository {
         limit: opts?.limit,
       },
     )
-    return entities.map(toRow)
+    return entities.map((x) => toRow(x))
   }
 
   async count() {

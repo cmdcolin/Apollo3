@@ -29,7 +29,7 @@ const DB_FILE = path.join(COLLAB_DIR, 'apollo-regen.sqlite')
 const LOG_FILE = '/tmp/apollo-demo-regen.log'
 
 function log(msg: string) {
-  console.log(msg)
+  console.debug(msg)
 }
 
 async function waitForServer(maxWait = 60) {
@@ -146,7 +146,9 @@ async function main() {
     }
     cleaned = true
     try {
-      process.kill(-server.pid!, 'SIGTERM')
+      if (server.pid) {
+        process.kill(-server.pid, 'SIGTERM')
+      }
     } catch {
       // already dead
     }
@@ -200,7 +202,7 @@ async function main() {
       if (!Array.isArray(featureGroup) || featureGroup.length === 0) {
         continue
       }
-      const line = featureGroup[0]
+      const [line] = featureGroup
       if (!line?.seq_id || !line.type) {
         continue
       }
@@ -552,7 +554,9 @@ async function main() {
   log(`\nDemo database saved to demo-data/demo.sqlite (${sizeKB}KB)`)
 }
 
-main().catch((error) => {
+try {
+  await main()
+} catch (error: unknown) {
   console.error(error)
   process.exit(1)
-})
+}

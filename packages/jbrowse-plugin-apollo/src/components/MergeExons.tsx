@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 
-import type { AnnotationFeature } from '@apollo-annotation/mst'
+import type { AnnotationFeature, Children } from '@apollo-annotation/mst'
 import { MergeExonsChange } from '@apollo-annotation/shared'
 import { getSnapshot } from '@jbrowse/mobx-state-tree'
 import {
@@ -41,8 +41,9 @@ function getNeighboringExons(
     throw new Error('Unable to find parent of reference exon')
   }
   let exons: AnnotationFeature[] = []
-  if (tx.children) {
-    for (const [, feature] of tx.children) {
+  const txChildren = tx.children as Children
+  if (txChildren) {
+    for (const [, feature] of txChildren) {
       if (feature.type === 'exon') {
         exons.push(feature)
       }

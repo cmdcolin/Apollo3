@@ -5,7 +5,6 @@ import { FeatureEntity } from '../entities/FeatureEntity.js'
 import {
   BaseFeatureRepository,
   STOP_WORDS,
-  entityToRow,
   matchesPhrase,
   tokenize,
 } from './BaseFeatureRepository.js'

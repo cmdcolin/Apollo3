@@ -30,7 +30,7 @@ function useCurrentUser() {
     fetch('/users/me', { headers: jsonHeaders })
       .then((r) => {
         if (r.ok) {
-          return r.json()
+          return r.json() as Promise<CurrentUser>
         }
         return null
       })
@@ -38,7 +38,7 @@ function useCurrentUser() {
         setUser(data)
         setChecked(true)
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         console.error('Failed to fetch current user:', error)
         setChecked(true)
       })
@@ -52,9 +52,11 @@ function useLoginTypes() {
 
   useEffect(() => {
     fetch('/auth/types', { headers: jsonHeaders })
-      .then((r) => r.json())
-      .then(setTypes)
-      .catch((error) => {
+      .then((r) => r.json() as Promise<string[]>)
+      .then((data) => {
+        setTypes(data)
+      })
+      .catch((error: unknown) => {
         console.error('Failed to fetch login types:', error)
       })
   }, [])
@@ -69,7 +71,7 @@ function useAdminContact() {
     fetch('/users/admin', { headers: jsonHeaders })
       .then((r) => {
         if (r.ok) {
-          return r.json()
+          return r.json() as Promise<{ email: string }>
         }
         return null
       })
@@ -78,7 +80,9 @@ function useAdminContact() {
           setAdminEmail(data.email)
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        /* ignore */
+      })
   }, [])
 
   return adminEmail
@@ -89,11 +93,13 @@ function useSetupActive() {
 
   useEffect(() => {
     fetch('/auth/setup-active', { headers: jsonHeaders })
-      .then((r) => r.json())
+      .then((r) => r.json() as Promise<{ active: boolean }>)
       .then((data) => {
-        setActive(data.active === true)
+        setActive(data.active)
       })
-      .catch(() => {})
+      .catch(() => {
+        /* ignore */
+      })
   }, [])
 
   return active
@@ -173,7 +179,7 @@ function useUserStats() {
     fetch('/users/stats', { headers: jsonHeaders })
       .then((r) => {
         if (r.ok) {
-          return r.json()
+          return r.json() as Promise<{ active: number; total: number }>
         }
         return null
       })
@@ -182,7 +188,9 @@ function useUserStats() {
           setStats(data)
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        /* ignore */
+      })
   }, [])
 
   return stats
@@ -225,6 +233,12 @@ function LoggedInContent({ user }: { user: CurrentUser }) {
             <Divider sx={{ my: 1 }} />
             <ListItemButton component="a" href="/admin/users/">
               <ListItemText primary="Manage Users" />
+            </ListItemButton>
+            <ListItemButton component="a" href="/admin/jobs/">
+              <ListItemText primary="Analysis Jobs" />
+            </ListItemButton>
+            <ListItemButton component="a" href="/admin/add-assembly/">
+              <ListItemText primary="Add Assembly" />
             </ListItemButton>
           </>
         ) : null}

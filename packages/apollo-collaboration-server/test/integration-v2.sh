@@ -57,6 +57,14 @@ json_len() {
   python3 -c "import sys,json; print(len(json.load(sys.stdin)))" 2>/dev/null
 }
 
+assert_http_status() {
+  local label="$1" expected="$2"
+  shift 2
+  local status
+  status=$(curl -s -o /dev/null -w "%{http_code}" "$@")
+  assert_eq "$label" "$expected" "$status"
+}
+
 echo "=== Integration Test: MikroORM (v2) Backend ==="
 echo ""
 
@@ -206,6 +214,98 @@ JB_BODY=$(echo "$JBROWSE" | sed '$d')
 JB_HAS_CONFIG=$(echo "$JB_BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print('yes' if 'configuration' in d else 'no')" 2>/dev/null || echo "no")
 assert_eq "jbrowse config HTTP status" "200" "$JB_HTTP_CODE"
 assert_eq "jbrowse config has configuration key" "yes" "$JB_HAS_CONFIG"
+
+# --- Guest token (readOnly role) ---
+echo ""
+echo "--- Guest authentication"
+GUEST_TOKEN=$(curl -s "$BASE_URL/auth/guest" | json_field "['token']")
+assert_ge "guest token length" 10 "${#GUEST_TOKEN}"
+
+# --- ReadOnly access tests ---
+echo ""
+echo "--- ReadOnly user CAN read"
+assert_http_status "readOnly can GET assemblies" "200" \
+  "$BASE_URL/assemblies" -H "Authorization: Bearer $GUEST_TOKEN"
+assert_http_status "readOnly can GET features" "200" \
+  "$BASE_URL/features/getFeatures?refSeq=$FIRST_REFSEQ_ID&start=0&end=999999999" \
+  -H "Authorization: Bearer $GUEST_TOKEN"
+assert_http_status "readOnly can GET users/me" "200" \
+  "$BASE_URL/users/me" -H "Authorization: Bearer $GUEST_TOKEN"
+
+echo ""
+echo "--- ReadOnly user CANNOT write"
+assert_http_status "readOnly cannot POST assemblies" "403" \
+  -X POST "$BASE_URL/assemblies" \
+  -H "Authorization: Bearer $GUEST_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"test"}'
+assert_http_status "readOnly cannot DELETE assembly" "403" \
+  -X DELETE "$BASE_URL/assemblies/$ASSEMBLY_ID" \
+  -H "Authorization: Bearer $GUEST_TOKEN"
+assert_http_status "readOnly cannot POST organisms" "403" \
+  -X POST "$BASE_URL/organisms" \
+  -H "Authorization: Bearer $GUEST_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"test"}'
+assert_http_status "readOnly cannot GET /users (admin-only)" "403" \
+  "$BASE_URL/users" -H "Authorization: Bearer $GUEST_TOKEN"
+
+# --- Unauthenticated access tests ---
+echo ""
+echo "--- Unauthenticated requests"
+assert_http_status "no auth header returns 401" "401" \
+  "$BASE_URL/assemblies"
+assert_http_status "invalid token returns 401" "401" \
+  "$BASE_URL/assemblies" -H "Authorization: Bearer invalidtoken"
+
+# --- Role mutation tests ---
+echo ""
+echo "--- Role mutation: admin changes guest role"
+GUEST_USER_ID=$(curl -s "$BASE_URL/users" -H "Authorization: Bearer $TOKEN" | \
+  python3 -c "import sys,json; users=json.load(sys.stdin); print(next(u['_id'] for u in users if u['email']=='guest_user'))")
+assert_ge "guest user id length" 10 "${#GUEST_USER_ID}"
+
+echo "  Patching guest to 'user' role..."
+assert_http_status "admin can PATCH guest to user role" "200" \
+  -X PATCH "$BASE_URL/users/$GUEST_USER_ID" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"role":"user"}'
+
+GUEST_TOKEN=$(curl -s "$BASE_URL/auth/guest" | json_field "['token']")
+assert_http_status "user role cannot POST assemblies" "403" \
+  -X POST "$BASE_URL/assemblies" \
+  -H "Authorization: Bearer $GUEST_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"test"}'
+
+echo "  Patching guest to 'none' role..."
+assert_http_status "admin can PATCH guest to none role" "200" \
+  -X PATCH "$BASE_URL/users/$GUEST_USER_ID" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"role":"none"}'
+
+GUEST_TOKEN=$(curl -s "$BASE_URL/auth/guest" | json_field "['token']")
+assert_http_status "none role cannot GET assemblies" "403" \
+  "$BASE_URL/assemblies" -H "Authorization: Bearer $GUEST_TOKEN"
+assert_http_status "none role can still GET users/me (Authenticated)" "200" \
+  "$BASE_URL/users/me" -H "Authorization: Bearer $GUEST_TOKEN"
+
+echo "  Restoring guest to 'readOnly' role..."
+assert_http_status "admin can PATCH guest back to readOnly" "200" \
+  -X PATCH "$BASE_URL/users/$GUEST_USER_ID" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"role":"readOnly"}'
+
+# --- Setup token tests ---
+echo ""
+echo "--- Setup token endpoints"
+SETUP_ACTIVE_VALUE=$(curl -s "$BASE_URL/auth/setup-active" | json_field "['active']")
+assert_eq "setup-active returns false (root admin exists)" "False" "$SETUP_ACTIVE_VALUE"
+assert_http_status "setup with invalid token returns 400" "400" \
+  "$BASE_URL/auth/setup?token=invalidtoken"
 
 # --- Summary ---
 echo ""

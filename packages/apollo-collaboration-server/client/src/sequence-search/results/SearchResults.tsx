@@ -62,15 +62,15 @@ export function SearchResults({
 
       {results && tool === 'blat' ? (
         <BlatResultsTable
-          hits={(results as { hits: PslHit[] }).hits ?? []}
+          hits={(results as { hits: PslHit[] }).hits}
           assemblyName={assemblyName}
         />
       ) : null}
 
       {results && tool === 'miniprot' ? (
         <MiniprotResultsTable
-          geneModels={(results as { geneModels: GeneModel[] }).geneModels ?? []}
-          gff3={String((results as { gff3: string }).gff3 ?? '')}
+          geneModels={(results as { geneModels: GeneModel[] }).geneModels}
+          gff3={(results as { gff3: string }).gff3}
           assemblyName={assemblyName}
         />
       ) : null}
@@ -78,14 +78,18 @@ export function SearchResults({
       {results && tool === 'local-blast' ? (
         <BlastResultsTable
           results={results as BlastSearchResult}
-          program={String(search.params?.program ?? '')}
+          program={
+            typeof search.params?.program === 'string'
+              ? search.params.program
+              : ''
+          }
           assemblyName={assemblyName}
         />
       ) : null}
 
       {results && tool === 'ispcr' ? (
         <IsPcrResultsTable
-          products={(results as { products: IsPcrProduct[] }).products ?? []}
+          products={(results as { products: IsPcrProduct[] }).products}
           assemblyName={assemblyName}
         />
       ) : null}

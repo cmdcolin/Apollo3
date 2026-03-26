@@ -81,7 +81,7 @@ export class ApolloSequenceAdapter extends BaseSequenceAdapter {
         this.regions = regions
         return regions
       } catch (error) {
-        console.warn(`[apollo-debug] getRegions ERROR: ${error}`)
+        console.warn(`[apollo-debug] getRegions ERROR: ${String(error)}`)
         throw error
       }
     }

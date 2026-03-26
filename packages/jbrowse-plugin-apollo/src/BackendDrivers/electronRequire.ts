@@ -4,16 +4,16 @@
 // through bracket notation on `globalThis`, we bypass rollup's static
 // analysis and get the real Node.js require provided by Electron.
 
-type GlobalWithRequire = typeof globalThis & { require?: NodeRequire }
+type GlobalWithRequire = Omit<typeof globalThis, 'require'> & {
+  require?: NodeJS.Require
+}
 
 export function getElectronRequire() {
-  const req = (globalThis as GlobalWithRequire)[
-    'require' as keyof typeof globalThis
-  ]
-  if (!req) {
+  const g = globalThis as GlobalWithRequire
+  if (!g.require) {
     throw new Error(
       'Node.js require is not available. This code must run in an Electron environment.',
     )
   }
-  return req as NodeRequire
+  return g.require
 }

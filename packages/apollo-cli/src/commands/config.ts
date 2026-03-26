@@ -74,12 +74,7 @@ export default class ApolloConfig extends BaseCommand<typeof ApolloConfig> {
       await this.interactiveSetup(config, flags.profile)
     } else {
       let profileName = flags.profile
-      if (profileName === undefined) {
-        profileName = process.env.APOLLO_PROFILE ?? 'default'
-      }
-      if (flags.profile !== undefined) {
-        profileName = flags.profile
-      }
+      profileName ??= process.env.APOLLO_PROFILE ?? 'default'
       if (args.value === undefined) {
         const currentValue: string = config.get(
           `${profileName}.${args.key}`,
@@ -99,9 +94,7 @@ export default class ApolloConfig extends BaseCommand<typeof ApolloConfig> {
     config: ApolloConf,
     profileName: string | undefined,
   ) {
-    if (profileName === undefined) {
-      profileName = await this.askProfileName(config.getProfileNames())
-    }
+    profileName ??= await this.askProfileName(config.getProfileNames())
 
     let setMe = true
     while (setMe) {

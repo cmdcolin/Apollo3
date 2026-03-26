@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-import type { AnnotationFeature } from '@apollo-annotation/mst'
+import type { AnnotationFeature, Children } from '@apollo-annotation/mst'
 import { MergeTranscriptsChange } from '@apollo-annotation/shared'
 import { getSnapshot } from '@jbrowse/mobx-state-tree'
 import {
@@ -46,8 +46,9 @@ function getTranscripts(
   }
 
   const transcripts: Record<string, AnnotationFeature> = {}
-  if (gene.children) {
-    for (const [, feature] of gene.children) {
+  const geneChildren = gene.children as Children
+  if (geneChildren) {
+    for (const [, feature] of geneChildren) {
       if (
         featureTypeOntology.isTypeOf(feature.type, 'transcript') &&
         feature._id !== referenceTranscript._id
@@ -83,9 +84,8 @@ export function MergeTranscripts({
   const [errorMessage, setErrorMessage] = useState('')
   const transcripts = getTranscripts(sourceFeature, session)
   const firstTranscript = Object.keys(transcripts).at(0)
-  const [selectedTranscriptId, setSelectedTranscriptId] = useState<
-    string | undefined
-  >(firstTranscript)
+  const [selectedTranscriptId, setSelectedTranscriptId] =
+    useState(firstTranscript)
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()

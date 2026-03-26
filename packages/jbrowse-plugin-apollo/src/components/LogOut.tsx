@@ -13,7 +13,7 @@ import { Dialog } from './Dialog'
 
 interface LogOutProps {
   session: ApolloSessionModel
-  handleClose(): void
+  handleClose: () => void
 }
 
 export function LogOut({ handleClose, session }: LogOutProps) {

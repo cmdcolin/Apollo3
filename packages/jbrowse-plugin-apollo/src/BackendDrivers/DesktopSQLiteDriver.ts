@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/consistent-type-imports */
 import {
-  type AssemblySpecificChange,
   type Change,
+  type FeatureRow,
   type NestedFeature,
+  type RefSeqRow,
   assembleFeatureTrees,
   isAssemblySpecificChange,
 } from '@apollo-annotation/common'
-import type { FeatureRow, RefSeqRow } from '@apollo-annotation/common'
 import type {
   AnnotationFeatureSnapshot,
   CheckResultSnapshot,
@@ -17,10 +17,10 @@ import {
 } from '@apollo-annotation/shared'
 import { getConf } from '@jbrowse/core/configuration'
 import { type Region, getSession } from '@jbrowse/core/util'
-// MikroORM is loaded dynamically via require() in Electron environments
-
-type MikroORM = import('@mikro-orm/core').MikroORM
 import ObjectID from 'bson-objectid'
+
+// MikroORM is loaded dynamically via require() in Electron environments
+type MikroORM = import('@mikro-orm/core').MikroORM
 
 import type { SubmitOpts } from '../ChangeManager'
 
@@ -195,7 +195,7 @@ export class DesktopSQLiteDriver extends BackendDriver {
       if (!Array.isArray(item) || item.length === 0) {
         continue
       }
-      const firstLoc = item[0]
+      const [firstLoc] = item
       if (!firstLoc.seq_id) {
         continue
       }
@@ -268,8 +268,8 @@ export class DesktopSQLiteDriver extends BackendDriver {
     return nestedFeatures.map((f) => nestedToSnapshot(f))
   }
 
-  async getCheckResults(): Promise<CheckResultSnapshot[]> {
-    return []
+  getCheckResults(_region: Region) {
+    return Promise.resolve<CheckResultSnapshot[]>([])
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await
@@ -375,9 +375,12 @@ export class DesktopSQLiteDriver extends BackendDriver {
   private patchRefSeqIds(change: Change, refNameMap: Map<string, string>) {
     const c = change as unknown as Record<string, unknown>
     if ('changes' in c && Array.isArray(c.changes)) {
-      for (const sub of c.changes) {
+      for (const sub of c.changes as Record<string, unknown>[]) {
         if (sub.addedFeature) {
-          this.patchFeatureRefSeq(sub.addedFeature, refNameMap)
+          this.patchFeatureRefSeq(
+            sub.addedFeature as AnnotationFeatureSnapshot,
+            refNameMap,
+          )
         }
       }
     }

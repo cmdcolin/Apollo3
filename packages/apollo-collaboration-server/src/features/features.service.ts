@@ -123,8 +123,8 @@ export class FeaturesService {
   async findFeaturesByRange(searchDto: FeatureRangeSearchDto) {
     const roots = await this.db.feature.findRootsByRange(
       searchDto.refSeq,
-      Number(searchDto.start),
-      Number(searchDto.end),
+      searchDto.start,
+      searchDto.end,
     )
     if (roots.length === 0) {
       return []

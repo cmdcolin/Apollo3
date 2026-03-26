@@ -1,5 +1,6 @@
+import path from 'node:path'
+
 import react from '@vitejs/plugin-react'
-import { resolve } from 'path'
 import { defineConfig } from 'vite'
 
 const detailRoutes: Record<string, string> = {
@@ -56,29 +57,35 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        index: resolve(__dirname, 'index.html'),
-        'ui/organisms/index': resolve(__dirname, 'ui/organisms/index.html'),
-        'ui/assemblies/index': resolve(__dirname, 'ui/assemblies/index.html'),
-        'ui/organism-detail/index': resolve(
+        index: path.resolve(__dirname, 'index.html'),
+        'ui/organisms/index': path.resolve(
+          __dirname,
+          'ui/organisms/index.html',
+        ),
+        'ui/assemblies/index': path.resolve(
+          __dirname,
+          'ui/assemblies/index.html',
+        ),
+        'ui/organism-detail/index': path.resolve(
           __dirname,
           'ui/organism-detail/index.html',
         ),
-        'ui/assembly-detail/index': resolve(
+        'ui/assembly-detail/index': path.resolve(
           __dirname,
           'ui/assembly-detail/index.html',
         ),
-        'ui/changes/index': resolve(__dirname, 'ui/changes/index.html'),
-        'ui/sequence-search/index': resolve(
+        'ui/changes/index': path.resolve(__dirname, 'ui/changes/index.html'),
+        'ui/sequence-search/index': path.resolve(
           __dirname,
           'ui/sequence-search/index.html',
         ),
-        'admin/users/index': resolve(__dirname, 'admin/users/index.html'),
-        'admin/jobs/index': resolve(__dirname, 'admin/jobs/index.html'),
-        'admin/add-assembly/index': resolve(
+        'admin/users/index': path.resolve(__dirname, 'admin/users/index.html'),
+        'admin/jobs/index': path.resolve(__dirname, 'admin/jobs/index.html'),
+        'admin/add-assembly/index': path.resolve(
           __dirname,
           'admin/add-assembly/index.html',
         ),
-        'error/index': resolve(__dirname, 'error/index.html'),
+        'error/index': path.resolve(__dirname, 'error/index.html'),
       },
     },
   },

@@ -65,7 +65,7 @@ export class AddFeatureChange extends FeatureChange {
     const { changes, logger } = this
 
     for (const change of changes) {
-      const { addedFeature, copyFeature, parentFeatureId } = change
+      const { addedFeature, parentFeatureId } = change
       const rows = flattenFeatureSnapshot(addedFeature, addedFeature.refSeq)
 
       if (parentFeatureId && rows.length > 0) {

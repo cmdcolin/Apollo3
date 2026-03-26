@@ -1,4 +1,4 @@
-import type { AnnotationFeature } from '@apollo-annotation/mst'
+import type { AnnotationFeature, Children } from '@apollo-annotation/mst'
 import { readConfObject } from '@jbrowse/core/configuration'
 import type { BaseDisplayModel } from '@jbrowse/core/pluggableElementTypes'
 import type { MenuItem } from '@jbrowse/core/ui'
@@ -163,7 +163,8 @@ function draw(
   const { refName, reversed } = displayedRegion
   const rowHeight = apolloRowHeight
   const cdsHeight = Math.round(0.9 * rowHeight)
-  const { children, strand } = feature
+  const children = feature.children as Children
+  const { strand } = feature
   if (!children) {
     return
   }
@@ -186,7 +187,7 @@ function draw(
       currentRow += 1
       continue
     }
-    const { children: transcriptChildren } = transcript
+    const transcriptChildren = transcript.children as Children
     if (!transcriptChildren) {
       continue
     }
@@ -240,7 +241,7 @@ function draw(
     const cdsCount = getCDSCount(child, featureTypeOntology)
     if (cdsCount != 0) {
       for (const cdsRow of child.cdsLocations) {
-        const { children: transcriptChildren } = child
+        const transcriptChildren = child.children as Children
         if (!transcriptChildren) {
           continue
         }
@@ -321,10 +322,10 @@ function draw(
       }
     }
 
-    const { children: transcriptChildren } = child
+    const transcriptChildrenNonCoding = child.children as Children
     // Draw exons for non-coding genes
-    if (cdsCount === 0 && transcriptChildren) {
-      for (const [, exon] of transcriptChildren) {
+    if (cdsCount === 0 && transcriptChildrenNonCoding) {
+      for (const [, exon] of transcriptChildrenNonCoding) {
         if (!featureTypeOntology.isTypeOf(exon.type, 'exon')) {
           continue
         }
@@ -596,7 +597,8 @@ function getCDSCount(
   feature: AnnotationFeature,
   featureTypeOntology: OntologyRecord,
 ): number {
-  const { children, type } = feature
+  const children = feature.children as Children
+  const { type } = feature
   if (!children) {
     return 0
   }
@@ -617,7 +619,8 @@ function getRowCount(
   featureTypeOntology: OntologyRecord,
   _bpPerPx?: number,
 ): number {
-  const { children, type } = feature
+  const children = feature.children as Children
+  const { type } = feature
   if (!children) {
     return 1
   }
@@ -657,7 +660,7 @@ function featuresForRow(
   if (!isGene) {
     throw new Error('Top level feature for GeneGlyph must have type "gene"')
   }
-  const { children } = feature
+  const children = feature.children as Children
   if (!children) {
     return [[feature]]
   }
@@ -672,12 +675,13 @@ function featuresForRow(
       features.push([child, feature])
       continue
     }
-    if (!child.children) {
+    const childChildren = child.children as Children
+    if (!childChildren) {
       continue
     }
     const cdss: AnnotationFeature[] = []
     const exons: AnnotationFeature[] = []
-    for (const [, grandchild] of child.children) {
+    for (const [, grandchild] of childChildren) {
       if (featureTypeOntology.isTypeOf(grandchild.type, 'CDS')) {
         cdss.push(grandchild)
       } else if (featureTypeOntology.isTypeOf(grandchild.type, 'exon')) {
@@ -801,11 +805,12 @@ function getDraggableFeatureInfo(
   const { lgv } = stateModel
   if (isCDS) {
     const transcript = feature.parent
-    if (!transcript?.children) {
+    const transcriptChildren = transcript?.children as Children
+    if (!transcriptChildren) {
       return
     }
     const exonChildren: AnnotationFeature[] = []
-    for (const child of transcript.children.values()) {
+    for (const child of transcriptChildren.values()) {
       const childIsExon = featureTypeOntology.isTypeOf(child.type, 'exon')
       if (childIsExon) {
         exonChildren.push(child)

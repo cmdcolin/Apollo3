@@ -39,8 +39,10 @@ export class ChangesController {
         change,
       )}`,
     )
-    // user is guaranteed by @Roles(Role.User) guard
-    return this.changesService.create(change, user!)
+    if (!user) {
+      throw new Error('User not found')
+    }
+    return this.changesService.create(change, user)
   }
 
   @Get('recent')

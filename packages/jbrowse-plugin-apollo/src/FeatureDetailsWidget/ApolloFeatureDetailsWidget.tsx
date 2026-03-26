@@ -33,7 +33,7 @@ export const ApolloFeatureDetailsWidget = observer(
     const currentAssembly = session.apolloDataStore.assemblies.get(assembly)
     const { classes } = useStyles()
 
-    const [panelState, setPanelState] = useState<string[]>(['attributes'])
+    const [panelState, setPanelState] = useState(['attributes'])
 
     useEffect(() => {
       setPanelState(['attributes'])

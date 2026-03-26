@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-confusing-void-expression */
-
 import type { GFF3Feature } from '@gmod/gff'
 import type { LoggerService } from '@nestjs/common'
 
@@ -29,7 +27,7 @@ export interface ServerDataStore {
       extensionPointName: string,
       extendee: unknown,
       props?: Record<string, unknown>,
-    ): void
+    ): unknown
   }
   user: string
 }
@@ -52,7 +50,7 @@ export abstract class Operation implements SerializedOperation {
 
   abstract toJSON(): SerializedOperation
 
-  async execute(backend: ServerDataStore): Promise<unknown> {
+  execute(backend: ServerDataStore): Promise<unknown> {
     const initialResult = this.executeOnServer(backend)
     return backend.pluginsService.evaluateExtensionPoint(
       `${this.typeName}-transformResults`,

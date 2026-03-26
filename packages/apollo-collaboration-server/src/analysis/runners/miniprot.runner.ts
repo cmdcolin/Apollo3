@@ -29,8 +29,10 @@ export class MiniprotRunner implements AnalysisRunner {
   }
 
   async run(context: RunContext) {
-    const query = String(context.job.params.query ?? '')
-    const databaseId = String(context.job.params.databaseId ?? '')
+    const { params } = context.job
+    const query = typeof params.query === 'string' ? params.query : ''
+    const databaseId =
+      typeof params.databaseId === 'string' ? params.databaseId : ''
 
     const analysisDb = await context.db.analysisDb.findById(databaseId)
     if (!analysisDb?.dbPath) {

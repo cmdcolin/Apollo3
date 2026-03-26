@@ -6,7 +6,6 @@ import {
 } from '@jbrowse/mobx-state-tree'
 
 import type ApolloPluginConfigurationSchema from '../config'
-import type { ApolloRootModel } from '../types'
 
 export async function createFetchErrorMessage(
   response: Response,
@@ -25,7 +24,7 @@ export async function createFetchErrorMessage(
 }
 
 function getPluginConfiguration(session: IAnyStateTreeNode) {
-  const { jbrowse } = getRoot<ApolloRootModel>(session)
+  const { jbrowse } = getRoot(session)
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   return jbrowse.configuration.ApolloPlugin as Instance<
     typeof ApolloPluginConfigurationSchema

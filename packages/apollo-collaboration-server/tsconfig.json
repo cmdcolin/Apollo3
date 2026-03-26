@@ -11,7 +11,7 @@
     "lib": ["es2023"],
     "types": ["jest", "node"],
   },
-  "include": ["./src"],
+  "include": ["./src", "./scripts"],
   "references": [
     { "path": "../apollo-common" },
     { "path": "../apollo-entities" },

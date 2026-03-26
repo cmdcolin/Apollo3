@@ -1,16 +1,11 @@
 import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Container from '@mui/material/Container'
 import MenuItem from '@mui/material/MenuItem'
-import Paper from '@mui/material/Paper'
 import Select from '@mui/material/Select'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
 import Typography from '@mui/material/Typography'
+import { DataGrid, type GridColDef } from '@mui/x-data-grid'
 import { useCallback, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
@@ -24,6 +19,8 @@ interface User {
   role: string
   createdAt?: string
 }
+
+const ROOT_USER_EMAIL = 'root_user'
 
 function UsersPage() {
   const [users, setUsers] = useState<User[]>([])
@@ -85,8 +82,68 @@ function UsersPage() {
     }
   }
 
-  const isSelf = (userId: string) =>
-    currentUser?.email === users.find((u) => u._id === userId)?.email
+  const columns: GridColDef<User>[] = [
+    { field: 'username', headerName: 'Username', flex: 1 },
+    { field: 'email', headerName: 'Email', flex: 1.5 },
+    {
+      field: 'role',
+      headerName: 'Role',
+      width: 160,
+      renderCell: (params) => {
+        const isRestricted =
+          params.row.email === currentUser?.email ||
+          params.row.email === ROOT_USER_EMAIL
+        return (
+          <Select
+            size="small"
+            value={params.row.role}
+            disabled={isRestricted}
+            onChange={(e) => {
+              void handleRoleChange(params.row._id, e.target.value)
+            }}
+            sx={{ minWidth: 120 }}
+          >
+            <MenuItem value="admin">Admin</MenuItem>
+            <MenuItem value="user">User</MenuItem>
+            <MenuItem value="readOnly">Read Only</MenuItem>
+            <MenuItem value="none">None</MenuItem>
+          </Select>
+        )
+      },
+    },
+    {
+      field: 'createdAt',
+      headerName: 'Created',
+      flex: 1,
+      valueFormatter: (value: string | undefined) =>
+        value ? new Date(value).toLocaleString() : '',
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      width: 100,
+      sortable: false,
+      align: 'right',
+      headerAlign: 'right',
+      renderCell: (params) => {
+        const isRestricted =
+          params.row.email === currentUser?.email ||
+          params.row.email === ROOT_USER_EMAIL
+        return (
+          <Button
+            size="small"
+            color="error"
+            disabled={isRestricted}
+            onClick={() => {
+              void handleDelete(params.row._id)
+            }}
+          >
+            Delete
+          </Button>
+        )
+      },
+    },
+  ]
 
   return (
     <AdminNav current="users">
@@ -99,72 +156,15 @@ function UsersPage() {
             {error}
           </Alert>
         )}
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          Total: {users.length}
-        </Typography>
-        <TableContainer component={Paper} variant="outlined">
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Username</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>Role</TableCell>
-                <TableCell>Created</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {users.map((u) => (
-                <TableRow key={u._id} hover>
-                  <TableCell>{u.username}</TableCell>
-                  <TableCell>{u.email}</TableCell>
-                  <TableCell>
-                    <Select
-                      size="small"
-                      value={u.role}
-                      disabled={isSelf(u._id)}
-                      onChange={(e) => {
-                        void handleRoleChange(u._id, e.target.value)
-                      }}
-                      sx={{ minWidth: 120 }}
-                    >
-                      <MenuItem value="admin">Admin</MenuItem>
-                      <MenuItem value="user">User</MenuItem>
-                      <MenuItem value="readOnly">Read Only</MenuItem>
-                      <MenuItem value="none">None</MenuItem>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    {u.createdAt ? new Date(u.createdAt).toLocaleString() : ''}
-                  </TableCell>
-                  <TableCell align="right">
-                    <Button
-                      size="small"
-                      color="error"
-                      disabled={isSelf(u._id)}
-                      onClick={() => {
-                        void handleDelete(u._id)
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {users.length === 0 && !error && (
-                <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    align="center"
-                    sx={{ color: 'text.secondary' }}
-                  >
-                    No users found
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <Box sx={{ height: 500 }}>
+          <DataGrid
+            rows={users.map((u) => ({ ...u, id: u._id }))}
+            columns={columns}
+            density="compact"
+            pageSizeOptions={[25, 50, 100]}
+            initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+          />
+        </Box>
       </Container>
     </AdminNav>
   )

@@ -1,4 +1,4 @@
-import type { AnnotationFeature } from '@apollo-annotation/mst'
+import type { AnnotationFeature, Children } from '@apollo-annotation/mst'
 import { Button, Typography } from '@mui/material'
 import { observer } from 'mobx-react'
 import React from 'react'
@@ -13,8 +13,9 @@ export const FeatureDetailsNavigation = observer(
     feature: AnnotationFeature
   }) {
     const { feature, model } = props
-    const { children, parent } = feature
-    const childFeatures = []
+    const { parent } = feature
+    const children = feature.children as Children
+    const childFeatures: AnnotationFeature[] = []
     if (children) {
       for (const [, child] of children) {
         childFeatures.push(child)

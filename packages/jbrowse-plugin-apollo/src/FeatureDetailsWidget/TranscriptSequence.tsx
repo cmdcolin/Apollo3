@@ -181,9 +181,7 @@ export const TranscriptSequence = observer(function TranscriptSequence({
 
   const defaultSelectedOption: SegmentListType = 'genomic'
   const defaultSequenceOptions: SegmentListType[] = ['genomic', 'cDNA']
-  const [sequenceOptions, setSequenceOptions] = useState<SegmentListType[]>(
-    defaultSequenceOptions,
-  )
+  const [sequenceOptions, setSequenceOptions] = useState(defaultSequenceOptions)
   const [selectedOption, setSelectedOption] = useState<SegmentListType>(
     defaultSelectedOption,
   )

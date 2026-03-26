@@ -52,9 +52,7 @@ export function groupIntoGeneModels(alignments: MiniprotAlignment[]) {
     if (!key) {
       continue
     }
-    if (!groups[key]) {
-      groups[key] = []
-    }
+    groups[key] ??= []
     groups[key].push(aln)
   }
   return Object.values(groups)

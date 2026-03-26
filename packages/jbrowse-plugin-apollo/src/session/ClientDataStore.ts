@@ -46,8 +46,6 @@ import { OntologyManagerType } from '../OntologyManager'
 import type ApolloPluginConfigurationSchema from '../config'
 import type { ApolloRootModel } from '../types'
 
-import type { ApolloSessionModel } from './session'
-
 export function clientDataStoreFactory(
   AnnotationFeatureExtended: typeof AnnotationFeatureModel,
 ) {
@@ -232,18 +230,14 @@ export function clientDataStoreFactory(
           }
           const { assemblyName, refName } = region
           let assembly = self.assemblies.get(assemblyName)
-          if (!assembly) {
-            assembly = self.assemblies.put({ _id: assemblyName, refSeqs: {} })
-          }
+          assembly ??= self.assemblies.put({ _id: assemblyName, refSeqs: {} })
           const [firstFeature] = features
           let ref = assembly.refSeqs.get(firstFeature.refSeq)
-          if (!ref) {
-            ref = assembly.refSeqs.put({
-              _id: firstFeature.refSeq,
-              name: refName,
-              features: {},
-            })
-          }
+          ref ??= assembly.refSeqs.put({
+            _id: firstFeature.refSeq,
+            name: refName,
+            features: {},
+          })
           for (const feature of features) {
             if (!ref.features.has(feature._id)) {
               ref.features.put(feature)
@@ -264,17 +258,13 @@ export function clientDataStoreFactory(
           const { refSeq, seq } = yield backendDriver.getSequence(region)
           const { assemblyName, end, refName, start } = region
           let assembly = self.assemblies.get(assemblyName)
-          if (!assembly) {
-            assembly = self.assemblies.put({ _id: assemblyName, refSeqs: {} })
-          }
+          assembly ??= self.assemblies.put({ _id: assemblyName, refSeqs: {} })
           let ref = assembly.refSeqs.get(refSeq)
-          if (!ref) {
-            ref = assembly.refSeqs.put({
-              _id: refSeq,
-              name: refName,
-              sequence: [],
-            })
-          }
+          ref ??= assembly.refSeqs.put({
+            _id: refSeq,
+            name: refName,
+            sequence: [],
+          })
           ref.addSequence({ start, stop: end, sequence: seq })
         }
       }),

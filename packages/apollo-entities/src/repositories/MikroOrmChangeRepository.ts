@@ -101,9 +101,9 @@ export class MikroOrmChangeRepository implements ChangeRepository {
       )
       const start = opts.offset ?? 0
       const end = opts.limit ? start + opts.limit : undefined
-      return matched.slice(start, end).map(toRow)
+      return matched.slice(start, end).map((x) => toRow(x))
     }
-    return entities.map(toRow)
+    return entities.map((x) => toRow(x))
   }
 
   async countByGeneId(geneId: string) {

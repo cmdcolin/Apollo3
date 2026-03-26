@@ -62,7 +62,7 @@ export class MikroOrmTextSearchAdapterConfigRepository implements TextSearchAdap
       { assemblies: assemblyId },
       POPULATE,
     )
-    return entities.map(toRow)
+    return entities.map((x) => toRow(x))
   }
 
   async findByAssemblyIds(assemblyIds: string[]) {
@@ -74,7 +74,7 @@ export class MikroOrmTextSearchAdapterConfigRepository implements TextSearchAdap
       { assemblies: { $in: assemblyIds } },
       POPULATE,
     )
-    return entities.map(toRow)
+    return entities.map((x) => toRow(x))
   }
 
   async findAll() {
@@ -83,7 +83,7 @@ export class MikroOrmTextSearchAdapterConfigRepository implements TextSearchAdap
       {},
       POPULATE,
     )
-    return entities.map(toRow)
+    return entities.map((x) => toRow(x))
   }
 
   async create(row: TextSearchAdapterConfigRow) {

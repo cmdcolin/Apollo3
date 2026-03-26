@@ -19,12 +19,12 @@
     "src"
   ],
   "scripts": {
-    "build": "pnpm -w run build:shared && pnpm clean && tsc --noEmit && node esbuild.mjs",
+    "build": "pnpm -w run build:shared && pnpm clean && tsc --noEmit && node --experimental-strip-types esbuild.mts",
     "clean": "rimraf dist",
     "prepack": "NODE_ENV=production pnpm build",
     "prepublishOnly": "pnpm test",
     "setup": "rimraf .jbrowse && jbrowse create .jbrowse",
-    "start": "pnpm -w run build:shared && pnpm clean && node esbuild.mjs --watch",
+    "start": "pnpm -w run build:shared && pnpm clean && node --experimental-strip-types esbuild.mts --watch",
     "test": "node --experimental-vm-modules ./node_modules/.bin/jest",
     "test:ci": "node --experimental-vm-modules ./node_modules/.bin/jest --coverage",
     "test:e2e": "bash scripts/e2e-servers.sh test",

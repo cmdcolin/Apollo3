@@ -1,4 +1,4 @@
-import type { AnnotationFeature } from '@apollo-annotation/mst'
+import type { AnnotationFeature, Children } from '@apollo-annotation/mst'
 
 export function getFeatureName(feature: AnnotationFeature) {
   const { attributes } = feature
@@ -54,9 +54,9 @@ export function getStrand(strand: number | undefined) {
 
 function getChildren(feature: AnnotationFeature): AnnotationFeature[] {
   const children: AnnotationFeature[] = []
-  //
-  if (feature.children) {
-    for (const [, ff] of feature.children) {
+  const featureChildren = feature.children as Children
+  if (featureChildren) {
+    for (const [, ff] of featureChildren) {
       children.push(ff)
     }
   }
@@ -96,10 +96,10 @@ export function getRelatedFeatures(
   // Also add siblings , i.e. features having the same parent as the clicked
   // one and intersecting the click position
   if (feature.parent) {
-    const siblings = feature.parent.children
+    const siblings = feature.parent.children as Children
     if (siblings) {
       for (const [, sib] of siblings) {
-        if (sib._id == feature._id) {
+        if (sib._id === feature._id) {
           continue
         }
         if (sib.min < bp && sib.max >= bp) {

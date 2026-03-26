@@ -28,9 +28,11 @@ export class LocalBlastRunner implements AnalysisRunner {
   }
 
   async run(context: RunContext) {
-    const program = String(context.job.params.program ?? '')
-    const query = String(context.job.params.query ?? '')
-    const databaseId = String(context.job.params.databaseId ?? '')
+    const { params } = context.job
+    const program = typeof params.program === 'string' ? params.program : ''
+    const query = typeof params.query === 'string' ? params.query : ''
+    const databaseId =
+      typeof params.databaseId === 'string' ? params.databaseId : ''
 
     const analysisDb = await context.db.analysisDb.findById(databaseId)
     if (!analysisDb?.dbPath) {
@@ -65,8 +67,11 @@ export class LocalBlastRunner implements AnalysisRunner {
         context.signal,
       )
 
-      const parsed = JSON.parse(stdout)
-      if (parsed.BlastOutput2 && Array.isArray(parsed.BlastOutput2)) {
+      const parsed = JSON.parse(stdout) as { BlastOutput2?: unknown[] }
+      if (
+        Array.isArray(parsed.BlastOutput2) &&
+        parsed.BlastOutput2.length > 0
+      ) {
         return parsed.BlastOutput2[0]
       }
       return parsed
@@ -76,7 +81,8 @@ export class LocalBlastRunner implements AnalysisRunner {
   }
 
   async buildDb(context: BuildDbContext) {
-    const program = String(context.params.program ?? '')
+    const program =
+      typeof context.params.program === 'string' ? context.params.program : ''
     const dbType = ['blastp', 'blastx'].includes(program) ? 'prot' : 'nucl'
 
     const dbDir = path.resolve(DB_DIR)

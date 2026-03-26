@@ -55,9 +55,7 @@ export default class Download extends BaseCommand<typeof Download> {
       `files/${fileId}`,
     )
     let { output } = flags
-    if (output === undefined) {
-      output = fileRec['basename' as keyof typeof fileRec] as string
-    }
+    output ??= fileRec['basename' as keyof typeof fileRec] as string
     const fileWriteStream = createWriteStream(output)
     await res.body?.pipeTo(
       Writable.toWeb(output === '-' ? process.stdout : fileWriteStream),

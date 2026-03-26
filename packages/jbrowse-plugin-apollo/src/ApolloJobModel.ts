@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-confusing-void-expression */
 import {
   type SessionWithWidgets,
@@ -36,13 +35,11 @@ export const ApolloJobModel = types
     get jobStatusWidget() {
       const { widgets } = getSession(self) as SessionWithWidgets
       let jobStatusWidget = widgets.get('JobsList')
-      if (!jobStatusWidget) {
-        // @ts-expect-error: addWidget function not detected on the session
-        jobStatusWidget = getSession(self).addWidget(
-          'JobsListWidget',
-          'JobsList',
-        )
-      }
+      // @ts-expect-error: addWidget function not detected on the session
+      jobStatusWidget ??= getSession(self).addWidget(
+        'JobsListWidget',
+        'JobsList',
+      )
       return jobStatusWidget as unknown as JobsListModel
     },
   }))

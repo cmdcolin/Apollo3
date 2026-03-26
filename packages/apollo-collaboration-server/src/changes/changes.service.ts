@@ -17,7 +17,10 @@ import { Inject, Injectable, Logger } from '@nestjs/common'
 
 import { ChecksService } from '../checks/checks.service.js'
 import { MessagesGateway } from '../messages/messages.gateway.js'
-import { DatabaseService } from '../mikro-orm/database.service.js'
+import {
+  DatabaseService,
+  type TransactionScope,
+} from '../mikro-orm/database.service.js'
 import { PluginsService } from '../plugins/plugins.service.js'
 
 import type { FindChangeDto } from './dto/find-change.dto.js'
@@ -32,7 +35,7 @@ export class ChangesService {
   ) {}
 
   private buildServerDataStore(
-    scope: import('../mikro-orm/database.service.js').TransactionScope,
+    scope: TransactionScope,
     user: string,
   ): ServerDataStore {
     return {

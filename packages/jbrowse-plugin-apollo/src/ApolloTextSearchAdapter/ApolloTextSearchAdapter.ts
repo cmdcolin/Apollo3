@@ -75,7 +75,9 @@ export class ApolloTextSearchAdapter
         )
         results.push(...this.mapBaseResult(features, assembly, query))
       } catch (error) {
-        console.warn(`[apollo-debug] ApolloTextSearchAdapter ERROR: ${error}`)
+        console.warn(
+          `[apollo-debug] ApolloTextSearchAdapter ERROR: ${String(error)}`,
+        )
       }
     }
 

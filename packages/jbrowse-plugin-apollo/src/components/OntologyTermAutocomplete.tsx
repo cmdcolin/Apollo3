@@ -1,12 +1,10 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-condition */
-
 import type { AbstractSessionModel } from '@jbrowse/core/util'
 import {
   Autocomplete,
   type AutocompleteRenderInputParams,
   TextField,
 } from '@mui/material'
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 
 import { type OntologyTerm, isDeprecated } from '../OntologyManager'
 import type { OntologyLookup } from '../OntologyManager/OntologyLookup'
@@ -47,21 +45,12 @@ export function OntologyTermAutocomplete({
   value: valueString,
 }: OntologyTermAutocompleteProps) {
   const [open, setOpen] = useState(false)
-  const [termChoices, setTermChoices] = useState<OntologyTerm[] | undefined>()
-  const [currentOntologyTermInvalid, setCurrentOntologyTermInvalid] =
-    useState('')
-  const [currentOntologyTerm, setCurrentOntologyTerm] = useState<
-    OntologyTerm | undefined
-  >()
 
   const { ontologyManager } = session.apolloDataStore
   const ontologyStore = ontologyManager.findOntology(
     ontologyName,
     ontologyVersion,
   )?.dataStore
-
-  const needToLoadTermChoices = ontologyStore && open && !termChoices
-  const needToLoadCurrentTerm = ontologyStore && !currentOntologyTerm
 
   const filterTerms = useCallback(
     (term: OntologyTerm) =>
@@ -71,43 +60,34 @@ export function OntologyTermAutocomplete({
     [filterTermsProp, includeDeprecated],
   )
 
-  // effect for matching the current value with an ontology term
-  useEffect(() => {
-    if (needToLoadCurrentTerm && ontologyStore) {
-      try {
-        const term = getCurrentTerm(ontologyStore, valueString, filterTerms)
-        setCurrentOntologyTermInvalid('')
-        setCurrentOntologyTerm(term)
-      } catch (error) {
-        setCurrentOntologyTermInvalid(String(error))
-      }
+  const currentOntologyTermInvalid = useMemo(() => {
+    if (!ontologyStore) {
+      return ''
     }
-  }, [session, valueString, filterTerms, ontologyStore, needToLoadCurrentTerm])
+    try {
+      getCurrentTerm(ontologyStore, valueString, filterTerms)
+      return ''
+    } catch (error) {
+      return String(error)
+    }
+  }, [ontologyStore, valueString, filterTerms])
 
-  // effect for loading term autocompletions
-  useEffect(() => {
-    if (needToLoadTermChoices && ontologyStore) {
-      try {
-        const soTerms = getValidTerms(
-          ontologyStore,
-          fetchValidTerms,
-          filterTerms,
-        )
-        setTermChoices(soTerms)
-      } catch (error) {
-        ;(session as unknown as AbstractSessionModel).notify(
-          error instanceof Error ? error.message : String(error),
-          'error',
-        )
-      }
+  const termChoices = useMemo(() => {
+    if (!ontologyStore || !open) {
+      return
     }
-  }, [
-    needToLoadTermChoices,
-    filterTerms,
-    ontologyStore,
-    session,
-    fetchValidTerms,
-  ])
+    try {
+      return getValidTerms(ontologyStore, fetchValidTerms, filterTerms)
+    } catch (error) {
+      ;(session as unknown as AbstractSessionModel).notify(
+        error instanceof Error ? error.message : String(error),
+        'error',
+      )
+      return []
+    }
+  }, [ontologyStore, open, fetchValidTerms, filterTerms, session])
+
+  const needToLoadTermChoices = ontologyStore && open && !termChoices
 
   const handleChange = (
     event: React.SyntheticEvent,
@@ -116,13 +96,10 @@ export function OntologyTermAutocomplete({
     if (!newValue) {
       return
     }
-    if (typeof newValue === 'string') {
-      setCurrentOntologyTerm(undefined)
-      onChange(valueString, newValue)
-    } else if (newValue.lbl !== valueString) {
-      setCurrentOntologyTermInvalid('')
-      setCurrentOntologyTerm(newValue)
+    if (typeof newValue !== 'string' && newValue.lbl !== valueString) {
       onChange(valueString, newValue.lbl)
+    } else if (typeof newValue === 'string') {
+      onChange(valueString, newValue)
     }
   }
 
@@ -197,13 +174,9 @@ function getValidTerms(
   let result: OntologyTerm[] | undefined
   if (fetchValidTerms) {
     const customTermList = fetchValidTerms(ontologyStore)
-    if (customTermList) {
-      result = customTermList
-    }
+    result ??= customTermList
   }
 
-  if (!result) {
-    result = ontologyStore.getAllTerms()
-  }
+  result ??= ontologyStore.getAllTerms()
   return filterTerms ? result.filter((element) => filterTerms(element)) : result
 }

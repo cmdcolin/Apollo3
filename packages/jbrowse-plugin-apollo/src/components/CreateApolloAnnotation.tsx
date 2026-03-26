@@ -170,7 +170,7 @@ export function CreateApolloAnnotation({
   )
 
   const [parentFeatureChecked, setParentFeatureChecked] = useState(true)
-  const [checkedChildrens, setCheckedChildrens] = useState<string[]>(childIds)
+  const [checkedChildrens, setCheckedChildrens] = useState(childIds)
   const [errorMessage, setErrorMessage] = useState('')
   const [destinationFeatures, setDestinationFeatures] = useState<
     AnnotationFeatureSnapshot[]

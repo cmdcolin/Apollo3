@@ -157,7 +157,8 @@ export class AuthenticationService {
         infer: true,
       })
       if (clientIDFile) {
-        microsoftClientID = (await fs.readFile(clientIDFile, 'utf8')).trim()
+        const content = await fs.readFile(clientIDFile, 'utf8')
+        microsoftClientID = content.trim()
       }
     }
     let googleClientID = this.configService.get('GOOGLE_CLIENT_ID', {
@@ -168,7 +169,8 @@ export class AuthenticationService {
         infer: true,
       })
       if (clientIDFile) {
-        googleClientID = (await fs.readFile(clientIDFile, 'utf8')).trim()
+        const googleContent = await fs.readFile(clientIDFile, 'utf8')
+        googleClientID = googleContent.trim()
       }
     }
     const allowGuestUser = this.configService.get('ALLOW_GUEST_USER', {
@@ -245,7 +247,8 @@ export class AuthenticationService {
         infer: true,
       })
       if (passwordFile) {
-        rootPassword = (await fs.readFile(passwordFile, 'utf8')).trim()
+        const passwordContent = await fs.readFile(passwordFile, 'utf8')
+        rootPassword = passwordContent.trim()
       }
     }
     if (rootPassword && password === rootPassword) {
@@ -291,7 +294,7 @@ export class AuthenticationService {
       username: user.username,
       email: user.email,
       role: user.role,
-      id: String(user._id),
+      id: user._id,
     }
     const returnToken = this.jwtService.sign(payload)
     return { token: returnToken }

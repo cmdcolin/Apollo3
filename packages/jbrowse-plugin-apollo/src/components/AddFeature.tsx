@@ -95,8 +95,8 @@ export function AddFeature({
 }: AddFeatureProps) {
   const [end, setEnd] = useState(String(region.end))
   const [start, setStart] = useState(String(region.start + 1))
-  const [type, setType] = useState<NewFeature>(NewFeature.GENE_AND_SUBFEATURES)
-  const [customType, setCustomType] = useState<string>('')
+  const [type, setType] = useState(NewFeature.GENE_AND_SUBFEATURES)
+  const [customType, setCustomType] = useState('')
   const [strand, setStrand] = useState<1 | -1 | undefined>()
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -233,7 +233,7 @@ export function AddFeature({
     }
   }
 
-  let submitDisabled: boolean = Boolean(error) || !(start && end && type)
+  let submitDisabled = error || !(start && end && type)
   if (
     (type === NewFeature.CUSTOM && !customType) ||
     (!strand && type === NewFeature.GENE_AND_SUBFEATURES) ||

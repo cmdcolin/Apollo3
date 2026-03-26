@@ -46,7 +46,7 @@ export function AddChildFeature({
     const terms = fetchValidDescendantTerms(sourceFeature, ontologyStore)
     if (!terms) {
       setTypeWarningText(
-        `Type "${sourceFeature?.type}" does not have any children in the ontology`,
+        `Type "${sourceFeature.type}" does not have any children in the ontology`,
       )
       return
     }

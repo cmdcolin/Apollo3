@@ -1,4 +1,4 @@
-import type { AnnotationFeature } from '@apollo-annotation/mst'
+import type { AnnotationFeature, Children } from '@apollo-annotation/mst'
 import {
   Checkbox,
   DialogContent,
@@ -26,8 +26,9 @@ export const FilterTranscripts = observer(function FilterTranscripts({
   onUpdate,
 }: FilterTranscriptsProps) {
   const allTranscripts: string[] = []
-  if (sourceFeature.children) {
-    for (const [, child] of sourceFeature.children) {
+  const sourceChildren = sourceFeature.children as Children
+  if (sourceChildren) {
+    for (const [, child] of sourceChildren) {
       const childID: string | undefined = child.attributes
         .get('gff_id')
         ?.toString()
@@ -37,7 +38,7 @@ export const FilterTranscripts = observer(function FilterTranscripts({
     }
   }
   const [excludedTranscripts, setExcludedTranscripts] =
-    useState<string[]>(filteredTranscripts)
+    useState(filteredTranscripts)
   const handleChange = (value: string) => {
     const newForms = excludedTranscripts.includes(value)
       ? excludedTranscripts.filter((form) => form !== value)

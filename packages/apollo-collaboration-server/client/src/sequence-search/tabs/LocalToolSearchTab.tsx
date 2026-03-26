@@ -1,7 +1,6 @@
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Divider from '@mui/material/Divider'
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
@@ -65,7 +64,11 @@ export function LocalToolSearchTab({
       return 'Protein sequence (FASTA or plain)'
     }
     if (tool === 'local-blast') {
-      return blastQueryLabel(String(selectedDbConfig?.params?.program ?? ''))
+      return blastQueryLabel(
+        typeof selectedDbConfig?.params.program === 'string'
+          ? selectedDbConfig.params.program
+          : '',
+      )
     }
     return 'Query sequence (FASTA or plain)'
   }
@@ -74,7 +77,7 @@ export function LocalToolSearchTab({
     if (!selectedDbConfig) {
       return
     }
-    const assemblyId = selectedDbConfig.assemblyIds[0]
+    const [assemblyId] = selectedDbConfig.assemblyIds
 
     if (tool === 'ispcr') {
       search.submit(
@@ -153,9 +156,10 @@ export function LocalToolSearchTab({
                   const asmName = asm
                     ? (asm.displayName ?? asm.name)
                     : 'unknown'
-                  const extra = db.params.program
-                    ? ` (${String(db.params.program)})`
-                    : ''
+                  const extra =
+                    typeof db.params.program === 'string' && db.params.program
+                      ? ` (${db.params.program})`
+                      : ''
                   return (
                     <MenuItem key={db._id} value={db._id}>
                       {db.name}

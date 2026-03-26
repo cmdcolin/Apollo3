@@ -38,7 +38,7 @@ export class FilesService {
     return this.configService.get('FILE_UPLOAD_FOLDER', { infer: true })
   }
 
-  async uploadFileFromRequest(req: FileRequest, name: string, size: number) {
+  async uploadFileFromRequest(req: FileRequest, name: string, _size: number) {
     return writeFileAndCalculateHash(
       { originalname: name, stream: req },
       this.uploadFolder,

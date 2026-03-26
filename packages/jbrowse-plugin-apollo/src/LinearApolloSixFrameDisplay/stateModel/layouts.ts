@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 
-import type { AnnotationFeature } from '@apollo-annotation/mst'
+import type { AnnotationFeature, Children } from '@apollo-annotation/mst'
 import type PluginManager from '@jbrowse/core/PluginManager'
 import type { AnyConfigurationSchemaType } from '@jbrowse/core/configuration'
 import {
@@ -133,17 +133,14 @@ export function layoutsModelFactory(
               }
               const layoutRow = featureLayout.get(rowNum)
               layoutRow?.push({ rowNum, feature })
-              const { children } = feature
+              const children = feature.children as Children
               if (!children) {
                 continue
               }
               for (const [, child] of children) {
                 if (featureTypeOntology.isTypeOf(child.type, 'transcript')) {
-                  const {
-                    cdsLocations,
-                    strand,
-                    children: childrenOfmRNA,
-                  } = child
+                  const { cdsLocations, strand } = child
+                  const childrenOfmRNA = child.children as Children
                   if (childrenOfmRNA) {
                     for (const [, exon] of childrenOfmRNA) {
                       if (!featureTypeOntology.isTypeOf(exon.type, 'exon')) {

@@ -32,8 +32,8 @@ export class ExportController {
    * @returns The ID of an export that will be valid for 5 minutes
    */
   @Get('getID')
-  async getExportID(@Query() request: { assembly: string }) {
-    const exportDoc = await this.exportService.getExportID(request.assembly)
+  getExportID(@Query() request: { assembly: string }) {
+    const exportDoc = this.exportService.getExportID(request.assembly)
     return { exportID: exportDoc._id }
   }
 

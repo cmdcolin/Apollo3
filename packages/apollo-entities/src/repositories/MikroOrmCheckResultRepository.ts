@@ -25,12 +25,16 @@ export class MikroOrmCheckResultRepository implements CheckResultRepository {
   constructor(private readonly em: EntityManager) {}
 
   async findByRange(refSeqId: string, start: number, end: number) {
-    const entities = await this.em.find(CheckResultEntity, {
-      refSeq: refSeqId,
-      start: { $lte: end },
-      end: { $gte: start },
-    })
-    return entities.map(toRow)
+    const entities = await this.em.find(
+      CheckResultEntity,
+      {
+        refSeq: refSeqId,
+        start: { $lte: end },
+        end: { $gte: start },
+      },
+      {},
+    )
+    return entities.map((x) => toRow(x))
   }
 
   async create(row: CheckResultRow) {
@@ -70,14 +74,14 @@ export class MikroOrmCheckResultRepository implements CheckResultRepository {
   }
 
   async findByFeatureId(featureId: string) {
-    const entities = await this.em.find(CheckResultEntity, { featureId })
-    return entities.map(toRow)
+    const entities = await this.em.find(CheckResultEntity, { featureId }, {})
+    return entities.map((x) => toRow(x))
   }
 
   async findByRefSeqIds(refSeqIds: string[]) {
     const filter = refSeqIds.length > 0 ? { refSeq: { $in: refSeqIds } } : {}
-    const entities = await this.em.find(CheckResultEntity, filter)
-    return entities.map(toRow)
+    const entities = await this.em.find(CheckResultEntity, filter, {})
+    return entities.map((x) => toRow(x))
   }
 
   async deleteByIds(ids: string[]) {

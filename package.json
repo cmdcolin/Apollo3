@@ -13,7 +13,8 @@
     "start:memory": "pnpm --filter @apollo-annotation/collaboration-server run start:memory",
     "start:guest": "pnpm --filter @apollo-annotation/collaboration-server run start:guest",
     "regenerate-demo-db": "node --experimental-strip-types scripts/regenerate-demo-db.ts",
-    "test": "pnpm -r run test:ci"
+    "test": "pnpm -r run test:ci",
+    "typecheck": "pnpm tsc -b"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

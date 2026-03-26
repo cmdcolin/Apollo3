@@ -19,6 +19,14 @@ export default [
       '**/dist/',
       'packages/website/.docusaurus/',
       'packages/jbrowse-plugin-apollo/.jbrowse/',
+      'packages/jbrowse-plugin-apollo/conf/',
+      'packages/jbrowse-plugin-apollo/pw-tests/',
+      'packages/jbrowse-plugin-apollo/test/',
+      'packages/jbrowse-plugin-apollo/playwright.config.ts',
+      'packages/apollo-entities/src/**/*.test.ts',
+      'packages/apollo-entities/src/test-utils.ts',
+      'packages/apollo-collaboration-server/scripts/dev-build.mjs',
+      'packages/apollo-collaboration-server/client/vite.config.ts',
     ],
   },
   js.configs.recommended,
@@ -33,7 +41,9 @@ export default [
   {
     languageOptions: {
       globals: { ...globals.browser, ...globals.node },
-      parserOptions: { projectService: true },
+      parserOptions: {
+        projectService: true,
+      },
     },
     settings: { react: { version: 'detect' } },
 
@@ -96,6 +106,10 @@ export default [
       ],
       // eslint-plugin-tsdoc rules
       'tsdoc/syntax': 'warn',
+      // eslint-plugin-react rules (override recommended)
+      'react/prop-types': 'off', // TypeScript handles prop types
+      'react/react-in-jsx-scope': 'off', // Not needed with React 17+ JSX transform
+      'react/jsx-uses-react': 'off', // Not needed with React 17+ JSX transform
       // eslint-plugin-unicorn rules (override recommended)
       'unicorn/filename-case': 'off', // Doesn't match our file naming, maybe can be configured later
       'unicorn/no-empty-file': 'off', // False positives
@@ -124,5 +138,36 @@ export default [
   {
     files: ['packages/apollo-cli/src/**/*.ts'],
     rules: { '@typescript-eslint/no-deprecated': 'off' },
+  },
+  {
+    files: [
+      'packages/jbrowse-plugin-apollo/pw-tests/**/*.ts',
+      'packages/jbrowse-plugin-apollo/test/**/*.ts',
+      'packages/apollo-entities/src/**/*.test.ts',
+      'packages/apollo-entities/src/test-utils.ts',
+      'packages/apollo-collaboration-server/src/**/*.spec.ts',
+    ],
+    rules: {
+      'no-console': 'off',
+      'unicorn/numeric-separators-style': 'off',
+      'unicorn/no-process-exit': 'off',
+      'unicorn/prefer-top-level-await': 'off',
+      'import/order': 'off',
+      '@typescript-eslint/consistent-type-imports': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
+    },
+  },
+  {
+    files: [
+      '**/*.mjs',
+      'packages/apollo-collaboration-server/scripts/**/*.ts',
+      'scripts/**/*.ts',
+    ],
+    rules: {
+      'no-console': 'off',
+      'tsdoc/syntax': 'off',
+      'unicorn/no-process-exit': 'off',
+      'unicorn/prefer-top-level-await': 'off',
+    },
   },
 ]

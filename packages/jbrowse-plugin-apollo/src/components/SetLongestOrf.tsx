@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 
-import type { AnnotationFeature } from '@apollo-annotation/mst'
+import type { AnnotationFeature, Children } from '@apollo-annotation/mst'
 import {
   SetCdsBoundsChange,
   buildExonMappings,
@@ -105,8 +105,9 @@ export function SetLongestOrf({
 
   const exons = useMemo(() => {
     const result: AnnotationFeature[] = []
-    if (sourceFeature.children) {
-      for (const [, child] of sourceFeature.children) {
+    const sourceChildren = sourceFeature.children as Children
+    if (sourceChildren) {
+      for (const [, child] of sourceChildren) {
         if (child.type === 'exon') {
           result.push(child)
         }
@@ -117,8 +118,9 @@ export function SetLongestOrf({
 
   const cdsChildren = useMemo(() => {
     const result: AnnotationFeature[] = []
-    if (sourceFeature.children) {
-      for (const [, child] of sourceFeature.children) {
+    const sourceChildren = sourceFeature.children as Children
+    if (sourceChildren) {
+      for (const [, child] of sourceChildren) {
         if (child.type === 'CDS') {
           result.push(child)
         }

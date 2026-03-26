@@ -1,5 +1,5 @@
 import { createReadStream } from 'node:fs'
-import { open, unlink } from 'node:fs/promises'
+import { type FileHandle, open, unlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import type { Readable } from 'node:stream'
@@ -29,7 +29,7 @@ export class ExportService {
     return assembly.name
   }
 
-  async getExportID(assembly: string) {
+  getExportID(assembly: string) {
     return { _id: `v2export:${assembly}` }
   }
 
@@ -60,13 +60,15 @@ export class ExportService {
     await fh.close()
     const resultStream = createReadStream(tmpFile)
     resultStream.on('close', () => {
-      unlink(tmpFile).catch(() => {})
+      unlink(tmpFile).catch(() => {
+        /* ignore cleanup errors */
+      })
     })
     return [resultStream, assemblyId]
   }
 
   private async writeGFF3Header(
-    fh: import('node:fs/promises').FileHandle,
+    fh: FileHandle,
     refSeqs: { name: string; length: number }[],
   ) {
     await fh.write('##gff-version 3\n')
@@ -76,7 +78,7 @@ export class ExportService {
   }
 
   private async writeGFF3Features(
-    fh: import('node:fs/promises').FileHandle,
+    fh: FileHandle,
     refSeqs: { _id: string; length: number }[],
     refSeqNames: Record<string, string>,
   ) {
@@ -104,7 +106,7 @@ export class ExportService {
   }
 
   private async writeFasta(
-    fh: import('node:fs/promises').FileHandle,
+    fh: FileHandle,
     refSeqs: {
       _id: string
       name: string

@@ -4,7 +4,6 @@ import { fileURLToPath } from 'node:url'
 
 import {
   deleteAssemblies,
-  getGuestToken,
   loginAsGuest,
   selectFromApolloMenu,
 } from './helpers.js'
@@ -25,225 +24,133 @@ async function assertAssemblyLoaded(
   page: import('@playwright/test').Page,
   assemblyName: string,
 ) {
-  // After reload, verify the assembly appears in the "Select assembly to view" dropdown
   await expect(page.getByText('Select assembly to view')).toBeVisible({
     timeout: 15_000,
   })
   await expect(page.getByText(assemblyName)).toBeVisible({ timeout: 10_000 })
 }
 
-async function addAssemblyViaMenu(page: import('@playwright/test').Page) {
-  await selectFromApolloMenu(page, ['Admin', 'Add Assembly'])
+async function goToAddAssemblyPage(page: import('@playwright/test').Page) {
+  await page.goto('/admin/add-assembly/')
+  await expect(page.getByRole('heading', { name: 'Add Assembly' })).toBeVisible(
+    { timeout: 10_000 },
+  )
 }
 
-async function fillAssemblyName(
-  page: import('@playwright/test').Page,
-  name: string,
-) {
+test('Can add assembly from fasta file path', async ({ page }) => {
+  await goToAddAssemblyPage(page)
+  await page.getByLabel('Assembly name').fill('volvox')
   await page
-    .locator('form[data-testid="submit-form"]')
-    .locator('input[type="TextField"]')
-    .fill(name)
-}
-
-async function submitAndWaitForSuccess(page: import('@playwright/test').Page) {
+    .getByLabel('FASTA file path (server-accessible)')
+    .fill(path.join(TEST_DATA, 'volvox.fa'))
   await page
-    .locator('form[data-testid="submit-form"]')
-    .locator('Button[data-testid="submit-button"]')
-    .click()
-  await expect(page.getByText('added successfully')).toBeVisible({
-    timeout: 60_000,
+    .getByLabel('FAI index path (defaults to FASTA + .fai)')
+    .fill(path.join(TEST_DATA, 'volvox.fa.fai'))
+  await page.getByRole('button', { name: 'Create Assembly' }).click()
+  await expect(page.getByText('Assembly "volvox" created.')).toBeVisible({
+    timeout: 30_000,
   })
-  await page.reload()
+  await page.goto('/jbrowse/')
+  await assertAssemblyLoaded(page, 'volvox')
+})
+
+test('Can add assembly from 2bit file path', async ({ page }) => {
+  await goToAddAssemblyPage(page)
+  await page.getByLabel('Assembly name').fill('volvox')
+  await page.getByLabel('Sequence source type').click()
+  await page.getByRole('option', { name: '2bit' }).click()
+  await page
+    .getByLabel('2bit file path (server-accessible)')
+    .fill(path.join(TEST_DATA, 'volvox.2bit'))
+  await page.getByRole('button', { name: 'Create Assembly' }).click()
+  await expect(page.getByText('Assembly "volvox" created.')).toBeVisible({
+    timeout: 30_000,
+  })
+  await page.goto('/jbrowse/')
+  await assertAssemblyLoaded(page, 'volvox')
+})
+
+test('Can add assembly from gzip fasta path', async ({ page }) => {
+  await goToAddAssemblyPage(page)
+  await page.getByLabel('Assembly name').fill('volvox')
+  await page
+    .getByLabel('FASTA file path (server-accessible)')
+    .fill(path.join(TEST_DATA, 'volvox.fa.gz'))
+  await page
+    .getByLabel('FAI index path (defaults to FASTA + .fai)')
+    .fill(path.join(TEST_DATA, 'volvox.fa.gz.fai'))
+  await page
+    .getByLabel('GZI index path (for bgzip-compressed FASTA)')
+    .fill(path.join(TEST_DATA, 'volvox.fa.gz.gzi'))
+  await page.getByRole('button', { name: 'Create Assembly' }).click()
+  await expect(page.getByText('Assembly "volvox" created.')).toBeVisible({
+    timeout: 30_000,
+  })
+  await page.goto('/jbrowse/')
+  await assertAssemblyLoaded(page, 'volvox')
+})
+
+test('Shows error when assembly name is missing', async ({ page }) => {
+  await goToAddAssemblyPage(page)
+  await page
+    .getByLabel('FASTA file path (server-accessible)')
+    .fill(path.join(TEST_DATA, 'volvox.fa'))
+  await page.getByRole('button', { name: 'Create Assembly' }).click()
+  await expect(page.getByText('Assembly name is required')).toBeVisible()
+})
+
+test('Change log records assembly creation with index files', async ({
+  page,
+}) => {
+  await goToAddAssemblyPage(page)
+  await page.getByLabel('Assembly name').fill('volvox')
+  await page
+    .getByLabel('FASTA file path (server-accessible)')
+    .fill(path.join(TEST_DATA, 'volvox.fa.gz'))
+  await page
+    .getByLabel('FAI index path (defaults to FASTA + .fai)')
+    .fill(path.join(TEST_DATA, 'volvox.fa.gz.fai'))
+  await page
+    .getByLabel('GZI index path (for bgzip-compressed FASTA)')
+    .fill(path.join(TEST_DATA, 'volvox.fa.gz.gzi'))
+  await page.getByRole('button', { name: 'Create Assembly' }).click()
+  await expect(page.getByText('Assembly "volvox" created.')).toBeVisible({
+    timeout: 30_000,
+  })
+  await page.goto('/jbrowse/')
   await expect(page.getByRole('button', { name: 'Apollo' })).toBeEnabled({
     timeout: 15_000,
   })
-  const launchButton = page.getByRole('button', { name: 'Launch view' })
-  if (await launchButton.isVisible({ timeout: 3_000 }).catch(() => false)) {
-    await launchButton.click()
-  }
-}
-
-// TODO: The GFF3 input tab in the Add Assembly UI has not yet been updated to
-// use the new POST /assemblies + client-side feature loading approach.
-// These tests are skipped until the frontend form is updated.
-test.skip('Can add assembly and features from gff3', async ({ page }) => {
-  await addAssemblyViaMenu(page)
-  const form = page.locator('form[data-testid="submit-form"]')
-  await fillAssemblyName(page, 'volvox')
-
-  await form.getByText('GFF3 input').click()
-  await form
-    .locator('input[data-testid="gff3-input-file"]')
-    .setInputFiles(path.join(TEST_DATA, 'volvox.fasta.gff3'))
-  await submitAndWaitForSuccess(page)
-  await assertAssemblyLoaded(page, 'volvox')
-})
-
-test.skip('Can add assembly from gff3 without importing features', async ({
-  page,
-}) => {
-  await addAssemblyViaMenu(page)
-  const form = page.locator('form[data-testid="submit-form"]')
-  await fillAssemblyName(page, 'volvox')
-
-  await form.getByText('GFF3 input').click()
-  await form
-    .locator('input[data-testid="gff3-input-file"]')
-    .setInputFiles(path.join(TEST_DATA, 'volvox.fasta.gff3'))
-
-  await form
-    .getByText('Load features from GFF3 file')
-    .locator('..')
-    .locator('input[type="checkbox"]')
-    .click()
-
-  await submitAndWaitForSuccess(page)
-  await assertAssemblyLoaded(page, 'volvox')
-})
-
-test('Can add assembly from editable gzip fasta', async ({ page }) => {
-  await addAssemblyViaMenu(page)
-  const form = page.locator('form[data-testid="submit-form"]')
-  await fillAssemblyName(page, 'volvox')
-
-  // Check "sequence is editable"
-  await form
-    .locator('[data-testid="sequence-is-editable-checkbox"]')
-    .locator('input[type="checkbox"]')
-    .click()
-
-  await form
-    .locator('input[data-testid="fasta-input-file"]')
-    .setInputFiles(path.join(TEST_DATA, 'volvox.fa.gz'))
-
-  // Index files should be disabled when sequence is editable
-  await expect(
-    form.locator('input[data-testid="fai-input-file"]'),
-  ).toBeDisabled()
-  await expect(
-    form.locator('input[data-testid="gzi-input-file"]'),
-  ).toBeDisabled()
-
-  await submitAndWaitForSuccess(page)
-  await assertAssemblyLoaded(page, 'volvox')
-})
-
-test('Can add assembly from non-editable fasta', async ({ page }) => {
-  await addAssemblyViaMenu(page)
-  const form = page.locator('form[data-testid="submit-form"]')
-  await fillAssemblyName(page, 'volvox')
-
-  // Submit should be disabled without index files
-  await expect(
-    form.locator('Button[data-testid="submit-button"]'),
-  ).toBeDisabled()
-
-  // Gzip checkbox should be checked and disabled
-  const gzipCheckbox = form
-    .locator('[data-testid="fasta-is-gzip-checkbox"]')
-    .locator('input[type="checkbox"]')
-  await expect(gzipCheckbox).toBeChecked()
-  await expect(gzipCheckbox).toBeDisabled()
-
-  await form
-    .locator('input[data-testid="fasta-input-file"]')
-    .setInputFiles(path.join(TEST_DATA, 'volvox.fa.gz'))
-  await form
-    .locator('input[data-testid="fai-input-file"]')
-    .setInputFiles(path.join(TEST_DATA, 'volvox.fa.gz.fai'))
-  await form
-    .locator('input[data-testid="gzi-input-file"]')
-    .setInputFiles(path.join(TEST_DATA, 'volvox.fa.gz.gzi'))
-
-  await submitAndWaitForSuccess(page)
-  await assertAssemblyLoaded(page, 'volvox')
-
-  // Verify change log contains index file references
-  await selectFromApolloMenu(page, ['View Change Log'])
+  await selectFromApolloMenu(page, ['View', 'Change log'])
   const textarea = page.locator('textarea')
   await expect(textarea).toContainText('"gzi":')
   await expect(textarea).toContainText('"fai":')
 })
 
-test('Keep original defaults when switching panels', async ({ page }) => {
-  await addAssemblyViaMenu(page)
-  const form = page.locator('form[data-testid="submit-form"]')
-  await fillAssemblyName(page, 'volvox')
+test('Source type switch resets file path', async ({ page }) => {
+  await goToAddAssemblyPage(page)
+  await page.getByLabel('Assembly name').fill('volvox')
+  await page
+    .getByLabel('FASTA file path (server-accessible)')
+    .fill(path.join(TEST_DATA, 'volvox.fa'))
 
-  // Select GFF3 first (implicitly enables editable mode)
-  await form.getByText('GFF3 input').click()
-  await form
-    .locator('input[data-testid="gff3-input-file"]')
-    .setInputFiles(path.join(TEST_DATA, 'volvox.fasta.gff3'))
-
-  // Switch back to FASTA input
-  await form.getByText('FASTA input').click()
-
-  // Indexes should still be required (not disabled)
+  // Switch to 2bit — FASTA field should disappear
+  await page.getByLabel('Sequence source type').click()
+  await page.getByRole('option', { name: '2bit' }).click()
   await expect(
-    form.locator('input[data-testid="fai-input-file"]'),
-  ).toBeEnabled()
+    page.getByLabel('FASTA file path (server-accessible)'),
+  ).not.toBeVisible()
   await expect(
-    form.locator('input[data-testid="gzi-input-file"]'),
-  ).toBeEnabled()
+    page.getByLabel('2bit file path (server-accessible)'),
+  ).toBeVisible()
 
-  // "sequence is editable" should NOT be checked
-  const editableCheckbox = form
-    .locator('[data-testid="sequence-is-editable-checkbox"]')
-    .locator('input[type="checkbox"]')
-  await expect(editableCheckbox).not.toBeChecked()
-
-  // Click editable → indexes should be disabled
-  await editableCheckbox.click()
+  // Switch back to FASTA — 2bit field should disappear
+  await page.getByLabel('Sequence source type').click()
+  await page.getByRole('option', { name: 'FASTA' }).click()
   await expect(
-    form.locator('input[data-testid="fai-input-file"]'),
-  ).toBeDisabled()
+    page.getByLabel('FASTA file path (server-accessible)'),
+  ).toBeVisible()
   await expect(
-    form.locator('input[data-testid="gzi-input-file"]'),
-  ).toBeDisabled()
-})
-
-test('Can add assembly from remote url', async ({ page }) => {
-  await addAssemblyViaMenu(page)
-  const form = page.locator('form[data-testid="submit-form"]')
-  await fillAssemblyName(page, 'volvox')
-
-  // Switch to URL mode
-  await form
-    .locator('[data-testid="files-on-url-checkbox"]')
-    .locator('input[type="checkbox"]')
-    .click()
-
-  // "sequence is editable" should be disabled in URL mode
-  await expect(
-    form
-      .locator('[data-testid="sequence-is-editable-checkbox"]')
-      .locator('input[type="checkbox"]'),
-  ).toBeDisabled()
-
-  // Gzip should be checked and disabled
-  const gzipCheckbox = form
-    .locator('[data-testid="fasta-is-gzip-checkbox"]')
-    .locator('input[type="checkbox"]')
-  await expect(gzipCheckbox).toBeChecked()
-  await expect(gzipCheckbox).toBeDisabled()
-
-  await form
-    .locator('[data-testid="fasta-input-url"]')
-    .locator('input')
-    .fill('http://localhost:3999/jbrowse/test_data/volvox.fa.gz')
-  await form.locator('[data-testid="fai-input-url"]').locator('input').clear()
-  await form
-    .locator('[data-testid="fai-input-url"]')
-    .locator('input')
-    .fill('http://localhost:3999/jbrowse/test_data/volvox.fa.gz.fai')
-  await form.locator('[data-testid="gzi-input-url"]').locator('input').clear()
-  await form
-    .locator('[data-testid="gzi-input-url"]')
-    .locator('input')
-    .fill('http://localhost:3999/jbrowse/test_data/volvox.fa.gz.gzi')
-
-  await submitAndWaitForSuccess(page)
-  await assertAssemblyLoaded(page, 'volvox')
+    page.getByLabel('2bit file path (server-accessible)'),
+  ).not.toBeVisible()
 })

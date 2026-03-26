@@ -19,7 +19,7 @@
 import assert from 'node:assert'
 import * as crypto from 'node:crypto'
 import fs from 'node:fs'
-import { after, afterEach, before, beforeEach, describe } from 'node:test'
+import { afterEach, before, beforeEach, describe } from 'node:test'
 
 import type {
   AnnotationFeature,

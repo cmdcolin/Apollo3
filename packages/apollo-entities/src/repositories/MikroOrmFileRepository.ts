@@ -32,8 +32,8 @@ export class MikroOrmFileRepository implements FileRepository {
   }
 
   async findAll() {
-    const entities = await this.em.find(FileEntity, {})
-    return entities.map(toRow)
+    const entities = await this.em.find(FileEntity, {}, {})
+    return entities.map((x) => toRow(x))
   }
 
   async create(row: FileRow) {

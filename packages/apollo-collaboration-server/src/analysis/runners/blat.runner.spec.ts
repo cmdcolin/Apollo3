@@ -21,7 +21,7 @@ match\tmis-\trep.\tN's\tQ gap\tQ gap\tT gap\tT gap\tstrand\tQ name\tQ size\tQ st
       '50\t0\t0\t0\t0\t0\t0\t0\t+\tquery1\t50\t0\t50\tctgA\t50000\t1000\t1050\t1\t50,\t0,\t1000,'
     const hits = parsePsl(line)
     expect(hits).toHaveLength(1)
-    const hit = hits[0]
+    const [hit] = hits
     expect(hit.matches).toBe(50)
     expect(hit.misMatches).toBe(0)
     expect(hit.qName).toBe('query1')

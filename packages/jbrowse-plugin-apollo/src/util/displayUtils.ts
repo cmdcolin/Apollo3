@@ -106,8 +106,7 @@ export function clusterResultByMessage<
       const mid = Math.floor(starts.length / 2)
       const median: number =
         starts.length % 2 ? starts[mid] : (starts[mid - 1] + starts[mid]) / 2
-      const clusterId = group[0]._id
-      const { featureId } = group[0]
+      const [{ _id: clusterId, featureId }] = group
 
       clusters.push({
         _id: clusterId,
@@ -171,7 +170,7 @@ export function colorCode(letter: string, theme: Theme) {
     letterUpper === 'G' ||
     letterUpper === 'T'
   ) {
-    return theme.palette.bases[letterUpper].main.toString()
+    return theme.palette.bases[letterUpper].main
   }
   return 'lightgray'
 }

@@ -57,7 +57,7 @@ export const ApolloTranscriptDetailsWidget = observer(
   }) {
     const { classes } = useStyles()
     const DEFAULT_PANELS = ['summary', 'location']
-    const [panelState, setPanelState] = useState<string[]>(DEFAULT_PANELS)
+    const [panelState, setPanelState] = useState(DEFAULT_PANELS)
 
     const { model } = props
     const { assembly, feature, refName } = model

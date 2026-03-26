@@ -7,7 +7,10 @@ import {
   type SerializedFeatureChange,
   type ServerDataStore,
 } from '@apollo-annotation/common'
-import type { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
+import type {
+  AnnotationFeatureSnapshot,
+  Children,
+} from '@apollo-annotation/mst'
 
 import { flattenFeatureSnapshot } from './AddFeatureChange.js'
 import { SplitTranscriptChange } from './SplitTranscriptChange.js'
@@ -118,10 +121,11 @@ export class UndoSplitTranscriptChange extends FeatureChange {
         parentFeature.deleteChild(id)
       }
       // Update parent gene bounds
-      if (parentFeature.children) {
+      const parentChildren = parentFeature.children as Children
+      if (parentChildren) {
         let newMin = Infinity
         let newMax = -Infinity
-        for (const [, child] of parentFeature.children) {
+        for (const [, child] of parentChildren) {
           if (child.min < newMin) {
             newMin = child.min
           }

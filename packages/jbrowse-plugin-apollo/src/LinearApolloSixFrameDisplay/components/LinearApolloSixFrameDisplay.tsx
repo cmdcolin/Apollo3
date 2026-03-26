@@ -4,12 +4,7 @@
 
 import type { CheckResultI } from '@apollo-annotation/mst'
 import { Menu, type MenuItem } from '@jbrowse/core/ui'
-import {
-  type AbstractSessionModel,
-  doesIntersect2,
-  getContainingView,
-  getFrame,
-} from '@jbrowse/core/util'
+import { doesIntersect2, getContainingView, getFrame } from '@jbrowse/core/util'
 import type { LinearGenomeViewModel } from '@jbrowse/plugin-linear-genome-view'
 import ErrorIcon from '@mui/icons-material/Error'
 import LockIcon from '@mui/icons-material/Lock'
@@ -69,7 +64,6 @@ export const LinearApolloSixFrameDisplay = observer(
     if (!isShown) {
       return null
     }
-    const { assemblyManager } = session as unknown as AbstractSessionModel
     return (
       <>
         <div
@@ -145,7 +139,6 @@ export const LinearApolloSixFrameDisplay = observer(
               />
               {lgv.displayedRegions.flatMap((region, idx) => {
                 const widthBp = lgv.bpPerPx * apolloRowHeight
-                const assembly = assemblyManager.get(region.assemblyName)
                 if (showCheckResults) {
                   const apolloAssembly = session.apolloDataStore.assemblies.get(
                     region.assemblyName,

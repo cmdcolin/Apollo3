@@ -78,8 +78,8 @@ export function parseOntology(doc: OboGraphDocument): ParsedOntology {
     const result = new Set<string>()
     const queue = [nodeId]
     while (queue.length > 0) {
-      const current = queue.pop()!
-      if (result.has(current)) {
+      const current = queue.pop()
+      if (current === undefined || result.has(current)) {
         continue
       }
       result.add(current)
@@ -97,8 +97,8 @@ export function parseOntology(doc: OboGraphDocument): ParsedOntology {
     const result = new Set<string>()
     const queue = [nodeId]
     while (queue.length > 0) {
-      const current = queue.pop()!
-      if (result.has(current)) {
+      const current = queue.pop()
+      if (current === undefined || result.has(current)) {
         continue
       }
       result.add(current)

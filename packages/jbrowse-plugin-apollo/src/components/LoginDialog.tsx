@@ -14,7 +14,7 @@ import { Dialog } from './Dialog'
 
 interface LoginDialogProps {
   session: ApolloSessionModel
-  handleClose(): void
+  handleClose: () => void
 }
 
 export function LoginDialog({ handleClose, session }: LoginDialogProps) {
@@ -43,7 +43,7 @@ export function LoginDialog({ handleClose, session }: LoginDialogProps) {
       }
       setLoading(false)
     }
-    fetchLoginTypes().catch((error) => {
+    fetchLoginTypes().catch((error: unknown) => {
       if (!cancelled) {
         setErrorMessage(String(error))
         setLoading(false)

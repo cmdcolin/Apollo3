@@ -81,8 +81,8 @@ export function BlastResultsTable({
   assemblyName: string
 }) {
   const [expandedId, setExpandedId] = useState<number | null>(null)
-  const searchData = results.report?.results?.search
-  const hits = searchData?.hits ?? []
+  const { search: searchData } = results.report.results
+  const { hits } = searchData
   const isProteinResult = PROTEIN_PROGRAMS.has(program)
 
   function handleViewAll() {
@@ -219,10 +219,10 @@ export function BlastResultsTable({
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {program}
-            {searchData?.query_len
+            {searchData.query_len
               ? ` · query length ${searchData.query_len.toLocaleString()} bp`
               : ''}
-            {searchData?.stat?.db_num
+            {searchData.stat.db_num
               ? ` · ${searchData.stat.db_num.toLocaleString()} sequences in database`
               : ''}
           </Typography>

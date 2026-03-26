@@ -30,17 +30,25 @@ export class MikroOrmRefSeqRepository implements RefSeqRepository {
   }
 
   async findByAssembly(assemblyId: string) {
-    const entities = await this.em.find(RefSeqEntity, {
-      assembly: assemblyId,
-    })
-    return entities.map(toRow)
+    const entities = await this.em.find(
+      RefSeqEntity,
+      {
+        assembly: assemblyId,
+      },
+      {},
+    )
+    return entities.map((x) => toRow(x))
   }
 
   async findByAssemblies(assemblyIds: string[]) {
-    const entities = await this.em.find(RefSeqEntity, {
-      assembly: { $in: assemblyIds },
-    })
-    return entities.map(toRow)
+    const entities = await this.em.find(
+      RefSeqEntity,
+      {
+        assembly: { $in: assemblyIds },
+      },
+      {},
+    )
+    return entities.map((x) => toRow(x))
   }
 
   async create(row: RefSeqRow) {
@@ -91,8 +99,8 @@ export class MikroOrmRefSeqRepository implements RefSeqRepository {
   }
 
   async findAll() {
-    const entities = await this.em.find(RefSeqEntity, {})
-    return entities.map(toRow)
+    const entities = await this.em.find(RefSeqEntity, {}, {})
+    return entities.map((x) => toRow(x))
   }
 
   async updateById(id: string, data: Partial<Omit<RefSeqRow, '_id'>>) {

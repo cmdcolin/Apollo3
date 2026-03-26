@@ -104,26 +104,12 @@ export function setupBrowserLogging(page: Page) {
 
 export async function loginAsGuest(page: Page) {
   setupBrowserLogging(page)
-
-  // Get a guest token via API and set it as a cookie on the browser context.
-  // This authenticates the browser before JBrowse loads — no login dialog.
-  const token = await getGuestToken()
-  await page.context().addCookies([
-    {
-      name: 'apollo-token',
-      value: token,
-      domain: 'localhost',
-      path: '/',
-      httpOnly: true,
-      sameSite: 'Lax',
-    },
-  ])
-
-  console.log('[login] Navigating with auth cookie...')
   await page.goto('/jbrowse/')
-
+  const guestButton = page.getByRole('button', { name: 'Continue as Guest' })
+  await expect(guestButton).toBeEnabled({ timeout: 15_000 })
+  await guestButton.click()
   await expect(page.getByRole('button', { name: 'Apollo' })).toBeEnabled({
-    timeout: 20_000,
+    timeout: 30_000,
   })
   console.log('[login] Apollo button ready')
 }
@@ -286,7 +272,9 @@ export async function selectAssemblyToView(
     console.log('[nav] RefSeqs loaded')
     // Close the regions panel by clicking the overview header or pressing Escape
     await page.keyboard.press('Escape')
-    await page.waitForTimeout(500)
+    await expect(
+      page.locator('table').filter({ hasText: location.split(':')[0] }),
+    ).not.toBeVisible({ timeout: 5_000 })
   }
 
   const locationInput = page
@@ -296,7 +284,7 @@ export async function selectAssemblyToView(
   await locationInput.fill(location)
   await locationInput.press('Enter')
   console.log(`[nav] Navigated to ${location}`)
-  await page.waitForTimeout(1000)
+  await page.waitForLoadState('networkidle', { timeout: 3_000 }).catch(() => {})
 }
 
 export async function searchFeatures(

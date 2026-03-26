@@ -36,7 +36,7 @@ export class UsersModule implements OnApplicationBootstrap {
       })
       this.logger.log('Users database bootstrapped')
     } catch (error) {
-      this.logger.error(`Failed to bootstrap users database: ${error}`)
+      this.logger.error(`Failed to bootstrap users database: ${String(error)}`)
     }
   }
 }

@@ -34,9 +34,12 @@ export class BlatRunner implements AnalysisRunner {
   }
 
   async run(context: RunContext) {
-    const query = String(context.job.params.query ?? '')
-    const databaseId = String(context.job.params.databaseId ?? '')
-    const queryType = String(context.job.params.queryType ?? 'dna')
+    const { params } = context.job
+    const query = typeof params.query === 'string' ? params.query : ''
+    const databaseId =
+      typeof params.databaseId === 'string' ? params.databaseId : ''
+    const queryType =
+      typeof params.queryType === 'string' ? params.queryType : 'dna'
 
     const analysisDb = await context.db.analysisDb.findById(databaseId)
     if (!analysisDb?.dbPath) {

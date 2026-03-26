@@ -68,11 +68,9 @@ export function mouseEventsModelIntermediateFactory(
               bp >= f.feature.min &&
               bp <= f.feature.max,
           )
-          if (!foundFeature) {
-            foundFeature = layoutRow.find(
-              (f) => bp >= f.feature.min && bp <= f.feature.max,
-            )
-          }
+          foundFeature ??= layoutRow.find(
+            (f) => bp >= f.feature.min && bp <= f.feature.max,
+          )
         } else {
           foundFeature = layoutRow.find((f) => {
             const { feature } = f

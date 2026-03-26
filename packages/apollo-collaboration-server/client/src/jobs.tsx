@@ -3,14 +3,12 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Container from '@mui/material/Container'
-import Paper from '@mui/material/Paper'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
 import Typography from '@mui/material/Typography'
+import {
+  DataGrid,
+  type GridColDef,
+  type GridRenderCellParams,
+} from '@mui/x-data-grid'
 import { useCallback, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
@@ -55,18 +53,17 @@ function statusColor(status: string): StatusColor {
   }
 }
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleString()
-}
-
 function jobDescription(job: AnalysisJob) {
   const { params } = job
-  if (job.tool === 'tiberius' && params.refSeqName) {
+  if (job.tool === 'tiberius' && typeof params.refSeqName === 'string') {
     const start = Number(params.start ?? 0)
     const end = Number(params.end ?? 0)
     return `${params.refSeqName}:${start.toLocaleString()}-${end.toLocaleString()}`
   }
-  if (params.program && params.database) {
+  if (
+    typeof params.program === 'string' &&
+    typeof params.database === 'string'
+  ) {
     return `${params.program} / ${params.database}`
   }
   return JSON.stringify(params).slice(0, 80)
@@ -99,6 +96,80 @@ function JobsPage() {
     }
   }
 
+  const columns: GridColDef<AnalysisJob>[] = [
+    {
+      field: 'status',
+      headerName: 'Status',
+      width: 120,
+      renderCell: (
+        params: GridRenderCellParams<AnalysisJob, AnalysisJob['status']>,
+      ) => (
+        <Chip
+          label={params.value}
+          size="small"
+          color={statusColor(params.value)}
+          variant="outlined"
+        />
+      ),
+    },
+    { field: 'tool', headerName: 'Tool', width: 120 },
+    {
+      field: 'description',
+      headerName: 'Description',
+      flex: 2,
+      sortable: false,
+      valueGetter: (_value, row) => jobDescription(row),
+    },
+    {
+      field: 'createdAt',
+      headerName: 'Created',
+      flex: 1,
+      valueFormatter: (value: string) => new Date(value).toLocaleString(),
+    },
+    {
+      field: 'error',
+      headerName: 'Error',
+      flex: 1.5,
+      renderCell: (
+        params: GridRenderCellParams<AnalysisJob, AnalysisJob['error']>,
+      ) =>
+        params.value ? (
+          <Typography
+            variant="body2"
+            color="error"
+            sx={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+            title={params.value}
+          >
+            {params.value}
+          </Typography>
+        ) : null,
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      width: 100,
+      sortable: false,
+      align: 'right',
+      headerAlign: 'right',
+      renderCell: (params) =>
+        params.row.status === 'pending' || params.row.status === 'running' ? (
+          <Button
+            size="small"
+            color="error"
+            onClick={() => {
+              void cancelJob(params.row._id)
+            }}
+          >
+            Cancel
+          </Button>
+        ) : null,
+    },
+  ]
+
   return (
     <AdminNav current="jobs">
       <Container>
@@ -121,85 +192,15 @@ function JobsPage() {
           </Alert>
         ) : null}
 
-        <TableContainer component={Paper} variant="outlined">
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Status</TableCell>
-                <TableCell>Tool</TableCell>
-                <TableCell>Description</TableCell>
-                <TableCell>Created</TableCell>
-                <TableCell>Error</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {jobs.map((job) => (
-                <TableRow key={job._id} hover>
-                  <TableCell>
-                    <Chip
-                      label={job.status}
-                      size="small"
-                      color={statusColor(job.status)}
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell>{job.tool}</TableCell>
-                  <TableCell>
-                    <Typography
-                      variant="body2"
-                      sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
-                    >
-                      {jobDescription(job)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>{formatDate(job.createdAt)}</TableCell>
-                  <TableCell>
-                    {job.error ? (
-                      <Typography
-                        variant="body2"
-                        color="error"
-                        sx={{
-                          maxWidth: 300,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                        title={job.error}
-                      >
-                        {job.error}
-                      </Typography>
-                    ) : null}
-                  </TableCell>
-                  <TableCell align="right">
-                    {job.status === 'pending' || job.status === 'running' ? (
-                      <Button
-                        size="small"
-                        color="error"
-                        onClick={() => {
-                          void cancelJob(job._id)
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    ) : null}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {jobs.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    align="center"
-                    sx={{ color: 'text.secondary' }}
-                  >
-                    No analysis jobs
-                  </TableCell>
-                </TableRow>
-              ) : null}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <Box sx={{ height: 600 }}>
+          <DataGrid
+            rows={jobs.map((j) => ({ ...j, id: j._id }))}
+            columns={columns}
+            density="compact"
+            pageSizeOptions={[25, 50, 100]}
+            initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+          />
+        </Box>
       </Container>
     </AdminNav>
   )

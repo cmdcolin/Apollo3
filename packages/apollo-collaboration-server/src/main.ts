@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import fs from 'node:fs'
+import type { Server } from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -67,9 +68,12 @@ async function bootstrap() {
     throw new Error('No PORT found in .env file')
   }
 
+  const sessionSecretFile = process.env.SESSION_SECRET_FILE
   const sessionSecret =
     process.env.SESSION_SECRET ??
-    fs.readFileSync(process.env.SESSION_SECRET_FILE!, 'utf8').trim()
+    (sessionSecretFile
+      ? fs.readFileSync(sessionSecretFile, 'utf8').trim()
+      : undefined)
 
   for (const [changeName, change] of Object.entries(changes)) {
     changeRegistry.registerChange(changeName, change)
@@ -186,7 +190,7 @@ async function bootstrap() {
     )
   }
 
-  const server = await app.listen(PORT, '0.0.0.0')
+  const server = (await app.listen(PORT, '0.0.0.0')) as Server
   server.headersTimeout = 24 * 60 * 60 * 1000
   server.requestTimeout = 24 * 60 * 60 * 1000
 
@@ -226,10 +230,19 @@ async function bootstrap() {
     }
   })
 
+  const appUrl = await app.getUrl()
   // eslint-disable-next-line no-console
-  console.log(
-    `Application is running on: ${await app.getUrl()}, CORS = ${cors}`,
-  )
+  console.log(`Application is running on: ${appUrl}, CORS = ${cors}`)
+  if (!isProduction) {
+    // eslint-disable-next-line no-console
+    console.log(
+      'For development, visit the Vite dev server at http://localhost:5173 (it proxies API calls here automatically)',
+    )
+    // eslint-disable-next-line no-console
+    console.log(
+      `Verbose logging is off by default. To enable, set LOG_LEVELS=error,warn,log,debug in .development.env (currently: ${LOG_LEVELS})`,
+    )
+  }
 
   app.enableShutdownHooks()
 }
@@ -238,7 +251,7 @@ void bootstrap()
 
 function convertToBoolean(input: string) {
   try {
-    return JSON.parse(input)
+    return JSON.parse(input) as boolean
   } catch {
     return
   }

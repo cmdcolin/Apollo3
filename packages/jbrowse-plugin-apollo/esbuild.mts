@@ -3,6 +3,7 @@ import http from 'node:http'
 
 import { globalExternals } from '@fal-works/esbuild-plugin-global-externals'
 import JBrowseReExports from '@jbrowse/core/ReExports/list'
+import type { BuildResult, PluginBuild } from 'esbuild'
 import * as esbuild from 'esbuild'
 import prettyBytes from 'pretty-bytes'
 
@@ -10,8 +11,8 @@ const isWatch = process.argv.includes('--watch')
 const isDev = process.env.NODE_ENV !== 'production'
 const PORT = process.env.PORT ? +process.env.PORT : 9000
 
-function createGlobalMap(jbrowseGlobals) {
-  const globalMap = {}
+function createGlobalMap(jbrowseGlobals: string[]) {
+  const globalMap: Record<string, { varName: string; type: string }> = {}
   for (const global of jbrowseGlobals) {
     globalMap[global] = {
       varName: `JBrowseExports["${global}"]`,
@@ -30,17 +31,19 @@ function createGlobalMap(jbrowseGlobals) {
 
 const rebuildLogPlugin = {
   name: 'rebuild-log',
-  setup({ onStart, onEnd }) {
-    let time
-    onStart(() => {
+  setup(build: PluginBuild) {
+    let time: number
+    build.onStart(() => {
       time = Date.now()
     })
-    onEnd(({ metafile, errors, warnings }) => {
+    build.onEnd((result: BuildResult) => {
       console.log(
-        `Built in ${Date.now() - time} ms with ${errors.length} error(s) and ${warnings.length} warning(s)`,
+        `Built in ${Date.now() - time} ms with ${result.errors.length} error(s) and ${result.warnings.length} warning(s)`,
       )
-      if (metafile) {
-        for (const [file, metadata] of Object.entries(metafile.outputs)) {
+      if (result.metafile) {
+        for (const [file, metadata] of Object.entries(
+          result.metafile.outputs,
+        )) {
           console.log(`Wrote ${prettyBytes(metadata.bytes)} to ${file}`)
         }
       }
