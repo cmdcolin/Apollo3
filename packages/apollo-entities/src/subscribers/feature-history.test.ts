@@ -149,4 +149,51 @@ describe('FeatureHistorySubscriber', () => {
     expect(history[2].max).toBe(500)
     expect(history[3].type).toBe('gene')
   })
+
+  it('records history for descendants when deleteDescendants is called', async () => {
+    const em = await setupAssemblyAndRefSeq()
+    const featureRepo = new MikroOrmFeatureRepository(em)
+
+    await featureRepo.create({
+      _id: 'gene-1',
+      refSeq: 'rs-1',
+      type: 'gene',
+      min: 100,
+      max: 1000,
+    })
+    await featureRepo.create({
+      _id: 'mrna-1',
+      refSeq: 'rs-1',
+      parentId: 'gene-1',
+      type: 'mRNA',
+      min: 100,
+      max: 1000,
+    })
+    await featureRepo.create({
+      _id: 'exon-1',
+      refSeq: 'rs-1',
+      parentId: 'mrna-1',
+      type: 'exon',
+      min: 100,
+      max: 400,
+    })
+    await featureRepo.create({
+      _id: 'exon-2',
+      refSeq: 'rs-1',
+      parentId: 'mrna-1',
+      type: 'exon',
+      min: 600,
+      max: 1000,
+    })
+
+    const deleted = await featureRepo.deleteDescendants('gene-1')
+    expect(deleted).toBe(3)
+
+    const history = await getHistoryRecords()
+    // 4 inserts + 3 deletes (mrna-1, exon-1, exon-2)
+    const deleteRecords = history.filter((h) => h.changeType === 'delete')
+    expect(deleteRecords).toHaveLength(3)
+    const deletedIds = deleteRecords.map((h) => h.featureId).sort()
+    expect(deletedIds).toEqual(['exon-1', 'exon-2', 'mrna-1'])
+  })
 })

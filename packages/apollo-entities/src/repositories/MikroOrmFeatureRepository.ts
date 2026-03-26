@@ -79,7 +79,9 @@ export class MikroOrmFeatureRepository extends BaseFeatureRepository {
     return rows.map((r) => rawToRow(r))
   }
 
-  // Raw SQL required: recursive CTE to collect all descendant IDs for deletion
+  // Raw SQL required: recursive CTE to collect all descendant IDs for deletion.
+  // Entities are loaded and removed through the UoW so that the
+  // FeatureHistorySubscriber records each deletion.
   async deleteDescendants(id: string) {
     const rows = (await this.sql(
       `WITH RECURSIVE tree AS (
@@ -94,7 +96,12 @@ export class MikroOrmFeatureRepository extends BaseFeatureRepository {
       return 0
     }
     const allIds = rows.map((r) => r._id)
-    return this.em.nativeDelete(FeatureEntity, { _id: { $in: allIds } })
+    const entities = await this.em.find(FeatureEntity, { _id: { $in: allIds } })
+    for (const entity of entities) {
+      this.em.remove(entity)
+    }
+    await this.em.flush()
+    return entities.length
   }
 
   // Raw SQL required: LIKE on computed expression (type || attributes) and

@@ -6,7 +6,7 @@ import {
 import type { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
 import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common'
 
-import type { FeatureRangeSearchDto } from '../entity/gff3Object.dto.js'
+import type { FeatureRangeSearchDto } from '../features/dto/feature-schemas.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
 import { RefSeqsService } from '../refSeqs/refSeqs.service.js'
 import { SequenceService } from '../sequence/sequence.service.js'

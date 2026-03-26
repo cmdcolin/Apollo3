@@ -35,15 +35,12 @@ export class MikroOrmUserRepository implements UserRepository {
   }
 
   async findByRole(role: string) {
-    const entity = await this.em.findOne(
+    const entities = await this.em.find(
       UserEntity,
       { role: role as UserRole },
       { orderBy: { createdAt: 'asc' } },
     )
-    if (entity) {
-      return toRow(entity)
-    }
-    return
+    return entities.map((e) => toRow(e))
   }
 
   async findAll() {

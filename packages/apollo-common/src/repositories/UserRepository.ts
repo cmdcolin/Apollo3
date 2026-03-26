@@ -11,7 +11,7 @@ export interface UserRow {
 export interface UserRepository {
   findById(id: string): Promise<UserRow | undefined>
   findByEmail(email: string): Promise<UserRow | undefined>
-  findByRole(role: string): Promise<UserRow | undefined>
+  findByRole(role: string): Promise<UserRow[]>
   findAll(): Promise<UserRow[]>
   count(): Promise<number>
   create(row: UserRow): Promise<UserRow>

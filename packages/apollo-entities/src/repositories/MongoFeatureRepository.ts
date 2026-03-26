@@ -48,31 +48,31 @@ export class MongoFeatureRepository extends BaseFeatureRepository {
     return allDescendants
   }
 
-  // Iterative BFS to collect descendant IDs, then bulk delete
+  // Iterative BFS collecting full entities, then remove through UoW so that
+  // the FeatureHistorySubscriber records each deletion.
   async deleteDescendants(id: string) {
-    const allIds: string[] = []
+    const allEntities: InferEntity<typeof FeatureEntity>[] = []
     let currentParentIds = [id]
     while (currentParentIds.length > 0) {
-      const children = await this.em.find(
-        FeatureEntity,
-        {
-          parent: { $in: currentParentIds },
-        },
-        { fields: ['_id'] },
-      )
+      const children = await this.em.find(FeatureEntity, {
+        parent: { $in: currentParentIds },
+      })
       if (children.length === 0) {
         break
       }
-      const childIds = children.map((e) => e._id)
-      for (const childId of childIds) {
-        allIds.push(childId)
+      for (const child of children) {
+        allEntities.push(child)
       }
-      currentParentIds = childIds
+      currentParentIds = children.map((e) => e._id)
     }
-    if (allIds.length === 0) {
+    if (allEntities.length === 0) {
       return 0
     }
-    return this.em.nativeDelete(FeatureEntity, { _id: { $in: allIds } })
+    for (const entity of allEntities) {
+      this.em.remove(entity)
+    }
+    await this.em.flush()
+    return allEntities.length
   }
 
   // Text search: load features for the given refSeqs and filter in JS

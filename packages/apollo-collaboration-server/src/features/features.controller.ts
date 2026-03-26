@@ -11,29 +11,34 @@ import {
   Post,
   Query,
   Req,
+  UsePipes,
 } from '@nestjs/common'
 
-import type {
-  FeatureIdsSearchDto,
-  FeatureRangeSearchDto,
-} from '../entity/gff3Object.dto.js'
 import type { RequestWithUser } from '../utils/request-with-user.js'
 import { Role } from '../utils/role/role.enum.js'
 import { Roles } from '../utils/roles.guard.js'
+import { ZodValidationPipe } from '../utils/zod-validation.pipe.js'
 
-import type {
-  FeatureCountRequest,
-  GetByIndexedIdRequest,
-} from './dto/feature.dto.js'
 import {
   type AddFeatureDto,
   type FeatureUpdateDto,
-  FeaturesService,
   type MergeExonsDto,
   type MergeTranscriptsDto,
   type SplitExonDto,
   type SplitTranscriptDto,
-} from './features.service.js'
+  addFeatureSchema,
+  featureCountSchema,
+  featureIdsSearchSchema,
+  featureRangeSearchSchema,
+  featureUpdateSchema,
+  getByIndexedIdSchema,
+  mergeExonsSchema,
+  mergeTranscriptsSchema,
+  splitExonSchema,
+  splitTranscriptSchema,
+  undoSchema,
+} from './dto/feature-schemas.js'
+import { FeaturesService } from './features.service.js'
 
 @Controller('features')
 export class FeaturesController {
@@ -52,7 +57,8 @@ export class FeaturesController {
 
   @Roles(Role.ReadOnly)
   @Get('getFeatures')
-  getFeaturesByRange(@Query() request: FeatureRangeSearchDto) {
+  @UsePipes(new ZodValidationPipe(featureRangeSearchSchema))
+  getFeaturesByRange(@Query() request: { refSeq: string; start: number; end: number }) {
     this.logger.debug(
       `getFeatures endpoint: refSeq: ${request.refSeq}, start: ${request.start}, end: ${request.end}`,
     )
@@ -61,7 +67,8 @@ export class FeaturesController {
 
   @Roles(Role.ReadOnly)
   @Post('getByIds')
-  findByFeatureIds(@Body() request: FeatureIdsSearchDto) {
+  @UsePipes(new ZodValidationPipe(featureIdsSearchSchema))
+  findByFeatureIds(@Body() request: { featureIds: string[]; topLevel?: boolean }) {
     this.logger.debug(`: featureIds: ${JSON.stringify(request.featureIds)}`)
     return this.featuresService.findByFeatureIds(
       request.featureIds,
@@ -71,7 +78,16 @@ export class FeaturesController {
 
   @Roles(Role.ReadOnly)
   @Get('count')
-  async getFeatureCount(@Query() featureCountRequest: FeatureCountRequest) {
+  @UsePipes(new ZodValidationPipe(featureCountSchema))
+  async getFeatureCount(
+    @Query()
+    featureCountRequest: {
+      assemblyId?: string
+      refSeqId?: string
+      start?: number
+      end?: number
+    },
+  ) {
     this.logger.debug(
       `Get features count by ${JSON.stringify(featureCountRequest)}`,
     )
@@ -82,7 +98,15 @@ export class FeaturesController {
 
   @Roles(Role.ReadOnly)
   @Get('getByIndexedId')
-  async getById(@Query() getByIndexedIdRequest: GetByIndexedIdRequest) {
+  @UsePipes(new ZodValidationPipe(getByIndexedIdSchema))
+  async getById(
+    @Query()
+    getByIndexedIdRequest: {
+      id: string
+      assemblies?: string
+      topLevel?: boolean
+    },
+  ) {
     return this.featuresService.getByIndexedId(getByIndexedIdRequest)
   }
 
@@ -105,7 +129,7 @@ export class FeaturesController {
   @Patch(':featureid')
   async updateFeature(
     @Param('featureid') featureid: string,
-    @Body() dto: FeatureUpdateDto,
+    @Body(new ZodValidationPipe(featureUpdateSchema)) dto: FeatureUpdateDto,
     @Req() request: RequestWithUser,
   ) {
     const { user } = request
@@ -118,7 +142,7 @@ export class FeaturesController {
   @Roles(Role.User)
   @Post()
   async addFeature(
-    @Body() dto: AddFeatureDto,
+    @Body(new ZodValidationPipe(addFeatureSchema)) dto: AddFeatureDto,
     @Req() request: RequestWithUser,
   ) {
     const { user } = request
@@ -144,7 +168,7 @@ export class FeaturesController {
   @Roles(Role.User)
   @Post('merge-exons')
   async mergeExons(
-    @Body() dto: MergeExonsDto,
+    @Body(new ZodValidationPipe(mergeExonsSchema)) dto: MergeExonsDto,
     @Req() request: RequestWithUser,
   ) {
     const { user } = request
@@ -157,7 +181,7 @@ export class FeaturesController {
   @Roles(Role.User)
   @Post('split-exon')
   async splitExon(
-    @Body() dto: SplitExonDto,
+    @Body(new ZodValidationPipe(splitExonSchema)) dto: SplitExonDto,
     @Req() request: RequestWithUser,
   ) {
     const { user } = request
@@ -170,7 +194,8 @@ export class FeaturesController {
   @Roles(Role.User)
   @Post('merge-transcripts')
   async mergeTranscripts(
-    @Body() dto: MergeTranscriptsDto,
+    @Body(new ZodValidationPipe(mergeTranscriptsSchema))
+    dto: MergeTranscriptsDto,
     @Req() request: RequestWithUser,
   ) {
     const { user } = request
@@ -183,7 +208,8 @@ export class FeaturesController {
   @Roles(Role.User)
   @Post('split-transcript')
   async splitTranscript(
-    @Body() dto: SplitTranscriptDto,
+    @Body(new ZodValidationPipe(splitTranscriptSchema))
+    dto: SplitTranscriptDto,
     @Req() request: RequestWithUser,
   ) {
     const { user } = request
@@ -196,7 +222,7 @@ export class FeaturesController {
   @Roles(Role.User)
   @Post('undo')
   async undo(
-    @Body() body: { sequence: number },
+    @Body(new ZodValidationPipe(undoSchema)) body: { sequence: number },
     @Req() request: RequestWithUser,
   ) {
     const { user } = request

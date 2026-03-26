@@ -1119,11 +1119,11 @@ describe('MikroOrmUserRepository', () => {
       role: 'user',
     })
 
-    const admin = await repo.findByRole('admin')
-    expect(admin).toBeDefined()
-    expect(admin!.username).toBe('alice')
+    const admins = await repo.findByRole('admin')
+    expect(admins).toHaveLength(1)
+    expect(admins[0].username).toBe('alice')
 
-    expect(await repo.findByRole('none')).toBeUndefined()
+    expect(await repo.findByRole('none')).toHaveLength(0)
   })
 
   it('should find all users', async () => {

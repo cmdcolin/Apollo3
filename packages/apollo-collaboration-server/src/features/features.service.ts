@@ -18,6 +18,8 @@ import {
 import { EntityManager } from '@mikro-orm/core'
 import {
   BadRequestException,
+  ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   Logger,
@@ -25,14 +27,20 @@ import {
 } from '@nestjs/common'
 
 import { ChecksService } from '../checks/checks.service.js'
-import type { FeatureRangeSearchDto } from '../entity/gff3Object.dto.js'
 import { MessagesGateway } from '../messages/messages.gateway.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
 
 import type {
+  AddFeatureDto,
   FeatureCountRequest,
+  FeatureRangeSearchDto,
+  FeatureUpdateDto,
   GetByIndexedIdRequest,
-} from './dto/feature.dto.js'
+  MergeExonsDto,
+  MergeTranscriptsDto,
+  SplitExonDto,
+  SplitTranscriptDto,
+} from './dto/feature-schemas.js'
 
 function doesIntersect2(s1: number, e1: number, s2: number, e2: number) {
   return s1 < e2 && s2 < e1
@@ -64,41 +72,6 @@ function flattenNestedFeature(
     }
   }
   return rows
-}
-
-export interface FeatureUpdateDto {
-  min?: number
-  max?: number
-  strand?: 1 | -1 | null
-  type?: string
-  attributes?: Record<string, string[]>
-  phase?: 0 | 1 | 2 | null
-}
-
-export interface AddFeatureDto {
-  addedFeature: NestedFeature
-  parentFeatureId?: string
-  assemblyId: string
-}
-
-export interface MergeExonsDto {
-  firstExonId: string
-  secondExonId: string
-}
-
-export interface SplitExonDto {
-  exonId: string
-  splitPoint: number
-}
-
-export interface MergeTranscriptsDto {
-  firstTranscriptId: string
-  secondTranscriptId: string
-}
-
-export interface SplitTranscriptDto {
-  transcriptId: string
-  splitPoint: number
 }
 
 interface MutationResult {
@@ -233,8 +206,8 @@ export class FeaturesService {
     return assembleFeatureTrees([...roots, ...descendants])
   }
 
-  async checkFeature(featureId: string, checkTimestamps = true) {
-    return this.checksService.checkFeature(featureId, checkTimestamps)
+  async checkFeature(featureId: string) {
+    return this.checksService.checkFeature(featureId)
   }
 
   async searchFeatures(searchDto: { term: string; assemblies: string }) {
@@ -370,6 +343,14 @@ export class FeaturesService {
         const rows = flattenNestedFeature(addedFeature, refSeq._id)
         if (parentFeatureId && rows.length > 0) {
           rows[0].parentId = parentFeatureId
+        }
+        const rowIds = rows.map((r) => r._id)
+        const existing = await scope.feature.findByIds(rowIds)
+        if (existing.length > 0) {
+          const dupes = existing.map((e) => e._id).join(', ')
+          throw new ConflictException(
+            `Features already exist with IDs: ${dupes}`,
+          )
         }
         await scope.feature.createMany(rows)
         return seq
@@ -811,6 +792,17 @@ export class FeaturesService {
       throw new NotFoundException(
         `No history found for sequence ${targetSequence}`,
       )
+    }
+
+    if (user.role !== 'admin') {
+      const otherAuthor = historyRecords.find(
+        (r) => r.changedBy !== null && r.changedBy !== user.email,
+      )
+      if (otherAuthor) {
+        throw new ForbiddenException(
+          'You can only undo your own changes. Admin role is required to undo changes made by other users.',
+        )
+      }
     }
 
     const affectedFeatureIds: string[] = []
