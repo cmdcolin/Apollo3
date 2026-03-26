@@ -3,220 +3,115 @@
 Tracked issues from code review of the repository/service/controller layers.
 Priority: H = will cause data bugs or crashes at scale, M = correctness risk, L = cleanup.
 
-## H1: Post-transaction reads see stale data
+## Done
 
-**Where**: `FeaturesService` — all mutation methods (`updateFeature`, `deleteFeature`, `addFeature`, etc.)
-
-**Problem**: After `db.transactional()` completes, `getRootFeatureTrees()` and
-`broadcastAndCheck()` read via `this.db.feature` which uses the non-transactional
-EntityManager. The broadcast can send pre-mutation state to clients.
-
-**Fix**: Return the data needed for broadcast from inside the transaction, or
-fork the EM after commit so reads see committed state.
+- **M1**: `deleteDescendants` now uses `em.remove()` so FeatureHistorySubscriber fires
+- **M4**: `findByRole` returns `UserRow[]` instead of single user
+- **H6**: `undoChange` checks `changedBy === user.email` (admin exempt)
+- **H5**: `addFeature` checks for duplicate IDs before `createMany` (409 Conflict)
+- **H4**: Zod validation on all feature mutation and query DTOs
+- Dead DTO files deleted, types consolidated via Zod inference
 
 ---
 
-## H2: Synchronous check execution blocks every mutation response
+## Remaining
+
+### H1: Post-transaction reads see stale data
+
+**Status**: Downgraded — not a real bug in practice. MikroORM's `em.find()` and
+raw SQL always query the DB after the transaction commits. Code quality issue only.
+
+---
+
+### H2: Synchronous check execution blocks every mutation response
 
 **Where**: `FeaturesService.broadcastAndCheck()` → `checksService.checkFeature()`
 
 **Problem**: Every mutation runs checks synchronously before returning the HTTP
-response. For a gene with many children, this adds hundreds of ms of latency to
-every single edit.
+response. `ChecksService.checkFeature` has no error handling, so fire-and-forget
+is not safe.
 
-**Fix**: Emit checks to an async queue (e.g. BullMQ or in-process event emitter)
-and return the mutation result immediately. Checks can broadcast their own
-results when done.
-
----
-
-## H3: `GET /features` returns every feature in the database
-
-**Where**: `FeaturesController.getAll()` → `findAll()`
-
-**Problem**: No pagination, no limit. A genome with millions of features will OOM
-the server.
-
-**Fix**: Either remove this endpoint entirely (clients use `getFeatures` by
-range) or add mandatory pagination with a reasonable max page size.
+**Next step**: Add try/catch + logging inside `checkFeature`, then it becomes
+safe to run without awaiting.
 
 ---
 
-## H4: No runtime validation on request DTOs
-
-**Where**: All controllers — `FeatureUpdateDto`, `AddFeatureDto`, `MergeExonsDto`,
-`SplitExonDto`, `MergeTranscriptsDto`, `SplitTranscriptDto`, body of `/undo`
-
-**Problem**: These are plain TypeScript interfaces, not classes with
-`class-validator` decorators. NestJS `ValidationPipe` has nothing to validate.
-Malformed input passes through silently.
-
-**Fix**: Convert DTOs to classes with `class-validator` decorators and enable
-`ValidationPipe` globally (or per-controller).
-
----
-
-## H5: Client-controlled `_id` with no conflict detection
-
-**Where**: `FeaturesService.addFeature()` trusts `addedFeature._id` from the
-client.
-
-**Problem**: A client can send a duplicate `_id` (collision or malicious) and
-the `createMany` call will either silently overwrite or throw an opaque DB error
-depending on the driver.
-
-**Fix**: Either generate IDs server-side, or check for existence before insert
-and return a clear 409 Conflict.
-
----
-
-## H6: Undo has no authorization check
-
-**Where**: `FeaturesService.undoChange()` and `POST /features/undo`
-
-**Problem**: Any User-role user can undo any other user's change by posting
-`{ sequence: N }`. No check that the requester authored the original change or
-has admin privileges.
-
-**Fix**: Verify `historyRecord.changedBy === user.email` or require Admin role
-for undoing other users' changes.
-
----
-
-## H7: N+1 queries in `propagateAncestorBounds`
+### H7: N+1 queries in `propagateAncestorBounds`
 
 **Where**: `FeaturesService.propagateAncestorBounds()`
 
 **Problem**: Walks up the tree one level at a time with individual `findById` +
 `findChildren` + `updateById`. For a 4-level tree that's 12+ round-trips inside
-a transaction holding locks.
+a transaction.
 
-**Fix**: Use a single recursive CTE to collect the ancestor chain, then batch
-the bound recalculations.
+**Fix**: Move to repository layer. SQL impl: CTE to find ancestor IDs → single
+query for children → compute bounds in JS → batch update.
 
 ---
 
-## H8: Feature history grows unbounded
+### H8: Feature history grows unbounded
 
 **Where**: `feature_history` table, `FeatureHistorySubscriber`
 
 **Problem**: Every mutation creates history records with no retention policy.
-Over time this becomes the largest table and slows down undo lookups.
 
-**Fix**: Add a configurable retention policy (e.g. keep N days or N records per
-feature). Implement a periodic cleanup job.
-
----
-
-## M1: `deleteDescendants` bypasses ORM cascade and history subscriber
-
-**Where**: `MikroOrmFeatureRepository.deleteDescendants()` uses `nativeDelete`
-after collecting IDs via CTE.
-
-**Problem**: `nativeDelete` skips MikroORM lifecycle hooks, so the
-`FeatureHistorySubscriber` does NOT record these deletions. The `cascade`
-deleteRule on the entity is also redundant/misleading since manual deletion is
-always used.
-
-**Fix**: Either route deletes through `em.remove()` so the subscriber fires, or
-record history explicitly in the CTE-based delete path. Document which strategy
-is canonical.
+**Fix**: Add `FEATURE_HISTORY_RETENTION_DAYS` env var (default 90). Periodic
+cleanup job following `AnalysisWorkerService` pattern.
 
 ---
 
-## M2: Raw SQL hardcodes MikroORM naming convention
+### M2: Raw SQL hardcodes MikroORM naming convention
 
 **Where**: `MikroOrmFeatureRepository` — `parent__id`, `ref_seq__id` column names
 
-**Problem**: These names come from MikroORM's default `UnderscoreNamingStrategy`.
-If the naming strategy or entity mapping changes, raw SQL silently breaks with no
-compile-time or startup error.
-
-**Fix**: Add an integration test that verifies raw SQL column names match the
-actual schema. Or extract column names from entity metadata at startup.
+**Fix**: Resolve column names from `em.getMetadata()` at construction time, or
+add an integration test that verifies names match the schema.
 
 ---
 
-## M3: No optimistic concurrency on feature updates
+### M3: No optimistic concurrency on feature updates
 
 **Where**: `FeaturesService.updateFeature()`
 
-**Problem**: Two users editing the same feature simultaneously — last write wins.
-The `updatedAt` field exists but isn't used as a version check.
+**Problem**: Two concurrent edits — last write wins silently. Requires client-side
+changes to send version back.
 
-**Fix**: Add a `@Version()` or `updatedAt`-based optimistic lock check. Return
-409 Conflict when the version doesn't match.
-
----
-
-## M4: `UserRepository.findByRole` returns single user
-
-**Where**: `UserRepository` interface
-
-**Problem**: `findByRole(role: string): Promise<UserRow | undefined>` — but
-multiple users can have the same role. Should return an array.
-
-**Fix**: Change return type to `Promise<UserRow[]>`.
+**Fix**: Add `version` property to `FeatureEntity`, accept in `FeatureUpdateDto`,
+catch `OptimisticLockError` → 409. Deferred until client protocol supports it.
 
 ---
 
-## M5: `mergeFeatureIntoTranscript` logic is fragile
+### M5: `mergeFeatureIntoTranscript` logic is fragile
 
-**Where**: `FeaturesService.mergeFeatureIntoTranscript()` (lines 598-680)
+**Where**: `FeaturesService.mergeFeatureIntoTranscript()`
 
-**Problem**: The `merged`/`mrgChild`/`toDelete` state machine iterates through
-`firstChildren` with unclear invariants. Edge cases with multiple overlapping
-exons of the same type are hard to reason about. No tests cover these edge cases.
-
-**Fix**: Add comprehensive unit tests for merge scenarios (no overlap, partial
-overlap, multiple overlaps, different types). Refactor the loop to make the
-state transitions explicit.
+**Fix**: Write tests first (no overlap, partial overlap, multiple overlaps,
+different types, grandchild reparenting), then refactor.
 
 ---
 
-## M6: `countByRange` counts all features, not just roots
+### M6: `countByRange` counts all features, not just roots
 
 **Where**: `BaseFeatureRepository.countByRange()`
 
-**Problem**: Returns count of ALL features in range (including children). But
-the UI shows assembled trees from root features. The count doesn't match what
-the user sees, making it unreliable for pagination or density display.
-
-**Fix**: Add a `countRootsByRange()` that filters `parent IS NULL`, or document
-that the count includes descendants.
+**Fix**: Add a separate `countRootsByRange()` with `parent: null` filter.
+Don't change existing `countByRange` semantics.
 
 ---
 
-## L1: Mongo `searchText` / `findByIndexedId` load all features into memory
+### L1: Mongo `searchText` / `findByIndexedId` load all features into memory
 
-**Where**: `MongoFeatureRepository.searchText()`, `MongoFeatureRepository.findByIndexedId()`
-
-**Problem**: Loads every feature for the given refSeqs (or all features if no
-refSeqIds) into memory, then filters in JS. A single chromosome can have
-hundreds of thousands of features.
-
-**Fix**: Use MongoDB's `$text` index or `$regex` for server-side filtering.
-Lower priority since Mongo is not the primary backend right now.
+Low priority — Mongo is not the primary backend.
 
 ---
 
-## L2: Status fields are untyped strings
+### L2: Status fields are untyped strings
 
-**Where**: `AnalysisJobRow.status`, `AnalysisDbRow.status`
-
-**Problem**: Plain `string` type — easy to typo in service code with no
-compile-time safety.
-
-**Fix**: Use string literal union types (`'pending' | 'running' | 'completed' | 'failed'`).
+**Fix**: Use string literal union types for `AnalysisJobRow.status` etc.
 
 ---
 
-## L3: `assemblies` query param is comma-separated string
+### L3: `assemblies` query param is comma-separated string
 
-**Where**: `searchFeatures`, `getByIndexedId` endpoints
-
-**Problem**: Comma-separated strings instead of proper array query params. Fragile
-parsing (`assemblies.split(',')`) with no validation.
-
-**Fix**: Use NestJS `@Query('assemblies', new ParseArrayPipe())` or accept
-repeated query params (`?assemblies=a&assemblies=b`).
+**Fix**: Accept array query params. Could do via Zod transform now that
+validation infra is in place.
