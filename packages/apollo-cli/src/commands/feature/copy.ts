@@ -11,14 +11,6 @@ import {
   getRefseqId,
 } from '../../utils.js'
 
-interface SerializedAddFeatureChange {
-  typeName: 'AddFeatureChange'
-  assembly: string
-  changedIds: string[]
-  addedFeature: AnnotationFeatureSnapshot
-  parentFeatureId?: string
-}
-
 export default class Copy extends BaseCommand<typeof Copy> {
   static summary = 'Copy a feature to another location'
   static description =
@@ -128,25 +120,19 @@ the database or by name and assembly or by identifier.'
   ): Promise<Response> {
     const featureLen = feature.max - feature.min
 
-    const change: SerializedAddFeatureChange = {
-      typeName: 'AddFeatureChange',
-      changedIds: [newId],
-      assembly,
-      addedFeature: {
-        _id: newId,
-        refSeq: refseq,
-        min: min - 1,
-        max: min + featureLen - 1,
-        type: feature.type,
-        attributes: feature.attributes,
-        strand: feature.strand,
-      },
-      copyFeature: true,
+    const addedFeature: AnnotationFeatureSnapshot = {
+      _id: newId,
+      refSeq: refseq,
+      min: min - 1,
+      max: min + featureLen - 1,
+      type: feature.type,
+      attributes: feature.attributes,
+      strand: feature.strand,
     }
-    const url = new URL(`${address}/changes`)
+    const url = new URL(`${address}/features`)
     const auth = {
       method: 'POST',
-      body: JSON.stringify(change),
+      body: JSON.stringify({ addedFeature, assemblyId: assembly }),
       headers: {
         authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',

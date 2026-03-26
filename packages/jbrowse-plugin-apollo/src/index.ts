@@ -2,12 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import { checkRegistry } from '@apollo-annotation/common'
-import {
-  CDSCheck,
-  CoreValidation,
-  TranscriptCheck,
-  validationRegistry,
-} from '@apollo-annotation/shared'
+import { CDSCheck, TranscriptCheck } from '@apollo-annotation/shared'
 import Plugin from '@jbrowse/core/Plugin'
 import type PluginManager from '@jbrowse/core/PluginManager'
 import { ConfigurationSchema } from '@jbrowse/core/configuration'
@@ -102,8 +97,6 @@ checkRegistry.registerCheck(cdsCheck.name, cdsCheck)
 
 const transcriptCheck = new TranscriptCheck()
 checkRegistry.registerCheck(transcriptCheck.name, transcriptCheck)
-
-validationRegistry.registerValidation(new CoreValidation())
 
 export default class ApolloPlugin extends Plugin {
   name = 'ApolloPlugin'

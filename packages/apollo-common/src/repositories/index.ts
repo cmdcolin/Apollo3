@@ -20,7 +20,6 @@ export type {
   OrganismRow,
   PaginationOptions,
 } from './OrganismRepository.js'
-export type { ChangeRepository, ChangeRow } from './ChangeRepository.js'
 export type { CounterRepository } from './CounterRepository.js'
 export type {
   CheckResultRepository,

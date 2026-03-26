@@ -4,7 +4,6 @@ import { MikroORM } from '@mikro-orm/core'
 import { NodeSqliteDialect, SqliteDriver } from '@mikro-orm/sqlite'
 
 import { AssemblyEntity } from '../entities/AssemblyEntity.js'
-import { ChangeEntity } from '../entities/ChangeEntity.js'
 import { CheckEntity } from '../entities/CheckEntity.js'
 import { CheckResultEntity } from '../entities/CheckResultEntity.js'
 import { CounterEntity } from '../entities/CounterEntity.js'
@@ -20,7 +19,6 @@ import { MikroOrmRefSeqRepository } from './MikroOrmRefSeqRepository.js'
 
 const allEntities = [
   AssemblyEntity,
-  ChangeEntity,
   CheckEntity,
   CheckResultEntity,
   CounterEntity,

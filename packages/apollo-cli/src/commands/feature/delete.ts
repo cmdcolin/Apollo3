@@ -1,4 +1,3 @@
-import type { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
 import { Flags } from '@oclif/core'
 import { type Response, fetch } from 'undici'
 
@@ -9,36 +8,14 @@ import {
   idReader,
 } from '../../utils.js'
 
-interface SerializedDeleteFeatureChange {
-  typeName: 'DeleteFeatureChange'
-  assembly: string
-  changedIds: string[]
-  deletedFeature: AnnotationFeatureSnapshot
-  parentFeatureId?: string
-}
-
 async function deleteFeature(
   address: string,
   accessToken: string,
-  feature: AnnotationFeatureSnapshot,
+  featureId: string,
 ): Promise<Response> {
-  const changeJson: SerializedDeleteFeatureChange = {
-    typeName: 'DeleteFeatureChange',
-    changedIds: [feature._id],
-    assembly: '111222333444555666777888', // Use a placeholder objectId (i.e. some 24 chars)
-    deletedFeature: {
-      _id: feature._id,
-      refSeq: feature.refSeq,
-      type: feature.type,
-      min: feature.min,
-      max: feature.max,
-      attributes: feature.attributes,
-    },
-  }
-  const url = new URL(`${address}/changes`)
+  const url = new URL(`${address}/features/${featureId}`)
   const auth = {
-    method: 'POST',
-    body: JSON.stringify(changeJson),
+    method: 'DELETE',
     headers: {
       authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
@@ -89,38 +66,28 @@ export default class Delete extends BaseCommand<typeof Delete> {
     const access = await this.getAccess()
 
     for (const featureId of featureIds) {
-      const res: Response = await getFeatureById(
-        access.address,
-        access.accessToken,
-        featureId,
-      )
-      if (res.status === 404 && flags.force) {
-        continue
-      }
-      if (!res.ok) {
-        const errorMessage = await createFetchErrorMessage(
-          res,
-          'getFeatureById failed',
-        )
-        throw new Error(errorMessage)
-      }
-      const feature = JSON.parse(await res.text()) as AnnotationFeatureSnapshot
-      if (flags['dry-run']) {
-        this.log(JSON.stringify(feature, null, 2))
-      } else {
-        const delFet: Response = await deleteFeature(
+      if (flags['dry-run'] || flags.force) {
+        const res: Response = await getFeatureById(
           access.address,
           access.accessToken,
-          feature,
+          featureId,
         )
-        if (!delFet.ok) {
+        if (res.status === 404 && flags.force) {
+          continue
+        }
+        if (!res.ok) {
           const errorMessage = await createFetchErrorMessage(
-            delFet,
-            'Delete feature failed',
+            res,
+            'getFeatureById failed',
           )
           throw new Error(errorMessage)
         }
+        if (flags['dry-run']) {
+          this.log(await res.text())
+          continue
+        }
       }
+      await deleteFeature(access.address, access.accessToken, featureId)
     }
   }
 }

@@ -3,7 +3,6 @@ import type { MikroORM } from '@mikro-orm/core'
 import { createTestORM } from '../test-utils.js'
 import { MikroOrmAssemblyRepository } from './MikroOrmAssemblyRepository.js'
 import { MikroOrmAssemblyPermissionRepository } from './MikroOrmAssemblyPermissionRepository.js'
-import { MikroOrmChangeRepository } from './MikroOrmChangeRepository.js'
 import { MikroOrmCheckRepository } from './MikroOrmCheckRepository.js'
 import { MikroOrmCheckResultRepository } from './MikroOrmCheckResultRepository.js'
 import { MikroOrmCounterRepository } from './MikroOrmCounterRepository.js'
@@ -719,78 +718,6 @@ describe('MikroOrmCounterRepository', () => {
     expect(await repo.getNextSequenceValue('counterA')).toBe(1)
     expect(await repo.getNextSequenceValue('counterB')).toBe(1)
     expect(await repo.getNextSequenceValue('counterA')).toBe(2)
-  })
-})
-
-describe('MikroOrmChangeRepository', () => {
-  it('should create and find changes', async () => {
-    const repo = new MikroOrmChangeRepository(orm.em.fork())
-    const created = await repo.create({
-      assembly: 'asm-1',
-      typeName: 'AddAssemblyFromFileChange',
-      changedIds: [],
-      changes: { assemblyName: 'volvox' },
-      user: 'testuser@example.com',
-      sequence: 1,
-    })
-    expect(created._id).toBeDefined()
-    expect(created.typeName).toBe('AddAssemblyFromFileChange')
-    expect(created.sequence).toBe(1)
-
-    const all = await repo.findAll({})
-    expect(all).toHaveLength(1)
-    expect(all[0].user).toBe('testuser@example.com')
-  })
-
-  it('should filter by assembly and typeName', async () => {
-    const repo = new MikroOrmChangeRepository(orm.em.fork())
-    await repo.create({
-      assembly: 'asm-1',
-      typeName: 'AddAssemblyFromFileChange',
-      changedIds: [],
-      changes: {},
-      user: 'user1@example.com',
-      sequence: 1,
-    })
-    await repo.create({
-      assembly: 'asm-2',
-      typeName: 'AddFeatureChange',
-      changedIds: ['f1'],
-      changes: {},
-      user: 'user2@example.com',
-      sequence: 2,
-    })
-
-    const byAssembly = await repo.findAll({ filter: { assembly: 'asm-1' } })
-    expect(byAssembly).toHaveLength(1)
-
-    const byType = await repo.findAll({
-      filter: { typeName: 'AddFeatureChange' },
-    })
-    expect(byType).toHaveLength(1)
-    expect(byType[0].user).toBe('user2@example.com')
-  })
-
-  it('should filter by sinceSequence and sort', async () => {
-    const repo = new MikroOrmChangeRepository(orm.em.fork())
-    for (let i = 1; i <= 5; i++) {
-      await repo.create({
-        typeName: 'SomeChange',
-        changedIds: [],
-        changes: {},
-        user: 'user@example.com',
-        sequence: i,
-      })
-    }
-
-    const since3 = await repo.findAll({ sinceSequence: 3 })
-    expect(since3).toHaveLength(2)
-
-    const asc = await repo.findAll({ sort: 'asc' })
-    expect(asc[0].sequence).toBe(1)
-
-    const limited = await repo.findAll({ limit: 2 })
-    expect(limited).toHaveLength(2)
   })
 })
 

@@ -4,14 +4,8 @@ import type { Server } from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { checkRegistry, operationRegistry } from '@apollo-annotation/common'
-import {
-  CDSCheck,
-  CoreValidation,
-  TranscriptCheck,
-  operations,
-  validationRegistry,
-} from '@apollo-annotation/shared'
+import { checkRegistry } from '@apollo-annotation/common'
+import { CDSCheck, TranscriptCheck } from '@apollo-annotation/shared'
 import { MikroORM, RequestContext } from '@mikro-orm/core'
 import type { LogLevel } from '@nestjs/common'
 import { HttpAdapterHost, NestFactory } from '@nestjs/core'
@@ -70,17 +64,11 @@ async function bootstrap() {
       ? fs.readFileSync(sessionSecretFile, 'utf8').trim()
       : undefined)
 
-  for (const [operationName, operation] of Object.entries(operations)) {
-    operationRegistry.registerOperation(operationName, operation)
-  }
-
   const cdsCheck = new CDSCheck()
   checkRegistry.registerCheck(cdsCheck.name, cdsCheck)
 
   const transcriptCheck = new TranscriptCheck()
   checkRegistry.registerCheck(transcriptCheck.name, transcriptCheck)
-
-  validationRegistry.registerValidation(new CoreValidation())
 
   const cors = convertToBoolean(CORS)
 

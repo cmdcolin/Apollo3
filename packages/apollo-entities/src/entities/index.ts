@@ -6,7 +6,6 @@ export {
   AssemblyRole,
 } from './AssemblyPermissionEntity.js'
 export { OrganismEntity } from './OrganismEntity.js'
-export { ChangeEntity } from './ChangeEntity.js'
 export { CheckEntity } from './CheckEntity.js'
 export { CheckResultEntity } from './CheckResultEntity.js'
 export { CounterEntity } from './CounterEntity.js'

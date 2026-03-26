@@ -5,19 +5,9 @@ import { type Response, fetch } from 'undici'
 import { BaseCommand } from '../../baseCommand.js'
 import {
   createFetchErrorMessage,
-  getAssemblyFromRefseq,
   getFeatureById,
   idReader,
 } from '../../utils.js'
-
-interface SerializedTypeChange {
-  typeName: 'TypeChange'
-  assembly: string
-  changedIds: string[]
-  featureId: string
-  oldType: string
-  newType: string
-}
 
 export default class Get extends BaseCommand<typeof Get> {
   static summary = 'Edit or view feature type'
@@ -77,26 +67,10 @@ It must be a valid sequence ontology term although but the valifdity of the new 
       return
     }
 
-    const assembly = await getAssemblyFromRefseq(
-      access.address,
-      access.accessToken,
-      featureJson.refSeq,
-    )
-
-    const changeJson: SerializedTypeChange = {
-      typeName: 'TypeChange',
-      changedIds: [featureId],
-      assembly,
-      featureId,
-      oldType: currentType,
-      newType: flags.type,
-    }
-
-    const url = new URL(`${access.address}/changes`)
-
+    const url = new URL(`${access.address}/features/${featureId}`)
     const auth = {
-      method: 'POST',
-      body: JSON.stringify(changeJson),
+      method: 'PATCH',
+      body: JSON.stringify({ type: flags.type }),
       headers: {
         authorization: `Bearer ${access.accessToken}`,
         'Content-Type': 'application/json',

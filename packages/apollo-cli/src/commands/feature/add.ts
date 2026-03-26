@@ -8,22 +8,6 @@ import { type Response, fetch } from 'undici'
 import { BaseCommand } from '../../baseCommand.js'
 import { createFetchErrorMessage } from '../../utils.js'
 
-interface AddFeatureChangeDetails {
-  addedFeature: AnnotationFeatureSnapshot
-  parentFeatureId?: string
-  copyFeature?: boolean
-}
-
-interface SerializedAddFeatureChangeBase {
-  typeName: 'AddFeatureChange'
-  assembly: string
-  changedIds: string[]
-}
-
-type SerializedAddFeatureChange =
-  | (SerializedAddFeatureChangeBase & AddFeatureChangeDetails)
-  | (SerializedAddFeatureChangeBase & { changes: AddFeatureChangeDetails[] })
-
 interface BaseFeatureJSON {
   min: number
   max: number
@@ -177,56 +161,29 @@ To add multiple features, features with more details, or features with children,
         )
       }
       const [assemblyId] = await this.getAssemblyAndRefSeqIds(refSeq, assembly)
-      const changedIds: string[] = []
-      const changes = await Promise.all(
-        featureJSON.map(
-          async (singleFeatureJSON): Promise<AddFeatureChangeDetails> => {
-            const { children, assembly, refSeq, ...rest } = singleFeatureJSON
-            const refSeqDocument = await this.getRefSeq(refSeq)
-            return {
-              addedFeature: this.makeFeatureSnapshot(
-                {
-                  assembly: assemblyId,
-                  refSeq: refSeqDocument._id,
-                  ...rest,
-                },
-                changedIds,
-              ),
-            }
-          },
-        ),
-      )
-      const change: SerializedAddFeatureChange = {
-        changedIds,
-        typeName: 'AddFeatureChange',
-        assembly: assemblyId,
-        changes,
+      for (const singleFeatureJSON of featureJSON) {
+        const ids: string[] = []
+        const { assembly: _assembly, refSeq: featureRefSeq, ...rest } = singleFeatureJSON
+        const refSeqDocument = await this.getRefSeq(featureRefSeq)
+        const addedFeature = this.makeFeatureSnapshot(
+          { assembly: assemblyId, refSeq: refSeqDocument._id, ...rest },
+          ids,
+        )
+        await this.submitFeature(addedFeature, assemblyId)
       }
-      return this.submitChange(change)
+      return
     }
     const { assembly, refSeq, ...rest } = featureJSON
     const [assemblyId, refSeqId] = await this.getAssemblyAndRefSeqIds(
       refSeq,
       assembly,
     )
-    const changedIds: string[] = []
-    const details = {
-      addedFeature: this.makeFeatureSnapshot(
-        {
-          assembly: assemblyId,
-          refSeq: refSeqId,
-          ...rest,
-        },
-        changedIds,
-      ),
-    }
-    const change: SerializedAddFeatureChange = {
-      changedIds,
-      typeName: 'AddFeatureChange',
-      assembly: assemblyId,
-      ...details,
-    }
-    return this.submitChange(change)
+    const ids: string[] = []
+    const addedFeature = this.makeFeatureSnapshot(
+      { assembly: assemblyId, refSeq: refSeqId, ...rest },
+      ids,
+    )
+    return this.submitFeature(addedFeature, assemblyId)
   }
 
   makeFeatureSnapshot(
@@ -264,20 +221,12 @@ To add multiple features, features with more details, or features with children,
       refSeqNameOrId,
       assemblyNameOrId,
     )
-    const changedIds: string[] = []
-    const details = {
-      addedFeature: this.makeFeatureSnapshot(
-        { refSeq: refSeqId, min: min - 1, max, type },
-        changedIds,
-      ),
-    }
-    const change: SerializedAddFeatureChange = {
-      changedIds,
-      typeName: 'AddFeatureChange',
-      assembly: assemblyId,
-      ...details,
-    }
-    return this.submitChange(change)
+    const ids: string[] = []
+    const addedFeature = this.makeFeatureSnapshot(
+      { refSeq: refSeqId, min: min - 1, max, type },
+      ids,
+    )
+    return this.submitFeature(addedFeature, assemblyId)
   }
 
   async getAssemblyAndRefSeqIds(
@@ -408,9 +357,12 @@ To add multiple features, features with more details, or features with children,
     throw new Error(`Could not find refSeq: "${refSeqNameOrId}"`)
   }
 
-  async submitChange(change: SerializedAddFeatureChange) {
-    const options = { method: 'POST', body: JSON.stringify(change) }
-    const response = await this.fetch('changes', options)
+  async submitFeature(addedFeature: AnnotationFeatureSnapshot, assemblyId: string) {
+    const options = {
+      method: 'POST',
+      body: JSON.stringify({ addedFeature, assemblyId }),
+    }
+    const response = await this.fetch('features', options)
     if (!response.ok) {
       const errorMessage = await createFetchErrorMessage(
         response,

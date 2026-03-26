@@ -113,10 +113,17 @@ backend uses MikroORM with multi-database support (SQLite, PostgreSQL, MongoDB).
 
 ### P3 — QC & Validation Checks
 
-17. **Reading frame validation check** — Verify CDS phase is consistent with
+17. **Server-side feature type validation** — The old client-side `CoreValidation`
+    checked that feature types were valid SO (Sequence Ontology) terms before
+    accepting a type change. With the server-authoritative architecture, this
+    validation should move to the server's `PATCH /features/:id` endpoint. When
+    `type` is in the update DTO, validate it against the SO sequence_feature list
+    before applying.
+
+18. **Reading frame validation check** — Verify CDS phase is consistent with
     upstream exon lengths across exon boundaries.
 
-18. **Start codon presence check** — Verify CDS begins with ATG (or valid
+19. **Start codon presence check** — Verify CDS begins with ATG (or valid
     alternative start codons per configurable translation table).
 
 ### P3 — Collaboration UX

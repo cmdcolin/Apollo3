@@ -3,7 +3,6 @@ import type {
   AnalysisJobRepository,
   AssemblyPermissionRepository,
   AssemblyRepository,
-  ChangeRepository,
   CheckRepository,
   CheckResultRepository,
   CounterRepository,
@@ -20,7 +19,6 @@ import {
   MikroOrmAnalysisJobRepository,
   MikroOrmAssemblyPermissionRepository,
   MikroOrmAssemblyRepository,
-  MikroOrmChangeRepository,
   MikroOrmCheckRepository,
   MikroOrmCheckResultRepository,
   MikroOrmCounterRepository,
@@ -78,8 +76,6 @@ export class DatabaseService {
   readonly checkConfig: CheckRepository
   readonly trackConfig: TrackConfigRepository
   readonly textSearchAdapterConfig: TextSearchAdapterConfigRepository
-  readonly changeLog: ChangeRepository
-
   constructor(@Inject(EntityManager) private readonly em: EntityManager) {
     this.dbType = process.env.DB_BACKEND ?? 'sqlite'
     this.analysisDb = new MikroOrmAnalysisDbRepository(em)
@@ -97,7 +93,6 @@ export class DatabaseService {
     this.trackConfig = new MikroOrmTrackConfigRepository(em)
     this.textSearchAdapterConfig =
       new MikroOrmTextSearchAdapterConfigRepository(em)
-    this.changeLog = new MikroOrmChangeRepository(em)
   }
 
   async transactional<T>(callback: (scope: TransactionScope) => Promise<T>) {

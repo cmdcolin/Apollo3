@@ -4,7 +4,6 @@ export { MikroOrmAnalysisJobRepository } from './MikroOrmAnalysisJobRepository.j
 export { MikroOrmAssemblyRepository } from './MikroOrmAssemblyRepository.js'
 export { MikroOrmAssemblyPermissionRepository } from './MikroOrmAssemblyPermissionRepository.js'
 export { MikroOrmOrganismRepository } from './MikroOrmOrganismRepository.js'
-export { MikroOrmChangeRepository } from './MikroOrmChangeRepository.js'
 export { MikroOrmCheckRepository } from './MikroOrmCheckRepository.js'
 export { MikroOrmCounterRepository } from './MikroOrmCounterRepository.js'
 export { MikroOrmCheckResultRepository } from './MikroOrmCheckResultRepository.js'

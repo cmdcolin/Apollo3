@@ -5,19 +5,9 @@ import { type Response, fetch } from 'undici'
 import { BaseCommand } from '../../baseCommand.js'
 import {
   createFetchErrorMessage,
-  getAssemblyFromRefseq,
   getFeatureById,
   idReader,
 } from '../../utils.js'
-
-interface SerializedFeatureAttributeChange {
-  typeName: 'FeatureAttributeChange'
-  assembly: string
-  changedIds: string[]
-  featureId: string
-  oldAttributes: Record<string, string[]>
-  newAttributes: Record<string, string[]>
-}
 
 export default class EditAttibute extends BaseCommand<typeof EditAttibute> {
   static summary = 'Add, edit, or view a feature attribute'
@@ -124,25 +114,10 @@ terms to non-existing terms'
       throw new Error(`Unexpected condition: value is "${flags.value}"`)
     }
 
-    const assembly = await getAssemblyFromRefseq(
-      access.address,
-      access.accessToken,
-      featureJson.refSeq,
-    )
-
-    const changeJson: SerializedFeatureAttributeChange = {
-      typeName: 'FeatureAttributeChange',
-      changedIds: [featureId],
-      assembly,
-      featureId,
-      oldAttributes,
-      newAttributes,
-    }
-
-    const url = new URL(`${access.address}/changes`)
+    const url = new URL(`${access.address}/features/${featureId}`)
     const auth = {
-      method: 'POST',
-      body: JSON.stringify(changeJson),
+      method: 'PATCH',
+      body: JSON.stringify({ attributes: newAttributes }),
       headers: {
         authorization: `Bearer ${access.accessToken}`,
         'Content-Type': 'application/json',

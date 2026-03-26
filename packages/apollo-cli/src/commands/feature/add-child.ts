@@ -13,14 +13,6 @@ import {
   queryApollo,
 } from '../../utils.js'
 
-interface SerializedAddFeatureChange {
-  typeName: 'AddFeatureChange'
-  assembly: string
-  changedIds: string[]
-  addedFeature: AnnotationFeatureSnapshot
-  parentFeatureId?: string
-}
-
 export default class Get extends BaseCommand<typeof Get> {
   static summary = 'Add a child feature (e.g. add an exon to an mRNA)'
   static description =
@@ -126,32 +118,24 @@ to retrive the parent ID of interest and to populate the child feature with attr
     const res = await queryApollo(address, accessToken, 'refSeqs')
     const refSeqs = (await res.json()) as object[]
     const { refSeq, _id } = parentFeature
-    let assembly = ''
+    let assemblyId = ''
     for (const x of refSeqs) {
       if (x['_id' as keyof typeof x] === refSeq) {
-        assembly = x['assembly' as keyof typeof x]
+        assemblyId = x['assembly' as keyof typeof x]
         break
       }
     }
-    const change: SerializedAddFeatureChange = {
-      typeName: 'AddFeatureChange',
-
-      changedIds: [_id],
-      assembly,
-      addedFeature: {
-        _id: new ObjectId().toHexString(),
-        refSeq,
-        min,
-        max,
-        type,
-      },
-
-      parentFeatureId: _id,
+    const addedFeature: AnnotationFeatureSnapshot = {
+      _id: new ObjectId().toHexString(),
+      refSeq,
+      min,
+      max,
+      type,
     }
-    const url = new URL(`${address}/changes`)
+    const url = new URL(`${address}/features`)
     const auth = {
       method: 'POST',
-      body: JSON.stringify(change),
+      body: JSON.stringify({ addedFeature, assemblyId, parentFeatureId: _id }),
       headers: {
         authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
@@ -161,7 +145,7 @@ to retrive the parent ID of interest and to populate the child feature with attr
     if (!response.ok) {
       const errorMessage = await createFetchErrorMessage(
         response,
-        'getFeatureById failed',
+        'addChild failed',
       )
       throw new Error(errorMessage)
     }

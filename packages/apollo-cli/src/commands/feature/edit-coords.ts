@@ -5,28 +5,9 @@ import { type Response, fetch } from 'undici'
 import { BaseCommand } from '../../baseCommand.js'
 import {
   createFetchErrorMessage,
-  getAssemblyFromRefseq,
   getFeatureById,
   idReader,
 } from '../../utils.js'
-
-interface SerializedLocationStartChange {
-  typeName: 'LocationStartChange'
-  assembly: string
-  changedIds: string[]
-  featureId: string
-  oldStart: number
-  newStart: number
-}
-
-interface SerializedLocationEndChange {
-  typeName: 'LocationEndChange'
-  assembly: string
-  changedIds: string[]
-  featureId: string
-  oldEnd: number
-  newEnd: number
-}
 
 export default class Get extends BaseCommand<typeof Get> {
   static summary = 'Edit feature start and/or end coordinates'
@@ -110,62 +91,18 @@ To get the identifier of the feature to edit consider using `apollo feature get`
       await res.text(),
     ) as AnnotationFeatureSnapshot
 
-    const assembly = await getAssemblyFromRefseq(
-      access.address,
-      access.accessToken,
-      featureJson.refSeq,
-    )
-
-    const currentEnd = featureJson.max
-    let edit = ['Start', 'End']
-    if (flags.start !== undefined && flags.start > currentEnd) {
-      // Edit End (Max) first so you avoid an intermediate start > end
-      edit = ['End', 'Start']
+    const patch: { min?: number; max?: number } = {}
+    if (flags.start !== undefined && flags.start !== featureJson.min) {
+      patch.min = flags.start
     }
-
-    for (const coord of edit) {
-      const currentStart = featureJson.min
-      if (
-        coord === 'Start' &&
-        (flags.start === undefined || flags.start === currentStart)
-      ) {
-        continue
-      } else if (
-        coord === 'End' &&
-        (flags.end === undefined || flags.end === currentEnd)
-      ) {
-        continue
-      }
-
-      let body: SerializedLocationStartChange | SerializedLocationEndChange
-      if (coord === 'Start' && flags.start !== undefined) {
-        const oldCoord = featureJson.min
-        body = {
-          typeName: 'LocationStartChange',
-          changedIds: [featureId],
-          assembly,
-          featureId,
-          ['oldStart']: oldCoord,
-          ['newStart']: flags.start,
-        }
-      } else if (coord === 'End' && flags.end !== undefined) {
-        const oldCoord = featureJson.max
-        body = {
-          typeName: 'LocationEndChange',
-          changedIds: [featureId],
-          assembly,
-          featureId,
-          ['oldEnd']: oldCoord,
-          ['newEnd']: flags.end,
-        }
-      } else {
-        throw new Error(`Unexpected coordinate name: "${coord}"`)
-      }
-
-      const url = new URL(`${access.address}/changes`)
+    if (flags.end !== undefined && flags.end !== featureJson.max) {
+      patch.max = flags.end
+    }
+    if (Object.keys(patch).length > 0) {
+      const url = new URL(`${access.address}/features/${featureId}`)
       const auth = {
-        method: 'POST',
-        body: JSON.stringify(body),
+        method: 'PATCH',
+        body: JSON.stringify(patch),
         headers: {
           authorization: `Bearer ${access.accessToken}`,
           'Content-Type': 'application/json',

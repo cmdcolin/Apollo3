@@ -18,10 +18,6 @@ export function userId() {
   return `u-${nanoid(ID_LENGTH)}`
 }
 
-export function changeId() {
-  return `ch-${nanoid(ID_LENGTH)}`
-}
-
 export function checkResultId() {
   return `cr-${nanoid(ID_LENGTH)}`
 }
