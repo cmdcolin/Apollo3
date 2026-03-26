@@ -1,16 +1,28 @@
 import { readFile } from 'node:fs/promises'
 
 import type { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
-import type {
-  AddFeatureChangeDetails,
-  SerializedAddFeatureChange,
-} from '@apollo-annotation/shared'
 import { Args, Flags } from '@oclif/core'
 import { ObjectId } from 'bson'
 import { type Response, fetch } from 'undici'
 
 import { BaseCommand } from '../../baseCommand.js'
 import { createFetchErrorMessage } from '../../utils.js'
+
+interface AddFeatureChangeDetails {
+  addedFeature: AnnotationFeatureSnapshot
+  parentFeatureId?: string
+  copyFeature?: boolean
+}
+
+interface SerializedAddFeatureChangeBase {
+  typeName: 'AddFeatureChange'
+  assembly: string
+  changedIds: string[]
+}
+
+type SerializedAddFeatureChange =
+  | (SerializedAddFeatureChangeBase & AddFeatureChangeDetails)
+  | (SerializedAddFeatureChangeBase & { changes: AddFeatureChangeDetails[] })
 
 interface BaseFeatureJSON {
   min: number

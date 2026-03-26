@@ -4,16 +4,11 @@ import type { Server } from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import {
-  changeRegistry,
-  checkRegistry,
-  operationRegistry,
-} from '@apollo-annotation/common'
+import { checkRegistry, operationRegistry } from '@apollo-annotation/common'
 import {
   CDSCheck,
   CoreValidation,
   TranscriptCheck,
-  changes,
   operations,
   validationRegistry,
 } from '@apollo-annotation/shared'
@@ -74,10 +69,6 @@ async function bootstrap() {
     (sessionSecretFile
       ? fs.readFileSync(sessionSecretFile, 'utf8').trim()
       : undefined)
-
-  for (const [changeName, change] of Object.entries(changes)) {
-    changeRegistry.registerChange(changeName, change)
-  }
 
   for (const [operationName, operation] of Object.entries(operations)) {
     operationRegistry.registerOperation(operationName, operation)

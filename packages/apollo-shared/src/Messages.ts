@@ -1,4 +1,4 @@
-import type { NestedFeature, SerializedChange } from '@apollo-annotation/common'
+import type { NestedFeature } from '@apollo-annotation/common'
 
 export const COMMON_CHANNEL = 'COMMON'
 
@@ -10,12 +10,6 @@ interface BaseMessage {
   channel: string
   userName: string
   userSessionId: string
-}
-
-export interface ChangeMessage extends BaseMessage {
-  changeInfo: SerializedChange
-  changeSequence: number
-  assemblyId?: string
 }
 
 export interface FeatureUpdateMessage extends BaseMessage {

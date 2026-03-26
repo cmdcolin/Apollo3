@@ -17,7 +17,6 @@ import {
 import { nanoid } from 'nanoid'
 import React, { useState } from 'react'
 
-import type { InMemoryFileDriver } from '../BackendDrivers'
 import type { ApolloSessionModel } from '../session'
 import { loadAssemblyIntoClient } from '../util'
 
@@ -26,7 +25,6 @@ import { Dialog } from './Dialog'
 interface OpenLocalFileProps {
   session: ApolloSessionModel
   handleClose(): void
-  inMemoryFileDriver: InMemoryFileDriver
 }
 
 export interface RefSeqInterface {

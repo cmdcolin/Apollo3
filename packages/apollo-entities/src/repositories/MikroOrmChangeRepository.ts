@@ -1,4 +1,4 @@
-import { changeId, type ChangeRepository, type ChangeRow } from '@apollo-annotation/common'
+import { type ChangeRepository, type ChangeRow, changeId } from '@apollo-annotation/common'
 import {
   type EntityManager,
   type InferEntity,

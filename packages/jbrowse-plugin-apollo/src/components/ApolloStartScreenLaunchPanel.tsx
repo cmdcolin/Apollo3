@@ -4,17 +4,12 @@ import React, { useEffect, useState } from 'react'
 
 import { NewApolloProjectDialog } from './NewApolloProjectDialog'
 
-interface StartScreenProps {
-  setPluginManager: (pm: PluginManager) => void
-  loadPluginManager: (path: string) => Promise<PluginManager>
-}
-
 export function ApolloStartScreenLaunchPanel({
   DefaultComponent,
   props,
 }: {
   DefaultComponent: React.ComponentType<Record<string, unknown>>
-  props: StartScreenProps
+  props: Record<string, unknown>
 }) {
   const [dialogOpen, setDialogOpen] = useState(false)
 
@@ -43,10 +38,18 @@ export function ApolloStartScreenLaunchPanel({
         </Button>
       </div>
       <DefaultComponent {...props} />
-      {dialogOpen ? (
+      {dialogOpen &&
+      typeof props.loadPluginManager === 'function' &&
+      typeof props.setPluginManager === 'function' ? (
         <NewApolloProjectDialog
-          loadPluginManager={props.loadPluginManager}
-          setPluginManager={props.setPluginManager}
+          loadPluginManager={
+            props.loadPluginManager as (
+              path: string,
+            ) => Promise<PluginManager>
+          }
+          setPluginManager={
+            props.setPluginManager as (pm: PluginManager) => void
+          }
           onClose={() => {
             setDialogOpen(false)
           }}

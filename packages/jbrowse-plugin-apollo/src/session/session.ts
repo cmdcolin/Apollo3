@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-condition */
+ 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import type { ClientDataStore as ClientDataStoreType } from '@apollo-annotation/common'
 import {
@@ -34,7 +34,6 @@ import LockIcon from '@mui/icons-material/Lock'
 import LogoutIcon from '@mui/icons-material/Logout'
 import RedoIcon from '@mui/icons-material/Redo'
 import SaveIcon from '@mui/icons-material/Save'
-import TrackChangesIcon from '@mui/icons-material/TrackChanges'
 import UndoIcon from '@mui/icons-material/Undo'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import { autorun } from 'mobx'
@@ -46,7 +45,6 @@ import {
   DownloadGFF3,
   LogOut,
   OpenLocalFile,
-  ViewChangeLog,
   ViewCheckResults,
 } from '../components'
 import { LoginDialog } from '../components/LoginDialog'
@@ -420,9 +418,7 @@ export function extendSession(
                               handleClose: () => {
                                 doneCallback()
                               },
-                              inMemoryFileDriver:
-                                session.apolloDataStore.inMemoryFileDriver,
-                            },
+                                            },
                           ])
                         },
                       },
@@ -448,23 +444,6 @@ export function extendSession(
                     ;(session as unknown as AbstractSessionModel).queueDialog(
                       (doneCallback) => [
                         DownloadGFF3,
-                        {
-                          session,
-                          handleClose: () => {
-                            doneCallback()
-                          },
-                        },
-                      ],
-                    )
-                  },
-                },
-                {
-                  label: 'Change log',
-                  icon: TrackChangesIcon,
-                  onClick: (session: ApolloSessionModel) => {
-                    ;(session as unknown as AbstractSessionModel).queueDialog(
-                      (doneCallback) => [
-                        ViewChangeLog,
                         {
                           session,
                           handleClose: () => {
@@ -633,33 +612,13 @@ export function extendSession(
       }
     })
   return types.snapshotProcessor(sm, {
-    postProcessor(snap: SnapshotOut<typeof sm>, node) {
+    postProcessor(snap: SnapshotOut<typeof sm>) {
       snap.apolloSelectedFeature = undefined
-      const assemblies = Object.fromEntries(
-        Object.entries(snap.apolloDataStore.assemblies).filter(
-          ([, assembly]) => assembly.backendDriverType === 'InMemoryFileDriver',
-        ),
-      )
       // @ts-expect-error ontologyManager isn't actually required
       snap.apolloDataStore = {
         typeName: 'Client',
-        assemblies,
+        assemblies: {},
         checkResults: {},
-      }
-      if (!node) {
-        return snap
-      }
-      const { apolloDataStore } = node
-      const { checkResults } = apolloDataStore
-      for (const [, cr] of checkResults) {
-        const feature = cr.featureId
-        if (!feature) {
-          continue
-        }
-        const assembly = apolloDataStore.assemblies.get(feature.assemblyId)
-        if (assembly?.backendDriverType === 'InMemoryFileDriver') {
-          snap.apolloDataStore.checkResults[cr._id] = getSnapshot(cr)
-        }
       }
       return snap
     },

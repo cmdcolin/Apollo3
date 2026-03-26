@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "@jbrowse/core": "^4.1.1",
-    "bson-objectid": "^2.0.4",
     "nanoid": "^4.0.2",
     "tslib": "^2.3.1"
   },

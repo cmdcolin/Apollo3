@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 
-import { assemblyId, type SequenceSource } from '@apollo-annotation/common'
+import { type SequenceSource, assemblyId } from '@apollo-annotation/common'
 import { TwoBitFile } from '@gmod/twobit'
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { LocalFile, RemoteFile } from 'generic-filehandle2'

@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/consistent-type-imports */
 import {
-  assemblyId,
   type FeatureRow,
   type NestedFeature,
-  refSeqId,
   type RefSeqRow,
   assembleFeatureTrees,
+  assemblyId,
+  refSeqId,
 } from '@apollo-annotation/common'
 import type {
   AnnotationFeatureSnapshot,

@@ -1,5 +1,4 @@
 import type {
-  Change,
   ClientDataStore,
   Context,
   Validation,
@@ -31,25 +30,12 @@ export class ValidationSet {
     this.validations.add(validation)
   }
 
-  async frontendPreValidate(change: Change): Promise<ValidationResultSet> {
-    const results = new ValidationResultSet()
-    for (const v of this.validations) {
-      const result = await v.frontendPreValidate(change)
-      results.add(result)
-      if (result.error) {
-        break
-      }
-    }
-    return results
-  }
-
   async frontendPostValidate(
-    change: Change,
     dataStore: ClientDataStore,
   ): Promise<ValidationResultSet> {
     const results = new ValidationResultSet()
     for (const v of this.validations) {
-      const result = await v.frontendPostValidate(change, dataStore)
+      const result = await v.frontendPostValidate(dataStore)
       results.add(result)
       if (result.error) {
         break
@@ -58,12 +44,10 @@ export class ValidationSet {
     return results
   }
 
-  async backendPreValidate(
-    change: Change | Context,
-  ): Promise<ValidationResultSet> {
+  async backendPreValidate(context: Context): Promise<ValidationResultSet> {
     const results = new ValidationResultSet()
     for (const v of this.validations) {
-      const result = await v.backendPreValidate(change)
+      const result = await v.backendPreValidate(context)
       results.add(result)
       if (result.error) {
         break
@@ -83,5 +67,5 @@ export class ValidationSet {
   }
 }
 
-/** global singleton of all known types of changes */
+/** global singleton of all known validations */
 export const validationRegistry = new ValidationSet()

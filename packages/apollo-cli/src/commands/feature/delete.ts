@@ -1,5 +1,4 @@
 import type { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
-import type { SerializedDeleteFeatureChange } from '@apollo-annotation/shared'
 import { Flags } from '@oclif/core'
 import { type Response, fetch } from 'undici'
 
@@ -9,6 +8,14 @@ import {
   getFeatureById,
   idReader,
 } from '../../utils.js'
+
+interface SerializedDeleteFeatureChange {
+  typeName: 'DeleteFeatureChange'
+  assembly: string
+  changedIds: string[]
+  deletedFeature: AnnotationFeatureSnapshot
+  parentFeatureId?: string
+}
 
 async function deleteFeature(
   address: string,

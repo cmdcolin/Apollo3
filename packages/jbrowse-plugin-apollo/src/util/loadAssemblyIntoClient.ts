@@ -30,7 +30,7 @@ export async function loadAssemblyIntoClient(
 
   let sequenceFeatureCount = 0
   let assembly = apolloDataStore.assemblies.get(assemblyId)
-  assembly ??= apolloDataStore.addAssembly(assemblyId, 'InMemoryFileDriver')
+  assembly ??= apolloDataStore.addAssembly(assemblyId)
 
   for (const seqLine of featuresAndSequences) {
     if (Array.isArray(seqLine)) {

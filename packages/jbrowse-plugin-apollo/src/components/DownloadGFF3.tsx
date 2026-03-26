@@ -23,10 +23,7 @@ import {
 import { saveAs } from 'file-saver'
 import React, { useState } from 'react'
 
-import type {
-  CollaborationServerDriver,
-  InMemoryFileDriver,
-} from '../BackendDrivers'
+import type { CollaborationServerDriver } from '../BackendDrivers'
 import type { ApolloSessionModel } from '../session'
 import { createFetchErrorMessage, getBaseURL } from '../util'
 
@@ -44,15 +41,11 @@ export function DownloadGFF3({ handleClose, session }: DownloadGFF3Props) {
 
   const baseURL = getBaseURL(session)
 
-  const { collaborationServerDriver, inMemoryFileDriver } =
+  const { collaborationServerDriver } =
     session.apolloDataStore as {
       collaborationServerDriver: CollaborationServerDriver
-      inMemoryFileDriver: InMemoryFileDriver
     }
-  const assemblies = [
-    ...collaborationServerDriver.getAssemblies(),
-    ...inMemoryFileDriver.getAssemblies(),
-  ]
+  const assemblies = collaborationServerDriver.getAssemblies()
 
   function handleChangeAssembly(e: SelectChangeEvent) {
     const newAssembly = assemblies.find((asm) => asm.name === e.target.value)

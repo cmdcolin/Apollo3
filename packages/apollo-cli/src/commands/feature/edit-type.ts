@@ -1,5 +1,4 @@
 import type { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
-import type { SerializedTypeChange } from '@apollo-annotation/shared'
 import { Flags } from '@oclif/core'
 import { type Response, fetch } from 'undici'
 
@@ -10,6 +9,15 @@ import {
   getFeatureById,
   idReader,
 } from '../../utils.js'
+
+interface SerializedTypeChange {
+  typeName: 'TypeChange'
+  assembly: string
+  changedIds: string[]
+  featureId: string
+  oldType: string
+  newType: string
+}
 
 export default class Get extends BaseCommand<typeof Get> {
   static summary = 'Edit or view feature type'

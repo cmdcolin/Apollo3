@@ -24,9 +24,9 @@ export async function createFetchErrorMessage(
 }
 
 function getPluginConfiguration(session: IAnyStateTreeNode) {
-  const { jbrowse } = getRoot(session)
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  return jbrowse.configuration.ApolloPlugin as Instance<
+  const root: Record<string, Record<string, Record<string, unknown>>> =
+    getRoot(session)
+  return root.jbrowse.configuration.ApolloPlugin as Instance<
     typeof ApolloPluginConfigurationSchema
   >
 }

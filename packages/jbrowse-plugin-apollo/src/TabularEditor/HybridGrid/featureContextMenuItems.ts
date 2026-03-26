@@ -12,7 +12,6 @@ import {
   CopyFeature,
   DeleteFeature,
   DuplicateTranscript,
-  FeatureChangeLog,
   MergeExons,
   MergeTranscripts,
   SplitExon,
@@ -117,23 +116,6 @@ export function featureContextMenuItems(
                 sourceAssemblyId: currentAssemblyId,
                 selectedFeature,
                 setSelectedFeature,
-              },
-            ],
-          )
-        },
-      },
-      {
-        label: 'View feature history',
-        onClick: () => {
-          ;(session as unknown as AbstractSessionModel).queueDialog(
-            (doneCallback) => [
-              FeatureChangeLog,
-              {
-                session,
-                handleClose: () => {
-                  doneCallback()
-                },
-                feature,
               },
             ],
           )

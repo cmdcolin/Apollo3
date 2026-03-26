@@ -1,5 +1,15 @@
+import type {
+  AnnotationFeature,
+  AnnotationFeatureSnapshot,
+  ApolloAssemblyI,
+  BackendDriverType,
+  CheckResultI,
+  CheckResultSnapshot,
+} from '@apollo-annotation/mst'
 import type { GFF3Feature } from '@gmod/gff'
+import type { Region } from '@jbrowse/core/util'
 import type { LoggerService } from '@nestjs/common'
+
 
 import type {
   AssemblyRepository,
@@ -9,6 +19,24 @@ import type {
   RefSeqRepository,
   UserRepository,
 } from './repositories/index.js'
+
+export interface ClientDataStore {
+  typeName: 'Client'
+  assemblies: Map<string | number, ApolloAssemblyI>
+  checkResults: Map<string | number, CheckResultI>
+  loadFeatures(regions: Region[]): Promise<void>
+  loadRefSeq(regions: Region[]): void
+  getFeature(featureId: string): AnnotationFeature | undefined
+  addFeature(assemblyId: string, feature: AnnotationFeatureSnapshot): void
+  deleteFeature(featureId: string): void
+  deleteAssembly(assemblyId: string): void
+  addCheckResults(checkResults: CheckResultSnapshot[]): void
+  addAssembly(
+    assemblyId: string,
+    backendDriverType?: BackendDriverType,
+  ): ApolloAssemblyI
+  clearCheckResults(): void
+}
 
 export interface ServerDataStore {
   typeName: 'Server'
@@ -50,8 +78,8 @@ export abstract class Operation implements SerializedOperation {
 
   abstract toJSON(): SerializedOperation
 
-  execute(backend: ServerDataStore): Promise<unknown> {
-    const initialResult = this.executeOnServer(backend)
+  async execute(backend: ServerDataStore) {
+    const initialResult = await this.executeOnServer(backend)
     return backend.pluginsService.evaluateExtensionPoint(
       `${this.typeName}-transformResults`,
       initialResult,

@@ -90,7 +90,6 @@ export const ApolloFeatureDetailsWidget = observer(
             <Attributes
               feature={feature}
               session={session}
-              assembly={currentAssembly._id}
               editable={!isReadOnly(session)}
             />
           </AccordionDetails>

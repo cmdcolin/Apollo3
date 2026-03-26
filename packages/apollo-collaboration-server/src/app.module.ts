@@ -11,7 +11,6 @@ import Joi from 'joi'
 import { AnalysisModule } from './analysis/analysis.module.js'
 import { AssembliesModule } from './assemblies/assemblies.module.js'
 import { AuthenticationModule } from './authentication/authentication.module.js'
-import { ChangesModule } from './changes/changes.module.js'
 import { ChecksModule } from './checks/checks.module.js'
 import { ExportModule } from './export/export.module.js'
 import { FallbackModule } from './fallback/fallback.module.js'
@@ -161,7 +160,6 @@ const validationSchema = Joi.object({
     OrganismsModule,
     JBrowseModule,
     ExportModule,
-    ChangesModule,
     TracksModule,
     PermissionsModule,
     AuthenticationModule,

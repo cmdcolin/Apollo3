@@ -20,7 +20,6 @@ import {
   AddChildFeature,
   CopyFeature,
   DeleteFeature,
-  FeatureChangeLog,
 } from '../components'
 import type { ApolloSessionModel } from '../session'
 
@@ -388,23 +387,6 @@ export function getContextMenuItemsForFeature(
       },
     })
   }
-  menuItems.push({
-    label: 'View feature history',
-    onClick: () => {
-      ;(session as unknown as AbstractSessionModel).queueDialog(
-        (doneCallback) => [
-          FeatureChangeLog,
-          {
-            session,
-            handleClose: () => {
-              doneCallback()
-            },
-            feature: sourceFeature,
-          },
-        ],
-      )
-    },
-  })
   return menuItems
 }
 

@@ -1,8 +1,4 @@
 import type { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
-import type {
-  SerializedLocationEndChange,
-  SerializedLocationStartChange,
-} from '@apollo-annotation/shared'
 import { Flags } from '@oclif/core'
 import { type Response, fetch } from 'undici'
 
@@ -13,6 +9,24 @@ import {
   getFeatureById,
   idReader,
 } from '../../utils.js'
+
+interface SerializedLocationStartChange {
+  typeName: 'LocationStartChange'
+  assembly: string
+  changedIds: string[]
+  featureId: string
+  oldStart: number
+  newStart: number
+}
+
+interface SerializedLocationEndChange {
+  typeName: 'LocationEndChange'
+  assembly: string
+  changedIds: string[]
+  featureId: string
+  oldEnd: number
+  newEnd: number
+}
 
 export default class Get extends BaseCommand<typeof Get> {
   static summary = 'Edit feature start and/or end coordinates'

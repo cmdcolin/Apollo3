@@ -12,17 +12,17 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { gff3LineToSnapshot } from '@apollo-annotation/shared'
-import { parseStringSync } from '@gmod/gff'
-
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '..')
 const COLLAB_DIR = path.join(REPO_ROOT, 'packages/apollo-collaboration-server')
 const DEMO_DATA_DIR = path.join(REPO_ROOT, 'demo-data')
-const VOLVOX_DIR = path.join(DEMO_DATA_DIR, 'volvox')
-const GFF3_FILE = path.join(VOLVOX_DIR, 'volvox-genes.gff3')
-const FASTA_FILE = path.join(VOLVOX_DIR, 'volvox.fa')
-const FAI_FILE = path.join(VOLVOX_DIR, 'volvox.fa.fai')
+const JBROWSE_DIR = path.join(
+  REPO_ROOT,
+  'packages/jbrowse-plugin-apollo/.jbrowse',
+)
+const VOLVOX_TEST_DATA = path.join(JBROWSE_DIR, 'test_data/volvox')
+const FASTA_FILE = path.join(VOLVOX_TEST_DATA, 'volvox.fa')
+const FAI_FILE = path.join(VOLVOX_TEST_DATA, 'volvox.fa.fai')
 const PORT = 3998
 const API_BASE = `http://127.0.0.1:${PORT}`
 const DB_FILE = path.join(COLLAB_DIR, 'apollo-regen.sqlite')
@@ -101,14 +101,20 @@ async function main() {
       'Server not built. Run: pnpm -C packages/apollo-collaboration-server dev:build',
     )
   }
-  if (!fs.existsSync(GFF3_FILE)) {
-    throw new Error(`GFF3 file not found at ${GFF3_FILE}`)
-  }
   if (!fs.existsSync(FASTA_FILE)) {
     throw new Error(`FASTA file not found at ${FASTA_FILE}`)
   }
   if (!fs.existsSync(FAI_FILE)) {
     throw new Error(`FAI index not found at ${FAI_FILE}`)
+  }
+
+  // Create demo-data/volvox symlink so evidence track URIs and
+  // sequenceSource relative paths work at runtime.
+  const volvoxLink = path.join(DEMO_DATA_DIR, 'volvox')
+  fs.mkdirSync(DEMO_DATA_DIR, { recursive: true })
+  if (!fs.existsSync(volvoxLink)) {
+    fs.symlinkSync(VOLVOX_TEST_DATA, volvoxLink)
+    log(`  Created symlink: demo-data/volvox -> ${VOLVOX_TEST_DATA}`)
   }
 
   // Clean slate
@@ -135,6 +141,7 @@ async function main() {
       DEFAULT_NEW_USER_ROLE: 'none',
       LOG_LEVELS: 'error,warn',
       NODE_ENV: 'development',
+      JBROWSE_STATIC_DIR: JBROWSE_DIR,
     },
     detached: true,
   })
@@ -171,55 +178,26 @@ async function main() {
     const token = await getToken()
     log('Authenticated as root.')
 
-    // Create assembly — server reads FASTA index to populate refSeqs
+    // Create assembly — server reads FASTA index to populate refSeqs.
+    // Paths are relative to the server CWD (packages/apollo-collaboration-server/).
     log('Creating volvox assembly...')
+    const faRelative = '../../demo-data/volvox/volvox.fa'
+    const faiRelative = '../../demo-data/volvox/volvox.fa.fai'
     const volvoxAssembly = (await apiPost(token, 'assemblies', {
       name: 'volvox',
       visibility: 'public',
       sequenceSource: {
         type: 'fasta',
-        fa: FASTA_FILE,
-        fai: FAI_FILE,
+        fa: faRelative,
+        fai: faiRelative,
       },
     })) as { _id: string }
     const volvoxId = volvoxAssembly._id
     log(`  assembly created: ${volvoxId}`)
 
-    // Load features from GFF3 — client parses file, posts via changes bus
-    log('Loading features from GFF3...')
-    const refSeqsRes = await fetch(`${API_BASE}/refSeqs?assembly=${volvoxId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    })
-    const refSeqs = (await refSeqsRes.json()) as { _id: string; name: string }[]
-    const refSeqIdMap = new Map(refSeqs.map((rs) => [rs.name, rs._id]))
-    const gff3Text = fs.readFileSync(GFF3_FILE, 'utf8')
-    const features = parseStringSync(gff3Text, { parseSequences: false })
-    let featureCount = 0
-    for (const featureGroup of features) {
-      if (!Array.isArray(featureGroup) || featureGroup.length === 0) {
-        continue
-      }
-      const [line] = featureGroup
-      if (!line?.seq_id || !line.type) {
-        continue
-      }
-      const refSeqId = refSeqIdMap.get(line.seq_id)
-      if (!refSeqId) {
-        continue
-      }
-      const snapshot = gff3LineToSnapshot(line, refSeqId)
-      await apiPost(token, 'changes', {
-        typeName: 'AddFeatureChange',
-        assembly: volvoxId,
-        changedIds: [snapshot._id],
-        addedFeature: snapshot,
-      })
-      featureCount++
-    }
-    log(`  ${featureCount} top-level features loaded.`)
+    // GFF3 annotations are loaded as a normal JBrowse track (Gff3TabixAdapter)
+    // rather than being bulk-loaded into the database.
+    log('Skipping GFF3 bulk load — will add as a normal track instead.')
 
     // Create organism and assign to assembly
     log('Creating Volvox carteri organism...')
@@ -485,6 +463,31 @@ async function main() {
           },
         },
       },
+      {
+        trackId: 'volvox_gff3',
+        name: 'volvox GFF3 annotations',
+        category: ['Annotations'],
+        config: {
+          type: 'FeatureTrack',
+          trackId: 'volvox_gff3',
+          name: 'volvox GFF3 annotations',
+          category: ['Annotations'],
+          assemblyNames: ['volvox'],
+          adapter: {
+            type: 'Gff3TabixAdapter',
+            gffGzLocation: {
+              uri: 'volvox/volvox.sort.gff3.gz',
+              locationType: 'UriLocation',
+            },
+            index: {
+              location: {
+                uri: 'volvox/volvox.sort.gff3.gz.tbi',
+                locationType: 'UriLocation',
+              },
+            },
+          },
+        },
+      },
     ]
 
     log('Adding evidence tracks...')
@@ -523,21 +526,21 @@ async function main() {
     await new Promise((r) => setTimeout(r, 5000))
     log(`  ${localBlastDbs.length} local BLAST databases built.`)
   } finally {
-    // Checkpoint WAL before killing server
-    try {
-      execSync(`sqlite3 "${DB_FILE}" "PRAGMA wal_checkpoint(TRUNCATE);"`, {
-        stdio: 'pipe',
-      })
-    } catch {
-      // sqlite3 may not be installed; WAL will be merged on next open
-    }
-
     cleanup()
     // Wait for process to exit
-    await new Promise((r) => setTimeout(r, 1000))
+    await new Promise((r) => setTimeout(r, 2000))
   }
 
-  // Clean up WAL files and move DB
+  // Checkpoint WAL after the server has released the lock.
+  try {
+    execSync(`sqlite3 "${DB_FILE}" "PRAGMA wal_checkpoint(TRUNCATE);"`, {
+      stdio: 'pipe',
+    })
+  } catch {
+    // sqlite3 may not be installed; WAL will be merged on next open
+  }
+
+  // Clean up WAL files
   for (const ext of ['-wal', '-shm']) {
     const f = DB_FILE + ext
     if (fs.existsSync(f)) {
@@ -548,6 +551,27 @@ async function main() {
   fs.mkdirSync(DEMO_DATA_DIR, { recursive: true })
   const dest = path.join(DEMO_DATA_DIR, 'demo.sqlite')
   fs.renameSync(DB_FILE, dest)
+
+  // Work around a MikroORM SQLite bug where JSON columns aren't persisted
+  // in WAL mode. Patch the sequence_source directly via sqlite3.
+  const faRel = '../../demo-data/volvox/volvox.fa'
+  const faiRel = '../../demo-data/volvox/volvox.fa.fai'
+  try {
+    const src = JSON.stringify({
+      type: 'fasta',
+      fa: faRel,
+      fai: faiRel,
+    })
+    const sql = `UPDATE assembly SET sequence_source = json('${src.replaceAll("'", "''")}');`
+    execSync(`sqlite3 "${dest}"`, { input: sql })
+    const check = execSync(
+      `sqlite3 "${dest}" "SELECT sequence_source FROM assembly"`,
+      { encoding: 'utf8' },
+    ).trim()
+    log(`Patched sequence_source: ${check}`)
+  } catch (error) {
+    log(`WARNING: Could not patch sequence_source: ${error}`)
+  }
 
   const stats = fs.statSync(dest)
   const sizeKB = Math.round(stats.size / 1024)

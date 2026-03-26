@@ -21,7 +21,7 @@ import {
   type SelectChangeEvent,
   TextField,
 } from '@mui/material'
-import ObjectID from 'bson-objectid'
+import type ObjectID from 'bson-objectid'
 import type { IKeyValueMap } from 'mobx'
 import React, { useEffect, useState } from 'react'
 

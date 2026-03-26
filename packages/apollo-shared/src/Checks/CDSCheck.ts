@@ -1,4 +1,4 @@
-import { checkResultId, Check } from '@apollo-annotation/common'
+import { Check, checkResultId } from '@apollo-annotation/common'
 import type {
   AnnotationFeatureSnapshot,
   CheckResultSnapshot,

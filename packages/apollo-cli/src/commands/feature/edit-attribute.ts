@@ -1,5 +1,4 @@
 import type { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
-import type { SerializedFeatureAttributeChange } from '@apollo-annotation/shared'
 import { Flags } from '@oclif/core'
 import { type Response, fetch } from 'undici'
 
@@ -10,6 +9,15 @@ import {
   getFeatureById,
   idReader,
 } from '../../utils.js'
+
+interface SerializedFeatureAttributeChange {
+  typeName: 'FeatureAttributeChange'
+  assembly: string
+  changedIds: string[]
+  featureId: string
+  oldAttributes: Record<string, string[]>
+  newAttributes: Record<string, string[]>
+}
 
 export default class EditAttibute extends BaseCommand<typeof EditAttibute> {
   static summary = 'Add, edit, or view a feature attribute'

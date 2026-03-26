@@ -140,3 +140,4 @@ demo-data/*
 # Claude Code worktrees
 .claude/worktrees/
 
+packages/apollo-collaboration-server/blast-dbs/

@@ -1,10 +1,10 @@
 import { historyId } from '@apollo-annotation/common'
 import {
+  ChangeSetType,
   type EntityManager,
   type EventSubscriber,
   type FlushEventArgs,
   type InferEntity,
-  ChangeSetType,
 } from '@mikro-orm/core'
 
 import type { FeatureEntity } from '../entities/FeatureEntity.js'

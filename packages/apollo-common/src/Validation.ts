@@ -2,15 +2,11 @@
 import type { ExecutionContext } from '@nestjs/common'
 import type { Reflector } from '@nestjs/core'
 
-import type { Change, ClientDataStore } from './Change.js'
+import type { ClientDataStore } from './Operation.js'
 
 export interface Context {
   context: ExecutionContext
   reflector: Reflector
-}
-
-export function isContext(thing: Change | Context): thing is Context {
-  return 'context' in thing && 'reflector' in thing
 }
 
 export interface ValidationResult {
@@ -20,20 +16,14 @@ export interface ValidationResult {
 
 export abstract class Validation {
   abstract name: string
-  async frontendPreValidate(_change: Change): Promise<ValidationResult> {
-    return { validationName: this.name }
-  }
 
   async frontendPostValidate(
-    _change: Change,
     _dataStore: ClientDataStore,
   ): Promise<ValidationResult> {
     return { validationName: this.name }
   }
 
-  async backendPreValidate(
-    _changeOrContext: Change | Context,
-  ): Promise<ValidationResult> {
+  async backendPreValidate(_context: Context): Promise<ValidationResult> {
     return { validationName: this.name }
   }
 

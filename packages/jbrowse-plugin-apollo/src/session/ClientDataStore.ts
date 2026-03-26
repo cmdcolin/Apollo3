@@ -39,7 +39,6 @@ import {
   CollaborationServerDriver,
   DesktopFileDriver,
   DesktopSQLiteDriver,
-  InMemoryFileDriver,
 } from '../BackendDrivers'
 import { FeatureService } from '../FeatureService'
 import { OntologyManagerType } from '../OntologyManager'
@@ -151,9 +150,6 @@ export function clientDataStoreFactory(
       collaborationServerDriver: new CollaborationServerDriver(
         self as unknown as ClientDataStoreType,
       ),
-      inMemoryFileDriver: new InMemoryFileDriver(
-        self as unknown as ClientDataStoreType,
-      ),
       desktopFileDriver: isElectron
         ? new DesktopFileDriver(self as unknown as ClientDataStoreType)
         : undefined,
@@ -212,7 +208,7 @@ export function clientDataStoreFactory(
         if (apollo) {
           return self.collaborationServerDriver
         }
-        return self.inMemoryFileDriver
+        return undefined
       },
     }))
     .actions((self) => ({

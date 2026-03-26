@@ -18,7 +18,7 @@ export function gff3LineToSnapshot(
   refSeqId: string,
 ): FeatureSnapshot {
   const _id = `${Math.random()}` //randomBytes(12).toString('hex')
-  const strand = line.strand === '+' ? 1 : line.strand === '-' ? -1 : undefined
+  const strand = line.strand === '+' ? 1 : (line.strand === '-' ? -1 : undefined)
   const attributes: Record<string, string[]> = {}
   if (line.attributes) {
     for (const [key, vals] of Object.entries(line.attributes)) {

@@ -30,6 +30,15 @@ JBROWSE_DIR="$PLUGIN_DIR/.jbrowse"
 
 cd "$COLLAB_DIR"
 
+# Ensure demo-data/volvox/ symlink exists so evidence track URIs and
+# sequenceSource paths resolve correctly at runtime.
+VOLVOX_LINK="$REPO_ROOT/demo-data/volvox"
+if [ ! -e "$VOLVOX_LINK" ]; then
+  echo '[start] Creating demo-data/volvox symlink to test_data/volvox...'
+  mkdir -p "$REPO_ROOT/demo-data"
+  ln -sf "$JBROWSE_DIR/test_data/volvox" "$VOLVOX_LINK"
+fi
+
 # Build server (esbuild, fast)
 echo '[start] Building server...'
 pnpm dev:build
