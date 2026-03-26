@@ -69,19 +69,13 @@ Any User-role user could undo any other user's change by posting
 `{ sequence: N }`. **Fix**: Check `changedBy === user.email` on history records.
 Admin users are exempt.
 
-### 7. addFeature duplicate ID causes 500
-
-Client-controlled `_id` with no conflict detection. A duplicate ID caused an
-opaque primary key violation (500). **Fix**: Pre-check with `findByIds()` and
-return 409 Conflict.
-
-### 8. No runtime DTO validation
+### 7. No runtime DTO validation
 
 All feature DTOs were plain TypeScript interfaces. Malformed requests reached
 the database layer unchecked. **Fix**: Zod schemas with `ZodValidationPipe` on
 all feature mutation and query endpoints.
 
-### 9. GFF3-specific attribute stripping in split operations
+### 8. GFF3-specific attribute stripping in split operations
 
 `splitExon` and `splitTranscript` deleted `gff_id`/`gff_name` from attributes
 when creating new features. This hardcoded GFF3 format knowledge into the

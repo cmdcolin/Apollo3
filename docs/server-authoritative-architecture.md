@@ -29,8 +29,6 @@ broadcasts the updated feature tree → all clients apply the new state directly
   Non-admin users can only undo their own changes.
 - **Input validation**: Zod schemas validate all mutation and query DTOs at the
   controller layer. Malformed requests return 400 before reaching the service.
-- **Conflict detection**: `addFeature` checks for duplicate IDs before insert,
-  returning 409 Conflict instead of an opaque DB error.
 - **Bounds propagation**: Server auto-updates parent gene/transcript bounds when
   child coordinates change
 - **Typed IDs**: Prefixed nanoid (`f-`, `asm-`, `rs-`, etc.) replacing raw hex

@@ -152,7 +152,6 @@ restoring the discipline Apollo2 had with Liquibase.
 | `deleteDescendants` bypasses history subscriber        | `MikroOrmFeatureRepository`, `MongoFeatureRepository` | Fixed — uses `em.remove()` + `em.flush()` |
 | `findByRole` returns single user instead of array      | `UserRepository`                              | Fixed — returns `UserRow[]` |
 | Undo has no authorization check                        | `FeaturesService.undoChange()`                | Fixed — checks `changedBy === user.email`, admin exempt |
-| Duplicate `_id` on addFeature causes 500               | `FeaturesService.addFeature()`                | Fixed — pre-check returns 409 Conflict |
 | GFF3-specific attribute stripping in split operations  | `FeaturesService.splitExon/splitTranscript`   | Fixed — attributes copied as-is |
 | Duplicate OAuth guards                                 | `google.guard.ts`, `microsoft.guard.ts`       | Open |
 | Inefficient admin check on login                       | `authentication.service.ts`                   | Open |

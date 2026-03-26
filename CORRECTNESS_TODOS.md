@@ -8,9 +8,9 @@ Priority: H = will cause data bugs or crashes at scale, M = correctness risk, L 
 - **M1**: `deleteDescendants` now uses `em.remove()` so FeatureHistorySubscriber fires
 - **M4**: `findByRole` returns `UserRow[]` instead of single user
 - **H6**: `undoChange` checks `changedBy === user.email` (admin exempt)
-- **H5**: `addFeature` checks for duplicate IDs before `createMany` (409 Conflict)
 - **H4**: Zod validation on all feature mutation and query DTOs
 - Dead DTO files deleted, types consolidated via Zod inference
+- GFF3-specific attribute stripping removed from split operations
 
 ---
 

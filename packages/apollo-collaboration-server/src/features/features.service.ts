@@ -18,7 +18,6 @@ import {
 import { EntityManager } from '@mikro-orm/core'
 import {
   BadRequestException,
-  ConflictException,
   ForbiddenException,
   Inject,
   Injectable,
@@ -343,14 +342,6 @@ export class FeaturesService {
         const rows = flattenNestedFeature(addedFeature, refSeq._id)
         if (parentFeatureId && rows.length > 0) {
           rows[0].parentId = parentFeatureId
-        }
-        const rowIds = rows.map((r) => r._id)
-        const existing = await scope.feature.findByIds(rowIds)
-        if (existing.length > 0) {
-          const dupes = existing.map((e) => e._id).join(', ')
-          throw new ConflictException(
-            `Features already exist with IDs: ${dupes}`,
-          )
         }
         await scope.feature.createMany(rows)
         return seq
