@@ -23,8 +23,14 @@ broadcasts the updated feature tree → all clients apply the new state directly
 - **REST endpoints**: `PATCH/POST/DELETE /features` plus `/features/merge-exons`,
   `split-exon`, `merge-transcripts`, `split-transcript`, `undo`
 - **Automatic history**: MikroORM subscriber records feature state on every
-  insert/update/delete — no per-operation code needed
-- **Undo**: Reads pre-mutation snapshots from history table and restores them
+  insert/update/delete — no per-operation code needed. Descendant deletions go
+  through the ORM unit-of-work so the subscriber fires for every row.
+- **Undo**: Reads pre-mutation snapshots from history table and restores them.
+  Non-admin users can only undo their own changes.
+- **Input validation**: Zod schemas validate all mutation and query DTOs at the
+  controller layer. Malformed requests return 400 before reaching the service.
+- **Conflict detection**: `addFeature` checks for duplicate IDs before insert,
+  returning 409 Conflict instead of an opaque DB error.
 - **Bounds propagation**: Server auto-updates parent gene/transcript bounds when
   child coordinates change
 - **Typed IDs**: Prefixed nanoid (`f-`, `asm-`, `rs-`, etc.) replacing raw hex

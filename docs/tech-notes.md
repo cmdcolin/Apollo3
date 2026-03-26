@@ -146,14 +146,16 @@ restoring the discipline Apollo2 had with Liquibase.
 
 ## NestJS Code Issues Found
 
-| Issue                                                  | Location                                      | Fix                                                       |
-| ------------------------------------------------------ | --------------------------------------------- | --------------------------------------------------------- |
-| No DTO validation (invalid data reaches service layer) | 7 DTO files                                   | Add `class-validator` decorators, enable `ValidationPipe` |
-| ChangesService has too many responsibilities           | `changes.service.ts`                          | Extract WebSocket notification to EventEmitter2           |
-| Duplicated ServerDataStore factory                     | `changes.service.ts`, `operations.service.ts` | Extract to shared injectable                              |
-| Silent auth failures (generic 403)                     | `validation.guards.ts`                        | Throw `ForbiddenException` with message                   |
-| Duplicate OAuth guards                                 | `google.guard.ts`, `microsoft.guard.ts`       | Generic `OAuthGuard` factory                              |
-| Inefficient admin check on login                       | `authentication.service.ts`                   | `countByRole()` instead of `findAll()`                    |
+| Issue                                                  | Location                                      | Status  |
+| ------------------------------------------------------ | --------------------------------------------- | ------- |
+| No DTO validation (invalid data reaches service layer) | Feature controller DTOs                       | Fixed — Zod schemas with `ZodValidationPipe` |
+| `deleteDescendants` bypasses history subscriber        | `MikroOrmFeatureRepository`, `MongoFeatureRepository` | Fixed — uses `em.remove()` + `em.flush()` |
+| `findByRole` returns single user instead of array      | `UserRepository`                              | Fixed — returns `UserRow[]` |
+| Undo has no authorization check                        | `FeaturesService.undoChange()`                | Fixed — checks `changedBy === user.email`, admin exempt |
+| Duplicate `_id` on addFeature causes 500               | `FeaturesService.addFeature()`                | Fixed — pre-check returns 409 Conflict |
+| GFF3-specific attribute stripping in split operations  | `FeaturesService.splitExon/splitTranscript`   | Fixed — attributes copied as-is |
+| Duplicate OAuth guards                                 | `google.guard.ts`, `microsoft.guard.ts`       | Open |
+| Inefficient admin check on login                       | `authentication.service.ts`                   | Open |
 
 Security issues (OAuth file-read bug, open redirect, etc.) are tracked in the
 _Authentication & Security Audit_ section.
