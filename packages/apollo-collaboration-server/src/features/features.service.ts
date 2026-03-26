@@ -479,12 +479,7 @@ export class FeaturesService {
           max: splitPoint,
           strand: exon.strand,
           attributes: exon.attributes
-            ? (() => {
-                const a = { ...exon.attributes }
-                delete a._id
-                delete a.gff_id
-                return a
-              })()
+            ? { ...exon.attributes }
             : undefined,
         }
         const rightRow: FeatureRow = {
@@ -495,8 +490,8 @@ export class FeaturesService {
           min: splitPoint,
           max: exon.max,
           strand: exon.strand,
-          attributes: leftRow.attributes
-            ? { ...leftRow.attributes }
+          attributes: exon.attributes
+            ? { ...exon.attributes }
             : undefined,
         }
 
@@ -706,15 +701,6 @@ export class FeaturesService {
           rightMax = Math.max(...rightChildren.map((c) => c.max))
         }
 
-        const strippedAttrs = transcript.attributes
-          ? (() => {
-              const a = { ...transcript.attributes }
-              delete a.gff_id
-              delete a.gff_name
-              return a
-            })()
-          : undefined
-
         const leftRow: FeatureRow = {
           _id: leftTranscriptId,
           refSeq: transcript.refSeq,
@@ -723,7 +709,9 @@ export class FeaturesService {
           min: leftMin,
           max: leftMax,
           strand: transcript.strand,
-          attributes: strippedAttrs,
+          attributes: transcript.attributes
+            ? { ...transcript.attributes }
+            : undefined,
         }
         const rightRow: FeatureRow = {
           _id: rightTranscriptId,
@@ -733,7 +721,9 @@ export class FeaturesService {
           min: rightMin,
           max: rightMax,
           strand: transcript.strand,
-          attributes: strippedAttrs ? { ...strippedAttrs } : undefined,
+          attributes: transcript.attributes
+            ? { ...transcript.attributes }
+            : undefined,
         }
         await scope.feature.createMany([leftRow, rightRow])
 
