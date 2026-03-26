@@ -7,6 +7,7 @@ import {
   type InferEntity,
 } from '@mikro-orm/core'
 
+import { mutationContext } from '../MutationContext.js'
 import type { FeatureEntity } from '../entities/FeatureEntity.js'
 import { FeatureHistoryEntity } from '../entities/FeatureHistoryEntity.js'
 
@@ -32,6 +33,7 @@ function recordFromEntity(
   entity: FeatureEntityInstance,
   changeType: 'insert' | 'update' | 'delete',
 ) {
+  const ctx = mutationContext.getStore()
   const record = em.create(FeatureHistoryEntity, {
     _id: historyId(),
     featureId: entity._id,
@@ -44,57 +46,14 @@ function recordFromEntity(
     phase: entity.phase ?? null,
     attributes: entity.attributes ?? null,
     changeType,
-    changedBy: entity.user ?? null,
+    changedBy: ctx?.user ?? entity.user ?? null,
     changedAt: new Date(),
-    sequence: null,
+    sequence: ctx?.sequence ?? null,
   })
   em.persist(record)
   return record
 }
 
-export function createHistoryRecord(
-  em: EntityManager,
-  entity: {
-    _id: string
-    refSeq: string
-    parentId: string | null
-    type: string
-    min: number
-    max: number
-    strand: number | null
-    phase: number | null
-    attributes: Record<string, string[]> | null
-  },
-  changeType: 'insert' | 'update' | 'delete',
-  changedBy: string | null,
-  sequence: number | null,
-) {
-  const record = em.create(FeatureHistoryEntity, {
-    _id: historyId(),
-    featureId: entity._id,
-    refSeq: entity.refSeq,
-    parentId: entity.parentId,
-    type: entity.type,
-    min: entity.min,
-    max: entity.max,
-    strand: entity.strand,
-    phase: entity.phase,
-    attributes: entity.attributes,
-    changeType,
-    changedBy,
-    changedAt: new Date(),
-    sequence,
-  })
-  em.persist(record)
-  return record
-}
-
-// Captures feature state on create/update/delete via MikroORM unit of work.
-// Uses onFlush to inspect all pending changeSets and create history records
-// that are included in the same flush (and thus the same transaction).
-//
-// Bulk operations (em.insertMany, em.nativeDelete) bypass the UoW and must
-// record history explicitly using createHistoryRecord().
 export class FeatureHistorySubscriber implements EventSubscriber {
   onFlush(args: FlushEventArgs) {
     const { uow } = args
@@ -110,8 +69,6 @@ export class FeatureHistorySubscriber implements EventSubscriber {
           break
         }
         case ChangeSetType.UPDATE: {
-          // originalEntity contains the full pre-update snapshot from when the
-          // entity was loaded into the identity map. We record that state.
           const original = cs.originalEntity as FeatureEntityInstance
           uow.computeChangeSet(recordFromEntity(args.em, original, 'update'))
           break

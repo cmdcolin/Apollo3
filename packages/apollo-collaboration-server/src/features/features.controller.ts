@@ -203,7 +203,7 @@ export class FeaturesController {
     if (!user) {
       throw new Error('User not found on request')
     }
-    await this.featuresService.undoChange(body.sequence, user)
+    return this.featuresService.undoChange(body.sequence, user)
   }
 
   // Keep single-feature GET last to avoid route conflicts
