@@ -15,6 +15,7 @@ export const UserEntity = defineEntity({
     username: p.string(),
     email: p.string().unique(),
     role: p.enum(() => UserRole),
+    pendingApproval: p.boolean().nullable(),
     createdAt: p.datetime().nullable(),
     updatedAt: p
       .datetime()

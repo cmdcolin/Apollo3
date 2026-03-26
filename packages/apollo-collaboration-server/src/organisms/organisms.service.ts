@@ -1,5 +1,4 @@
-import { randomBytes } from 'node:crypto'
-
+import { organismId } from '@apollo-annotation/common'
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common'
 
 import { DatabaseService } from '../mikro-orm/database.service.js'
@@ -15,7 +14,7 @@ export class OrganismsService {
 
   async create(dto: CreateOrganismDto) {
     return this.db.organism.create({
-      _id: randomBytes(12).toString('hex'),
+      _id: organismId(),
       taxid: dto.taxid,
       genus: dto.genus,
       species: dto.species,

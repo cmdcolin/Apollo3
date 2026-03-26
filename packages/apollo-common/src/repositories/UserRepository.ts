@@ -3,6 +3,7 @@ export interface UserRow {
   username: string
   email: string
   role: 'readOnly' | 'admin' | 'user' | 'none'
+  pendingApproval?: boolean
   createdAt?: Date
   updatedAt?: Date
 }

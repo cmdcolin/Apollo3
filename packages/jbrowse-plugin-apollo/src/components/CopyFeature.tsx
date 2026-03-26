@@ -3,11 +3,11 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-misused-promises */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import { featureId } from '@apollo-annotation/common'
 import type {
   AnnotationFeature,
   AnnotationFeatureSnapshot,
 } from '@apollo-annotation/mst'
-import { AddFeatureChange } from '@apollo-annotation/shared'
 import { readConfObject } from '@jbrowse/core/configuration'
 import type { AbstractSessionModel } from '@jbrowse/core/util'
 import { getSnapshot } from '@jbrowse/mobx-state-tree'
@@ -25,7 +25,7 @@ import ObjectID from 'bson-objectid'
 import type { IKeyValueMap } from 'mobx'
 import React, { useEffect, useState } from 'react'
 
-import type { ChangeManager } from '../ChangeManager'
+import type { FeatureService } from '../FeatureService'
 import type { ApolloSessionModel } from '../session'
 
 import { Dialog } from './Dialog'
@@ -35,7 +35,7 @@ interface CopyFeatureProps {
   handleClose(): void
   sourceFeature: AnnotationFeature
   sourceAssemblyId: string
-  changeManager: ChangeManager
+  featureService: FeatureService
 }
 
 interface Collection {
@@ -53,7 +53,7 @@ function generateNewIds(
   feature: AnnotationFeatureSnapshot,
   featureIds: string[],
 ): AnnotationFeatureSnapshot {
-  const newId = new ObjectID().toHexString()
+  const newId = featureId()
   featureIds.push(newId)
 
   const children: Record<string, AnnotationFeatureSnapshot> = {}
@@ -77,7 +77,7 @@ function generateNewIds(
 }
 
 export function CopyFeature({
-  changeManager,
+  featureService,
   handleClose,
   session,
   sourceAssemblyId,
@@ -183,11 +183,8 @@ export function CopyFeature({
     // Updates children start and end values
     const updatedChildren = updateRefSeqStartEnd(newFeatureLine, locationMove)
 
-    const change = new AddFeatureChange({
-      changedIds: [newFeatureLine._id],
-      typeName: 'AddFeatureChange',
-      assembly: selectedAssemblyId,
-      addedFeature: {
+    void featureService.addFeature(
+      {
         _id: newFeatureLine._id,
         refSeq: newFeatureLine.refSeq,
         min: newFeatureLine.min,
@@ -200,9 +197,8 @@ export function CopyFeature({
         attributes: attributeMap,
         strand: newFeatureLine.strand,
       },
-      copyFeature: true,
-    })
-    void changeManager.submit(change).then(() => {
+      selectedAssemblyId,
+    ).then(() => {
       session.apolloSetSelectedFeature(newFeatureLine._id)
     })
     handleClose()

@@ -1,10 +1,10 @@
-import { randomBytes } from 'node:crypto'
 import { createReadStream } from 'node:fs'
 import { readFile, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { Readable } from 'node:stream'
 import { type ReadableStream, TransformStream } from 'node:stream/web'
 
+import { fileId } from '@apollo-annotation/common'
 import { type GFF3Feature, GFFTransformer } from '@gmod/gff'
 import {
   Inject,
@@ -51,7 +51,7 @@ export class FilesService {
       `Add uploaded file info into DB: ${JSON.stringify(createFileDto)}`,
     )
     return this.db.file.create({
-      _id: randomBytes(12).toString('hex'),
+      _id: fileId(),
       basename: createFileDto.basename,
       checksum: createFileDto.checksum,
       type: createFileDto.type,

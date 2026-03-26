@@ -1,11 +1,5 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import type { AnnotationFeature } from '@apollo-annotation/mst'
-import {
-  LocationEndChange,
-  LocationStartChange,
-  StrandChange,
-  TypeChange,
-} from '@apollo-annotation/shared'
 import type { AbstractSessionModel } from '@jbrowse/core/util'
 import { TextField, Typography } from '@mui/material'
 import { observer } from 'mobx-react'
@@ -55,13 +49,11 @@ const ReadOnlyBasicInformation = observer(function ReadOnlyBasicInformation({
 })
 
 export const BasicInformation = observer(function BasicInformation({
-  assembly,
   feature,
   session,
 }: {
   feature: AnnotationFeature
   session: ApolloSessionModel
-  assembly: string
 }) {
   if (isReadOnly(session)) {
     return <ReadOnlyBasicInformation feature={feature} />
@@ -70,82 +62,46 @@ export const BasicInformation = observer(function BasicInformation({
     <EditableBasicInformation
       feature={feature}
       session={session}
-      assembly={assembly}
     />
   )
 })
 
 const EditableBasicInformation = observer(function EditableBasicInformation({
-  assembly,
   feature,
   session,
 }: {
   feature: AnnotationFeature
   session: ApolloSessionModel
-  assembly: string
 }) {
   const [errorMessage, setErrorMessage] = useState('')
   const [typeWarningText, setTypeWarningText] = useState('')
 
-  const { _id, assemblyId, max, min, strand, type } = feature
+  const { _id, max, min, strand, type } = feature
 
   const notifyError = (e: Error) => {
     ;(session as unknown as AbstractSessionModel).notify(e.message, 'error')
   }
 
-  const { changeManager } = session.apolloDataStore
+  const { featureService } = session.apolloDataStore
   function handleTypeChange(newType: string) {
     setErrorMessage('')
-    const featureId = _id
-    const change = new TypeChange({
-      typeName: 'TypeChange',
-      changedIds: [featureId],
-      featureId,
-      oldType: type,
-      newType,
-      assembly: assemblyId,
-    })
-    return changeManager.submit(change)
+    return featureService.updateFeature(_id, { type: newType })
   }
 
   function handleStrandChange(event: React.ChangeEvent<HTMLInputElement>) {
     const { value } = event.target
     const newStrand = value ? (Number(value) as 1 | -1) : undefined
-    const change = new StrandChange({
-      typeName: 'StrandChange',
-      changedIds: [_id],
-      featureId: _id,
-      oldStrand: strand,
-      newStrand,
-      assembly,
-    })
-    return changeManager.submit(change)
+    return featureService.updateFeature(_id, { strand: newStrand ?? null })
   }
 
   async function handleStartChange(newStart: number) {
     newStart--
-    const change = new LocationStartChange({
-      typeName: 'LocationStartChange',
-      changedIds: [_id],
-      featureId: _id,
-      oldStart: min,
-      newStart,
-      assembly,
-    })
-    await changeManager.submit(change)
+    await featureService.updateFeature(_id, { min: newStart })
     return true
   }
 
   async function handleEndChange(newEnd: number) {
-    const change = new LocationEndChange({
-      typeName: 'LocationEndChange',
-      changedIds: [_id],
-      featureId: _id,
-      oldEnd: max,
-      newEnd,
-      assembly,
-    })
-    await changeManager.submit(change)
+    await featureService.updateFeature(_id, { max: newEnd })
     return true
   }
 

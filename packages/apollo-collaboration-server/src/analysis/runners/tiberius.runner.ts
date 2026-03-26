@@ -1,5 +1,4 @@
 import { type ChildProcess, execSync, spawn } from 'node:child_process'
-import { randomBytes } from 'node:crypto'
 import {
   existsSync,
   mkdirSync,
@@ -11,6 +10,7 @@ import {
 import { homedir } from 'node:os'
 import path from 'node:path'
 
+import { trackConfigId } from '@apollo-annotation/common'
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
@@ -152,10 +152,10 @@ export class TiberiusRunner implements AnalysisRunner, OnModuleInit {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const serverUrl = this.configService.get('URL', { infer: true })!
     const trackId = `tiberius_${context.job._id}`
-    const trackConfigId = randomBytes(12).toString('hex')
+    const newTrackConfigId = trackConfigId()
 
     await context.db.trackConfig.create({
-      _id: trackConfigId,
+      _id: newTrackConfigId,
       trackId,
       assemblyIds: [assemblyId],
       config: {
@@ -186,7 +186,7 @@ export class TiberiusRunner implements AnalysisRunner, OnModuleInit {
       rmSync(outputPath)
     }
 
-    return { trackConfigId }
+    return { trackConfigId: newTrackConfigId }
   }
 
   // ── Config detection ─────────────────────────────────────────────

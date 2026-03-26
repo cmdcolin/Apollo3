@@ -172,6 +172,8 @@ async function bootstrap() {
   const detailPages: Record<string, string> = {
     assemblies: path.join(pagesDir, 'ui/assembly-detail/index.html'),
     organisms: path.join(pagesDir, 'ui/organism-detail/index.html'),
+    'assembly-checks': path.join(pagesDir, 'ui/assembly-checks/index.html'),
+    'assembly-admin': path.join(pagesDir, 'ui/assembly-admin/index.html'),
   }
   for (const [resource, htmlFile] of Object.entries(detailPages)) {
     app.use(

@@ -1,27 +1,14 @@
 /* eslint-disable @typescript-eslint/require-await */
 import type * as Fs from 'node:fs'
 
-import {
-  type AssemblySpecificChange,
-  type Change,
-  isAssemblySpecificChange,
-} from '@apollo-annotation/common'
 import type {
   AnnotationFeatureSnapshot,
   CheckResultSnapshot,
 } from '@apollo-annotation/mst'
-import {
-  ValidationResultSet,
-  annotationFeatureToGFF3,
-  splitStringIntoChunks,
-} from '@apollo-annotation/shared'
-import { type GFF3Item, formatSync } from '@gmod/gff'
 import { getConf } from '@jbrowse/core/configuration'
 import { type Region, getSession } from '@jbrowse/core/util'
-import { getSnapshot } from '@jbrowse/mobx-state-tree'
 
-import type { SubmitOpts } from '../ChangeManager'
-import { checkFeatures, loadAssemblyIntoClient } from '../util'
+import { loadAssemblyIntoClient } from '../util'
 
 import { BackendDriver, type RefNameAliases } from './BackendDriver'
 import { getElectronRequire } from './electronRequire'
@@ -105,76 +92,6 @@ export class DesktopFileDriver extends BackendDriver {
         sequenceMetadata && !sequenceMetadata.apollo && sequenceMetadata.file,
       )
     })
-  }
-
-  async submitChange(
-    change: Change | AssemblySpecificChange,
-    _opts?: SubmitOpts,
-  ) {
-    if (!isAssemblySpecificChange(change)) {
-      throw new Error(
-        `Cannot use this type of change with local file: "${change.typeName}"`,
-      )
-    }
-    const { assemblyManager } = getSession(this.clientStore)
-    const assembly = assemblyManager.get(change.assembly)
-    if (!assembly) {
-      throw new Error(`Could not find assembly with name "${change.assembly}"`)
-    }
-    const { file } = getConf(assembly, ['sequence', 'metadata']) as {
-      file: string
-    }
-    const clientAssembly = this.clientStore.assemblies.get(change.assembly)
-    if (!clientAssembly) {
-      throw new Error(
-        `Could not find assembly in client with name "${change.assembly}"`,
-      )
-    }
-    const refSeqs = new Set(...clientAssembly.refSeqs.keys())
-    const { checkResults } = this.clientStore
-    for (const checkResult of checkResults.values()) {
-      if (refSeqs.has(checkResult.refSeq)) {
-        checkResults.delete(checkResult._id)
-      }
-    }
-    const newCheckResults = await checkFeatures(clientAssembly)
-    this.clientStore.addCheckResults(newCheckResults)
-    const gff3Items: GFF3Item[] = [{ directive: 'gff-version', value: '3' }]
-    for (const [, refSeq] of clientAssembly.refSeqs) {
-      gff3Items.push({
-        directive: 'sequence-region',
-        value: `${refSeq.name} 1 ${refSeq.sequence[0].stop}`,
-      })
-    }
-    for (const comment of clientAssembly.comments) {
-      gff3Items.push({ comment })
-    }
-    for (const [, refSeq] of clientAssembly.refSeqs) {
-      const { features } = refSeq
-      for (const [, feature] of features) {
-        gff3Items.push(annotationFeatureToGFF3(getSnapshot(feature)))
-      }
-    }
-    for (const [, refSeq] of clientAssembly.refSeqs) {
-      const [sequence] = refSeq.sequence
-      const formattedSequence = splitStringIntoChunks(
-        sequence.sequence,
-        80,
-      ).join('\n')
-      gff3Items.push({
-        id: refSeq.name,
-        description: refSeq.description,
-        sequence: formattedSequence,
-      })
-    }
-
-    const gff3Contents = formatSync(gff3Items)
-
-    const fs = getElectronRequire()('node:fs') as typeof Fs
-    await fs.promises.writeFile(file, gff3Contents, 'utf8')
-
-    const results = new ValidationResultSet()
-    return results
   }
 
   async searchFeatures(

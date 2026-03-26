@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/unbound-method */
+import { featureId } from '@apollo-annotation/common'
 import type {
   AnnotationFeature,
   AnnotationFeatureSnapshot,
 } from '@apollo-annotation/mst'
-import { AddFeatureChange } from '@apollo-annotation/shared'
 import type { AbstractSessionModel } from '@jbrowse/core/util/types'
 import { getSnapshot } from '@jbrowse/mobx-state-tree'
 import {
@@ -12,10 +12,9 @@ import {
   DialogContent,
   DialogContentText,
 } from '@mui/material'
-import ObjectID from 'bson-objectid'
 import React, { useState } from 'react'
 
-import type { ChangeManager } from '../ChangeManager'
+import type { FeatureService } from '../FeatureService'
 import type { ApolloSessionModel } from '../session'
 
 import { Dialog } from './Dialog'
@@ -25,13 +24,13 @@ interface DuplicateTranscriptProps {
   handleClose(): void
   sourceFeature: AnnotationFeature
   sourceAssemblyId: string
-  changeManager: ChangeManager
+  featureService: FeatureService
   selectedFeature?: AnnotationFeature
   setSelectedFeature(feature?: AnnotationFeature): void
 }
 
 export function DuplicateTranscript({
-  changeManager,
+  featureService,
   handleClose,
   session,
   sourceAssemblyId,
@@ -53,7 +52,7 @@ export function DuplicateTranscript({
       }
 
       const transcriptSnapshot = getSnapshot(sourceFeature)
-      const newTranscriptId = new ObjectID().toHexString()
+      const newTranscriptId = featureId()
       const duplicateTranscript = {
         ...transcriptSnapshot,
         _id: newTranscriptId,
@@ -62,7 +61,7 @@ export function DuplicateTranscript({
       if (duplicateTranscript.children) {
         const newChildren: Record<string, AnnotationFeatureSnapshot> = {}
         for (const [, child] of Object.entries(duplicateTranscript.children)) {
-          const newChildId = new ObjectID().toHexString()
+          const newChildId = featureId()
           newChildren[newChildId] = {
             ...child,
             _id: newChildId,
@@ -71,15 +70,11 @@ export function DuplicateTranscript({
         duplicateTranscript.children = newChildren
       }
 
-      const change = new AddFeatureChange({
-        parentFeatureId: parentGene._id,
-        changedIds: [parentGene._id],
-        typeName: 'AddFeatureChange',
-        assembly: sourceAssemblyId,
-        addedFeature: duplicateTranscript,
-      })
-
-      await changeManager.submit(change).then(() => {
+      await featureService.addFeature(
+        duplicateTranscript,
+        sourceAssemblyId,
+        parentGene._id,
+      ).then(() => {
         setSelectedFeature(undefined)
         session.apolloSetSelectedFeature(newTranscriptId)
         notify('Successfully duplicated transcript', 'success')

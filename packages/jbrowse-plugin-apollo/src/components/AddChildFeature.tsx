@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 
+import { featureId } from '@apollo-annotation/common'
 import type { AnnotationFeature } from '@apollo-annotation/mst'
-import { AddFeatureChange } from '@apollo-annotation/shared'
 import {
   Button,
   DialogActions,
@@ -9,10 +9,9 @@ import {
   DialogContentText,
   TextField,
 } from '@mui/material'
-import ObjectID from 'bson-objectid'
 import React, { useState } from 'react'
 
-import type { ChangeManager } from '../ChangeManager'
+import type { FeatureService } from '../FeatureService'
 import { isOntologyClass } from '../OntologyManager'
 import type { OntologyLookup } from '../OntologyManager/OntologyLookup'
 import { fetchValidDescendantTerms } from '../OntologyManager/util'
@@ -26,11 +25,11 @@ interface AddChildFeatureProps {
   handleClose(): void
   sourceFeature: AnnotationFeature
   sourceAssemblyId: string
-  changeManager: ChangeManager
+  featureService: FeatureService
 }
 
 export function AddChildFeature({
-  changeManager,
+  featureService,
   handleClose,
   session,
   sourceAssemblyId,
@@ -56,21 +55,18 @@ export function AddChildFeature({
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setErrorMessage('')
-    const _id = new ObjectID().toHexString()
-    const change = new AddFeatureChange({
-      changedIds: [sourceFeature._id],
-      typeName: 'AddFeatureChange',
-      assembly: sourceAssemblyId,
-      addedFeature: {
+    const _id = featureId()
+    void featureService.addFeature(
+      {
         _id,
         refSeq: sourceFeature.refSeq,
         min: Number(start) - 1,
         max: Number(end),
         type,
       },
-      parentFeatureId: sourceFeature._id,
-    })
-    void changeManager.submit(change).then(() => {
+      sourceAssemblyId,
+      sourceFeature._id,
+    ).then(() => {
       session.apolloSetSelectedFeature(_id)
     })
     handleClose()

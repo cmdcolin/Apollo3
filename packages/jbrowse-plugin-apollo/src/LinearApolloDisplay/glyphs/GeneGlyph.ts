@@ -849,7 +849,7 @@ function getContextMenuItems(
   const {
     role: displayRole,
     hoveredFeature,
-    changeManager,
+    featureService,
     regions,
     selectedFeature,
     session,
@@ -928,7 +928,7 @@ function getContextMenuItems(
                     handleClose: () => {
                       doneCallback()
                     },
-                    changeManager,
+                    featureService,
                     sourceFeature: feature,
                     sourceAssemblyId: currentAssemblyId,
                     selectedFeature,
@@ -952,7 +952,7 @@ function getContextMenuItems(
                     handleClose: () => {
                       doneCallback()
                     },
-                    changeManager,
+                    featureService,
                     sourceFeature: feature,
                     sourceAssemblyId: currentAssemblyId,
                     selectedFeature,
@@ -980,7 +980,7 @@ function getContextMenuItems(
                     handleClose: () => {
                       doneCallback()
                     },
-                    changeManager,
+                    featureService,
                     sourceFeature: feature,
                     sourceAssemblyId: currentAssemblyId,
                     selectedFeature,
@@ -1004,7 +1004,7 @@ function getContextMenuItems(
                     handleClose: () => {
                       doneCallback()
                     },
-                    changeManager,
+                    featureService,
                     sourceFeature: feature,
                     sourceAssemblyId: currentAssemblyId,
                     selectedFeature,
@@ -1027,7 +1027,7 @@ function getContextMenuItems(
                     handleClose: () => {
                       doneCallback()
                     },
-                    changeManager,
+                    featureService,
                     sourceFeature: feature,
                     sourceAssemblyId: currentAssemblyId,
                     selectedFeature,
@@ -1051,7 +1051,7 @@ function getContextMenuItems(
                     handleClose: () => {
                       doneCallback()
                     },
-                    changeManager,
+                    featureService,
                     sourceFeature: feature,
                     sourceAssemblyId: currentAssemblyId,
                     refName: region.refName,
@@ -1071,7 +1071,6 @@ function getContextMenuItems(
                 {
                   feature,
                   assembly: currentAssemblyId,
-                  changeManager,
                   refName: region.refName,
                 },
               )

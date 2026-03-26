@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 
 import type { AnnotationFeature, Children } from '@apollo-annotation/mst'
-import { MergeExonsChange } from '@apollo-annotation/shared'
-import { getSnapshot } from '@jbrowse/mobx-state-tree'
 import {
   Box,
   Button,
@@ -17,7 +15,7 @@ import {
 } from '@mui/material'
 import React, { useState } from 'react'
 
-import type { ChangeManager } from '../ChangeManager'
+import type { FeatureService } from '../FeatureService'
 import type { ApolloSessionModel } from '../session'
 
 import { Dialog } from './Dialog'
@@ -27,7 +25,7 @@ interface MergeExonsProps {
   handleClose(): void
   sourceFeature: AnnotationFeature
   sourceAssemblyId: string
-  changeManager: ChangeManager
+  featureService: FeatureService
   selectedFeature?: AnnotationFeature
   setSelectedFeature(feature?: AnnotationFeature): void
 }
@@ -91,11 +89,10 @@ function makeRadioButtonName(
 }
 
 export function MergeExons({
-  changeManager,
+  featureService,
   handleClose,
   selectedFeature,
   setSelectedFeature,
-  sourceAssemblyId,
   sourceFeature,
 }: MergeExonsProps) {
   const [errorMessage, setErrorMessage] = useState('')
@@ -111,15 +108,7 @@ export function MergeExons({
     if (selectedFeature?._id === sourceFeature._id) {
       setSelectedFeature()
     }
-    const change = new MergeExonsChange({
-      changedIds: [sourceFeature._id],
-      typeName: 'MergeExonsChange',
-      assembly: sourceAssemblyId,
-      firstExon: getSnapshot(sourceFeature),
-      secondExon: getSnapshot(selectedExon),
-      parentFeatureId: parent._id,
-    })
-    void changeManager.submit(change)
+    void featureService.mergeExons(sourceFeature._id, selectedExon._id)
     handleClose()
     event.preventDefault()
   }

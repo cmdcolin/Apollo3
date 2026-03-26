@@ -1,7 +1,6 @@
-import { randomBytes } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 
-import type { SequenceSource } from '@apollo-annotation/common'
+import { assemblyId, type SequenceSource } from '@apollo-annotation/common'
 import { TwoBitFile } from '@gmod/twobit'
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { LocalFile, RemoteFile } from 'generic-filehandle2'
@@ -76,9 +75,9 @@ export class AssembliesService {
   async create(createAssemblyDto: CreateAssemblyDto) {
     const defaultChecks = await this.db.checkConfig.findDefaults()
     const defaultCheckIds = defaultChecks.map((c) => c._id)
-    const assemblyId = randomBytes(12).toString('hex')
+    const newAssemblyId = assemblyId()
     const assembly = await this.db.assembly.create({
-      _id: assemblyId,
+      _id: newAssemblyId,
       name: createAssemblyDto.name,
       displayName: createAssemblyDto.displayName,
       description: createAssemblyDto.description,
@@ -95,7 +94,7 @@ export class AssembliesService {
       )
       for (const { length, name } of sequences) {
         await this.refSeqsService.create({
-          assembly: assemblyId,
+          assembly: newAssemblyId,
           name,
           length: String(length),
         })

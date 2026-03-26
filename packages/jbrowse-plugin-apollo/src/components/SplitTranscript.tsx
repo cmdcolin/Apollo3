@@ -2,11 +2,8 @@
 
 import type {
   AnnotationFeature,
-  AnnotationFeatureSnapshot,
   Children,
 } from '@apollo-annotation/mst'
-import { SplitTranscriptChange } from '@apollo-annotation/shared'
-import { getSnapshot } from '@jbrowse/mobx-state-tree'
 import {
   Box,
   Button,
@@ -19,10 +16,9 @@ import {
   RadioGroup,
   type SelectChangeEvent,
 } from '@mui/material'
-import ObjectID from 'bson-objectid'
 import React, { useState } from 'react'
 
-import type { ChangeManager } from '../ChangeManager'
+import type { FeatureService } from '../FeatureService'
 import type { ApolloSessionModel } from '../session'
 
 import { Dialog } from './Dialog'
@@ -32,7 +28,7 @@ interface SplitTranscriptProps {
   handleClose(): void
   sourceFeature: AnnotationFeature
   sourceAssemblyId: string
-  changeManager: ChangeManager
+  featureService: FeatureService
   selectedFeature?: AnnotationFeature
   setSelectedFeature(feature?: AnnotationFeature): void
 }
@@ -88,12 +84,11 @@ function makeExonName(feature: AnnotationFeature): string {
 }
 
 export function SplitTranscript({
-  changeManager,
+  featureService,
   handleClose,
   selectedFeature,
   session,
   setSelectedFeature,
-  sourceAssemblyId,
   sourceFeature,
 }: SplitTranscriptProps) {
   const [errorMessage, setErrorMessage] = useState('')
@@ -112,25 +107,10 @@ export function SplitTranscript({
       setSelectedFeature()
     }
 
-    if (!sourceFeature.parent?._id) {
-      throw new Error(
-        'Splitting a transcript without a parent gene is not possible',
-      )
-    }
-
-    const transcriptSnapshot =
-      getSnapshot<AnnotationFeatureSnapshot>(sourceFeature)
-    const change = new SplitTranscriptChange({
-      changedIds: [sourceFeature._id],
-      typeName: 'SplitTranscriptChange',
-      assembly: sourceAssemblyId,
-      transcriptToSplit: transcriptSnapshot,
-      parentFeatureId: sourceFeature.parent._id,
-      splitPoint: splitPoints[selectedSplitIdx].position,
-      leftTranscriptId: new ObjectID().toHexString(),
-      rightTranscriptId: new ObjectID().toHexString(),
-    })
-    void changeManager.submit(change)
+    void featureService.splitTranscript(
+      sourceFeature._id,
+      splitPoints[selectedSplitIdx].position,
+    )
     handleClose()
   }
 

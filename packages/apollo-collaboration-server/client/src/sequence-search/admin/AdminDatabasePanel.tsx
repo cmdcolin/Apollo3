@@ -9,14 +9,9 @@ import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
 import Paper from '@mui/material/Paper'
 import Select from '@mui/material/Select'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
+import { DataGrid, type GridColDef } from '@mui/x-data-grid'
 import { useCallback, useState } from 'react'
 
 import { AssemblyChip } from '../helpers/index.js'
@@ -27,6 +22,8 @@ import {
   TAB_TOOLS,
   TOOL_LABELS,
 } from '../types.js'
+
+type DbRow = AnalysisDb & { id: string }
 
 export function AdminDatabasePanel({
   assemblies,
@@ -89,6 +86,67 @@ export function AdminDatabasePanel({
     [onChanged],
   )
 
+  const columns: GridColDef<DbRow>[] = [
+    { field: 'name', headerName: 'Name', flex: 1 },
+    {
+      field: 'tool',
+      headerName: 'Tool',
+      width: 140,
+      renderCell: (params) => {
+        const tool = String(params.value ?? '')
+        return <Chip label={TOOL_LABELS[tool] ?? tool} size="small" />
+      },
+    },
+    {
+      field: 'program',
+      headerName: 'Program',
+      width: 120,
+      renderCell: (params) => {
+        const p = params.row.params.program
+        return typeof p === 'string' ? p : ''
+      },
+    },
+    {
+      field: 'status',
+      headerName: 'Status',
+      width: 120,
+      renderCell: (params) => {
+        const status = String(params.value ?? '')
+        const color =
+          status === 'ready' ? 'success' : (status === 'building' ? 'warning' : 'error')
+        return <Chip label={status} size="small" color={color} />
+      },
+    },
+    {
+      field: 'assemblyIds',
+      headerName: 'Assemblies',
+      flex: 1,
+      sortable: false,
+      renderCell: (params) =>
+        (params.value as string[]).map((id) => (
+          <AssemblyChip key={id} id={id} assemblies={assemblies} />
+        )),
+    },
+    {
+      field: 'actions',
+      headerName: '',
+      width: 60,
+      sortable: false,
+      renderCell: (params) => (
+        <IconButton
+          size="small"
+          color="error"
+          onClick={() => {
+            void handleDelete(params.row._id)
+          }}
+          title="Delete"
+        >
+          &#x2715;
+        </IconButton>
+      ),
+    },
+  ]
+
   return (
     <>
       <Divider sx={{ my: 4 }} />
@@ -103,68 +161,15 @@ export function AdminDatabasePanel({
       ) : null}
 
       {analysisDbs.length > 0 ? (
-        <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Tool</TableCell>
-                <TableCell>Program</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Assemblies</TableCell>
-                <TableCell />
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {analysisDbs.map((db) => (
-                <TableRow key={db._id} hover>
-                  <TableCell>{db.name}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={TOOL_LABELS[db.tool] ?? db.tool}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {typeof db.params.program === 'string'
-                      ? db.params.program
-                      : ''}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={db.status}
-                      size="small"
-                      color={
-                        db.status === 'ready'
-                          ? 'success'
-                          : db.status === 'building'
-                            ? 'warning'
-                            : 'error'
-                      }
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {db.assemblyIds.map((id) => (
-                      <AssemblyChip key={id} id={id} assemblies={assemblies} />
-                    ))}
-                  </TableCell>
-                  <TableCell>
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => {
-                        void handleDelete(db._id)
-                      }}
-                      title="Delete"
-                    >
-                      &#x2715;
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <Box sx={{ height: 400, mb: 3 }}>
+          <DataGrid
+            rows={analysisDbs.map((db) => ({ ...db, id: db._id }))}
+            columns={columns}
+            density="compact"
+            pageSizeOptions={[25]}
+            hideFooter={analysisDbs.length <= 25}
+          />
+        </Box>
       ) : null}
 
       <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>

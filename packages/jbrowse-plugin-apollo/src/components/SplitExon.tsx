@@ -4,7 +4,6 @@ import type {
   AnnotationFeature,
   AnnotationFeatureSnapshot,
 } from '@apollo-annotation/mst'
-import { SplitExonChange } from '@apollo-annotation/shared'
 import { getSnapshot } from '@jbrowse/mobx-state-tree'
 import {
   Button,
@@ -12,10 +11,9 @@ import {
   DialogContent,
   DialogContentText,
 } from '@mui/material'
-import ObjectID from 'bson-objectid'
 import React, { useState } from 'react'
 
-import type { ChangeManager } from '../ChangeManager'
+import type { FeatureService } from '../FeatureService'
 import type { ApolloSessionModel } from '../session'
 
 import { Dialog } from './Dialog'
@@ -25,7 +23,7 @@ interface SplitExonProps {
   handleClose(): void
   sourceFeature: AnnotationFeature
   sourceAssemblyId: string
-  changeManager: ChangeManager
+  featureService: FeatureService
   selectedFeature?: AnnotationFeature
   setSelectedFeature(feature?: AnnotationFeature): void
 }
@@ -56,11 +54,10 @@ function makeDialogText(splitExon: AnnotationFeatureSnapshot): string {
 }
 
 export function SplitExon({
-  changeManager,
+  featureService,
   handleClose,
   selectedFeature,
   setSelectedFeature,
-  sourceAssemblyId,
   sourceFeature,
 }: SplitExonProps) {
   const [errorMessage, setErrorMessage] = useState('')
@@ -76,25 +73,8 @@ export function SplitExon({
 
     const midpoint =
       exonToBeSplit.min + (exonToBeSplit.max - exonToBeSplit.min) / 2
-    const upstreamCut = Math.floor(midpoint)
-    const downstreamCut = Math.ceil(midpoint)
 
-    if (!sourceFeature.parent?._id) {
-      throw new Error('Splitting an exon without parent is not possible yet')
-    }
-
-    const change = new SplitExonChange({
-      changedIds: [sourceFeature._id],
-      typeName: 'SplitExonChange',
-      assembly: sourceAssemblyId,
-      exonToBeSplit,
-      parentFeatureId: sourceFeature.parent._id,
-      upstreamCut,
-      downstreamCut,
-      leftExonId: new ObjectID().toHexString(),
-      rightExonId: new ObjectID().toHexString(),
-    })
-    void changeManager.submit(change)
+    void featureService.splitExon(sourceFeature._id, midpoint)
     handleClose()
     event.preventDefault()
   }

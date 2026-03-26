@@ -6,6 +6,8 @@ import { defineConfig } from 'vite'
 const detailRoutes: Record<string, string> = {
   '/ui/assemblies/': '/ui/assembly-detail/index.html',
   '/ui/organisms/': '/ui/organism-detail/index.html',
+  '/ui/assembly-checks/': '/ui/assembly-checks/index.html',
+  '/ui/assembly-admin/': '/ui/assembly-admin/index.html',
 }
 
 export default defineConfig({
@@ -80,10 +82,22 @@ export default defineConfig({
           'ui/sequence-search/index.html',
         ),
         'admin/users/index': path.resolve(__dirname, 'admin/users/index.html'),
+        'admin/approve-users/index': path.resolve(
+          __dirname,
+          'admin/approve-users/index.html',
+        ),
         'admin/jobs/index': path.resolve(__dirname, 'admin/jobs/index.html'),
         'admin/add-assembly/index': path.resolve(
           __dirname,
           'admin/add-assembly/index.html',
+        ),
+        'ui/assembly-checks/index': path.resolve(
+          __dirname,
+          'ui/assembly-checks/index.html',
+        ),
+        'ui/assembly-admin/index': path.resolve(
+          __dirname,
+          'ui/assembly-admin/index.html',
         ),
         'error/index': path.resolve(__dirname, 'error/index.html'),
       },

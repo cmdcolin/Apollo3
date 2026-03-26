@@ -1,28 +1,22 @@
 /* eslint-disable @typescript-eslint/consistent-type-imports */
 import {
-  type Change,
+  assemblyId,
   type FeatureRow,
   type NestedFeature,
+  refSeqId,
   type RefSeqRow,
   assembleFeatureTrees,
-  isAssemblySpecificChange,
 } from '@apollo-annotation/common'
 import type {
   AnnotationFeatureSnapshot,
   CheckResultSnapshot,
 } from '@apollo-annotation/mst'
-import {
-  ValidationResultSet,
-  gff3ToAnnotationFeature,
-} from '@apollo-annotation/shared'
+import { gff3ToAnnotationFeature } from '@apollo-annotation/shared'
 import { getConf } from '@jbrowse/core/configuration'
 import { type Region, getSession } from '@jbrowse/core/util'
-import ObjectID from 'bson-objectid'
 
 // MikroORM is loaded dynamically via require() in Electron environments
 type MikroORM = import('@mikro-orm/core').MikroORM
-
-import type { SubmitOpts } from '../ChangeManager'
 
 import { BackendDriver, type RefNameAliases } from './BackendDriver'
 import { createLocalDataStore } from './createLocalDataStore'
@@ -123,9 +117,9 @@ export class DesktopSQLiteDriver extends BackendDriver {
 
   private async createEmptyAssembly(assemblyName: string, orm: MikroORM) {
     const dataStore = createLocalDataStore(orm.em)
-    const assemblyId = new ObjectID().toHexString()
+    const newAssemblyId = assemblyId()
     await dataStore.assemblyRepository.create({
-      _id: assemblyId,
+      _id: newAssemblyId,
       name: assemblyName,
     })
 
@@ -135,10 +129,10 @@ export class DesktopSQLiteDriver extends BackendDriver {
 
     const refSeqRows: RefSeqRow[] = []
     for (const region of regions) {
-      const refSeqId = new ObjectID().toHexString()
+      const newRefSeqId = refSeqId()
       refSeqRows.push({
-        _id: refSeqId,
-        assembly: assemblyId,
+        _id: newRefSeqId,
+        assembly: newAssemblyId,
         name: region.refName,
         length: region.end - region.start,
       })
@@ -164,9 +158,9 @@ export class DesktopSQLiteDriver extends BackendDriver {
 
     const dataStore = createLocalDataStore(orm.em)
 
-    const assemblyId = new ObjectID().toHexString()
+    const newAssemblyId = assemblyId()
     await dataStore.assemblyRepository.create({
-      _id: assemblyId,
+      _id: newAssemblyId,
       name: assemblyName,
     })
 
@@ -177,11 +171,11 @@ export class DesktopSQLiteDriver extends BackendDriver {
     const refSeqMap = new Map<string, string>()
     const refSeqRows: RefSeqRow[] = []
     for (const region of regions) {
-      const refSeqId = new ObjectID().toHexString()
-      refSeqMap.set(region.refName, refSeqId)
+      const newRefSeqId = refSeqId()
+      refSeqMap.set(region.refName, newRefSeqId)
       refSeqRows.push({
-        _id: refSeqId,
-        assembly: assemblyId,
+        _id: newRefSeqId,
+        assembly: newAssemblyId,
         name: region.refName,
         length: region.end - region.start,
       })
@@ -345,60 +339,6 @@ export class DesktopSQLiteDriver extends BackendDriver {
       map.set(rs.name, rs._id)
     }
     return map
-  }
-
-  async submitChange(change: Change, _opts: SubmitOpts) {
-    if (!isAssemblySpecificChange(change)) {
-      throw new Error(
-        `Cannot use this type of change with desktop SQLite: "${change.typeName}"`,
-      )
-    }
-    const assemblyChange = change
-    const orm = await this.getOrmForAssembly(assemblyChange.assembly)
-
-    // Translate refNames to refSeq IDs in the change's feature snapshots.
-    // The client uses refNames (e.g. 'ctgA') but SQLite FKs require the
-    // refSeq row's _id.
-    const refNameMap = await this.buildRefNameToIdMap(
-      assemblyChange.assembly,
-      orm,
-    )
-    this.patchRefSeqIds(change, refNameMap)
-
-    await orm.em.transactional(async (txEm) => {
-      const dataStore = createLocalDataStore(txEm)
-      await change.execute(dataStore)
-    })
-    return new ValidationResultSet()
-  }
-
-  private patchRefSeqIds(change: Change, refNameMap: Map<string, string>) {
-    const c = change as unknown as Record<string, unknown>
-    if ('changes' in c && Array.isArray(c.changes)) {
-      for (const sub of c.changes as Record<string, unknown>[]) {
-        if (sub.addedFeature) {
-          this.patchFeatureRefSeq(
-            sub.addedFeature as AnnotationFeatureSnapshot,
-            refNameMap,
-          )
-        }
-      }
-    }
-  }
-
-  private patchFeatureRefSeq(
-    feature: AnnotationFeatureSnapshot,
-    refNameMap: Map<string, string>,
-  ) {
-    const mapped = refNameMap.get(feature.refSeq)
-    if (mapped) {
-      feature.refSeq = mapped
-    }
-    if (feature.children) {
-      for (const child of Object.values(feature.children)) {
-        this.patchFeatureRefSeq(child, refNameMap)
-      }
-    }
   }
 
   async searchFeatures(

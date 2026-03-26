@@ -8,10 +8,6 @@ import type {
   Children,
   TranscriptPart,
 } from '@apollo-annotation/mst'
-import {
-  LocationEndChange,
-  LocationStartChange,
-} from '@apollo-annotation/shared'
 import styled from '@emotion/styled'
 import {
   type AbstractSessionModel,
@@ -112,7 +108,7 @@ export const TranscriptWidgetEditLocation = observer(
     const { notify } = session as unknown as AbstractSessionModel
     const currentAssembly = session.apolloDataStore.assemblies.get(assembly)
     const refData = currentAssembly?.getByRefName(refName)
-    const { changeManager } = session.apolloDataStore
+    const { featureService } = session.apolloDataStore
     const seqRef = useRef<HTMLDivElement>(null)
     const { changeInProgress } = session
 
@@ -189,7 +185,6 @@ export const TranscriptWidgetEditLocation = observer(
         return false
       }
 
-      // overlapping exon of new CDS location
       const overlappingExon = getOverlappingExonForCDS(
         feature,
         featureTypeOntology,
@@ -205,26 +200,11 @@ export const TranscriptWidgetEditLocation = observer(
         return false
       }
 
-      const change = isMin
-        ? new LocationStartChange({
-            typeName: 'LocationStartChange',
-            changedIds: [cdsFeature._id],
-            featureId: cdsFeature._id,
-            oldStart: cdsFeature.min,
-            newStart: newLocation,
-            assembly,
-          })
-        : new LocationEndChange({
-            typeName: 'LocationEndChange',
-            changedIds: [cdsFeature._id],
-            featureId: cdsFeature._id,
-            oldEnd: cdsFeature.max,
-            newEnd: newLocation,
-            assembly,
-          })
-
       try {
-        await changeManager.submit(change)
+        await featureService.updateFeature(
+          cdsFeature._id,
+          isMin ? { min: newLocation } : { max: newLocation },
+        )
         if (onComplete) {
           onComplete()
         }
@@ -255,22 +235,18 @@ export const TranscriptWidgetEditLocation = observer(
         return false
       }
 
-      // Start location should be less than end location
       if (isMin && newLocation >= matchingExon.max) {
         notify(`Start location should be less than end location`, 'error')
         return false
       }
-      // End location should be greater than start location
       if (!isMin && newLocation <= matchingExon.min) {
         notify(`End location should be greater than start location`, 'error')
         return false
       }
-      // Changed location should be greater than end location of previous exon - give 2bp buffer
       if (prevExon && prevExon.max + 2 > newLocation) {
         notify(`Error while changing start location`, 'error')
         return false
       }
-      // Changed location should be less than start location of next exon - give 2bp buffer
       if (nextExon && nextExon.min - 2 < newLocation) {
         notify(`Error while changing end location`, 'error')
         return false
@@ -287,162 +263,20 @@ export const TranscriptWidgetEditLocation = observer(
         return false
       }
 
-      const cdsFeature = getFirstCDSFeature(feature, featureTypeOntology)
-
-      // START LOCATION CHANGE
-      if (isMin && newLocation !== matchingExon.min) {
-        const startChange = new LocationStartChange({
-          typeName: 'LocationStartChange',
-          changedIds: [],
-          changes: [],
-          assembly,
-        })
-        if (prevExon) {
-          // update exon start location
-          appendStartLocationChange(exonFeature, startChange, newLocation)
-        } else {
-          const transcriptStart = feature.min
-          const gene = feature.parent
-          if (newLocation < transcriptStart) {
-            if (gene && newLocation < gene.min) {
-              // update gene start location
-              appendStartLocationChange(gene, startChange, newLocation)
-            }
-            // update transcript start location
-            appendStartLocationChange(feature, startChange, newLocation)
-            // update exon start location
-            appendStartLocationChange(exonFeature, startChange, newLocation)
-          } else if (newLocation > transcriptStart) {
-            // update exon start location
-            appendStartLocationChange(exonFeature, startChange, newLocation)
-            // update transcript start location
-            appendStartLocationChange(feature, startChange, newLocation)
-
-            if (gene) {
-              const [geneMinWithNewLoc] = geneMinMaxWithNewLocation(
-                gene,
-                feature,
-                newLocation,
-                featureTypeOntology,
-                isMin,
-              )
-              if (gene.min != geneMinWithNewLoc) {
-                // update gene start location
-                appendStartLocationChange(gene, startChange, geneMinWithNewLoc)
-              }
-            }
-          }
-        }
-
-        // When we change the start location of the exon overlapping with start location of the CDS
-        // and the new start location is greater than the CDS start location then we need to update the CDS start location
-        if (
-          cdsFeature &&
-          cdsFeature.min >= matchingExon.min &&
-          cdsFeature.min <= matchingExon.max &&
-          newLocation > cdsFeature.min
-        ) {
-          // update CDS start location
-          appendStartLocationChange(cdsFeature, startChange, newLocation)
-        }
-
-        try {
-          await changeManager.submit(startChange)
-        } catch {
-          notify('Error updating feature exon start position', 'error')
-        }
-      }
-
-      // END LOCATION CHANGE
-      if (!isMin && newLocation !== matchingExon.max) {
-        const endChange = new LocationEndChange({
-          typeName: 'LocationEndChange',
-          changedIds: [],
-          changes: [],
-          assembly,
-        })
-        if (nextExon) {
-          // update exon end location
-          appendEndLocationChange(exonFeature, endChange, newLocation)
-        } else {
-          const transcriptEnd = feature.max
-          const gene = feature.parent
-          if (newLocation > transcriptEnd) {
-            if (gene && newLocation > gene.max) {
-              // update gene end location
-              appendEndLocationChange(gene, endChange, newLocation)
-            }
-            // update transcript end location
-            appendEndLocationChange(feature, endChange, newLocation)
-            // update exon end location
-            appendEndLocationChange(exonFeature, endChange, newLocation)
-          } else if (newLocation < transcriptEnd) {
-            // update exon end location
-            appendEndLocationChange(exonFeature, endChange, newLocation)
-            // update transcript end location
-            appendEndLocationChange(feature, endChange, newLocation)
-
-            if (gene) {
-              const [, geneMaxWithNewLoc] = geneMinMaxWithNewLocation(
-                gene,
-                feature,
-                newLocation,
-                featureTypeOntology,
-                isMin,
-              )
-              if (gene.max != geneMaxWithNewLoc) {
-                // update gene end location
-                appendEndLocationChange(gene, endChange, geneMaxWithNewLoc)
-              }
-            }
-          }
-        }
-
-        // When we change the end location of the exon overlapping with end location of the CDS
-        // and the new end location is less than the CDS end location then we need to update the CDS end location
-        if (
-          cdsFeature &&
-          cdsFeature.max >= matchingExon.min &&
-          cdsFeature.max <= matchingExon.max &&
-          newLocation < cdsFeature.max
-        ) {
-          // update CDS end location
-          appendEndLocationChange(cdsFeature, endChange, newLocation)
-        }
-
-        try {
-          await changeManager.submit(endChange)
-        } catch {
-          notify('Error updating feature exon end position', 'error')
-        }
+      try {
+        await featureService.updateFeature(
+          exonFeature._id,
+          isMin ? { min: newLocation } : { max: newLocation },
+        )
+      } catch {
+        notify(
+          isMin
+            ? 'Error updating feature exon start position'
+            : 'Error updating feature exon end position',
+          'error',
+        )
       }
       return true
-    }
-
-    const appendEndLocationChange = (
-      feature: AnnotationFeature,
-      change: LocationEndChange,
-      newLocation: number,
-    ) => {
-      change.changedIds.push(feature._id)
-      change.changes.push({
-        featureId: feature._id,
-        oldEnd: feature.max,
-        newEnd: newLocation,
-      })
-    }
-
-    const appendStartLocationChange = (
-      feature: AnnotationFeature,
-      change: LocationStartChange,
-      newLocation: number,
-    ) => {
-      change.changedIds.push(feature._id)
-      change.changes.push({
-        featureId: feature._id,
-        oldStart: feature.min,
-        newStart: newLocation,
-      })
     }
 
     const getMatchingCDSFeature = (
@@ -469,21 +303,6 @@ export const TranscriptWidgetEditLocation = observer(
       return cdsFeature
     }
 
-    const getFirstCDSFeature = (
-      feature: AnnotationFeature,
-      featureTypeOntology: OntologyRecord,
-    ) => {
-      let cdsFeature: AnnotationFeature | undefined
-      for (const [, child] of (feature.children as Children) ?? []) {
-        if (!featureTypeOntology.isTypeOf(child.type, 'CDS')) {
-          continue
-        }
-        cdsFeature = child
-        break
-      }
-      return cdsFeature
-    }
-
     const getExonFeature = (
       feature: AnnotationFeature,
       exonMin: number,
@@ -501,39 +320,6 @@ export const TranscriptWidgetEditLocation = observer(
         }
       }
       return exonFeature
-    }
-
-    const geneMinMaxWithNewLocation = (
-      gene: AnnotationFeature,
-      transcript: AnnotationFeature,
-      newLocation: number,
-      featureTypeOntology: OntologyRecord,
-      isMin: boolean,
-    ) => {
-      const mins: number[] = []
-      const maxs: number[] = []
-      for (const [, t] of (gene.children as Children)?.entries() ?? []) {
-        if (!featureTypeOntology.isTypeOf(t.type, 'transcript')) {
-          continue
-        }
-
-        if (t._id === transcript._id) {
-          if (isMin) {
-            mins.push(newLocation)
-            maxs.push(t.max)
-          } else {
-            maxs.push(newLocation)
-            mins.push(t.min)
-          }
-        } else {
-          mins.push(t.min)
-          maxs.push(t.max)
-        }
-      }
-
-      const newMin = Math.min(...mins)
-      const newMax = Math.max(...maxs)
-      return [newMin, newMax]
     }
 
     const getOverlappingExonForCDS = (

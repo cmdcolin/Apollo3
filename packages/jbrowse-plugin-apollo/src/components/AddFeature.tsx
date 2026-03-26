@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 
+import { featureId } from '@apollo-annotation/common'
 import type { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
-import { AddFeatureChange } from '@apollo-annotation/shared'
 import type { Region } from '@jbrowse/core/util/types'
 import InfoIcon from '@mui/icons-material/Info'
 import {
@@ -22,11 +22,10 @@ import {
   TextField,
   Tooltip,
 } from '@mui/material'
-import ObjectID from 'bson-objectid'
 import React, { useState } from 'react'
 
 import { CollaborationServerDriver } from '../BackendDrivers'
-import type { ChangeManager } from '../ChangeManager'
+import type { FeatureService } from '../FeatureService'
 import { isOntologyClass } from '../OntologyManager'
 import type { ApolloSessionModel } from '../session'
 
@@ -37,7 +36,7 @@ interface AddFeatureProps {
   session: ApolloSessionModel
   handleClose(): void
   region: Region
-  changeManager: ChangeManager
+  featureService: FeatureService
 }
 
 enum NewFeature {
@@ -53,7 +52,7 @@ function makeCodingMrna(
   max: number,
 ): AnnotationFeatureSnapshot {
   const cds = {
-    _id: new ObjectID().toHexString(),
+    _id: featureId(),
     refSeq: refSeqId,
     type: 'CDS',
     min,
@@ -62,7 +61,7 @@ function makeCodingMrna(
   } as AnnotationFeatureSnapshot
 
   const exon = {
-    _id: new ObjectID().toHexString(),
+    _id: featureId(),
     refSeq: refSeqId,
     type: 'exon',
     min,
@@ -75,7 +74,7 @@ function makeCodingMrna(
   children[exon._id] = exon
 
   const mRNA = {
-    _id: new ObjectID().toHexString(),
+    _id: featureId(),
     refSeq: refSeqId,
     type: 'mRNA',
     min,
@@ -88,7 +87,7 @@ function makeCodingMrna(
 }
 
 export function AddFeature({
-  changeManager,
+  featureService,
   handleClose,
   region,
   session,
@@ -134,12 +133,9 @@ export function AddFeature({
       const children: Record<string, AnnotationFeatureSnapshot> = {}
       children[mRNA._id] = mRNA
 
-      const id = new ObjectID().toHexString()
-      const change = new AddFeatureChange({
-        changedIds: [id],
-        typeName: 'AddFeatureChange',
-        assembly: region.assemblyName,
-        addedFeature: {
+      const id = featureId()
+      void featureService.addFeature(
+        {
           _id: id,
           refSeq: refSeqId,
           min: Number(start) - 1,
@@ -148,8 +144,8 @@ export function AddFeature({
           strand,
           children,
         },
-      })
-      void changeManager.submit(change).then(() => {
+        region.assemblyName,
+      ).then(() => {
         session.apolloSetSelectedFeature(id)
       })
       handleClose()
@@ -162,13 +158,7 @@ export function AddFeature({
         Number(start) - 1,
         Number(end),
       )
-      const change = new AddFeatureChange({
-        changedIds: [mRNA._id],
-        typeName: 'AddFeatureChange',
-        assembly: region.assemblyName,
-        addedFeature: mRNA,
-      })
-      void changeManager.submit(change).then(() => {
+      void featureService.addFeature(mRNA, region.assemblyName).then(() => {
         session.apolloSetSelectedFeature(mRNA._id)
       })
       handleClose()
@@ -179,12 +169,9 @@ export function AddFeature({
       setErrorMessage('No type selected')
       return
     }
-    const id = new ObjectID().toHexString()
-    const change = new AddFeatureChange({
-      changedIds: [id],
-      typeName: 'AddFeatureChange',
-      assembly: region.assemblyName,
-      addedFeature: {
+    const id = featureId()
+    void featureService.addFeature(
+      {
         _id: id,
         refSeq: refSeqId,
         min: Number(start) - 1,
@@ -192,8 +179,8 @@ export function AddFeature({
         type: customType,
         strand,
       },
-    })
-    void changeManager.submit(change).then(() => {
+      region.assemblyName,
+    ).then(() => {
       session.apolloSetSelectedFeature(id)
     })
     handleClose()

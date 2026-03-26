@@ -117,22 +117,46 @@ was silently promoted to admin. That old approach had a race condition: if a
 guest user logged in first, the guest would become the admin. The new setup link
 requires deliberate action by someone with server access.
 
-If an existing user with role `none` (i.e. a pending user) logs in while setup
-is active, they are promoted to Admin. Guest users are explicitly excluded from
+If an existing user with role `readOnly` or `none` logs in while setup is
+active, they are promoted to Admin. Guest users are explicitly excluded from
 setup promotion.
 
 ## Role system
 
-| Role       | Access                                |
-| ---------- | ------------------------------------- |
-| `admin`    | Full access, user management          |
-| `user`     | Read + write annotations              |
-| `readOnly` | View only                             |
-| `none`     | Authenticated but no access (pending) |
+| Role       | Access                                                   |
+| ---------- | -------------------------------------------------------- |
+| `admin`    | Full access, user management                             |
+| `user`     | Read + write annotations                                 |
+| `readOnly` | View only (default for new registrations — pending approval) |
+| `none`     | Authenticated but no access                              |
 
-Roles are hierarchical: admin inherits all lower roles. The default role for new
-users is controlled by `DEFAULT_NEW_USER_ROLE` (defaults to `none`, meaning new
-users must be approved by an admin).
+Roles are hierarchical: admin inherits all lower roles.
+
+### New user approval workflow
+
+By default (`DEFAULT_NEW_USER_ROLE=readOnly`), every user who registers gets
+`readOnly` access immediately and is flagged as `pendingApproval`. This lets
+them log in and browse public assemblies, but they cannot create or edit
+annotations until an admin approves their account.
+
+The home page shows a banner to pending users explaining their status and
+providing the admin's contact email.
+
+Admins review pending users at **Admin → Users**. The Admin nav button shows a
+badge with the count of pending users so admins notice new registrations
+without visiting the page. A **Pending Approval** section at the top of the
+Users page lists only users flagged `pendingApproval=true` — users deliberately
+set to `readOnly` by an admin do not appear here. From there an admin can:
+
+- **Approve** — promotes the user to `user` role and clears the pending flag
+- **Reject** — deletes the account
+
+After approval the user must log out and back in for the new role to take
+effect (JWTs are stateless and valid for 24 hours).
+
+To skip the approval workflow entirely (e.g. a trusted internal deployment),
+set `DEFAULT_NEW_USER_ROLE=user`. To tighten it further (no access until
+explicitly granted), set `DEFAULT_NEW_USER_ROLE=none`.
 
 ### Guard architecture
 

@@ -1,5 +1,6 @@
 import { createJBrowseTheme } from '@jbrowse/core/ui/theme'
 import AppBar from '@mui/material/AppBar'
+import Badge from '@mui/material/Badge'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
@@ -51,6 +52,33 @@ function useCurrentUser() {
   return user
 }
 
+function usePendingCount(isAdmin: boolean) {
+  const [count, setCount] = useState(0)
+
+  useEffect(() => {
+    if (!isAdmin) {
+      return
+    }
+    fetch('/users/pending-count', { headers: { Accept: 'application/json' } })
+      .then((r) => {
+        if (r.ok) {
+          return r.json() as Promise<{ count: number }>
+        }
+        return null
+      })
+      .then((data) => {
+        if (data) {
+          setCount(data.count)
+        }
+      })
+      .catch(() => {
+        /* ignore */
+      })
+  }, [isAdmin])
+
+  return count
+}
+
 type Page =
   | 'organisms'
   | 'assemblies'
@@ -58,6 +86,7 @@ type Page =
   | 'sequence-search'
   | 'changes'
   | 'users'
+  | 'approve-users'
   | 'jobs'
 
 interface NavMenuItem {
@@ -82,6 +111,11 @@ const toolsMenuItems: NavMenuItem[] = [
 
 const adminMenuItems: NavMenuItem[] = [
   { label: 'Users', href: '/admin/users/', value: 'users' },
+  {
+    label: 'Approve Users',
+    href: '/admin/approve-users/',
+    value: 'approve-users',
+  },
   { label: 'Analysis Jobs', href: '/admin/jobs/', value: 'jobs' },
   {
     label: 'Add Assembly',
@@ -91,29 +125,41 @@ const adminMenuItems: NavMenuItem[] = [
 ]
 
 function NavMenu({
-  label,
-  items,
+  badgeCounts,
   current,
+  items,
+  label,
 }: {
-  label: string
-  items: NavMenuItem[]
+  badgeCounts?: Partial<Record<Page, number>>
   current?: Page
+  items: NavMenuItem[]
+  label: string
 }) {
   const [open, setOpen] = useState(false)
   const anchorRef = useRef<HTMLButtonElement>(null)
 
+  const totalBadge = badgeCounts
+    ? Object.values(badgeCounts).reduce((sum, n) => sum + (n ?? 0), 0)
+    : 0
+
   return (
     <>
-      <Button
-        ref={anchorRef}
-        color="inherit"
-        size="small"
-        onClick={() => {
-          setOpen(true)
-        }}
+      <Badge
+        badgeContent={totalBadge}
+        color="warning"
+        sx={{ '& .MuiBadge-badge': { top: 8, right: -4 } }}
       >
-        {label}
-      </Button>
+        <Button
+          ref={anchorRef}
+          color="inherit"
+          size="small"
+          onClick={() => {
+            setOpen(true)
+          }}
+        >
+          {label}
+        </Button>
+      </Badge>
       <Menu
         anchorEl={anchorRef.current}
         open={open}
@@ -121,22 +167,35 @@ function NavMenu({
           setOpen(false)
         }}
       >
-        {items.map((item) => (
-          <MenuItem
-            key={item.value}
-            component="a"
-            href={item.href}
-            selected={item.value === current}
-          >
-            <ListItemText>{item.label}</ListItemText>
-          </MenuItem>
-        ))}
+        {items.map((item) => {
+          const count = badgeCounts?.[item.value] ?? 0
+          return (
+            <MenuItem
+              key={item.value}
+              component="a"
+              href={item.href}
+              selected={item.value === current}
+            >
+              <ListItemText>{item.label}</ListItemText>
+              {count > 0 ? (
+                <Chip
+                  label={count}
+                  size="small"
+                  color="warning"
+                  sx={{ ml: 1 }}
+                />
+              ) : null}
+            </MenuItem>
+          )
+        })}
       </Menu>
     </>
   )
 }
 
 function NavBar({ current, user }: { current?: Page; user?: UserInfo }) {
+  const pendingCount = usePendingCount(user?.role === 'admin')
+
   return (
     <AppBar position="static" color="secondary" sx={{ mb: 3 }}>
       <Toolbar variant="dense">
@@ -175,7 +234,12 @@ function NavBar({ current, user }: { current?: Page; user?: UserInfo }) {
             <NavMenu label="File" items={fileMenuItems} current={current} />
             <NavMenu label="Tools" items={toolsMenuItems} current={current} />
             {user.role === 'admin' ? (
-              <NavMenu label="Admin" items={adminMenuItems} current={current} />
+              <NavMenu
+                label="Admin"
+                items={adminMenuItems}
+                current={current}
+                badgeCounts={{ 'approve-users': pendingCount }}
+              />
             ) : null}
           </>
         ) : null}

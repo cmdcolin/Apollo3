@@ -1,4 +1,7 @@
-import { createMikroOrmConfig } from '@apollo-annotation/entities'
+import {
+  FeatureHistorySubscriber,
+  createMikroOrmConfig,
+} from '@apollo-annotation/entities'
 import { EntityManager, MikroORM } from '@mikro-orm/core'
 import { type DynamicModule, Logger, Module } from '@nestjs/common'
 
@@ -44,6 +47,10 @@ export class ApolloMikroOrmModule {
               ? orm.schema.create()
               : orm.schema.update())
             this.logger.log('Schema updated')
+            orm.em
+              .getEventManager()
+              .registerSubscriber(new FeatureHistorySubscriber())
+            this.logger.log('FeatureHistorySubscriber registered')
             return orm
           },
         },

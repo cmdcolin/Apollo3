@@ -30,11 +30,17 @@ export class UsersController {
 
   @Authenticated()
   @Get('me')
-  getMe(@Req() req: RequestWithUser) {
+  async getMe(@Req() req: RequestWithUser) {
+    const user = req.user?.id
+      ? await this.usersService.findById(req.user.id)
+      : undefined
+    const dbRole = user?.role ?? req.user?.role
     return {
       username: req.user?.username,
       email: req.user?.email,
-      role: req.user?.role,
+      role: dbRole,
+      pendingApproval: user?.pendingApproval ?? false,
+      needsRelogin: dbRole !== req.user?.role,
     }
   }
 
@@ -56,6 +62,12 @@ export class UsersController {
       active: this.activeUsersService.getActiveCount(),
       total: await this.usersService.getCount(),
     }
+  }
+
+  @Roles(Role.Admin)
+  @Get('pending-count')
+  async getPendingCount() {
+    return { count: await this.usersService.getPendingCount() }
   }
 
   @Get(':id')

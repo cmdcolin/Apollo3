@@ -861,7 +861,7 @@ function getContextMenuItems(
   const {
     role: displayRole,
     hoveredFeature,
-    changeManager,
+    featureService,
     filteredTranscripts,
     regions,
     selectedFeature,
@@ -950,7 +950,7 @@ function getContextMenuItems(
                     handleClose: () => {
                       doneCallback()
                     },
-                    changeManager,
+                    featureService,
                     sourceFeature: feature,
                     sourceAssemblyId: currentAssemblyId,
                     selectedFeature,
@@ -974,7 +974,7 @@ function getContextMenuItems(
                     handleClose: () => {
                       doneCallback()
                     },
-                    changeManager,
+                    featureService,
                     sourceFeature: feature,
                     sourceAssemblyId: currentAssemblyId,
                     selectedFeature,

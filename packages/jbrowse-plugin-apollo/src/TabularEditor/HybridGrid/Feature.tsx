@@ -63,7 +63,7 @@ function makeContextMenuItems(
   feature: AnnotationFeature,
 ) {
   const {
-    changeManager,
+    featureService,
     getAssemblyId,
     regions,
     selectedFeature,
@@ -79,7 +79,7 @@ function makeContextMenuItems(
     selectedFeature,
     setSelectedFeature,
     session,
-    changeManager,
+    featureService,
     filteredTranscripts,
     updateFilteredTranscripts,
   )
@@ -113,7 +113,7 @@ export const Feature = observer(function Feature({
 }) {
   const { classes } = useStyles()
   const {
-    changeManager,
+    featureService,
     hoveredFeature,
     selectedFeature,
     session,
@@ -210,7 +210,7 @@ export const Feature = observer(function Feature({
               onChange={(oldValue, newValue) => {
                 if (newValue) {
                   handleFeatureTypeChange(
-                    changeManager,
+                    featureService,
                     feature,
                     oldValue,
                     newValue,
@@ -224,23 +224,23 @@ export const Feature = observer(function Feature({
           <NumberCell
             initialValue={min + 1}
             notifyError={notifyError}
-            onChangeCommitted={(newStart) =>
-              handleFeatureStartChange(
-                changeManager,
+            onChangeCommitted={async (newStart) => {
+              await handleFeatureStartChange(
+                featureService,
                 feature,
                 min,
                 newStart - 1,
               )
-            }
+            }}
           />
         </td>
         <td>
           <NumberCell
             initialValue={max}
             notifyError={notifyError}
-            onChangeCommitted={(newEnd) =>
-              handleFeatureEndChange(changeManager, feature, max, newEnd)
-            }
+            onChangeCommitted={async (newEnd) => {
+              await handleFeatureEndChange(featureService, feature, max, newEnd)
+            }}
           />
         </td>
         <td>{strand === 1 ? '+' : strand === -1 ? '-' : undefined}</td>

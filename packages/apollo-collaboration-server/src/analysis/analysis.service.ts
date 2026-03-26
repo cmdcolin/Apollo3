@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto'
 
+import { analysisId } from '@apollo-annotation/common'
 import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common'
 
 import { DatabaseService } from '../mikro-orm/database.service.js'
@@ -81,7 +82,7 @@ export class AnalysisService {
     assemblyIds: string[]
     createdBy?: string
   }) {
-    const _id = randomBytes(16).toString('hex')
+    const _id = analysisId()
     return this.db.analysisDb.create({
       _id,
       name: params.name,
@@ -113,7 +114,7 @@ export class AnalysisService {
     }
 
     const dbName = `${assembly.name}-${params.tool}-${randomBytes(4).toString('hex')}`
-    const _id = randomBytes(16).toString('hex')
+    const _id = analysisId()
     const row = await this.db.analysisDb.create({
       _id,
       name: params.name,
@@ -175,7 +176,7 @@ export class AnalysisService {
       throw new BadRequestException(`Unknown tool: ${jobParams.tool}`)
     }
 
-    const _id = randomBytes(16).toString('hex')
+    const _id = analysisId()
     const job = await this.db.analysisJob.create({
       _id,
       status: 'pending',

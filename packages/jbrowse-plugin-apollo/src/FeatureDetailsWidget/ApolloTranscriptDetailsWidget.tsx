@@ -236,7 +236,6 @@ export const ApolloTranscriptDetailsWidget = observer(
             <Attributes
               feature={feature}
               session={apolloSession}
-              assembly={currentAssembly._id || ''}
               editable={editable}
             />
             <CustomComponentInsideAttributes

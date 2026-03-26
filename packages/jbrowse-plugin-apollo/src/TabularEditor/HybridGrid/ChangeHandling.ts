@@ -1,63 +1,30 @@
 import type { AnnotationFeature } from '@apollo-annotation/mst'
-import {
-  LocationEndChange,
-  LocationStartChange,
-  TypeChange,
-} from '@apollo-annotation/shared'
 
-import type { ChangeManager } from '../../ChangeManager'
+import type { FeatureService } from '../../FeatureService'
 
 export function handleFeatureTypeChange(
-  changeManager: ChangeManager,
+  featureService: FeatureService,
   feature: AnnotationFeature,
-  oldType: string,
+  _oldType: string,
   newType: string,
 ) {
-  const featureId = feature._id
-  const change = new TypeChange({
-    typeName: 'TypeChange',
-    changedIds: [featureId],
-    featureId,
-    oldType,
-    newType,
-    assembly: feature.assemblyId,
-  })
-  return changeManager.submit(change)
+  return featureService.updateFeature(feature._id, { type: newType })
 }
 
 export function handleFeatureStartChange(
-  changeManager: ChangeManager,
+  featureService: FeatureService,
   feature: AnnotationFeature,
-  oldStart: number,
+  _oldStart: number,
   newStart: number,
 ) {
-  const featureId = feature._id
-  const change = new LocationStartChange({
-    typeName: 'LocationStartChange',
-    changedIds: [featureId],
-    featureId,
-    oldStart,
-    newStart,
-    assembly: feature.assemblyId,
-  })
-
-  return changeManager.submit(change)
+  return featureService.updateFeature(feature._id, { min: newStart })
 }
 
 export function handleFeatureEndChange(
-  changeManager: ChangeManager,
+  featureService: FeatureService,
   feature: AnnotationFeature,
-  oldEnd: number,
+  _oldEnd: number,
   newEnd: number,
 ) {
-  const featureId = feature._id
-  const change = new LocationEndChange({
-    typeName: 'LocationEndChange',
-    changedIds: [featureId],
-    featureId,
-    oldEnd,
-    newEnd,
-    assembly: feature.assemblyId,
-  })
-  return changeManager.submit(change)
+  return featureService.updateFeature(feature._id, { max: newEnd })
 }

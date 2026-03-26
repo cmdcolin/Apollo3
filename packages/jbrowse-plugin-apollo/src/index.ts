@@ -1,12 +1,11 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 /* eslint-disable @typescript-eslint/no-misused-promises */
-import { changeRegistry, checkRegistry } from '@apollo-annotation/common'
+import { checkRegistry } from '@apollo-annotation/common'
 import {
   CDSCheck,
   CoreValidation,
   TranscriptCheck,
-  changes,
   validationRegistry,
 } from '@apollo-annotation/shared'
 import Plugin from '@jbrowse/core/Plugin'
@@ -97,10 +96,6 @@ function isApolloMessageData(data?: unknown): data is ApolloMessageData {
 }
 
 const inWebWorker = 'WorkerGlobalScope' in globalThis
-
-for (const [changeName, change] of Object.entries(changes)) {
-  changeRegistry.registerChange(changeName, change)
-}
 
 const cdsCheck = new CDSCheck()
 checkRegistry.registerCheck(cdsCheck.name, cdsCheck)
@@ -250,8 +245,8 @@ export default class ApolloPlugin extends Plugin {
                                   doneCallback()
                                 },
                                 region: selectedRegions[0],
-                                changeManager:
-                                  session.apolloDataStore.changeManager,
+                                featureService:
+                                  session.apolloDataStore.featureService,
                               },
                             ])
                           },

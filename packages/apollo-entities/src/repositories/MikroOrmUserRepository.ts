@@ -9,6 +9,7 @@ function toRow(entity: InferEntity<typeof UserEntity>): UserRow {
     username: entity.username,
     email: entity.email,
     role: entity.role as UserRow['role'],
+    pendingApproval: entity.pendingApproval ?? undefined,
     createdAt: entity.createdAt ?? undefined,
     updatedAt: entity.updatedAt ?? undefined,
   }
@@ -60,6 +61,7 @@ export class MikroOrmUserRepository implements UserRepository {
       username: row.username,
       email: row.email,
       role: row.role as UserRole,
+      pendingApproval: row.pendingApproval ?? null,
       createdAt: row.createdAt ?? new Date(),
       updatedAt: row.updatedAt ?? new Date(),
     })
@@ -73,9 +75,12 @@ export class MikroOrmUserRepository implements UserRepository {
     if (!entity) {
       return
     }
-    const { role, ...rest } = data
+    const { role, pendingApproval, ...rest } = data
     if (role !== undefined) {
       entity.role = role as UserRole
+    }
+    if (pendingApproval !== undefined) {
+      entity.pendingApproval = pendingApproval
     }
     this.em.assign(entity, rest)
     await this.em.flush()

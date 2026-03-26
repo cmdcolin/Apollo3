@@ -20,6 +20,8 @@ interface CurrentUser {
   username: string
   email: string
   role: string
+  pendingApproval?: boolean
+  needsRelogin?: boolean
 }
 
 function useCurrentUser() {
@@ -234,6 +236,9 @@ function LoggedInContent({ user }: { user: CurrentUser }) {
             <ListItemButton component="a" href="/admin/users/">
               <ListItemText primary="Manage Users" />
             </ListItemButton>
+            <ListItemButton component="a" href="/admin/approve-users/">
+              <ListItemText primary="Approve Users" />
+            </ListItemButton>
             <ListItemButton component="a" href="/admin/jobs/">
               <ListItemText primary="Analysis Jobs" />
             </ListItemButton>
@@ -254,7 +259,8 @@ function IndexPage() {
     return null
   }
 
-  const isPendingApproval = user?.role === 'none'
+  const isPendingApproval = user?.pendingApproval === true
+  const isReadOnly = user?.role === 'readOnly' && !isPendingApproval
 
   return (
     <Nav>
@@ -265,6 +271,18 @@ function IndexPage() {
         <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 4 }}>
           Collaborative genome annotation editor
         </Typography>
+        {user?.needsRelogin ? (
+          <Alert severity="success" sx={{ mb: 2, textAlign: 'left' }}>
+            Your access has been updated to <strong>{user.role}</strong>. Sign
+            out and back in to apply it.
+          </Alert>
+        ) : null}
+        {isReadOnly ? (
+          <Alert severity="info" sx={{ mb: 2, textAlign: 'left' }}>
+            You have read-only access. Contact an admin to request write
+            permissions.
+          </Alert>
+        ) : null}
         <Paper variant="outlined" sx={{ p: 3 }}>
           {user ? (
             isPendingApproval ? (

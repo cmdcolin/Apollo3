@@ -1,5 +1,4 @@
-import { randomBytes } from 'node:crypto'
-
+import { userId } from '@apollo-annotation/common'
 import { Inject, Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
@@ -52,15 +51,21 @@ export class UsersService {
 
   async addNew(user: CreateUserDto) {
     return this.db.user.create({
-      _id: randomBytes(12).toString('hex'),
+      _id: userId(),
       email: user.email,
       username: user.username,
       role: user.role ?? Role.None,
+      pendingApproval: user.pendingApproval,
     })
   }
 
   async updateRole(id: string, role: Role) {
-    return this.db.user.updateById(id, { role })
+    return this.db.user.updateById(id, { role, pendingApproval: false })
+  }
+
+  async getPendingCount() {
+    const all = await this.db.user.findAll()
+    return all.filter((u) => u.pendingApproval === true).length
   }
 
   async remove(id: string) {

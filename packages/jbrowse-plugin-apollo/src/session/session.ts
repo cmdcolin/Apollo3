@@ -1,16 +1,14 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import {
-  Change,
-  type ClientDataStore as ClientDataStoreType,
-  type SerializedChange,
-  isFeatureChange,
-} from '@apollo-annotation/common'
+import type { ClientDataStore as ClientDataStoreType } from '@apollo-annotation/common'
 import {
   type AnnotationFeature,
   AnnotationFeatureModel,
 } from '@apollo-annotation/mst'
-import { COMMON_CHANNEL, type ChangeMessage } from '@apollo-annotation/shared'
+import {
+  COMMON_CHANNEL,
+  type FeatureUpdateMessage,
+} from '@apollo-annotation/shared'
 import type PluginManager from '@jbrowse/core/PluginManager'
 import type { AssemblyModel } from '@jbrowse/core/assemblyManager/assembly'
 import { getConf, readConfObject } from '@jbrowse/core/configuration'
@@ -43,7 +41,7 @@ import { autorun } from 'mobx'
 import { type Socket, io } from 'socket.io-client'
 
 import { ApolloJobModel } from '../ApolloJobModel'
-import type { ChangeManager } from '../ChangeManager'
+import type { FeatureService } from '../FeatureService'
 import {
   DownloadGFF3,
   LogOut,
@@ -64,7 +62,9 @@ import {
 import { clientDataStoreFactory } from './ClientDataStore'
 
 export interface ApolloSession extends AbstractSessionModel {
-  apolloDataStore: ClientDataStoreType & { changeManager: ChangeManager }
+  apolloDataStore: ClientDataStoreType & {
+    featureService: FeatureService
+  }
   apolloSelectedFeature?: AnnotationFeature
   apolloSetSelectedFeature(feature?: AnnotationFeature): void
   menus(): { label: string; menuItems: unknown[] }[]
@@ -188,61 +188,6 @@ export function extendSession(
             : 0
         self.setLastChangeSequenceNumber(sequence)
       },
-      async getMissingChanges() {
-        const { changeManager } = self.apolloDataStore
-        if (!self.lastChangeSequenceNumber) {
-          throw new Error(
-            'No LastChangeSequence stored in session. Please, refresh your browser to get last updates from server',
-          )
-        }
-        const baseURL = getBaseURL(self as unknown as ApolloSessionModel)
-        if (!baseURL) {
-          return
-        }
-        const { lastChangeSequenceNumber } = self
-
-        const url = new URL('changes', baseURL)
-        const searchParams = new URLSearchParams({
-          since: String(lastChangeSequenceNumber),
-          sort: '1',
-        })
-        url.search = searchParams.toString()
-        const uri = url.toString()
-
-        let response: Response
-        try {
-          response = await fetch(uri, {
-            method: 'GET',
-            signal: self.abortController.signal,
-          })
-        } catch (error) {
-          if (!self.abortController.signal.aborted) {
-            console.error(error)
-          }
-          return
-        }
-        if (!response.ok) {
-          console.error(
-            `Error when fetching the last updates to recover socket connection — ${response.status}`,
-          )
-          return
-        }
-        const { apolloDataStore } = self
-        const serializedChanges = (await response.json()) as SerializedChange[]
-        for (const serializedChange of serializedChanges) {
-          const change = Change.fromJSON(serializedChange)
-          if (isFeatureChange(change)) {
-            const hasRelevantData = change.changedIds.some((id) =>
-              apolloDataStore.getFeature(id),
-            )
-            if (!hasRelevantData) {
-              continue
-            }
-          }
-          // eslint-disable-next-line @typescript-eslint/no-floating-promises
-          changeManager.submit(change, { submitToBackend: false })
-        }
-      },
     }))
     .actions((self) => ({
       addSocketListeners() {
@@ -260,37 +205,32 @@ export function extendSession(
         }
         const localSessionId = apolloUserSessionId
         const { apolloDataStore } = self
-        const { changeManager } = apolloDataStore
         const { notify } = self as unknown as AbstractSessionModel
         socket.on('connect', () => {
-          // eslint-disable-next-line @typescript-eslint/no-floating-promises
-          self.getMissingChanges()
+          void apolloDataStore.refreshLoadedRegions()
         })
         socket.on('connect_error', (error) => {
           console.error(error)
           notify('Could not connect to the Apollo server.', 'error')
         })
-        socket.on(COMMON_CHANNEL, (message: ChangeMessage) => {
-          self.setLastChangeSequenceNumber(message.changeSequence)
-          if (message.userSessionId === localSessionId) {
-            return
-          }
-          try {
-            const change = Change.fromJSON(message.changeInfo)
-            if (isFeatureChange(change)) {
-              const hasRelevantData = change.changedIds.some((id) =>
-                apolloDataStore.getFeature(id),
-              )
-              if (!hasRelevantData) {
-                return
-              }
+        socket.on(
+          COMMON_CHANNEL,
+          (message: FeatureUpdateMessage) => {
+            self.setLastChangeSequenceNumber(message.changeSequence)
+            if (message.userSessionId === localSessionId) {
+              return
             }
-            // eslint-disable-next-line @typescript-eslint/no-floating-promises
-            changeManager.submit(change, { submitToBackend: false })
-          } catch (error) {
-            console.error('Failed to apply incoming change:', error)
-          }
-        })
+            try {
+              apolloDataStore.applyFeatureUpdate(
+                message.assemblyId,
+                message.features,
+                message.deletedFeatureIds,
+              )
+            } catch (error) {
+              console.error('Failed to apply incoming change:', error)
+            }
+          },
+        )
       },
     }))
     .actions((self) => ({
@@ -457,14 +397,14 @@ export function extendSession(
                         label: 'Undo',
                         icon: UndoIcon,
                         onClick(session: ApolloSessionModel) {
-                          void session.apolloDataStore.changeManager.undoLastChange()
+                          void session.apolloDataStore.featureService.undoLastChange()
                         },
                       },
                       {
                         label: 'Redo',
                         icon: RedoIcon,
                         onClick(session: ApolloSessionModel) {
-                          void session.apolloDataStore.changeManager.redoLastChange()
+                          void session.apolloDataStore.featureService.redoLastChange()
                         },
                       },
                       {

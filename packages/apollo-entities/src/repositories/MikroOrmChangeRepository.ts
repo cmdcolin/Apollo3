@@ -1,6 +1,4 @@
-import { randomBytes } from 'node:crypto'
-
-import type { ChangeRepository, ChangeRow } from '@apollo-annotation/common'
+import { changeId, type ChangeRepository, type ChangeRow } from '@apollo-annotation/common'
 import {
   type EntityManager,
   type InferEntity,
@@ -9,10 +7,6 @@ import {
 } from '@mikro-orm/core'
 
 import { ChangeEntity } from '../entities/ChangeEntity.js'
-
-function generateId() {
-  return randomBytes(12).toString('hex')
-}
 
 function toRow(entity: InferEntity<typeof ChangeEntity>): ChangeRow {
   return {
@@ -34,7 +28,7 @@ export class MikroOrmChangeRepository implements ChangeRepository {
 
   async create(row: Omit<ChangeRow, '_id'>) {
     const entity = this.em.create(ChangeEntity, {
-      _id: generateId(),
+      _id: changeId(),
       ...row,
       createdAt: new Date(),
       updatedAt: new Date(),

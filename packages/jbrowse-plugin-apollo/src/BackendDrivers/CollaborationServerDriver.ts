@@ -3,17 +3,14 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
-import type { AssemblySpecificChange, Change } from '@apollo-annotation/common'
 import type {
   AnnotationFeatureSnapshot,
   ApolloRefSeqI,
   CheckResultSnapshot,
 } from '@apollo-annotation/mst'
-import { ValidationResultSet } from '@apollo-annotation/shared'
 import { getConf } from '@jbrowse/core/configuration'
 import { type Region, getSession } from '@jbrowse/core/util'
 
-import type { SubmitOpts } from '../ChangeManager'
 import type { ApolloSessionModel } from '../session'
 import { createFetchErrorMessage, getBaseURL } from '../util'
 
@@ -387,25 +384,4 @@ export class CollaborationServerDriver extends BackendDriver {
     })
   }
 
-  async submitChange(
-    change: Change | AssemblySpecificChange,
-    _opts: SubmitOpts = {},
-  ) {
-    const baseURL = this.getBaseURL()
-    const url = new URL('changes', baseURL).href
-    const response = await fetch(url, {
-      method: 'POST',
-      body: JSON.stringify(change.toJSON()),
-      headers: { 'Content-Type': 'application/json' },
-    })
-    if (!response.ok) {
-      const errorMessage = await createFetchErrorMessage(
-        response,
-        'submitChange failed',
-      )
-      throw new Error(errorMessage)
-    }
-    const results = new ValidationResultSet()
-    return results
-  }
 }

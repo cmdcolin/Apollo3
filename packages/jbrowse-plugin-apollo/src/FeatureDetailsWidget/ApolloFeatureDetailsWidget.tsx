@@ -71,7 +71,6 @@ export const ApolloFeatureDetailsWidget = observer(
         <BasicInformation
           feature={feature}
           session={session}
-          assembly={currentAssembly._id}
         />
         <Accordion
           style={{ marginTop: 10 }}

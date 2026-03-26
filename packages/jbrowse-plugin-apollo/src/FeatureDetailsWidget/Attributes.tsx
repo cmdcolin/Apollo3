@@ -1,5 +1,4 @@
 import type { AnnotationFeature } from '@apollo-annotation/mst'
-import { FeatureAttributeChange } from '@apollo-annotation/shared'
 import { type AbstractSessionModel, getEnv } from '@jbrowse/core/util'
 import { makeStyles } from '@jbrowse/core/util/tss-react'
 import { getSnapshot } from '@jbrowse/mobx-state-tree'
@@ -47,14 +46,12 @@ const useStyles = makeStyles()((theme) => ({
 }))
 
 export const Attributes = observer(function Attributes({
-  assembly,
   editable,
   feature,
   session,
 }: {
   feature: AnnotationFeature
   session: ApolloSessionModel
-  assembly: string
   editable: boolean
 }) {
   const { pluginManager } = getEnv(session)
@@ -67,7 +64,7 @@ export const Attributes = observer(function Attributes({
 
   const open = Boolean(anchorEl)
 
-  const { changeManager } = session.apolloDataStore
+  const { featureService } = session.apolloDataStore
   const { notify } = session as unknown as AbstractSessionModel
 
   function handleListMenuClick(
@@ -98,22 +95,13 @@ export const Attributes = observer(function Attributes({
 
   function deleteFeatureAttribute(key: string) {
     const attributesSerialized = getSnapshot(attributes)
-    const { [key]: deletedAttribute, ...remainingAttributes } =
+    const { [key]: _deletedAttribute, ...remainingAttributes } =
       attributesSerialized
-    const change = new FeatureAttributeChange({
-      changedIds: [_id],
-      typeName: 'FeatureAttributeChange',
-      assembly,
-      featureId: _id,
-      oldAttributes: attributesSerialized,
-      newAttributes: remainingAttributes,
-    })
-    void changeManager.submit(change)
+    void featureService.updateFeature(_id, { attributes: remainingAttributes })
   }
 
   function modifyFeatureAttribute(key: string, attribute: string[]) {
     const serializedAttributes = { ...getSnapshot(attributes) }
-    const oldAttributes = structuredClone(serializedAttributes)
     if (!(key in serializedAttributes)) {
       notify(`"${key}" not found in feature attributes`, 'error')
       return
@@ -123,36 +111,17 @@ export const Attributes = observer(function Attributes({
       return
     }
     serializedAttributes[key] = attribute
-
-    const change = new FeatureAttributeChange({
-      changedIds: [feature._id],
-      typeName: 'FeatureAttributeChange',
-      assembly,
-      featureId: feature._id,
-      oldAttributes,
-      newAttributes: serializedAttributes,
-    })
-    void changeManager.submit(change)
+    void featureService.updateFeature(feature._id, { attributes: serializedAttributes })
   }
 
   function addFeatureAttribute(key: string, attribute: string[]) {
     const serializedAttributes = { ...getSnapshot(attributes) }
-    const oldAttributes = structuredClone(serializedAttributes)
     if (key in serializedAttributes) {
       notify(`Feature already has attribute "${key}"`, 'error')
       return
     }
     serializedAttributes[key] = attribute
-
-    const change = new FeatureAttributeChange({
-      changedIds: [feature._id],
-      typeName: 'FeatureAttributeChange',
-      assembly,
-      featureId: feature._id,
-      oldAttributes,
-      newAttributes: serializedAttributes,
-    })
-    void changeManager.submit(change)
+    void featureService.updateFeature(feature._id, { attributes: serializedAttributes })
   }
 
   const NewKeyAttributeEditor = pluginManager.evaluateExtensionPoint(

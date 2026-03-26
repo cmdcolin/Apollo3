@@ -1,5 +1,4 @@
-import { randomBytes } from 'node:crypto'
-
+import { permissionId } from '@apollo-annotation/common'
 import {
   Body,
   Controller,
@@ -61,7 +60,7 @@ export class PermissionsController {
       await this.db.assemblyPermission.deleteById(existing._id)
     }
     return this.db.assemblyPermission.create({
-      _id: randomBytes(12).toString('hex'),
+      _id: permissionId(),
       user: body.userId,
       assembly: assemblyId,
       role: body.role,

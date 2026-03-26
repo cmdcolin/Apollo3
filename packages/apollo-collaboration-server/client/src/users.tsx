@@ -17,6 +17,7 @@ interface User {
   username: string
   email: string
   role: string
+  pendingApproval?: boolean
   createdAt?: string
 }
 
@@ -145,6 +146,8 @@ function UsersPage() {
     },
   ]
 
+  const pendingCount = users.filter((u) => u.pendingApproval === true).length
+
   return (
     <AdminNav current="users">
       <Container>
@@ -156,6 +159,13 @@ function UsersPage() {
             {error}
           </Alert>
         )}
+        {pendingCount > 0 ? (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            {pendingCount} user{pendingCount === 1 ? '' : 's'} pending approval
+            —{' '}
+            <a href="/admin/approve-users/">review now</a>
+          </Alert>
+        ) : null}
         <Box sx={{ height: 500 }}>
           <DataGrid
             rows={users.map((u) => ({ ...u, id: u._id }))}

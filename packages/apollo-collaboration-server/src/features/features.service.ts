@@ -1,11 +1,27 @@
 import {
+  type FeatureRepository,
   type FeatureRow,
+  type NestedFeature,
   assembleFeatureTrees,
+  featureId,
 } from '@apollo-annotation/common'
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common'
+import {
+  COMMON_CHANNEL,
+  type DecodedJWT,
+  type FeatureUpdateMessage,
+  makeUserSessionId,
+} from '@apollo-annotation/shared'
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common'
 
 import { ChecksService } from '../checks/checks.service.js'
 import type { FeatureRangeSearchDto } from '../entity/gff3Object.dto.js'
+import { MessagesGateway } from '../messages/messages.gateway.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
 
 import type {
@@ -13,14 +29,91 @@ import type {
   GetByIndexedIdRequest,
 } from './dto/feature.dto.js'
 
+function doesIntersect2(s1: number, e1: number, s2: number, e2: number) {
+  return s1 < e2 && s2 < e1
+}
+
+function flattenNestedFeature(
+  feature: NestedFeature,
+  refSeq: string,
+  parentId?: string,
+) {
+  const rows: FeatureRow[] = []
+  const row: FeatureRow = {
+    _id: feature._id,
+    refSeq,
+    parentId,
+    type: feature.type,
+    min: feature.min,
+    max: feature.max,
+    strand: feature.strand,
+    attributes: feature.attributes,
+  }
+  rows.push(row)
+  if (feature.children) {
+    for (const child of Object.values(feature.children)) {
+      const childRows = flattenNestedFeature(child, refSeq, feature._id)
+      for (const cr of childRows) {
+        rows.push(cr)
+      }
+    }
+  }
+  return rows
+}
+
+export interface FeatureUpdateDto {
+  min?: number
+  max?: number
+  strand?: 1 | -1 | null
+  type?: string
+  attributes?: Record<string, string[]>
+  phase?: 0 | 1 | 2 | null
+}
+
+export interface AddFeatureDto {
+  addedFeature: NestedFeature
+  parentFeatureId?: string
+  assemblyId: string
+}
+
+export interface MergeExonsDto {
+  firstExonId: string
+  secondExonId: string
+}
+
+export interface SplitExonDto {
+  exonId: string
+  splitPoint: number
+}
+
+export interface MergeTranscriptsDto {
+  firstTranscriptId: string
+  secondTranscriptId: string
+}
+
+export interface SplitTranscriptDto {
+  transcriptId: string
+  splitPoint: number
+}
+
+interface MutationResult {
+  features: NestedFeature[]
+  deletedFeatureIds: string[]
+  changeSequence: number
+  assemblyId: string
+}
+
 @Injectable()
 export class FeaturesService {
   constructor(
     @Inject(ChecksService) private readonly checksService: ChecksService,
     @Inject(DatabaseService) private readonly db: DatabaseService,
+    @Inject(MessagesGateway) private readonly messagesGateway: MessagesGateway,
   ) {}
 
   private readonly logger = new Logger(FeaturesService.name)
+
+  // --- Read operations (unchanged) ---
 
   async findAll() {
     return this.db.feature.findAll()
@@ -144,5 +237,557 @@ export class FeaturesService {
     const refSeqs = await this.db.refSeq.findByAssemblies(assemblyIds)
     const refSeqIds = refSeqs.map((rs) => rs._id)
     return this.db.feature.searchText(refSeqIds, term)
+  }
+
+  // --- Mutation helpers ---
+
+  private async getAssemblyForFeature(featureId: string) {
+    const feature = await this.db.feature.findById(featureId)
+    if (!feature) {
+      throw new NotFoundException(`Feature not found: ${featureId}`)
+    }
+    const refSeq = await this.db.refSeq.findById(feature.refSeq)
+    if (!refSeq) {
+      throw new NotFoundException(`RefSeq not found: ${feature.refSeq}`)
+    }
+    return refSeq.assembly
+  }
+
+  private async getRootFeatureTrees(featureIds: string[]) {
+    const rootFeatures = await this.db.feature.findRootParentsOfMany(featureIds)
+    if (rootFeatures.length === 0) {
+      return []
+    }
+    const rootIds = rootFeatures.map((r) => r._id)
+    const descendants =
+      await this.db.feature.findDescendantsOfMany(rootIds)
+    return assembleFeatureTrees([...rootFeatures, ...descendants])
+  }
+
+  private async broadcastAndCheck(
+    result: MutationResult,
+    user: DecodedJWT,
+    affectedFeatureIds: string[],
+  ) {
+    const rootFeatures =
+      await this.db.feature.findRootParentsOfMany(affectedFeatureIds)
+    for (const root of rootFeatures) {
+      await this.checksService.checkFeature(root._id)
+    }
+
+    const userSessionId = makeUserSessionId(user)
+    const message: FeatureUpdateMessage = {
+      channel: COMMON_CHANNEL,
+      userName: user.username,
+      userSessionId,
+      changeSequence: result.changeSequence,
+      assemblyId: result.assemblyId,
+      features: result.features,
+      deletedFeatureIds: result.deletedFeatureIds,
+    }
+    this.messagesGateway.emitToAssembly(
+      result.assemblyId,
+      COMMON_CHANNEL,
+      message,
+    )
+
+    return result
+  }
+
+  // --- Mutation operations ---
+
+  private async propagateAncestorBounds(
+    featureId: string,
+    featureRepository: FeatureRepository,
+  ) {
+    let current = await featureRepository.findById(featureId)
+    while (current?.parentId) {
+      const siblings = await featureRepository.findChildren(current.parentId)
+      if (siblings.length > 0) {
+        let newMin = Infinity
+        let newMax = -Infinity
+        for (const s of siblings) {
+          newMin = Math.min(newMin, s.min)
+          newMax = Math.max(newMax, s.max)
+        }
+        await featureRepository.updateById(current.parentId, {
+          min: newMin,
+          max: newMax,
+        })
+      }
+      current = await featureRepository.findById(current.parentId)
+    }
+  }
+
+  async updateFeature(featureId: string, dto: FeatureUpdateDto, user: DecodedJWT) {
+    const assemblyId = await this.getAssemblyForFeature(featureId)
+
+    const sequence = await this.db.transactional(async (scope) => {
+      const seq = await scope.counter.getNextSequenceValue('changeCounter')
+      const feature = await scope.feature.findById(featureId)
+      if (!feature) {
+        throw new NotFoundException(`Feature not found: ${featureId}`)
+      }
+      await scope.feature.updateById(featureId, dto)
+      if (dto.min !== undefined || dto.max !== undefined) {
+        await this.propagateAncestorBounds(featureId, scope.feature)
+      }
+      return seq
+    })
+
+    const features = await this.getRootFeatureTrees([featureId])
+
+    const result: MutationResult = {
+      features,
+      deletedFeatureIds: [],
+      changeSequence: sequence,
+      assemblyId,
+    }
+    return this.broadcastAndCheck(result, user, [featureId])
+  }
+
+  async addFeature(dto: AddFeatureDto, user: DecodedJWT) {
+    const { addedFeature, assemblyId, parentFeatureId } = dto
+
+    const sequence = await this.db.transactional(async (scope) => {
+      const seq = await scope.counter.getNextSequenceValue('changeCounter')
+
+      const refSeqs = await scope.refSeq.findByAssembly(assemblyId)
+      const refSeq = refSeqs.find((rs) => rs.name === addedFeature.refSeq || rs._id === addedFeature.refSeq)
+      if (!refSeq) {
+        throw new BadRequestException(
+          `RefSeq not found: ${addedFeature.refSeq} in assembly ${assemblyId}`,
+        )
+      }
+      const rows = flattenNestedFeature(addedFeature, refSeq._id)
+      if (parentFeatureId && rows.length > 0) {
+        rows[0].parentId = parentFeatureId
+      }
+      await scope.feature.createMany(rows)
+      return seq
+    })
+
+    const featureIds = [addedFeature._id]
+    if (parentFeatureId) {
+      featureIds.push(parentFeatureId)
+    }
+    const features = await this.getRootFeatureTrees(featureIds)
+
+    const result: MutationResult = {
+      features,
+      deletedFeatureIds: [],
+      changeSequence: sequence,
+      assemblyId,
+    }
+    return this.broadcastAndCheck(result, user, featureIds)
+  }
+
+  async deleteFeature(featureId: string, user: DecodedJWT) {
+    const assemblyId = await this.getAssemblyForFeature(featureId)
+    const feature = await this.db.feature.findById(featureId)
+    if (!feature) {
+      throw new NotFoundException(`Feature not found: ${featureId}`)
+    }
+    const { parentId } = feature
+
+    const sequence = await this.db.transactional(async (scope) => {
+      const seq = await scope.counter.getNextSequenceValue('changeCounter')
+      await scope.feature.deleteDescendants(featureId)
+      await scope.feature.deleteById(featureId)
+      if (parentId) {
+        await this.propagateAncestorBounds(parentId, scope.feature)
+      }
+      return seq
+    })
+
+    const deletedFeatureIds = [featureId]
+    const features = parentId
+      ? await this.getRootFeatureTrees([parentId])
+      : []
+
+    const result: MutationResult = {
+      features,
+      deletedFeatureIds,
+      changeSequence: sequence,
+      assemblyId,
+    }
+    if (parentId) {
+      return this.broadcastAndCheck(result, user, [parentId])
+    }
+    return this.broadcastAndCheck(result, user, [])
+  }
+
+  async mergeExons(dto: MergeExonsDto, user: DecodedJWT) {
+    const { firstExonId, secondExonId } = dto
+    const assemblyId = await this.getAssemblyForFeature(firstExonId)
+
+    const sequence = await this.db.transactional(async (scope) => {
+      const seq = await scope.counter.getNextSequenceValue('changeCounter')
+
+      const firstExon = await scope.feature.findById(firstExonId)
+      if (!firstExon) {
+        throw new NotFoundException(`Feature not found: ${firstExonId}`)
+      }
+      const secondExon = await scope.feature.findById(secondExonId)
+      if (!secondExon) {
+        throw new NotFoundException(`Feature not found: ${secondExonId}`)
+      }
+
+      const mergedAttributes: Record<string, string[]> = firstExon.attributes
+        ? structuredClone(firstExon.attributes)
+        : {}
+      const secondAttrs: Record<string, string[]> = secondExon.attributes ?? {}
+      mergedAttributes.merged_with = [JSON.stringify(secondAttrs)]
+
+      await scope.feature.updateById(firstExonId, {
+        min: Math.min(firstExon.min, secondExon.min),
+        max: Math.max(firstExon.max, secondExon.max),
+        attributes: mergedAttributes,
+      })
+      await scope.feature.deleteDescendants(secondExonId)
+      await scope.feature.deleteById(secondExonId)
+      return seq
+    })
+
+    const features = await this.getRootFeatureTrees([firstExonId])
+
+    const result: MutationResult = {
+      features,
+      deletedFeatureIds: [secondExonId],
+      changeSequence: sequence,
+      assemblyId,
+    }
+    return this.broadcastAndCheck(result, user, [firstExonId])
+  }
+
+  async splitExon(dto: SplitExonDto, user: DecodedJWT) {
+    const { exonId, splitPoint } = dto
+    const assemblyId = await this.getAssemblyForFeature(exonId)
+    const leftExonId = featureId()
+    const rightExonId = featureId()
+
+    const sequence = await this.db.transactional(async (scope) => {
+      const seq = await scope.counter.getNextSequenceValue('changeCounter')
+
+      const exon = await scope.feature.findById(exonId)
+      if (!exon) {
+        throw new NotFoundException(`Feature not found: ${exonId}`)
+      }
+      if (!exon.parentId) {
+        throw new BadRequestException('Cannot split exon without a parent')
+      }
+
+      const leftRow: FeatureRow = {
+        _id: leftExonId,
+        refSeq: exon.refSeq,
+        parentId: exon.parentId,
+        type: exon.type,
+        min: exon.min,
+        max: splitPoint,
+        strand: exon.strand,
+        attributes: exon.attributes
+          ? (() => {
+              const a = { ...exon.attributes }
+              delete a._id
+              delete a.gff_id
+              return a
+            })()
+          : undefined,
+      }
+      const rightRow: FeatureRow = {
+        _id: rightExonId,
+        refSeq: exon.refSeq,
+        parentId: exon.parentId,
+        type: exon.type,
+        min: splitPoint,
+        max: exon.max,
+        strand: exon.strand,
+        attributes: leftRow.attributes
+          ? { ...leftRow.attributes }
+          : undefined,
+      }
+
+      await scope.feature.createMany([leftRow, rightRow])
+      await scope.feature.deleteDescendants(exonId)
+      await scope.feature.deleteById(exonId)
+      return seq
+    })
+
+    const features = await this.getRootFeatureTrees([leftExonId, rightExonId])
+
+    const result: MutationResult = {
+      features,
+      deletedFeatureIds: [exonId],
+      changeSequence: sequence,
+      assemblyId,
+    }
+    return this.broadcastAndCheck(result, user, [leftExonId, rightExonId])
+  }
+
+  async mergeTranscripts(dto: MergeTranscriptsDto, user: DecodedJWT) {
+    const { firstTranscriptId, secondTranscriptId } = dto
+    const assemblyId = await this.getAssemblyForFeature(firstTranscriptId)
+
+    const sequence = await this.db.transactional(async (scope) => {
+      const seq = await scope.counter.getNextSequenceValue('changeCounter')
+
+      const firstRow = await scope.feature.findById(firstTranscriptId)
+      if (!firstRow) {
+        throw new NotFoundException(`Feature not found: ${firstTranscriptId}`)
+      }
+      const secondRow = await scope.feature.findById(secondTranscriptId)
+      if (!secondRow) {
+        throw new NotFoundException(`Feature not found: ${secondTranscriptId}`)
+      }
+
+      const mergedAttributes: Record<string, string[]> = firstRow.attributes
+        ? structuredClone(firstRow.attributes)
+        : {}
+      if (secondRow.attributes) {
+        const existing = mergedAttributes.merged_with ?? []
+        existing.push(JSON.stringify(secondRow.attributes))
+        mergedAttributes.merged_with = existing
+      }
+
+      await scope.feature.updateById(firstTranscriptId, {
+        min: Math.min(firstRow.min, secondRow.min),
+        max: Math.max(firstRow.max, secondRow.max),
+        attributes: mergedAttributes,
+      })
+
+      const secondChildren = await scope.feature.findChildren(secondTranscriptId)
+      for (const secondChild of secondChildren) {
+        await this.mergeFeatureIntoTranscript(
+          secondChild,
+          firstTranscriptId,
+          firstRow.refSeq,
+          scope.feature,
+        )
+      }
+
+      await scope.feature.deleteById(secondTranscriptId)
+      return seq
+    })
+
+    const features = await this.getRootFeatureTrees([firstTranscriptId])
+
+    const result: MutationResult = {
+      features,
+      deletedFeatureIds: [secondTranscriptId],
+      changeSequence: sequence,
+      assemblyId,
+    }
+    return this.broadcastAndCheck(result, user, [firstTranscriptId])
+  }
+
+  private async mergeFeatureIntoTranscript(
+    secondChild: FeatureRow,
+    firstTranscriptId: string,
+    refSeq: string,
+    featureRepository: FeatureRepository,
+  ) {
+    const firstChildren =
+      await featureRepository.findChildren(firstTranscriptId)
+    let merged = false
+    let mrgChild: FeatureRow | undefined
+    let toDelete: FeatureRow | undefined
+
+    for (const firstChild of firstChildren) {
+      if (!merged || !mrgChild) {
+        toDelete = undefined
+        mrgChild = firstChild
+      } else {
+        toDelete = firstChild
+      }
+      if (
+        mrgChild.type === secondChild.type &&
+        mrgChild.type === firstChild.type &&
+        doesIntersect2(
+          secondChild.min,
+          secondChild.max,
+          mrgChild.min,
+          mrgChild.max,
+        ) &&
+        doesIntersect2(
+          firstChild.min,
+          firstChild.max,
+          mrgChild.min,
+          mrgChild.max,
+        )
+      ) {
+        const newMin = Math.min(secondChild.min, mrgChild.min, firstChild.min)
+        const newMax = Math.max(secondChild.max, mrgChild.max, firstChild.max)
+
+        const mrgChildAttr: Record<string, string[]> = mrgChild.attributes
+          ? structuredClone(mrgChild.attributes)
+          : {}
+        const existingMergedWith = mrgChildAttr.merged_with ?? []
+        existingMergedWith.push(JSON.stringify(secondChild.attributes ?? {}))
+
+        if (toDelete) {
+          existingMergedWith.push(JSON.stringify(toDelete.attributes ?? {}))
+          const grandchildren = await featureRepository.findChildren(
+            toDelete._id,
+          )
+          for (const gc of grandchildren) {
+            await featureRepository.updateById(gc._id, {
+              parentId: mrgChild._id,
+            })
+          }
+          await featureRepository.deleteById(toDelete._id)
+        }
+
+        mrgChildAttr.merged_with = [...new Set(existingMergedWith)]
+        await featureRepository.updateById(mrgChild._id, {
+          min: newMin,
+          max: newMax,
+          attributes: mrgChildAttr,
+        })
+        merged = true
+      }
+    }
+
+    if (merged && mrgChild) {
+      const secondGrandchildren = await featureRepository.findChildren(
+        secondChild._id,
+      )
+      for (const gc of secondGrandchildren) {
+        await featureRepository.updateById(gc._id, {
+          parentId: mrgChild._id,
+        })
+      }
+    }
+
+    if (!merged) {
+      await featureRepository.updateById(secondChild._id, {
+        parentId: firstTranscriptId,
+      })
+    }
+  }
+
+  async splitTranscript(dto: SplitTranscriptDto, user: DecodedJWT) {
+    const { transcriptId, splitPoint } = dto
+    const assemblyId = await this.getAssemblyForFeature(transcriptId)
+    const leftTranscriptId = featureId()
+    const rightTranscriptId = featureId()
+
+    const sequence = await this.db.transactional(async (scope) => {
+      const seq = await scope.counter.getNextSequenceValue('changeCounter')
+
+      const transcript = await scope.feature.findById(transcriptId)
+      if (!transcript) {
+        throw new NotFoundException(`Feature not found: ${transcriptId}`)
+      }
+      if (!transcript.parentId) {
+        throw new BadRequestException(
+          'Cannot split transcript without a parent',
+        )
+      }
+
+      const children = await scope.feature.findChildren(transcriptId)
+      const leftChildren: FeatureRow[] = []
+      const rightChildren: FeatureRow[] = []
+
+      for (const child of children) {
+        const midpoint = (child.min + child.max) / 2
+        if (midpoint <= splitPoint) {
+          leftChildren.push(child)
+        } else {
+          rightChildren.push(child)
+        }
+      }
+
+      let leftMin = transcript.min
+      let leftMax = splitPoint
+      let rightMin = splitPoint
+      let rightMax = transcript.max
+
+      if (leftChildren.length > 0) {
+        leftMin = Math.min(...leftChildren.map((c) => c.min))
+        leftMax = Math.max(...leftChildren.map((c) => c.max))
+      }
+      if (rightChildren.length > 0) {
+        rightMin = Math.min(...rightChildren.map((c) => c.min))
+        rightMax = Math.max(...rightChildren.map((c) => c.max))
+      }
+
+      const strippedAttrs = transcript.attributes
+        ? (() => {
+            const a = { ...transcript.attributes }
+            delete a.gff_id
+            delete a.gff_name
+            return a
+          })()
+        : undefined
+
+      const leftRow: FeatureRow = {
+        _id: leftTranscriptId,
+        refSeq: transcript.refSeq,
+        parentId: transcript.parentId,
+        type: transcript.type,
+        min: leftMin,
+        max: leftMax,
+        strand: transcript.strand,
+        attributes: strippedAttrs,
+      }
+      const rightRow: FeatureRow = {
+        _id: rightTranscriptId,
+        refSeq: transcript.refSeq,
+        parentId: transcript.parentId,
+        type: transcript.type,
+        min: rightMin,
+        max: rightMax,
+        strand: transcript.strand,
+        attributes: strippedAttrs ? { ...strippedAttrs } : undefined,
+      }
+      await scope.feature.createMany([leftRow, rightRow])
+
+      for (const child of leftChildren) {
+        await scope.feature.updateById(child._id, {
+          parentId: leftTranscriptId,
+        })
+      }
+      for (const child of rightChildren) {
+        await scope.feature.updateById(child._id, {
+          parentId: rightTranscriptId,
+        })
+      }
+
+      await scope.feature.deleteById(transcriptId)
+
+      const { parentId: geneId } = transcript
+      const siblings = await scope.feature.findChildren(geneId)
+      if (siblings.length > 0) {
+        const newMin = Math.min(...siblings.map((s) => s.min))
+        const newMax = Math.max(...siblings.map((s) => s.max))
+        await scope.feature.updateById(geneId, {
+          min: newMin,
+          max: newMax,
+        })
+      }
+
+      return seq
+    })
+
+    const features = await this.getRootFeatureTrees([
+      leftTranscriptId,
+      rightTranscriptId,
+    ])
+
+    const result: MutationResult = {
+      features,
+      deletedFeatureIds: [transcriptId],
+      changeSequence: sequence,
+      assemblyId,
+    }
+    return this.broadcastAndCheck(result, user, [
+      leftTranscriptId,
+      rightTranscriptId,
+    ])
+  }
+
+  // eslint-disable-next-line @typescript-eslint/require-await
+  async undoChange(_sequence: number, _user: DecodedJWT) {
+    throw new BadRequestException('Undo not yet implemented')
   }
 }

@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
+import { featureId } from '@apollo-annotation/common'
 import type { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
 import type { Assembly } from '@jbrowse/core/assemblyManager/assembly'
 import type {
@@ -16,7 +17,6 @@ import {
 } from '@jbrowse/core/util'
 import type { LinearGenomeViewModel } from '@jbrowse/plugin-linear-genome-view'
 import AddIcon from '@mui/icons-material/Add'
-import ObjectID from 'bson-objectid'
 
 import { CreateApolloAnnotation } from '../components/CreateApolloAnnotation'
 import type { ApolloSessionModel } from '../session'
@@ -145,7 +145,7 @@ export function annotationFromPileup(pluggableElement: PluggableElementType) {
         }
 
         const newFeature: AnnotationFeatureSnapshot = {
-          _id: ObjectID().toHexString(),
+          _id: featureId(),
           refSeq: refSeqId,
           min: start,
           max: end,
@@ -164,7 +164,7 @@ export function annotationFromPileup(pluggableElement: PluggableElementType) {
 
         for (const exon of exons) {
           const newExon: AnnotationFeatureSnapshot = {
-            _id: ObjectID().toHexString(),
+            _id: featureId(),
             refSeq: refSeqId,
             min: exon.start,
             max: exon.end,

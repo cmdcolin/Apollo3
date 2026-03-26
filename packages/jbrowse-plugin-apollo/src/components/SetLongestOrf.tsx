@@ -2,7 +2,6 @@
 
 import type { AnnotationFeature, Children } from '@apollo-annotation/mst'
 import {
-  SetCdsBoundsChange,
   buildExonMappings,
   findLongestOrf,
   splicedToGenomic,
@@ -17,7 +16,7 @@ import {
 } from '@mui/material'
 import React, { useMemo } from 'react'
 
-import type { ChangeManager } from '../ChangeManager'
+import type { FeatureService } from '../FeatureService'
 import type { ApolloSessionModel } from '../session'
 
 import { Dialog } from './Dialog'
@@ -27,7 +26,7 @@ interface SetLongestOrfProps {
   handleClose(): void
   sourceFeature: AnnotationFeature
   sourceAssemblyId: string
-  changeManager: ChangeManager
+  featureService: FeatureService
   refName: string
 }
 
@@ -91,7 +90,7 @@ function OrfResultDisplay({ orfResult }: { orfResult: OrfResult }) {
 }
 
 export function SetLongestOrf({
-  changeManager,
+  featureService,
   handleClose,
   refName,
   session,
@@ -159,18 +158,10 @@ export function SetLongestOrf({
       return
     }
     const [cds] = cdsChildren
-
-    const change = new SetCdsBoundsChange({
-      typeName: 'SetCdsBoundsChange',
-      changedIds: [cds._id],
-      assembly: sourceAssemblyId,
-      featureId: cds._id,
-      oldMin: cds.min,
-      newMin: orfResult.cdsMin,
-      oldMax: cds.max,
-      newMax: orfResult.cdsMax,
+    void featureService.updateFeature(cds._id, {
+      min: orfResult.cdsMin,
+      max: orfResult.cdsMax,
     })
-    void changeManager.submit(change)
     handleClose()
   }
 

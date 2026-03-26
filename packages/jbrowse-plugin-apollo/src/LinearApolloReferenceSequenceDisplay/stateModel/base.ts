@@ -93,9 +93,9 @@ export function baseModelFactory(
         const session = self.session as unknown as ApolloSessionModel
         return getRole(session)
       },
-      get changeManager() {
+      get featureService() {
         return (self.session as unknown as ApolloSessionModel).apolloDataStore
-          .changeManager
+          .featureService
       },
       getAssemblyId(assemblyName: string) {
         const { assemblyManager } =

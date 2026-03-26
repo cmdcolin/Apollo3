@@ -123,9 +123,9 @@ export function baseModelFactory(
       get readOnly() {
         return isReadOnly(self.session as unknown as ApolloSessionModel)
       },
-      get changeManager() {
+      get featureService() {
         return (self.session as unknown as ApolloSessionModel).apolloDataStore
-          .changeManager
+          .featureService
       },
       getAssemblyId(assemblyName: string) {
         const { assemblyManager } =
@@ -284,7 +284,6 @@ export function baseModelFactory(
           return
         }
         const { session } = self
-        const { changeManager } = session.apolloDataStore
         const [widgetName, widgetId] = customWidgetNameAndId ?? [
           'ApolloFeatureDetailsWidget',
           'apolloFeatureDetailsWidget',
@@ -295,7 +294,6 @@ export function baseModelFactory(
           feature,
           assembly,
           refName,
-          changeManager,
         })
         ;(session as unknown as SessionWithWidgets).showWidget(
           apolloFeatureWidget,

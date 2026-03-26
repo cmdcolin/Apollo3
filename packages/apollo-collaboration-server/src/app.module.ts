@@ -80,7 +80,7 @@ const validationSchema = Joi.object({
   CHUNK_SIZE: Joi.number(),
   DEFAULT_NEW_USER_ROLE: Joi.string()
     .valid('admin', 'user', 'readOnly', 'none')
-    .default('none'),
+    .default('readOnly'),
   ALLOW_GUEST_USER: Joi.boolean().default(false),
   GUEST_USER_ROLE: Joi.string()
     .valid('admin', 'user', 'readOnly')

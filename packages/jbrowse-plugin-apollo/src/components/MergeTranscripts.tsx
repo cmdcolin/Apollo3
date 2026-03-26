@@ -1,7 +1,5 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import type { AnnotationFeature, Children } from '@apollo-annotation/mst'
-import { MergeTranscriptsChange } from '@apollo-annotation/shared'
-import { getSnapshot } from '@jbrowse/mobx-state-tree'
 import {
   Box,
   Button,
@@ -16,7 +14,7 @@ import {
 } from '@mui/material'
 import React, { useState } from 'react'
 
-import type { ChangeManager } from '../ChangeManager'
+import type { FeatureService } from '../FeatureService'
 import type { ApolloSessionModel } from '../session'
 
 import { Dialog } from './Dialog'
@@ -26,7 +24,7 @@ interface MergeTranscriptsProps {
   handleClose(): void
   sourceFeature: AnnotationFeature
   sourceAssemblyId: string
-  changeManager: ChangeManager
+  featureService: FeatureService
   selectedFeature?: AnnotationFeature
   setSelectedFeature(feature?: AnnotationFeature): void
 }
@@ -73,12 +71,11 @@ function makeRadioButtonName(transcript: AnnotationFeature): string {
 }
 
 export function MergeTranscripts({
-  changeManager,
+  featureService,
   handleClose,
   selectedFeature,
   session,
   setSelectedFeature,
-  sourceAssemblyId,
   sourceFeature,
 }: MergeTranscriptsProps) {
   const [errorMessage, setErrorMessage] = useState('')
@@ -93,24 +90,14 @@ export function MergeTranscripts({
     if (!selectedTranscriptId) {
       return
     }
-    const selectedTranscript = transcripts[selectedTranscriptId]
     if (selectedFeature?._id === sourceFeature._id) {
       setSelectedFeature()
     }
 
-    if (!sourceFeature.parent) {
-      throw new Error('Cannot find parent')
-    }
-
-    const change = new MergeTranscriptsChange({
-      changedIds: [sourceFeature._id],
-      typeName: 'MergeTranscriptsChange',
-      assembly: sourceAssemblyId,
-      firstTranscript: getSnapshot(sourceFeature),
-      secondTranscript: getSnapshot(selectedTranscript),
-      parentFeatureId: sourceFeature.parent._id,
-    })
-    void changeManager.submit(change)
+    void featureService.mergeTranscripts(
+      sourceFeature._id,
+      selectedTranscriptId,
+    )
     handleClose()
   }
 

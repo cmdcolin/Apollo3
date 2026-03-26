@@ -3,15 +3,9 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Container from '@mui/material/Container'
-import Paper from '@mui/material/Paper'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
+import { DataGrid, type GridColDef } from '@mui/x-data-grid'
 import { useCallback, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
@@ -35,98 +29,38 @@ interface GeneHistoryResponse {
   limit: number
 }
 
-function ChangeTable({ changes }: { changes: ChangeRow[] }) {
-  return (
-    <TableContainer component={Paper} variant="outlined">
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell>Sequence</TableCell>
-            <TableCell>Type</TableCell>
-            <TableCell>User</TableCell>
-            <TableCell>Assembly</TableCell>
-            <TableCell>Changed IDs</TableCell>
-            <TableCell>Date</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {changes.map((c) => {
-            const ids = c.changedIds ?? []
-            const idsDisplay =
-              ids.slice(0, 3).join(', ') + (ids.length > 3 ? '...' : '')
-            const date = c.createdAt
-              ? new Date(c.createdAt).toLocaleString()
-              : ''
-            return (
-              <TableRow key={c._id} hover>
-                <TableCell>{c.sequence ?? ''}</TableCell>
-                <TableCell>{c.typeName}</TableCell>
-                <TableCell>{c.user}</TableCell>
-                <TableCell>{c.assembly ?? ''}</TableCell>
-                <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                  {idsDisplay}
-                </TableCell>
-                <TableCell>{date}</TableCell>
-              </TableRow>
-            )
-          })}
-          {changes.length === 0 && (
-            <TableRow>
-              <TableCell
-                colSpan={6}
-                align="center"
-                sx={{ color: 'text.secondary' }}
-              >
-                No changes found
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </TableContainer>
-  )
-}
+type ChangeGridRow = ChangeRow & { id: string }
 
-function Pagination({
-  page,
-  setPage,
-  hasMore,
-  total,
-}: {
-  page: number
-  setPage: (p: number) => void
-  hasMore: boolean
-  total?: number
-}) {
-  return (
-    <Box sx={{ display: 'flex', gap: 1, mt: 2, alignItems: 'center' }}>
-      <Button
-        size="small"
-        disabled={page <= 1}
-        onClick={() => {
-          setPage(page - 1)
-        }}
-      >
-        Previous
-      </Button>
-      <Typography variant="body2">Page {page}</Typography>
-      <Button
-        size="small"
-        disabled={!hasMore}
-        onClick={() => {
-          setPage(page + 1)
-        }}
-      >
-        Next
-      </Button>
-      {total !== undefined && (
-        <Typography variant="body2" color="text.secondary">
-          ({total} total)
+const columns: GridColDef<ChangeGridRow>[] = [
+  { field: 'sequence', headerName: 'Sequence', width: 100 },
+  { field: 'typeName', headerName: 'Type', flex: 1 },
+  { field: 'user', headerName: 'User', flex: 1 },
+  { field: 'assembly', headerName: 'Assembly', flex: 1 },
+  {
+    field: 'changedIds',
+    headerName: 'Changed IDs',
+    flex: 1.5,
+    renderCell: (params) => {
+      const ids = (params.value as string[] | undefined) ?? []
+      const display = ids.slice(0, 3).join(', ') + (ids.length > 3 ? '...' : '')
+      return (
+        <Typography
+          variant="body2"
+          sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
+        >
+          {display}
         </Typography>
-      )}
-    </Box>
-  )
-}
+      )
+    },
+  },
+  {
+    field: 'createdAt',
+    headerName: 'Date',
+    flex: 1,
+    renderCell: (params) =>
+      params.value ? new Date(params.value as string).toLocaleString() : '',
+  },
+]
 
 function clearGeneIdParam() {
   const url = new URL(globalThis.location.href)
@@ -139,25 +73,29 @@ function RecentChangesPage() {
   const initialGeneId = params.get('geneId') ?? ''
 
   const [changes, setChanges] = useState<ChangeRow[]>([])
-  const [page, setPage] = useState(1)
   const [total, setTotal] = useState<number>()
   const [error, setError] = useState<string>()
   const [geneIdInput, setGeneIdInput] = useState(initialGeneId)
   const [activeGeneId, setActiveGeneId] = useState(initialGeneId)
-  const pageSize = 25
+  const [paginationModel, setPaginationModel] = useState({
+    page: 0,
+    pageSize: 25,
+  })
 
   const load = useCallback(async () => {
     try {
       setError(undefined)
+      const page = paginationModel.page + 1
+      const limit = paginationModel.pageSize
       if (activeGeneId) {
         const data = await fetchJson<GeneHistoryResponse>(
-          `/changes/gene/${encodeURIComponent(activeGeneId)}?limit=${pageSize}&page=${page}`,
+          `/changes/gene/${encodeURIComponent(activeGeneId)}?limit=${limit}&page=${page}`,
         )
         setChanges(data.changes)
         setTotal(data.total)
       } else {
         const data = await fetchJson<ChangeRow[]>(
-          `/changes/recent?limit=${pageSize}&page=${page}`,
+          `/changes/recent?limit=${limit}&page=${page}`,
         )
         setChanges(data)
         setTotal(undefined)
@@ -165,7 +103,7 @@ function RecentChangesPage() {
     } catch (error_) {
       setError(error_ instanceof Error ? error_.message : String(error_))
     }
-  }, [page, activeGeneId])
+  }, [paginationModel.page, paginationModel.pageSize, activeGeneId])
 
   useEffect(() => {
     void load()
@@ -174,9 +112,17 @@ function RecentChangesPage() {
   function clearFilter() {
     setGeneIdInput('')
     setActiveGeneId('')
-    setPage(1)
+    setPaginationModel((m) => ({ ...m, page: 0 }))
     clearGeneIdParam()
   }
+
+  // For recent changes where total is unknown, estimate rowCount so DataGrid
+  // shows a "next" button only when the current page is full.
+  const unknownRowCount =
+    changes.length >= paginationModel.pageSize
+      ? (paginationModel.page + 2) * paginationModel.pageSize
+      : paginationModel.page * paginationModel.pageSize + changes.length
+  const rowCount = total ?? unknownRowCount
 
   return (
     <Nav current="changes">
@@ -191,7 +137,7 @@ function RecentChangesPage() {
           onSubmit={(e) => {
             e.preventDefault()
             const trimmed = geneIdInput.trim()
-            setPage(1)
+            setPaginationModel((m) => ({ ...m, page: 0 }))
             setActiveGeneId(trimmed)
             if (trimmed) {
               const url = new URL(globalThis.location.href)
@@ -239,23 +185,18 @@ function RecentChangesPage() {
           </Alert>
         )}
 
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          Showing {changes.length} changes (page {page})
-          {total === undefined ? '' : ` of ${total} total`}
-        </Typography>
-
-        <ChangeTable changes={changes} />
-
-        <Pagination
-          page={page}
-          setPage={setPage}
-          hasMore={
-            total === undefined
-              ? changes.length >= pageSize
-              : page * pageSize < total
-          }
-          total={total}
-        />
+        <Box sx={{ height: 600 }}>
+          <DataGrid
+            rows={changes.map((c) => ({ ...c, id: c._id }))}
+            columns={columns}
+            density="compact"
+            paginationMode="server"
+            rowCount={rowCount}
+            paginationModel={paginationModel}
+            onPaginationModelChange={setPaginationModel}
+            pageSizeOptions={[25, 50, 100]}
+          />
+        </Box>
       </Container>
     </Nav>
   )

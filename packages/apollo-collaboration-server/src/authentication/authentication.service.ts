@@ -276,10 +276,12 @@ export class AuthenticationService {
         this.consumeSetup()
         this.logger.log(`Setup complete: ${email} promoted to admin`)
       }
+      const isDefaultRole = newUserRole === this.defaultNewUserRole
       const newUser: CreateUserDto = {
         email,
         username: name,
         role: newUserRole,
+        pendingApproval: isDefaultRole && !isGuestUser && !isRootUser,
       }
       user = await this.usersService.addNew(newUser)
     } else if (user.role === Role.None && this.setupActive && !isGuestUser) {

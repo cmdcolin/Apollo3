@@ -1,4 +1,5 @@
 export * from './ApolloPlugin.js'
+export * from './ids.js'
 export * from './repositories/index.js'
 export * from './tree/assembleFeatureTrees.js'
 export * from './AssemblySpecificChange.js'

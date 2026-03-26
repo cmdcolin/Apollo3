@@ -41,7 +41,7 @@ import {
   DesktopSQLiteDriver,
   InMemoryFileDriver,
 } from '../BackendDrivers'
-import { ChangeManager } from '../ChangeManager'
+import { FeatureService } from '../FeatureService'
 import { OntologyManagerType } from '../OntologyManager'
 import type ApolloPluginConfigurationSchema from '../config'
 import type { ApolloRootModel } from '../types'
@@ -147,7 +147,7 @@ export function clientDataStoreFactory(
       },
     }))
     .volatile((self) => ({
-      changeManager: new ChangeManager(self as unknown as ClientDataStoreType),
+      featureService: new FeatureService(self),
       collaborationServerDriver: new CollaborationServerDriver(
         self as unknown as ClientDataStoreType,
       ),
@@ -266,6 +266,48 @@ export function clientDataStoreFactory(
             sequence: [],
           })
           ref.addSequence({ start, stop: end, sequence: seq })
+        }
+      }),
+      applyFeatureUpdate(
+        assemblyId: string,
+        features: AnnotationFeatureSnapshot[],
+        deletedFeatureIds: string[],
+      ) {
+        for (const id of deletedFeatureIds) {
+          if (self.getFeature(id)) {
+            self.deleteFeature(id)
+          }
+        }
+        for (const feature of features) {
+          self.addFeature(assemblyId, feature)
+        }
+      },
+      refreshLoadedRegions: flow(function* refreshLoadedRegions() {
+        for (const [, assembly] of self.assemblies) {
+          for (const [, refSeq] of assembly.refSeqs) {
+            if (refSeq.features.size > 0) {
+              const backendDriver = self.getBackendDriver(assembly._id)
+              if (!backendDriver) {
+                continue
+              }
+              let min = Infinity
+              let max = -Infinity
+              for (const [, feat] of refSeq.features) {
+                min = Math.min(min, feat.min)
+                max = Math.max(max, feat.max)
+              }
+              const features = (yield backendDriver.getFeatures({
+                assemblyName: assembly._id,
+                refName: refSeq.name,
+                start: min,
+                end: max,
+              })) as AnnotationFeatureSnapshot[]
+              refSeq.features.clear()
+              for (const feature of features) {
+                refSeq.features.put(feature)
+              }
+            }
+          }
         }
       }),
     }))

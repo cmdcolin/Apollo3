@@ -289,7 +289,7 @@ export function getContextMenuItemsForFeature(
 ): MenuItem[] {
   const {
     role: displayRole,
-    changeManager,
+    featureService,
     regions,
     selectedFeature,
     session,
@@ -318,7 +318,7 @@ export function getContextMenuItemsForFeature(
               handleClose: () => {
                 doneCallback()
               },
-              changeManager,
+              featureService,
               sourceFeature,
               sourceAssemblyId,
             },
@@ -338,7 +338,7 @@ export function getContextMenuItemsForFeature(
               handleClose: () => {
                 doneCallback()
               },
-              changeManager,
+              featureService,
               sourceFeature,
               sourceAssemblyId: currentAssemblyId,
             },
@@ -358,7 +358,7 @@ export function getContextMenuItemsForFeature(
               handleClose: () => {
                 doneCallback()
               },
-              changeManager,
+              featureService,
               sourceFeature,
               sourceAssemblyId: currentAssemblyId,
               selectedFeature,

@@ -1,15 +1,10 @@
 /* eslint-disable @typescript-eslint/require-await */
-import type { AssemblySpecificChange, Change } from '@apollo-annotation/common'
 import type {
   AnnotationFeatureSnapshot,
   CheckResultSnapshot,
 } from '@apollo-annotation/mst'
-import { ValidationResultSet } from '@apollo-annotation/shared'
 import { getConf } from '@jbrowse/core/configuration'
 import { type Region, getSession } from '@jbrowse/core/util'
-
-import type { SubmitOpts } from '../ChangeManager'
-import { checkFeatures } from '../util'
 
 import { BackendDriver, type RefNameAliases } from './BackendDriver'
 
@@ -79,22 +74,6 @@ export class InMemoryFileDriver extends BackendDriver {
         sequenceMetadata && !sequenceMetadata.apollo && !sequenceMetadata.file,
       )
     })
-  }
-
-  async submitChange(
-    _change: Change | AssemblySpecificChange,
-    _opts: SubmitOpts = {},
-  ) {
-    const { clientStore } = this
-    const { assemblies } = clientStore
-    clientStore.clearCheckResults()
-    for (const [, assembly] of assemblies) {
-      if (assembly.backendDriverType === 'InMemoryFileDriver') {
-        const checkResults = await checkFeatures(assembly)
-        clientStore.addCheckResults(checkResults)
-      }
-    }
-    return new ValidationResultSet()
   }
 
   async searchFeatures(

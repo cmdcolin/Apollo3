@@ -10,6 +10,7 @@ import { CheckResultEntity } from './entities/CheckResultEntity.js'
 import { CounterEntity } from './entities/CounterEntity.js'
 import { ExportEntity } from './entities/ExportEntity.js'
 import { FeatureEntity } from './entities/FeatureEntity.js'
+import { FeatureHistoryEntity } from './entities/FeatureHistoryEntity.js'
 import { FileEntity } from './entities/FileEntity.js'
 import { OrganismEntity } from './entities/OrganismEntity.js'
 import { RefSeqEntity } from './entities/RefSeqEntity.js'
@@ -29,6 +30,7 @@ const allEntities = [
   CounterEntity,
   ExportEntity,
   FeatureEntity,
+  FeatureHistoryEntity,
   FileEntity,
   RefSeqEntity,
   TextSearchAdapterConfigEntity,

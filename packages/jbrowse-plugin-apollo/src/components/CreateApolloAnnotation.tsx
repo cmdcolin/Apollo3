@@ -2,12 +2,8 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 /* eslint-disable @typescript-eslint/unbound-method */
 
+import { featureId } from '@apollo-annotation/common'
 import type { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
-import {
-  AddFeatureChange,
-  LocationEndChange,
-  LocationStartChange,
-} from '@apollo-annotation/shared'
 import type { Assembly } from '@jbrowse/core/assemblyManager/assembly'
 import type { AbstractSessionModel } from '@jbrowse/core/util'
 import { getSnapshot } from '@jbrowse/mobx-state-tree'
@@ -26,7 +22,6 @@ import {
   type SelectChangeEvent,
   Typography,
 } from '@mui/material'
-import ObjectID from 'bson-objectid'
 import React, { useEffect, useMemo, useState } from 'react'
 
 import type { ApolloSessionModel } from '../session'
@@ -340,37 +335,30 @@ export function CreateApolloAnnotation({
 
   // Copies gene feature along with its selected children
   const copyGeneFeature = async () => {
-    let change
+    let addedFeature: AnnotationFeatureSnapshot
     if (
       annotationFeature.children &&
       checkedChildrens.length !==
         Object.values(annotationFeature.children).length
     ) {
-      // IF SOME CHILDREN ARE CHECKED
       const childrens: Record<string, AnnotationFeatureSnapshot> = {}
       for (const childId of checkedChildrens) {
         childrens[childId] = annotationFeature.children[childId]
       }
-      change = new AddFeatureChange({
-        changedIds: [annotationFeature._id],
-        typeName: 'AddFeatureChange',
-        assembly: assembly.name,
-        addedFeature: {
-          ...annotationFeature,
-          children: childrens,
-        },
-      })
+      addedFeature = {
+        ...annotationFeature,
+        children: childrens,
+      }
     } else {
-      // IF PARENT AND ALL CHILDREN ARE CHECKED
-      change = new AddFeatureChange({
-        changedIds: [annotationFeature._id],
-        typeName: 'AddFeatureChange',
-        assembly: assembly.name,
-        addedFeature: annotationFeature,
-      })
+      addedFeature = annotationFeature
     }
 
-    await submitChange(change, annotationFeature._id)
+    await apolloSessionModel.apolloDataStore.featureService.addFeature(
+      addedFeature,
+      assembly.name,
+    ).then(() => {
+      apolloSessionModel.apolloSetSelectedFeature(annotationFeature._id)
+    })
   }
 
   const copyTranscriptsToDestinationGene = async (
@@ -390,29 +378,24 @@ export function CreateApolloAnnotation({
             selectedDestinationFeature.strand
         }
       }
-      const change = new AddFeatureChange({
-        parentFeatureId: selectedDestinationFeature._id,
-        changedIds: [selectedDestinationFeature._id],
-        typeName: 'AddFeatureChange',
-        assembly: assembly.name,
-        addedFeature: transcript,
+      await apolloSessionModel.apolloDataStore.featureService.addFeature(
+        transcript,
+        assembly.name,
+        selectedDestinationFeature._id,
+      ).then(() => {
+        apolloSessionModel.apolloSetSelectedFeature(transcriptId)
       })
-      // selects the last added transcript
-      await submitChange(change, transcriptId)
     }
   }
 
   const createNewGeneFeatureWithTranscripts = async (
     childrens: Record<string, AnnotationFeatureSnapshot>,
   ) => {
-    const newGeneId = new ObjectID().toHexString()
+    const newGeneId = featureId()
     const min = Math.min(...Object.values(childrens).map((child) => child.min))
     const max = Math.max(...Object.values(childrens).map((child) => child.max))
-    const change = new AddFeatureChange({
-      changedIds: [newGeneId],
-      typeName: 'AddFeatureChange',
-      assembly: assembly.name,
-      addedFeature: {
+    await apolloSessionModel.apolloDataStore.featureService.addFeature(
+      {
         _id: newGeneId,
         refSeq: refSeqId,
         min,
@@ -425,8 +408,10 @@ export function CreateApolloAnnotation({
           gene_name: [getGeneNameOrId(annotationFeature)],
         },
       },
+      assembly.name,
+    ).then(() => {
+      apolloSessionModel.apolloSetSelectedFeature(newGeneId)
     })
-    await submitChange(change, newGeneId)
   }
 
   const extendSelectedDestinationFeatureLocation = async (
@@ -436,46 +421,19 @@ export function CreateApolloAnnotation({
     if (!selectedDestinationFeature) {
       return
     }
-    const changes = []
+    const updates: { min?: number; max?: number } = {}
     if (newMin !== selectedDestinationFeature.min) {
-      changes.push(
-        new LocationStartChange({
-          typeName: 'LocationStartChange',
-          changedIds: [selectedDestinationFeature._id],
-          featureId: selectedDestinationFeature._id,
-          assembly: assembly.name,
-          oldStart: selectedDestinationFeature.min,
-          newStart: newMin,
-        }),
-      )
+      updates.min = newMin
     }
     if (newMax !== selectedDestinationFeature.max) {
-      changes.push(
-        new LocationEndChange({
-          typeName: 'LocationEndChange',
-          changedIds: [selectedDestinationFeature._id],
-          featureId: selectedDestinationFeature._id,
-          assembly: assembly.name,
-          oldEnd: selectedDestinationFeature.max,
-          newEnd: newMax,
-        }),
+      updates.max = newMax
+    }
+    if (Object.keys(updates).length > 0) {
+      await apolloSessionModel.apolloDataStore.featureService.updateFeature(
+        selectedDestinationFeature._id,
+        updates,
       )
     }
-    for (const change of changes) {
-      await submitChange(change)
-    }
-  }
-
-  const submitChange = async (
-    change: AddFeatureChange | LocationStartChange | LocationEndChange,
-    selectedFeatureId?: string,
-  ) => {
-    await apolloSessionModel.apolloDataStore.changeManager
-      .submit(change)
-      .then(() => {
-        // Selects the newly added/modified feature
-        apolloSessionModel.apolloSetSelectedFeature(selectedFeatureId)
-      })
   }
 
   const handleCreateNewGeneChange = (

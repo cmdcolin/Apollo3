@@ -1,10 +1,9 @@
-import { Check } from '@apollo-annotation/common'
+import { checkResultId, Check } from '@apollo-annotation/common'
 import type {
   AnnotationFeatureSnapshot,
   CheckResultSnapshot,
 } from '@apollo-annotation/mst'
 import { intersection2 } from '@jbrowse/core/util'
-import ObjectID from 'bson-objectid'
 
 import { getPrintableId } from './util.js'
 
@@ -170,7 +169,7 @@ async function checkMRNA(
             : (cdsLocation.at(0)?.min ?? min)
         cdsStart = strand === -1 ? cdsStart - 3 : cdsStart
         checkResults.push({
-          _id: new ObjectID().toHexString(),
+          _id: checkResultId(),
           name: CHECK_NAME,
           cause: CAUSES[CAUSES.MissingStartCodon],
           featureId,
@@ -184,7 +183,7 @@ async function checkMRNA(
       const lastCodon = codons.at(-1) // Last codon is supposed to be a stop
       if (lastCodon && !(lastCodon.toUpperCase() in STOP_CODONS)) {
         checkResults.push({
-          _id: new ObjectID().toHexString(),
+          _id: checkResultId(),
           name: CHECK_NAME,
           cause: CAUSES[CAUSES.MissingStopCodon],
           featureId,
@@ -196,7 +195,7 @@ async function checkMRNA(
       }
     } else {
       checkResults.push({
-        _id: new ObjectID().toHexString(),
+        _id: checkResultId(),
         name: CHECK_NAME,
         cause: CAUSES[CAUSES.MissingStopCodon],
         featureId,
@@ -215,7 +214,7 @@ async function checkMRNA(
       if (location && codon.toUpperCase() in STOP_CODONS) {
         const [codonStart, codonEnd] = location
         checkResults.push({
-          _id: new ObjectID().toHexString(),
+          _id: checkResultId(),
           name: CHECK_NAME,
           cause: CAUSES[CAUSES.InternalStopCodon],
           featureId,

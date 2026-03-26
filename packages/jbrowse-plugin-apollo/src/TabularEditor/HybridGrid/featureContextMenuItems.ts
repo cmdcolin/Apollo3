@@ -6,7 +6,7 @@ import {
   isSessionModelWithWidgets,
 } from '@jbrowse/core/util'
 
-import type { ChangeManager } from '../../ChangeManager'
+import type { FeatureService } from '../../FeatureService'
 import {
   AddChildFeature,
   CopyFeature,
@@ -28,7 +28,7 @@ export function featureContextMenuItems(
   selectedFeature: AnnotationFeature | undefined,
   setSelectedFeature: (f: AnnotationFeature | undefined) => void,
   session: ApolloSessionModel,
-  changeManager: ChangeManager,
+  featureService: FeatureService,
   filteredTranscripts: string[],
   updateFilteredTranscripts: (forms: string[]) => void,
 ) {
@@ -72,7 +72,7 @@ export function featureContextMenuItems(
                 handleClose: () => {
                   doneCallback()
                 },
-                changeManager,
+                featureService,
                 sourceFeature: feature,
                 sourceAssemblyId,
               },
@@ -92,7 +92,7 @@ export function featureContextMenuItems(
                 handleClose: () => {
                   doneCallback()
                 },
-                changeManager,
+                featureService,
                 sourceFeature: feature,
                 sourceAssemblyId: currentAssemblyId,
               },
@@ -112,7 +112,7 @@ export function featureContextMenuItems(
                 handleClose: () => {
                   doneCallback()
                 },
-                changeManager,
+                featureService,
                 sourceFeature: feature,
                 sourceAssemblyId: currentAssemblyId,
                 selectedFeature,
@@ -151,7 +151,7 @@ export function featureContextMenuItems(
                 handleClose: () => {
                   doneCallback()
                 },
-                changeManager,
+                featureService,
                 sourceFeature: feature,
                 sourceAssemblyId: currentAssemblyId,
                 selectedFeature,
@@ -173,7 +173,7 @@ export function featureContextMenuItems(
                 handleClose: () => {
                   doneCallback()
                 },
-                changeManager,
+                featureService,
                 sourceFeature: feature,
                 sourceAssemblyId: currentAssemblyId,
                 selectedFeature,
@@ -195,7 +195,7 @@ export function featureContextMenuItems(
                 handleClose: () => {
                   doneCallback()
                 },
-                changeManager,
+                featureService,
                 sourceFeature: feature,
                 sourceAssemblyId: currentAssemblyId,
                 selectedFeature,
@@ -217,7 +217,7 @@ export function featureContextMenuItems(
                 handleClose: () => {
                   doneCallback()
                 },
-                changeManager,
+                featureService,
                 sourceFeature: feature,
                 sourceAssemblyId: currentAssemblyId,
                 selectedFeature,
@@ -247,7 +247,6 @@ export function featureContextMenuItems(
               {
                 feature,
                 assembly: currentAssemblyId,
-                changeManager,
                 refName: region.refName,
               },
             )
@@ -265,7 +264,7 @@ export function featureContextMenuItems(
                   handleClose: () => {
                     doneCallback()
                   },
-                  changeManager,
+                  featureService,
                   sourceFeature: feature,
                   sourceAssemblyId: currentAssemblyId,
                   selectedFeature,

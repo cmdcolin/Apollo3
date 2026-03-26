@@ -1,3 +1,4 @@
+import type { MikroORM as BaseMikroORM } from '@mikro-orm/core'
 import { MikroORM } from '@mikro-orm/core'
 import { MikroORM as PostgreSqlORM } from '@mikro-orm/postgresql'
 import { NodeSqliteDialect, SqliteDriver } from '@mikro-orm/sqlite'
@@ -10,12 +11,14 @@ import { CheckResultEntity } from './entities/CheckResultEntity.js'
 import { CounterEntity } from './entities/CounterEntity.js'
 import { ExportEntity } from './entities/ExportEntity.js'
 import { FeatureEntity } from './entities/FeatureEntity.js'
+import { FeatureHistoryEntity } from './entities/FeatureHistoryEntity.js'
 import { FileEntity } from './entities/FileEntity.js'
 import { OrganismEntity } from './entities/OrganismEntity.js'
 import { RefSeqEntity } from './entities/RefSeqEntity.js'
 import { TextSearchAdapterConfigEntity } from './entities/TextSearchAdapterConfigEntity.js'
 import { TrackConfigEntity } from './entities/TrackConfigEntity.js'
 import { UserEntity } from './entities/UserEntity.js'
+import { FeatureHistorySubscriber } from './subscribers/FeatureHistorySubscriber.js'
 
 const allEntities = [
   AssemblyEntity,
@@ -26,6 +29,7 @@ const allEntities = [
   CounterEntity,
   ExportEntity,
   FeatureEntity,
+  FeatureHistoryEntity,
   FileEntity,
   OrganismEntity,
   RefSeqEntity,
@@ -33,6 +37,10 @@ const allEntities = [
   TrackConfigEntity,
   UserEntity,
 ]
+
+function registerSubscribers(orm: BaseMikroORM) {
+  orm.em.getEventManager().registerSubscriber(new FeatureHistorySubscriber())
+}
 
 export async function createTestORM() {
   const dbBackend = process.env.DB_BACKEND
@@ -44,6 +52,7 @@ export async function createTestORM() {
       clientUrl: connectionUrl,
     })
     await orm.schema.refresh()
+    registerSubscribers(orm)
     return orm
   }
 
@@ -54,5 +63,6 @@ export async function createTestORM() {
     entities: allEntities,
   })
   await orm.schema.create()
+  registerSubscribers(orm)
   return orm
 }

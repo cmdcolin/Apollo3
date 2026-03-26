@@ -1,5 +1,4 @@
-import { randomBytes } from 'node:crypto'
-
+import { refSeqId } from '@apollo-annotation/common'
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common'
 
 import { DatabaseService } from '../mikro-orm/database.service.js'
@@ -16,7 +15,7 @@ export class RefSeqsService {
 
   async create(createRefSeqDto: CreateRefSeqDto) {
     return this.db.refSeq.create({
-      _id: randomBytes(12).toString('hex'),
+      _id: refSeqId(),
       name: createRefSeqDto.name,
       description: createRefSeqDto.description,
       assembly: createRefSeqDto.assembly,

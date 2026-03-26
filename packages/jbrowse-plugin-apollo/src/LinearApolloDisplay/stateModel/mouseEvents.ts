@@ -1,8 +1,4 @@
 import type { AnnotationFeature } from '@apollo-annotation/mst'
-import {
-  LocationEndChange,
-  LocationStartChange,
-} from '@apollo-annotation/shared'
 import type PluginManager from '@jbrowse/core/PluginManager'
 import type { AnyConfigurationSchemaType } from '@jbrowse/core/configuration'
 import type { MenuItem } from '@jbrowse/core/ui'
@@ -15,7 +11,6 @@ import {
   type MousePosition,
   type MousePositionWithFeature,
   getMousePosition,
-  getPropagatedLocationChanges,
   isMousePositionWithFeature,
 } from '../../util'
 import type { CanvasMouseEvent } from '../types'
@@ -169,47 +164,17 @@ export function mouseEventsModelFactory(
         if (!self.apolloDragging) {
           throw new Error('endDrag() called with no current drag in progress')
         }
-        const { current, edge, feature, start, shrinkParent } =
+        const { current, edge, feature, start } =
           self.apolloDragging
-        // don't do anything if it was only dragged a tiny bit
         if (Math.abs(current.x - start.x) <= 4) {
           self.setDragging()
           self.setCursor()
           return
         }
-        const { displayedRegions } = self.lgv
-        const region = displayedRegions[start.regionNumber]
-        const assembly = self.getAssemblyId(region.assemblyName)
-        const changes = getPropagatedLocationChanges(
-          feature,
-          current.bp,
-          edge,
-          shrinkParent,
+        void self.featureService.updateFeature(
+          feature._id,
+          edge === 'max' ? { max: current.bp } : { min: current.bp },
         )
-
-        const change: LocationEndChange | LocationStartChange =
-          edge === 'max'
-            ? new LocationEndChange({
-                typeName: 'LocationEndChange',
-                changedIds: changes.map((c) => c.featureId),
-                changes: changes.map((c) => ({
-                  featureId: c.featureId,
-                  oldEnd: c.oldLocation,
-                  newEnd: c.newLocation,
-                })),
-                assembly,
-              })
-            : new LocationStartChange({
-                typeName: 'LocationStartChange',
-                changedIds: changes.map((c) => c.featureId),
-                changes: changes.map((c) => ({
-                  featureId: c.featureId,
-                  oldStart: c.oldLocation,
-                  newStart: c.newLocation,
-                })),
-                assembly,
-              })
-        void self.changeManager.submit(change)
         self.setDragging()
         self.setCursor()
       },
