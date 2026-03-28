@@ -3,15 +3,10 @@ import fs from 'node:fs/promises'
 import { Module } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { JwtModule, type JwtModuleOptions } from '@nestjs/jwt'
-import { PassportModule } from '@nestjs/passport'
-
-import { UsersModule } from '../users/users.module.js'
-import { GoogleStrategy } from '../utils/strategies/google.strategy.js'
-import { JwtStrategy } from '../utils/strategies/jwt.strategy.js'
-import { MicrosoftStrategy } from '../utils/strategies/microsoft.strategy.js'
 
 import { AuthenticationController } from './authentication.controller.js'
 import { AuthenticationService } from './authentication.service.js'
+import { OidcService } from './oidc.service.js'
 
 interface JWTSecretConfig {
   JWT_SECRET?: string
@@ -34,21 +29,15 @@ async function jwtConfigFactory(
 
 @Module({
   imports: [
-    UsersModule,
-    PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: jwtConfigFactory,
       inject: [ConfigService],
+      global: true,
     }),
   ],
   controllers: [AuthenticationController],
-  providers: [
-    AuthenticationService,
-    JwtStrategy,
-    GoogleStrategy,
-    MicrosoftStrategy,
-  ],
-  exports: [AuthenticationService],
+  providers: [AuthenticationService, OidcService],
+  exports: [AuthenticationService, OidcService],
 })
 export class AuthenticationModule {}

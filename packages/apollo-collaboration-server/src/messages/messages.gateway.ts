@@ -14,7 +14,7 @@ import {
   PermissionService,
   type UserInfo,
 } from '../permissions/permission.service.js'
-import { AUTH_COOKIE_NAME } from '../utils/strategies/jwt.strategy.js'
+import { AUTH_COOKIE_NAME } from '../authentication/auth-cookie.js'
 
 interface SocketData {
   user: UserInfo & { id: string }

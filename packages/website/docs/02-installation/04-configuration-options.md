@@ -39,26 +39,18 @@ SESSION_SECRET=g9fGaRuw06T7hs960Tm7KYyfcFaYEIaG9jfFnVEQ4QyFXmq7
 # Alternatively, can be a path to a file with the session secret
 # SESSION_SECRET_FILE=/run/secrets/session-secret
 
-##############################################################################
-## To enable users to log in, you need either (or both) Google or Microsoft ##
-## OAuth configured, or root user login enabled.                            ##
-##############################################################################
+###########################################################################
+## To enable users to log in, configure one or more OIDC providers,     ##
+## REMOTE_USER header auth, or root user login.                         ##
+###########################################################################
 
-# Google client id and secret.
-GOOGLE_CLIENT_ID=client_id_here
-# Alternatively, can be a path to a file with the client ID
-# GOOGLE_CLIENT_ID_FILE=/run/secrets/google-client-id
-GOOGLE_CLIENT_SECRET=client_secret_here
-# Alternatively, can be a path to a file with the client secret
-# GOOGLE_CLIENT_SECRET_FILE=/run/secrets/google-client-secret
+# OIDC login providers (JSON array). See docs/authentication.md for details.
+# OIDC_PROVIDERS=[{"name":"google","displayName":"Google","issuerUrl":"https://accounts.google.com","clientId":"...","clientSecret":"..."}]
+# Alternatively, can be a path to a file with the JSON array
+# OIDC_PROVIDERS_FILE=/run/secrets/oidc-providers
 
-# Microsoft client id and secret.
-MICROSOFT_CLIENT_ID=client_id_here
-# Alternatively, can be a path to a file with the client ID
-# MICROSOFT_CLIENT_ID_FILE=/run/secrets/microsoft-client-id
-MICROSOFT_CLIENT_SECRET=client_secret_here
-# Alternatively, can be a path to a file with the client secret
-# MICROSOFT_CLIENT_SECRET_FILE=/run/secrets/microsoft-client-secret
+# Trusted reverse proxy header for auto-login (e.g. Shibboleth, CAS, LDAP)
+# REMOTE_USER_HEADER=X-Remote-User
 
 ##############
 ## OPTIONAL ##

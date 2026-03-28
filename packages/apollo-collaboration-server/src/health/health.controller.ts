@@ -1,7 +1,7 @@
 import { Controller, Get, Inject } from '@nestjs/common'
 import { HealthCheck, HealthCheckService } from '@nestjs/terminus'
 
-import { Public } from '../utils/roles.guard.js'
+import { Public } from '../authentication/roles.guard.js'
 
 @Public()
 @Controller('health')

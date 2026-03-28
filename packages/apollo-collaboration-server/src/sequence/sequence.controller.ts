@@ -1,9 +1,9 @@
 import { Controller, Get, Inject, Logger, Query, Req } from '@nestjs/common'
 
 import { PermissionService } from '../permissions/permission.service.js'
-import type { RequestWithUser } from '../utils/request-with-user.js'
-import { Role } from '../utils/role/role.enum.js'
-import { Public } from '../utils/roles.guard.js'
+import type { RequestWithUser } from '../authentication/request-with-user.js'
+import { Role } from '../authentication/role.enum.js'
+import { Public } from '../authentication/roles.guard.js'
 
 import type { GetSequenceDto } from './dto/get-sequence.dto.js'
 import { SequenceService } from './sequence.service.js'

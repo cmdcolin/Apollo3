@@ -105,8 +105,8 @@ If not set, the server auto-generates random secrets and persists them to
 | `DB_BACKEND`                      | `sqlite` / `postgresql` / `mongo`                     |
 | `DB_CONNECTION_URL`               | Database connection string                            |
 | `DEFAULT_NEW_USER_ROLE`           | New user role: `admin` / `user` / `readOnly` / `none` (default: `readOnly`) |
-| `GOOGLE_CLIENT_ID` / `_SECRET`    | Google OAuth                                          |
-| `MICROSOFT_CLIENT_ID` / `_SECRET` | Microsoft OAuth                                       |
+| `OIDC_PROVIDERS`                  | JSON array of OIDC provider configs (see docs/authentication.md) |
+| `REMOTE_USER_HEADER`              | HTTP header for trusted reverse proxy auth            |
 | `ALLOW_ROOT_USER`                 | Enable root password login                            |
 | `ROOT_USER_PASSWORD`              | Root admin password                                   |
 | `ALLOWED_REDIRECT_ORIGINS`        | Extra origins for post-login redirects (dev only)     |

@@ -4,9 +4,8 @@ import {
   DialogContent,
   DialogContentText,
   LinearProgress,
-  TextField,
 } from '@mui/material'
-import React, { type FormEvent, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 import type { ApolloSessionModel } from '../session'
 import { getBaseURL } from '../util'
@@ -18,27 +17,31 @@ interface LoginDialogProps {
   handleClose: () => void
 }
 
+interface OidcProviderInfo {
+  name: string
+  displayName: string
+}
+
+interface LoginTypes {
+  oidc: OidcProviderInfo[]
+}
+
 export function LoginDialog({ handleClose, session }: LoginDialogProps) {
   const baseURL = getBaseURL(session)
-  const [loginTypes, setLoginTypes] = useState<string[]>([])
+  const [loginTypes, setLoginTypes] = useState<LoginTypes>({ oidc: [] })
   const [errorMessage, setErrorMessage] = useState('')
   const [loading, setLoading] = useState(true)
-  const [rootPassword, setRootPassword] = useState('')
 
   useEffect(() => {
     let cancelled = false
     async function fetchLoginTypes() {
-      console.debug('[LoginDialog] fetchLoginTypes starting', { baseURL })
       const url = new URL('auth/types', baseURL)
       const response = await fetch(url.toString())
       if (cancelled) {
-        console.debug(
-          '[LoginDialog] fetchLoginTypes completed after cleanup — would have called setState on unmounted component.',
-        )
         return
       }
       if (response.ok) {
-        const types = (await response.json()) as string[]
+        const types = (await response.json()) as LoginTypes
         setLoginTypes(types)
       } else {
         setErrorMessage('Could not fetch login options from server')
@@ -56,28 +59,9 @@ export function LoginDialog({ handleClose, session }: LoginDialogProps) {
     }
   }, [baseURL])
 
-  async function handleRootLogin(e: FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setErrorMessage('')
-    const url = new URL('auth/root', baseURL)
-    const response = await fetch(url.toString(), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: rootPassword }),
-    })
-    if (response.ok) {
-      globalThis.location.reload()
-    } else {
-      setErrorMessage('Invalid password')
-      setLoading(false)
-    }
-  }
-
-  function handleOAuthLogin(type: string) {
+  function handleOAuthLogin(providerName: string) {
     const redirectUri = globalThis.location.href
-    const url = new URL('auth/login', baseURL)
-    url.searchParams.set('type', type)
+    const url = new URL(`auth/oidc/${providerName}`, baseURL)
     url.searchParams.set('redirect_uri', redirectUri)
     globalThis.location.href = url.toString()
   }
@@ -98,58 +82,23 @@ export function LoginDialog({ handleClose, session }: LoginDialogProps) {
         }}
       >
         {loading ? <LinearProgress /> : null}
-        {!loading && loginTypes.length === 0 && !errorMessage ? (
+        {!loading && loginTypes.oidc.length === 0 && !errorMessage ? (
           <DialogContentText>
             No login methods are configured on this server.
           </DialogContentText>
         ) : null}
-        {loginTypes.includes('google') ? (
+        {loginTypes.oidc.map((provider) => (
           <Button
+            key={provider.name}
             variant="contained"
             fullWidth
             onClick={() => {
-              handleOAuthLogin('google')
+              handleOAuthLogin(provider.name)
             }}
           >
-            Sign in with Google
+            Sign in with {provider.displayName}
           </Button>
-        ) : null}
-        {loginTypes.includes('microsoft') ? (
-          <Button
-            variant="contained"
-            fullWidth
-            onClick={() => {
-              handleOAuthLogin('microsoft')
-            }}
-          >
-            Sign in with Microsoft
-          </Button>
-        ) : null}
-        {loginTypes.includes('root') ? (
-          <form
-            onSubmit={handleRootLogin}
-            style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
-          >
-            <TextField
-              label="Root password"
-              type="password"
-              size="small"
-              fullWidth
-              value={rootPassword}
-              onChange={(e) => {
-                setRootPassword(e.target.value)
-              }}
-            />
-            <Button
-              type="submit"
-              variant="outlined"
-              fullWidth
-              disabled={loading || !rootPassword}
-            >
-              Sign in as Root
-            </Button>
-          </form>
-        ) : null}
+        ))}
         {errorMessage ? (
           <DialogContentText color="error">{errorMessage}</DialogContentText>
         ) : null}

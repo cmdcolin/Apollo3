@@ -1,8 +1,8 @@
 import { Controller, Get, Inject, Logger, Param, Query } from '@nestjs/common'
 
 import type { FeatureRangeSearchDto } from '../features/dto/feature-schemas.js'
-import { Role } from '../utils/role/role.enum.js'
-import { Roles } from '../utils/roles.guard.js'
+import { Role } from '../authentication/role.enum.js'
+import { Roles } from '../authentication/roles.guard.js'
 
 import { ChecksService } from './checks.service.js'
 

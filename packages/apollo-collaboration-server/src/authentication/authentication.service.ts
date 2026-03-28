@@ -11,28 +11,18 @@ import {
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
-import type { Request } from 'express'
-import type { Profile as GoogleProfile } from 'passport-google-oauth20'
 
 import type { CreateUserDto } from '../users/dto/create-user.dto.js'
 import { UsersService } from '../users/users.service.js'
-import { ROOT_USER_EMAIL } from '../utils/constants.js'
-import { Role } from '../utils/role/role.enum.js'
-import type { Profile as MicrosoftProfile } from '../utils/strategies/microsoft.strategy.js'
+import { ROOT_USER_EMAIL } from './constants.js'
+import { Role } from './role.enum.js'
 
+import { OidcService } from './oidc.service.js'
 import { safeRedirectUrl } from './redirect.js'
-
-export interface RequestWithUserToken extends Request {
-  user: { token: string }
-}
 
 interface ConfigValues {
   URL: string
   ALLOWED_REDIRECT_ORIGINS?: string
-  MICROSOFT_CLIENT_ID?: string
-  MICROSOFT_CLIENT_ID_FILE?: string
-  GOOGLE_CLIENT_ID?: string
-  GOOGLE_CLIENT_ID_FILE?: string
   DEFAULT_NEW_USER_ROLE: Role
   ALLOW_ROOT_USER: boolean
   ROOT_USER_PASSWORD?: string
@@ -54,6 +44,7 @@ export class AuthenticationService {
     @Inject(JwtService) private readonly jwtService: JwtService,
     @Inject(ConfigService)
     private readonly configService: ConfigService<ConfigValues, true>,
+    @Inject(OidcService) private readonly oidcService: OidcService,
   ) {
     const raw = configService.get('ALLOWED_REDIRECT_ORIGINS', { infer: true })
     this.allowedRedirectOrigins = raw
@@ -114,13 +105,14 @@ export class AuthenticationService {
     )
   }
 
+  getServerUrl() {
+    return this.configService.get('URL', { infer: true })
+  }
+
   getSafeRedirectUrl(redirectUri: string) {
-    const serverUrl = this.configService.get('URL', { infer: true })
+    const serverUrl = this.getServerUrl()
     const serverOrigin = new URL(serverUrl).origin
-    const allowed = new Set([
-      serverOrigin,
-      ...this.allowedRedirectOrigins,
-    ])
+    const allowed = new Set([serverOrigin, ...this.allowedRedirectOrigins])
     let inputOrigin: string | undefined
     try {
       inputOrigin = new URL(redirectUri).origin
@@ -140,89 +132,10 @@ export class AuthenticationService {
     return result.toString()
   }
 
-  handleRedirect(req: RequestWithUserToken) {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    if (!req.user) {
-      throw new BadRequestException()
+  getLoginTypes() {
+    return {
+      oidc: this.oidcService.getProviderNames(),
     }
-    const authInfo = req.authInfo as
-      | { state?: { redirect_uri?: string } }
-      | undefined
-    const redirectUri = authInfo?.state?.redirect_uri
-    const serverUrl = this.configService.get('URL', { infer: true })
-    const url = redirectUri
-      ? safeRedirectUrl(serverUrl, redirectUri, this.allowedRedirectOrigins)
-      : new URL(new URL(serverUrl).origin)
-    url.searchParams.set('access_token', req.user.token)
-    return { url: url.toString() }
-  }
-
-  async getLoginTypes() {
-    const loginTypes: string[] = []
-    let microsoftClientID = this.configService.get('MICROSOFT_CLIENT_ID', {
-      infer: true,
-    })
-    if (!microsoftClientID) {
-      const clientIDFile = this.configService.get('MICROSOFT_CLIENT_ID_FILE', {
-        infer: true,
-      })
-      if (clientIDFile) {
-        const content = await fs.readFile(clientIDFile, 'utf8')
-        microsoftClientID = content.trim()
-      }
-    }
-    let googleClientID = this.configService.get('GOOGLE_CLIENT_ID', {
-      infer: true,
-    })
-    if (!googleClientID) {
-      const clientIDFile = this.configService.get('GOOGLE_CLIENT_ID_FILE', {
-        infer: true,
-      })
-      if (clientIDFile) {
-        const googleContent = await fs.readFile(clientIDFile, 'utf8')
-        googleClientID = googleContent.trim()
-      }
-    }
-    if (microsoftClientID) {
-      loginTypes.push('microsoft')
-    }
-    if (googleClientID) {
-      loginTypes.push('google')
-    }
-    const allowRootUser = this.configService.get('ALLOW_ROOT_USER', {
-      infer: true,
-    })
-    if (allowRootUser) {
-      loginTypes.push('root')
-    }
-    return loginTypes
-  }
-
-  /**
-   * Log in with google
-   * @param profile - profile
-   * @returns Return either token with HttpResponse status 'HttpStatus.OK' OR null with 'HttpStatus.UNAUTHORIZED'
-   */
-  async googleLogin(profile: GoogleProfile) {
-    if (!profile._json.email) {
-      throw new UnauthorizedException('No email provided')
-    }
-    const { email, name } = profile._json
-    return this.logIn(name ?? 'N/A', email)
-  }
-
-  /**
-   * Log in with microsoft
-   * @param profile - profile
-   * @returns Return either token with HttpResponse status 'HttpStatus.OK' OR null with 'HttpStatus.UNAUTHORIZED'
-   */
-  async microsoftLogin(profile: MicrosoftProfile) {
-    const [email] = profile.emails
-    if (!email) {
-      throw new UnauthorizedException('No email provided')
-    }
-    const { displayName } = profile
-    return this.logIn(displayName, email.value)
   }
 
   async rootLogin(password: string) {
@@ -247,12 +160,6 @@ export class AuthenticationService {
     throw new UnauthorizedException('Invalid password for ROOT user')
   }
 
-  /**
-   * Log in
-   * @param name - User's display name
-   * @param email - User's email
-   * @returns Return token with HttpResponse status 'HttpStatus.OK'
-   */
   async logIn(name: string, email: string) {
     let user = await this.usersService.findByEmail(email)
     if (!user) {

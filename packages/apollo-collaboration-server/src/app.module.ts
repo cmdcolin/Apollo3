@@ -2,7 +2,7 @@ import type { ServerResponse } from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { Module } from '@nestjs/common'
+import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
 import { ServeStaticModule } from '@nestjs/serve-static'
@@ -12,6 +12,7 @@ import Joi from 'joi'
 import { AnalysisModule } from './analysis/analysis.module.js'
 import { AssembliesModule } from './assemblies/assemblies.module.js'
 import { AuthenticationModule } from './authentication/authentication.module.js'
+import { RemoteUserMiddleware } from './authentication/remote-user.middleware.js'
 import { SlidingWindowInterceptor } from './authentication/sliding-window.interceptor.js'
 import { ChecksModule } from './checks/checks.module.js'
 import { ExportModule } from './export/export.module.js'
@@ -29,8 +30,8 @@ import { RefSeqsModule } from './refSeqs/refSeqs.module.js'
 import { SequenceModule } from './sequence/sequence.module.js'
 import { TracksModule } from './tracks/tracks.module.js'
 import { UsersModule } from './users/users.module.js'
-import { JwtAuthGuard } from './utils/jwt-auth.guard.js'
-import { RolesGuard } from './utils/roles.guard.js'
+import { JwtAuthGuard } from './authentication/jwt-auth.guard.js'
+import { RolesGuard } from './authentication/roles.guard.js'
 
 const nodeEnv = process.env.NODE_ENV ?? 'production'
 
@@ -39,14 +40,8 @@ const validationSchema = Joi.object({
   URL: Joi.string().uri().required(),
   NAME: Joi.string().required(),
   FILE_UPLOAD_FOLDER: Joi.string().required(),
-  GOOGLE_CLIENT_ID: Joi.string(),
-  GOOGLE_CLIENT_ID_FILE: Joi.string(),
-  GOOGLE_CLIENT_SECRET: Joi.string(),
-  GOOGLE_CLIENT_SECRET_FILE: Joi.string(),
-  MICROSOFT_CLIENT_ID: Joi.string(),
-  MICROSOFT_CLIENT_ID_FILE: Joi.string(),
-  MICROSOFT_CLIENT_SECRET: Joi.string(),
-  MICROSOFT_CLIENT_SECRET_FILE: Joi.string(),
+  OIDC_PROVIDERS: Joi.string(),
+  OIDC_PROVIDERS_FILE: Joi.string(),
   JWT_SECRET: Joi.string().min(32),
   JWT_SECRET_FILE: Joi.string(),
   SESSION_SECRET: Joi.string().min(32),
@@ -122,14 +117,11 @@ const validationSchema = Joi.object({
     }
     return value
   }),
-  OAUTH_HTTP_PROXY: Joi.string(),
+  REMOTE_USER_HEADER: Joi.string(),
   JBROWSE_STATIC_DIR: Joi.string(),
   APOLLO_TOOLS_CONFIG: Joi.string(),
 })
-  .oxor('GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_ID_FILE')
-  .oxor('GOOGLE_CLIENT_SECRET', 'GOOGLE_CLIENT_SECRET_FILE')
-  .oxor('MICROSOFT_CLIENT_ID', 'MICROSOFT_CLIENT_ID_FILE')
-  .oxor('MICROSOFT_CLIENT_SECRET', 'MICROSOFT_CLIENT_SECRET_FILE')
+  .oxor('OIDC_PROVIDERS', 'OIDC_PROVIDERS_FILE')
   .oxor('ROOT_USER_PASSWORD', 'ROOT_USER_PASSWORD_FILE')
   .oxor('JWT_SECRET', 'JWT_SECRET_FILE')
   .oxor('SESSION_SECRET', 'SESSION_SECRET_FILE')
@@ -192,4 +184,8 @@ const validationSchema = Joi.object({
     { provide: APP_INTERCEPTOR, useClass: SlidingWindowInterceptor },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RemoteUserMiddleware).forRoutes('*')
+  }
+}

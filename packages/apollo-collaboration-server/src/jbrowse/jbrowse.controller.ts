@@ -10,8 +10,8 @@ import {
 } from '@nestjs/common'
 import type { Response } from 'express'
 
-import type { RequestWithUser } from '../utils/request-with-user.js'
-import { Public } from '../utils/roles.guard.js'
+import type { RequestWithUser } from '../authentication/request-with-user.js'
+import { Public } from '../authentication/roles.guard.js'
 
 import { JBrowseService } from './jbrowse.service.js'
 

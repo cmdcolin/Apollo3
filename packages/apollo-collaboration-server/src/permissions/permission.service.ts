@@ -1,7 +1,7 @@
 import { ForbiddenException, Inject, Injectable, Logger } from '@nestjs/common'
 
 import { DatabaseService } from '../mikro-orm/database.service.js'
-import { Role, RoleInheritance } from '../utils/role/role.enum.js'
+import { Role, RoleInheritance } from '../authentication/role.enum.js'
 
 export interface UserInfo {
   id?: string

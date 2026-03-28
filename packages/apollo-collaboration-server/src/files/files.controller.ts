@@ -17,8 +17,8 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express'
 import type { Response } from 'express'
 
-import { Role } from '../utils/role/role.enum.js'
-import { Roles } from '../utils/roles.guard.js'
+import { Role } from '../authentication/role.enum.js'
+import { Roles } from '../authentication/roles.guard.js'
 
 import { FileStorageEngine } from './FileStorageEngine.js'
 import { FilesInterceptor as StreamingFileInterceptor } from './files.interceptor.js'

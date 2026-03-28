@@ -11,8 +11,8 @@ import {
   Post,
 } from '@nestjs/common'
 
-import { Role } from '../utils/role/role.enum.js'
-import { Roles } from '../utils/roles.guard.js'
+import { Role } from '../authentication/role.enum.js'
+import { Roles } from '../authentication/roles.guard.js'
 
 import { AssembliesService } from './assemblies.service.js'
 import type { CreateAssemblyDto } from './dto/create-assembly.dto.js'

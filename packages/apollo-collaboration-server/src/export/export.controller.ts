@@ -12,8 +12,8 @@ import {
 } from '@nestjs/common'
 import type { Response as ExpressResponse } from 'express'
 
-import { Role } from '../utils/role/role.enum.js'
-import { Roles } from '../utils/roles.guard.js'
+import { Role } from '../authentication/role.enum.js'
+import { Roles } from '../authentication/roles.guard.js'
 
 import { ExportService } from './export.service.js'
 

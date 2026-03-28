@@ -8,9 +8,8 @@ import List from '@mui/material/List'
 import ListItemButton from '@mui/material/ListItemButton'
 import ListItemText from '@mui/material/ListItemText'
 import Paper from '@mui/material/Paper'
-import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
-import { type FormEvent, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { Nav } from './Nav.js'
@@ -50,12 +49,21 @@ function useCurrentUser() {
   return { user, checked }
 }
 
+interface OidcProviderInfo {
+  name: string
+  displayName: string
+}
+
+interface LoginTypes {
+  oidc: OidcProviderInfo[]
+}
+
 function useLoginTypes() {
-  const [types, setTypes] = useState<string[]>([])
+  const [types, setTypes] = useState<LoginTypes>({ oidc: [] })
 
   useEffect(() => {
     fetch('/auth/types', { headers: jsonHeaders })
-      .then((r) => r.json() as Promise<string[]>)
+      .then((r) => r.json() as Promise<LoginTypes>)
       .then((data) => {
         setTypes(data)
       })
@@ -109,65 +117,9 @@ function useSetupActive() {
 }
 
 
-function RootLoginForm() {
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    const res = await fetch('/auth/root', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
-    })
-    if (res.ok) {
-      globalThis.location.reload()
-    } else {
-      setError('Invalid password')
-      setLoading(false)
-    }
-  }
-
-  return (
-    <Box
-      component="form"
-      onSubmit={(e) => {
-        void handleSubmit(e)
-      }}
-      sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
-    >
-      <TextField
-        label="Root password"
-        type="password"
-        size="small"
-        fullWidth
-        value={password}
-        onChange={(e) => {
-          setPassword(e.target.value)
-        }}
-      />
-      {error ? (
-        <Typography color="error" variant="body2">
-          {error}
-        </Typography>
-      ) : null}
-      <Button
-        type="submit"
-        variant="outlined"
-        fullWidth
-        disabled={loading || !password}
-      >
-        Sign in as Root
-      </Button>
-    </Box>
-  )
-}
 
 function LoginSection() {
-  const types = useLoginTypes()
+  const { oidc } = useLoginTypes()
   const setupActive = useSetupActive()
   const currentUrl = globalThis.location.href
 
@@ -180,25 +132,21 @@ function LoginSection() {
         </Alert>
       ) : null}
       <Typography variant="h6">Sign in</Typography>
-      {types.includes('google') ? (
+      {oidc.map((provider) => (
         <Button
+          key={provider.name}
           variant="contained"
           fullWidth
-          href={`/auth/login?type=google&redirect_uri=${encodeURIComponent(currentUrl)}`}
+          href={`/auth/oidc/${provider.name}?redirect_uri=${encodeURIComponent(currentUrl)}`}
         >
-          Sign in with Google
+          Sign in with {provider.displayName}
         </Button>
+      ))}
+      {oidc.length === 0 && !setupActive ? (
+        <Typography variant="body2" color="text.secondary">
+          No login providers configured. Contact your administrator.
+        </Typography>
       ) : null}
-      {types.includes('microsoft') ? (
-        <Button
-          variant="contained"
-          fullWidth
-          href={`/auth/login?type=microsoft&redirect_uri=${encodeURIComponent(currentUrl)}`}
-        >
-          Sign in with Microsoft
-        </Button>
-      ) : null}
-      {types.includes('root') ? <RootLoginForm /> : null}
     </Box>
   )
 }

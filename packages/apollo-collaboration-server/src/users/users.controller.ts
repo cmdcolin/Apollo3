@@ -11,9 +11,9 @@ import {
   Req,
 } from '@nestjs/common'
 
-import type { RequestWithUser } from '../utils/request-with-user.js'
-import { Role } from '../utils/role/role.enum.js'
-import { Authenticated, Roles } from '../utils/roles.guard.js'
+import type { RequestWithUser } from '../authentication/request-with-user.js'
+import { Role } from '../authentication/role.enum.js'
+import { Authenticated, Roles } from '../authentication/roles.guard.js'
 
 import { ActiveUsersService } from './active-users.service.js'
 import { UsersService } from './users.service.js'

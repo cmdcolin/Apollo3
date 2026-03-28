@@ -7,8 +7,8 @@ import {
 import type { Response } from 'express'
 import { tap } from 'rxjs'
 
-import type { RequestWithUser } from '../utils/request-with-user.js'
-import { AUTH_COOKIE_NAME } from '../utils/strategies/jwt.strategy.js'
+import type { RequestWithUser } from './request-with-user.js'
+import { AUTH_COOKIE_NAME } from './auth-cookie.js'
 
 import { COOKIE_OPTIONS } from './auth-cookie.js'
 

@@ -11,8 +11,8 @@ import {
 } from '@nestjs/common'
 
 import { DatabaseService } from '../mikro-orm/database.service.js'
-import { Role } from '../utils/role/role.enum.js'
-import { Roles } from '../utils/roles.guard.js'
+import { Role } from '../authentication/role.enum.js'
+import { Roles } from '../authentication/roles.guard.js'
 
 import { PermissionService } from './permission.service.js'
 

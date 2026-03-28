@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto'
+
 import {
   BadRequestException,
   Body,
@@ -5,25 +7,23 @@ import {
   Get,
   Inject,
   Logger,
+  Param,
   Post,
   Query,
   Redirect,
   Req,
   Res,
-  UseGuards,
+  UnauthorizedException,
 } from '@nestjs/common'
-import type { Response } from 'express'
+import { Throttle } from '@nestjs/throttler'
+import type { Request, Response } from 'express'
 
-import { GoogleAuthGuard } from '../utils/google.guard.js'
-import { MicrosoftAuthGuard } from '../utils/microsoft.guard.js'
-import { Public } from '../utils/roles.guard.js'
-import { AUTH_COOKIE_NAME } from '../utils/strategies/jwt.strategy.js'
+import { Public } from './roles.guard.js'
+import { AUTH_COOKIE_NAME } from './auth-cookie.js'
 
 import { COOKIE_BASE, COOKIE_OPTIONS } from './auth-cookie.js'
-import {
-  AuthenticationService,
-  type RequestWithUserToken,
-} from './authentication.service.js'
+import { AuthenticationService } from './authentication.service.js'
+import { OidcService } from './oidc.service.js'
 
 @Public()
 @Controller('auth')
@@ -33,6 +33,8 @@ export class AuthenticationController {
   constructor(
     @Inject(AuthenticationService)
     private readonly authService: AuthenticationService,
+    @Inject(OidcService)
+    private readonly oidcService: OidcService,
   ) {}
 
   @Get('setup')
@@ -55,44 +57,85 @@ export class AuthenticationController {
     return this.authService.getLoginTypes()
   }
 
-  @Get('login')
+  // --- Generic OIDC login ---
+
+  @Get('oidc/:provider')
   @Redirect()
-  handleLogin(
-    @Query('type') type: string,
-    @Query('redirect_uri') redirect_uri?: string,
+  oidcLogin(
+    @Param('provider') providerName: string,
+    @Query('redirect_uri') redirectUri: string | undefined,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    if (['google', 'microsoft'].includes(type)) {
-      const url = redirect_uri
-        ? `${type}?${new URLSearchParams({ redirect_uri }).toString()}`
-        : type
-      return { url }
+    const provider = this.oidcService.getProvider(providerName)
+    if (!provider) {
+      throw new BadRequestException(`Unknown OIDC provider "${providerName}"`)
     }
-    throw new BadRequestException(`Unknown login type "${type}"`)
+    const serverUrl = this.authService.getServerUrl()
+    const base = serverUrl.endsWith('/') ? serverUrl : `${serverUrl}/`
+    const callbackUrl = `${base}auth/oidc/${providerName}/callback`
+
+    const state = randomBytes(32).toString('hex')
+    const session = req.session as Record<string, unknown>
+    session.oidcState = state
+    session.oidcRedirectUri = redirectUri
+
+    const authUrl = this.oidcService.buildAuthorizationUrl(
+      provider,
+      callbackUrl,
+      state,
+    )
+    return { url: authUrl.href }
   }
 
-  @Get('google')
+  @Get('oidc/:provider/callback')
   @Redirect()
-  @UseGuards(GoogleAuthGuard)
-  handleRedirect(
-    @Req() req: RequestWithUserToken,
+  async oidcCallback(
+    @Param('provider') providerName: string,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    res.cookie(AUTH_COOKIE_NAME, req.user.token, COOKIE_OPTIONS)
-    return this.authService.handleRedirect(req)
+    const provider = this.oidcService.getProvider(providerName)
+    if (!provider) {
+      throw new BadRequestException(`Unknown OIDC provider "${providerName}"`)
+    }
+
+    const session = req.session as Record<string, unknown>
+    const expectedState = session.oidcState as string | undefined
+    if (!expectedState) {
+      throw new BadRequestException('Missing OIDC session state')
+    }
+    delete session.oidcState
+
+    const serverUrl = this.authService.getServerUrl()
+    const base = serverUrl.endsWith('/') ? serverUrl : `${serverUrl}/`
+    const callbackUrl = new URL(
+      `auth/oidc/${providerName}/callback`,
+      base,
+    )
+    callbackUrl.search = new URL(req.url, base).search
+
+    const { email, name } = await this.oidcService.handleCallback(
+      provider,
+      callbackUrl,
+      expectedState,
+    )
+    const result = await this.authService.logIn(name, email)
+    res.cookie(AUTH_COOKIE_NAME, result.token, COOKIE_OPTIONS)
+
+    const redirectUri = session.oidcRedirectUri as string | undefined
+    delete session.oidcRedirectUri
+
+    const url = redirectUri
+      ? this.authService.getSafeRedirectUrl(redirectUri)
+      : serverUrl
+    return { url }
   }
 
-  @Get('microsoft')
-  @Redirect()
-  @UseGuards(MicrosoftAuthGuard)
-  microsoftHandleRedirect(
-    @Req() req: RequestWithUserToken,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    res.cookie(AUTH_COOKIE_NAME, req.user.token, COOKIE_OPTIONS)
-    return this.authService.handleRedirect(req)
-  }
+  // --- Root password login ---
 
   @Post('root')
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   async rootLogin(
     @Body() { password }: { password: string },
     @Res({ passthrough: true }) res: Response,

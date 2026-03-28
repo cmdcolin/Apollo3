@@ -16,9 +16,9 @@ import {
 
 import { DatabaseService } from '../mikro-orm/database.service.js'
 import { PermissionService } from '../permissions/permission.service.js'
-import type { RequestWithUser } from '../utils/request-with-user.js'
-import { Role } from '../utils/role/role.enum.js'
-import { Authenticated, Public } from '../utils/roles.guard.js'
+import type { RequestWithUser } from '../authentication/request-with-user.js'
+import { Role } from '../authentication/role.enum.js'
+import { Authenticated, Public } from '../authentication/roles.guard.js'
 
 interface CreateTrackBody {
   trackId: string

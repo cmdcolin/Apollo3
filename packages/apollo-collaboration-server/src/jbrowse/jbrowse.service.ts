@@ -6,7 +6,7 @@ import { ConfigService } from '@nestjs/config'
 import { AnalysisService } from '../analysis/analysis.service.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
 import { PermissionService } from '../permissions/permission.service.js'
-import { Role } from '../utils/role/role.enum.js'
+import { Role } from '../authentication/role.enum.js'
 
 @Injectable()
 export class JBrowseService {

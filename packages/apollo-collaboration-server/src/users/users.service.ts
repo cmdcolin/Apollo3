@@ -2,7 +2,7 @@ import { userId } from '@apollo-annotation/common'
 import { Inject, Injectable, Logger } from '@nestjs/common'
 
 import { DatabaseService } from '../mikro-orm/database.service.js'
-import { Role } from '../utils/role/role.enum.js'
+import { Role } from '../authentication/role.enum.js'
 
 import type { CreateUserDto } from './dto/create-user.dto.js'
 

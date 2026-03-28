@@ -15,9 +15,9 @@ import {
 } from '@nestjs/common'
 
 import { PermissionService } from '../permissions/permission.service.js'
-import type { RequestWithUser } from '../utils/request-with-user.js'
-import { Role } from '../utils/role/role.enum.js'
-import { Public, Roles } from '../utils/roles.guard.js'
+import type { RequestWithUser } from '../authentication/request-with-user.js'
+import { Role } from '../authentication/role.enum.js'
+import { Public, Roles } from '../authentication/roles.guard.js'
 import { ZodValidationPipe } from '../utils/zod-validation.pipe.js'
 
 import {

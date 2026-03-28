@@ -17,8 +17,7 @@ services:
       SESSION_SECRET:
         ${SESSION_SECRET:?Set SESSION_SECRET in .env (min 32 chars)}
       DEFAULT_NEW_USER_ROLE: ${DEFAULT_NEW_USER_ROLE:-none}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      OIDC_PROVIDERS: ${OIDC_PROVIDERS:-}
       # No JBROWSE_STATIC_DIR — nginx serves static files directly
     volumes:
       - uploads:/data/uploads

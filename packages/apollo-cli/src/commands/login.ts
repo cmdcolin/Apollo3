@@ -209,7 +209,7 @@ need to execute this command again unless the token has expired. To setup a new 
     })
 
     // await ux.anykey('Press any key to open your browser') // Do we need this?
-    const authorizationCodeURL = `${address}/auth/login?type=${accessType}&redirect_uri=http://localhost:${port}${callbackPath}`
+    const authorizationCodeURL = `${address}/auth/oidc/${accessType}?redirect_uri=http://localhost:${port}${callbackPath}`
     await open(authorizationCodeURL)
     ux.action.start('Waiting for authentication')
 

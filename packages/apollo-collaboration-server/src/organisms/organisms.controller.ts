@@ -11,8 +11,8 @@ import {
   Query,
 } from '@nestjs/common'
 
-import { Role } from '../utils/role/role.enum.js'
-import { Roles } from '../utils/roles.guard.js'
+import { Role } from '../authentication/role.enum.js'
+import { Roles } from '../authentication/roles.guard.js'
 
 import type { CreateOrganismDto } from './dto/create-organism.dto.js'
 import type { UpdateOrganismDto } from './dto/update-organism.dto.js'

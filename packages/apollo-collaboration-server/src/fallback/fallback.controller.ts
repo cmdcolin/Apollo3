@@ -1,7 +1,7 @@
 import { Controller, Get, Req, Res } from '@nestjs/common'
 import type { Request, Response } from 'express'
 
-import { Public } from '../utils/roles.guard.js'
+import { Public } from '../authentication/roles.guard.js'
 
 @Public()
 @Controller()
