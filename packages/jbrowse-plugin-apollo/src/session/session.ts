@@ -158,33 +158,8 @@ export function extendSession(
       },
     }))
     .actions((self) => ({
-      async updateLastChangeSequenceNumber() {
-        const baseURL = getBaseURL(self as unknown as ApolloSessionModel)
-        if (!baseURL) {
-          return
-        }
-        const url = new URL('changes', baseURL)
-        const searchParams = new URLSearchParams({ limit: '1' })
-        url.search = searchParams.toString()
-        const uri = url.toString()
-
-        const response = await fetch(uri, {
-          method: 'GET',
-          signal: self.abortController.signal,
-        })
-        if (!response.ok) {
-          const errorMessage = await createFetchErrorMessage(
-            response,
-            'Error when fetching server LastChangeSequence',
-          )
-          throw new Error(errorMessage)
-        }
-        const changes = await response.json()
-        const sequence =
-          (changes as { sequence: number }[]).length > 0
-            ? (changes as { sequence: number }[])[0].sequence
-            : 0
-        self.setLastChangeSequenceNumber(sequence)
+      updateLastChangeSequenceNumber() {
+        self.setLastChangeSequenceNumber(0)
       },
     }))
     .actions((self) => ({

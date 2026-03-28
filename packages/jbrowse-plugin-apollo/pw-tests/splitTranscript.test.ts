@@ -57,7 +57,7 @@ test('Split transcript at first exon boundary', async ({ page }) => {
 
   // Wait for the change to be applied
   await page.waitForResponse(
-    (resp) => resp.url().includes('/changes') && resp.status() === 201,
+    (resp) => resp.url().includes('/features') && resp.status() === 201,
   )
 
   // mrna03 should be gone after split
@@ -117,7 +117,7 @@ test('Split and undo restores original transcript', async ({ page }) => {
   await expect(dialog).toBeVisible({ timeout: 5_000 })
   await page.getByRole('button', { name: 'Submit' }).click()
   await page.waitForResponse(
-    (resp) => resp.url().includes('/changes') && resp.status() === 201,
+    (resp) => resp.url().includes('/features') && resp.status() === 201,
   )
 
   // mrna03 should be gone
@@ -136,7 +136,7 @@ test('Split and undo restores original transcript', async ({ page }) => {
     .click()
 
   await page.waitForResponse(
-    (resp) => resp.url().includes('/changes') && resp.status() === 201,
+    (resp) => resp.url().includes('/features') && resp.status() === 201,
   )
 
   // mrna03 should be restored

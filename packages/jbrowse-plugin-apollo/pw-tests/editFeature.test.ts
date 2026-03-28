@@ -35,7 +35,7 @@ test('Edit feature via table editor', async ({ page }) => {
   const match5Row = tbody.locator('tr').filter({ hasText: 'Match5' })
 
   // Change type from EST_match to CDS
-  const typeInput = match5Row.locator('input[type="text"][value="EST_match"]')
+  const typeInput = match5Row.locator('input[type="text"]').first()
   await typeInput.fill('CDS')
   await typeInput.press('Enter')
 
@@ -52,7 +52,7 @@ test('Edit feature via table editor', async ({ page }) => {
   // Click outside to trigger save
   await page.click('body', { position: { x: 0, y: 0 } })
   await page.waitForResponse(
-    (resp) => resp.url().includes('/changes') && resp.status() === 201,
+    (resp) => resp.url().includes('/features') && resp.status() === 200,
   )
 
   // Verify edits persisted after reload

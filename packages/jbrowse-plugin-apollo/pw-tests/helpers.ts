@@ -213,14 +213,12 @@ export async function addAssemblyFromGff(
       continue
     }
     const snapshot = gff3LineToSnapshot(line, refSeqId)
-    await fetch(`${API_BASE}/changes`, {
+    await fetch(`${API_BASE}/features`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
-        typeName: 'AddFeatureChange',
-        assembly: assemblyId,
-        changedIds: [snapshot._id],
         addedFeature: snapshot,
+        assemblyId,
       }),
     })
   }
@@ -243,9 +241,20 @@ export async function selectAssemblyToView(
   location: string,
 ) {
   console.log(`[nav] Selecting assembly "${assemblyName}" at ${location}`)
-  await expect(page.getByText('Select assembly to view')).toBeVisible({
-    timeout: 10_000,
-  })
+
+  // The page may be at "Select a view to launch" (needs Launch view click)
+  // or already at "Select assembly to view" (LGV is open)
+  const selectAssembly = page.getByText('Select assembly to view')
+  const launchButton = page.getByText('Launch view', { exact: false })
+  const result = await Promise.race([
+    selectAssembly.waitFor({ timeout: 15_000 }).then(() => 'assembly' as const),
+    launchButton.waitFor({ timeout: 15_000 }).then(() => 'launch' as const),
+  ])
+  if (result === 'launch') {
+    console.log('[nav] Clicking Launch view')
+    await launchButton.click()
+    await expect(selectAssembly).toBeVisible({ timeout: 10_000 })
+  }
 
   const assemblyContainer = page
     .getByText('Select assembly to view')
@@ -255,26 +264,6 @@ export async function selectAssemblyToView(
     console.log(`[nav] Switching assembly to "${assemblyName}"`)
     await assemblyContainer.locator('[role="combobox"]').click()
     await page.locator('li').filter({ hasText: assemblyName }).click()
-  }
-
-  // If navigating by coordinates, ensure refSeqs are loaded first by clicking
-  // "Show all regions in assembly", waiting for regions, then closing the panel
-  const isCoordinate = /:.+\.\./.test(location)
-  if (isCoordinate) {
-    console.log('[nav] Coordinate navigation — loading refSeqs first')
-    const showAllButton = page.getByRole('button', {
-      name: 'Show all regions in assembly',
-    })
-    await showAllButton.click()
-    await expect(
-      page.locator('table').filter({ hasText: location.split(':')[0] }),
-    ).toBeVisible({ timeout: 15_000 })
-    console.log('[nav] RefSeqs loaded')
-    // Close the regions panel by clicking the overview header or pressing Escape
-    await page.keyboard.press('Escape')
-    await expect(
-      page.locator('table').filter({ hasText: location.split(':')[0] }),
-    ).not.toBeVisible({ timeout: 5_000 })
   }
 
   const locationInput = page
@@ -337,7 +326,7 @@ export async function downloadGff(
   assemblyName: string,
   includeFasta: boolean,
 ) {
-  await selectFromApolloMenu(page, ['Download GFF3'])
+  await selectFromApolloMenu(page, ['View', 'Download GFF3'])
 
   const selectAssembly = page.getByText('Select assembly').locator('..')
   await selectAssembly.locator('input').first().click()

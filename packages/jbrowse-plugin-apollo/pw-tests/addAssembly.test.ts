@@ -99,33 +99,7 @@ test('Shows error when assembly name is missing', async ({ page }) => {
   await expect(page.getByText('Assembly name is required')).toBeVisible()
 })
 
-test('Change log records assembly creation with index files', async ({
-  page,
-}) => {
-  await goToAddAssemblyPage(page)
-  await page.getByLabel('Assembly name').fill('volvox')
-  await page
-    .getByLabel('FASTA file path (server-accessible)')
-    .fill(path.join(TEST_DATA, 'volvox.fa.gz'))
-  await page
-    .getByLabel('FAI index path (defaults to FASTA + .fai)')
-    .fill(path.join(TEST_DATA, 'volvox.fa.gz.fai'))
-  await page
-    .getByLabel('GZI index path (for bgzip-compressed FASTA)')
-    .fill(path.join(TEST_DATA, 'volvox.fa.gz.gzi'))
-  await page.getByRole('button', { name: 'Create Assembly' }).click()
-  await expect(page.getByText('Assembly "volvox" created.')).toBeVisible({
-    timeout: 30_000,
-  })
-  await page.goto('/jbrowse/')
-  await expect(page.getByRole('button', { name: 'Apollo' })).toBeEnabled({
-    timeout: 15_000,
-  })
-  await selectFromApolloMenu(page, ['View', 'Change log'])
-  const textarea = page.locator('textarea')
-  await expect(textarea).toContainText('"gzi":')
-  await expect(textarea).toContainText('"fai":')
-})
+// Change log test removed — Change log UI was removed with the old change system
 
 test('Source type switch resets file path', async ({ page }) => {
   await goToAddAssemblyPage(page)

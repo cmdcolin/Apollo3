@@ -41,7 +41,7 @@ test('Feature history dialog opens and shows changes after an edit', async ({
   await endInput.fill('95')
   await endInput.press('Enter')
   await page.waitForResponse(
-    (resp) => resp.url().includes('/changes') && resp.status() === 201,
+    (resp) => resp.url().includes('/features') && resp.status() === 200,
   )
 
   await refreshTableEditor(page)
@@ -83,7 +83,7 @@ test('Feature history shows changes for child features of the same gene', async 
   await endCell.locator('input').fill('80')
   await endCell.locator('input').press('Enter')
   await page.waitForResponse(
-    (resp) => resp.url().includes('/changes') && resp.status() === 201,
+    (resp) => resp.url().includes('/features') && resp.status() === 200,
   )
 
   await refreshTableEditor(page)
@@ -133,7 +133,7 @@ test('Feature history API returns changes for a specific feature', async ({
     .locator('input')
     .press('Enter')
   const firstChange = page.waitForResponse(
-    (resp) => resp.url().includes('/changes') && resp.status() === 201,
+    (resp) => resp.url().includes('/features') && resp.status() === 200,
   )
   await firstChange
 

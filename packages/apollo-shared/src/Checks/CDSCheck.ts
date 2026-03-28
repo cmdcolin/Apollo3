@@ -269,7 +269,9 @@ function getCDSLocations(
       return { ...loc, phase }
     })
     phasedLocs.sort((a, b) => (a.min < b.min ? -1 : 1))
-    cdsLocations.push(phasedLocs)
+    if (phasedLocs.length > 0) {
+      cdsLocations.push(phasedLocs)
+    }
   }
   if (cdsLocations.length > 1) {
     cdsLocations.sort((a, b) => (a[0].min < b[0].min ? -1 : 1))
