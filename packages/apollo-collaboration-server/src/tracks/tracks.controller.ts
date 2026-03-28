@@ -18,7 +18,7 @@ import { DatabaseService } from '../mikro-orm/database.service.js'
 import { PermissionService } from '../permissions/permission.service.js'
 import type { RequestWithUser } from '../utils/request-with-user.js'
 import { Role } from '../utils/role/role.enum.js'
-import { Authenticated } from '../utils/roles.guard.js'
+import { Authenticated, Public } from '../utils/roles.guard.js'
 
 interface CreateTrackBody {
   trackId: string
@@ -56,6 +56,7 @@ export class TracksController {
     })
   }
 
+  @Public()
   @Get()
   async list(
     @Req() request: RequestWithUser,
