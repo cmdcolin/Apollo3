@@ -29,12 +29,12 @@ export class JBrowseService {
     private readonly analysisService: AnalysisService,
   ) {}
 
-  async getConfiguration(user: DecodedJWT | undefined) {
+  async getConfiguration(user: DecodedJWT | undefined, requestOrigin?: string) {
     const role = user?.role
     const userId = user?.id
     const userSessionId =
       userId && user.iat ? `${userId}-${user.iat}` : undefined
-    const url = this.configService.get('URL', { infer: true })
+    const url = requestOrigin ?? this.configService.get('URL', { infer: true })
     const feature_type_ontology_location =
       this.configService.get('FEATURE_TYPE_ONTOLOGY_LOCATION', {
         infer: true,
@@ -132,8 +132,7 @@ export class JBrowseService {
     }
   }
 
-  getAssemblyConfig(assembly: AssemblyRow) {
-    const url = this.configService.get('URL', { infer: true })
+  getAssemblyConfig(assembly: AssemblyRow, url: string) {
     const assemblyId = assembly._id
     const trackId = `sequenceConfigId-${assembly.name}`
     return {
@@ -174,8 +173,7 @@ export class JBrowseService {
     }
   }
 
-  getApolloTrackConfig(assembly: AssemblyRow) {
-    const url = this.configService.get('URL', { infer: true })
+  getApolloTrackConfig(assembly: AssemblyRow, url: string) {
     const trackId = `apollo_track_${assembly._id}`
     return {
       type: 'ApolloTrack',
@@ -197,8 +195,7 @@ export class JBrowseService {
     }
   }
 
-  getApolloTextSearchAdapter(assembly: AssemblyRow) {
-    const url = this.configService.get('URL', { infer: true })
+  getApolloTextSearchAdapter(assembly: AssemblyRow, url: string) {
     return {
       type: 'ApolloTextSearchAdapter',
       textSearchAdapterId: `apollo_search_${assembly._id}`,
@@ -227,28 +224,30 @@ export class JBrowseService {
     return this.db.assembly.findByIds(accessibleIds)
   }
 
-  async getConfig(user: DecodedJWT | undefined, assemblyIds?: string[]) {
-    const configuration = await this.getConfiguration(user)
+  async getConfig(user: DecodedJWT | undefined, assemblyIds?: string[], requestOrigin?: string) {
+    const configuration = await this.getConfiguration(user, requestOrigin)
     const plugins = this.getPlugins()
     const assemblies = await this.getAccessibleAssemblies(user, assemblyIds)
+    const url = requestOrigin ?? this.configService.get('URL', { infer: true })
 
     if (assemblies.length === 0) {
       return { configuration, plugins }
     }
-    return this.buildFullConfig(configuration, plugins, assemblies)
+    return this.buildFullConfig(configuration, plugins, assemblies, url)
   }
 
   private async buildFullConfig(
     configuration: ReturnType<typeof this.getConfiguration>,
     plugins: ReturnType<typeof this.getPlugins>,
     assemblies: AssemblyRow[],
+    url: string,
   ) {
     const assemblyIds = assemblies.map((a) => a._id)
 
-    const assemblyConfigs = assemblies.map((a) => this.getAssemblyConfig(a))
-    const apolloTracks = assemblies.map((a) => this.getApolloTrackConfig(a))
+    const assemblyConfigs = assemblies.map((a) => this.getAssemblyConfig(a, url))
+    const apolloTracks = assemblies.map((a) => this.getApolloTrackConfig(a, url))
     const apolloSearchAdapters = assemblies.map((a) =>
-      this.getApolloTextSearchAdapter(a),
+      this.getApolloTextSearchAdapter(a, url),
     )
 
     const storedTracks =

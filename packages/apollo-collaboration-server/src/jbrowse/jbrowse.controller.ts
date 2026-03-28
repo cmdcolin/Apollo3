@@ -67,6 +67,7 @@ export class JBrowseController {
     this.logger.debug(
       `config.json requested: user.id=${user?.id}, user.role=${user?.role}, assemblies=${assemblies ?? 'all'}`,
     )
-    return this.jbrowseService.getConfig(user, assemblyIds)
+    const requestOrigin = `${request.protocol}://${request.get('host')}`
+    return this.jbrowseService.getConfig(user, assemblyIds, requestOrigin)
   }
 }

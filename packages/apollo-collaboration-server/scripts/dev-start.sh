@@ -2,22 +2,23 @@
 # Dev start: build everything, set up JBrowse, seed demo data, start server.
 #
 # Usage:
-#   bash scripts/dev-start.sh [--fresh] [--memory]
+#   bash scripts/dev-start.sh [--persist] [--fresh] [--guest]
 #
-#   --fresh   Delete existing database and re-seed from demo data
-#   --memory  Use an in-memory SQLite database (no persistence across restarts)
+#   (default) Use a fresh in-memory SQLite database, seeded with volvox data
+#   --persist Use a persistent apollo-dev.sqlite file (copied from demo.sqlite if absent)
+#   --fresh   Delete existing persistent database and re-seed from demo data
 #   --guest   Enable guest user with admin role
 set -euo pipefail
 export COREPACK_ENABLE_AUTO_INSTALL=0
 
+PERSIST=false
 FRESH=false
-MEMORY=false
 GUEST=false
 for arg in "$@"; do
   case "$arg" in
-    --fresh)  FRESH=true ;;
-    --memory) MEMORY=true ;;
-    --guest)  GUEST=true ;;
+    --persist) PERSIST=true ;;
+    --fresh)   FRESH=true ;;
+    --guest)   GUEST=true ;;
     *) echo "Unknown option: $arg"; exit 1 ;;
   esac
 done
@@ -27,6 +28,7 @@ COLLAB_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$COLLAB_DIR/../.." && pwd)"
 PLUGIN_DIR="$REPO_ROOT/packages/jbrowse-plugin-apollo"
 JBROWSE_DIR="$PLUGIN_DIR/.jbrowse"
+VOLVOX_DIR="$JBROWSE_DIR/test_data/volvox"
 
 cd "$COLLAB_DIR"
 
@@ -62,30 +64,30 @@ cp "$PLUGIN_DIR/dist/jbrowse-plugin-apollo.umd.development.js" "$JBROWSE_DIR/apo
 cp "$PLUGIN_DIR/test_data/so-v3.1.json" "$JBROWSE_DIR/so-v3.1.json"
 
 # Database setup
-if [ "$MEMORY" = true ]; then
-  echo '[start] Using in-memory SQLite database (no persistence)'
+if [ "$PERSIST" = true ]; then
+  if [ "$FRESH" = true ]; then
+    echo '[start] Deleting existing database for fresh start...'
+    rm -f apollo-dev.sqlite
+  fi
+  if [ ! -f apollo-dev.sqlite ]; then
+    echo '[start] Seeding demo database...'
+    cp "$REPO_ROOT/demo-data/demo.sqlite" apollo-dev.sqlite 2>/dev/null || true
+  fi
+else
+  echo '[start] Using in-memory SQLite database (fresh on every start)'
   export DB_CONNECTION_URL=':memory:'
-elif [ "$FRESH" = true ]; then
-  echo '[start] Deleting existing database for fresh start...'
-  rm -f apollo-dev.sqlite
-fi
-
-if [ "$MEMORY" = false ] && [ ! -f apollo-dev.sqlite ]; then
-  echo '[start] Seeding demo database...'
-  cp "$REPO_ROOT/demo-data/demo.sqlite" apollo-dev.sqlite 2>/dev/null || true
+  # Randomize session secret so stale browser cookies don't resolve to missing users
+  SESSION_SECRET="$(head -c 32 /dev/urandom | base64)"
+  export SESSION_SECRET
+  # Enable root user so we can seed volvox data via API after startup
+  export ALLOW_ROOT_USER=true
+  export ROOT_USER_PASSWORD=devpass
 fi
 
 if [ "$GUEST" = true ]; then
   echo '[start] Guest user enabled with admin role'
   export ALLOW_GUEST_USER=true
   export GUEST_USER_ROLE=admin
-fi
-
-# In-memory mode: randomize session secret so stale browser cookies are
-# automatically invalidated instead of resolving to a missing user.
-if [ "$MEMORY" = true ]; then
-  SESSION_SECRET="$(head -c 32 /dev/urandom | base64)"
-  export SESSION_SECRET
 fi
 
 # Auto-detect Tiberius if installed at common location
@@ -99,6 +101,9 @@ if [ -z "${TIBERIUS_PATH:-}" ]; then
   done
 fi
 
+SERVER_PORT="${PORT:-3999}"
+API_BASE="http://127.0.0.1:$SERVER_PORT"
+
 # Start NestJS server in background
 echo '[start] Starting server...'
 JBROWSE_STATIC_DIR="$JBROWSE_DIR" \
@@ -110,6 +115,30 @@ NODE_PID=$!
 
 cleanup() { kill "$NODE_PID" 2>/dev/null || true; }
 trap cleanup EXIT INT TERM
+
+# Seed volvox data into in-memory DB after server is ready
+if [ "$PERSIST" = false ]; then
+  echo '[start] Waiting for server to be ready for seeding...'
+  max_wait=60 waited=0
+  while [ $waited -lt $max_wait ]; do
+    if curl -sf "$API_BASE/health" >/dev/null 2>&1; then
+      break
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+  if [ $waited -ge $max_wait ]; then
+    echo '[start] ERROR: server did not become ready in time'
+  else
+    echo "[start] Server ready (${waited}s), seeding volvox assembly..."
+    PORT="$SERVER_PORT" node --experimental-strip-types \
+      "$SCRIPT_DIR/seed-volvox.ts" \
+      "$VOLVOX_DIR/volvox.sort.gff3" \
+      "$VOLVOX_DIR/volvox.fa" \
+      "$VOLVOX_DIR/volvox.fa.fai"
+    echo '[start] Volvox assembly seeded (assembly name: volvox, gff3: volvox.sort.gff3)'
+  fi
+fi
 
 echo '[start] Starting Vite dev server (UI at http://localhost:5173)...'
 exec pnpm --filter @apollo-annotation/web-ui dev

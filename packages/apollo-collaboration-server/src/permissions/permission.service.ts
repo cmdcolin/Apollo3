@@ -86,6 +86,22 @@ export class PermissionService {
     }
   }
 
+  async checkRefSeqPermission(
+    user: UserInfo | undefined,
+    refSeqId: string,
+    minRole: Role,
+  ) {
+    const refSeq = await this.db.refSeq.findById(refSeqId)
+    if (!refSeq) {
+      throw new ForbiddenException(`RefSeq ${refSeqId} not found`)
+    }
+    await this.checkIfUserHasPermissionForAssembly(
+      user,
+      refSeq.assembly,
+      minRole,
+    )
+  }
+
   async checkIfUserHasPermissionForAssembly(
     user: UserInfo | undefined,
     assemblyId: string,

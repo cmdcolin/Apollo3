@@ -1,23 +1,35 @@
-import { Controller, Get, Inject, Logger, Query } from '@nestjs/common'
+import { Controller, Get, Inject, Logger, Query, Req } from '@nestjs/common'
 
+import { PermissionService } from '../permissions/permission.service.js'
+import type { RequestWithUser } from '../utils/request-with-user.js'
 import { Role } from '../utils/role/role.enum.js'
-import { Roles } from '../utils/roles.guard.js'
+import { Public } from '../utils/roles.guard.js'
 
 import type { GetSequenceDto } from './dto/get-sequence.dto.js'
 import { SequenceService } from './sequence.service.js'
 
-@Roles(Role.ReadOnly)
 @Controller('sequence')
 export class SequenceController {
   constructor(
     @Inject(SequenceService) private readonly sequenceService: SequenceService,
+    @Inject(PermissionService)
+    private readonly permissionService: PermissionService,
   ) {}
 
   private readonly logger = new Logger(SequenceController.name)
 
+  @Public()
   @Get()
-  getSequence(@Query() request: GetSequenceDto) {
+  async getSequence(
+    @Query() request: GetSequenceDto,
+    @Req() req: RequestWithUser,
+  ) {
     this.logger.debug(`getSequence: ${JSON.stringify(request)}`)
+    await this.permissionService.checkRefSeqPermission(
+      req.user ?? undefined,
+      request.refSeq,
+      Role.ReadOnly,
+    )
     return this.sequenceService.getSequence(request)
   }
 }

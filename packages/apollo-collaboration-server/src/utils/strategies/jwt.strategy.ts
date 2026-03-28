@@ -23,6 +23,10 @@ function extractFromCookieOrHeader(req: Request) {
   if (cookies?.[AUTH_COOKIE_NAME]) {
     return cookies[AUTH_COOKIE_NAME]
   }
+  const cookieKeys = cookies ? Object.keys(cookies) : []
+  console.warn(
+    `[jwt-debug] ${req.method} ${req.url} — NO token found (cookies: [${cookieKeys.join(', ')}], origin: ${req.headers.origin ?? 'none'})`,
+  )
   return null
 }
 

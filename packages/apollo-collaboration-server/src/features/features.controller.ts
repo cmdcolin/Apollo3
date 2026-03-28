@@ -14,9 +14,10 @@ import {
   UsePipes,
 } from '@nestjs/common'
 
+import { PermissionService } from '../permissions/permission.service.js'
 import type { RequestWithUser } from '../utils/request-with-user.js'
 import { Role } from '../utils/role/role.enum.js'
-import { Roles } from '../utils/roles.guard.js'
+import { Public, Roles } from '../utils/roles.guard.js'
 import { ZodValidationPipe } from '../utils/zod-validation.pipe.js'
 
 import {
@@ -44,23 +45,33 @@ import { FeaturesService } from './features.service.js'
 export class FeaturesController {
   constructor(
     @Inject(FeaturesService) private readonly featuresService: FeaturesService,
+    @Inject(PermissionService)
+    private readonly permissionService: PermissionService,
   ) {}
   private readonly logger = new Logger(FeaturesController.name)
 
-  // --- Read endpoints (ReadOnly role) ---
+  // --- Read endpoints (public for public assemblies, ReadOnly for private) ---
 
-  @Roles(Role.ReadOnly)
+  @Public()
   @Get('searchFeatures')
   async searchFeatures(@Query() request: { term: string; assemblies: string }) {
     return this.featuresService.searchFeatures(request)
   }
 
-  @Roles(Role.ReadOnly)
+  @Public()
   @Get('getFeatures')
   @UsePipes(new ZodValidationPipe(featureRangeSearchSchema))
-  getFeaturesByRange(@Query() request: { refSeq: string; start: number; end: number }) {
+  async getFeaturesByRange(
+    @Query() request: { refSeq: string; start: number; end: number },
+    @Req() req: RequestWithUser,
+  ) {
     this.logger.debug(
       `getFeatures endpoint: refSeq: ${request.refSeq}, start: ${request.start}, end: ${request.end}`,
+    )
+    await this.permissionService.checkRefSeqPermission(
+      req.user ?? undefined,
+      request.refSeq,
+      Role.ReadOnly,
     )
     return this.featuresService.findFeaturesByRange(request)
   }
