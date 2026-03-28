@@ -169,6 +169,11 @@ the `redirect_uri` against the server's configured `URL` origin. If the origin
 doesn't match (e.g. `redirect_uri=https://evil.com`), the redirect falls back to
 the server root. This prevents open-redirect token theft.
 
+In development, the Vite dev server runs on a different port (5173) than the API
+(3999). Set `ALLOWED_REDIRECT_ORIGINS=http://localhost:5173` to allow post-login
+redirects back to the dev server. In production this is not needed since the
+client is served by the same origin.
+
 On origin/main, the OAuth callback accepted arbitrary redirect URIs with no
 validation — a critical vulnerability that has been fixed.
 
@@ -180,7 +185,7 @@ validation — a critical vulnerability that has been fixed.
 | First admin          | Silent race (first user wins)         | Explicit setup link from server log                          |
 | Root login           | Always accessible if password set     | Gated by `ALLOW_ROOT_USER` flag (default off)                |
 | Root password file   | Schema declared but never read        | Fully supported                                              |
-| Guest redirect       | Open redirect (no origin check)       | Origin-validated                                             |
+| Guest login          | Synthetic guest user with JWT         | Removed — use `@Public()` endpoints for unauthenticated read access |
 | OAuth redirect       | Open redirect (no origin check)       | Origin-validated                                             |
 | OAuth callback crash | Crashes if no `redirect_uri` in state | Falls back to server root                                    |
 | Cookie security      | No `httpOnly`/`secure`/`sameSite`     | Full cookie hardening                                        |

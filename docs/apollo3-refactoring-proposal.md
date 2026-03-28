@@ -664,6 +664,7 @@ If not set, the server auto-generates random secrets and persists them to
 | `MICROSOFT_CLIENT_ID` / `_SECRET` | Microsoft OAuth                                       |
 | `ALLOW_ROOT_USER`                 | Enable root password login                            |
 | `ROOT_USER_PASSWORD`              | Root admin password                                   |
+| `ALLOWED_REDIRECT_ORIGINS`        | Extra origins for post-login redirects (dev only)     |
 
 ## First-Time Setup
 
