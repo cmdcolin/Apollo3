@@ -311,10 +311,8 @@ export async function searchFeatures(
       page.getByText(`Error: Unknown feature or sequence "${query}"`),
     ).toBeVisible({ timeout: 10_000 })
   } else if (expectedNumOfHits === 1) {
-    await page.waitForResponse(
-      (resp) =>
-        resp.url().includes('/users/userLocation') && resp.status() === 200,
-    )
+    // Single hit navigates directly - wait for the location bar to update
+    await expect(locationInput).not.toHaveValue(query, { timeout: 10_000 })
   } else {
     const searchResults = page.getByText('Search results').locator('..')
     await expect(searchResults).toBeVisible({ timeout: 10_000 })

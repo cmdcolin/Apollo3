@@ -109,10 +109,7 @@ test.describe('volvox.fasta.gff3 searches', () => {
       .filter({ hasText: 'ctgA:1,000..2,000' })
       .locator('..')
     await row.getByRole('button', { name: /^Go$/i }).click()
-    await page.waitForResponse(
-      (resp) =>
-        resp.url().includes('/users/userLocation') && resp.status() === 200,
-    )
+    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {})
     await currentLocationEquals(page, 'ctgA', 800, 2200, 10)
 
     await searchFeatures(page, 'hgb', 2)
