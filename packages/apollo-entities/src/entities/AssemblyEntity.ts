@@ -16,7 +16,7 @@ export const AssemblyEntity = defineEntity({
   tableName: 'assembly',
   properties: {
     _id: p.string().primary(),
-    name: p.string(),
+    name: p.string().unique(),
     displayName: p.string().nullable(),
     aliases: p.json<string[]>().nullable(),
     description: p.string().nullable(),

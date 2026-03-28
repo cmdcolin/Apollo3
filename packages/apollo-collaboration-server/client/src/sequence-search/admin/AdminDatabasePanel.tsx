@@ -219,7 +219,7 @@ export function AdminDatabasePanel({
             >
               {assemblies.map((a) => (
                 <MenuItem key={a._id} value={a._id}>
-                  {a.displayName ?? a.name}
+                  {a.displayName}
                 </MenuItem>
               ))}
             </Select>

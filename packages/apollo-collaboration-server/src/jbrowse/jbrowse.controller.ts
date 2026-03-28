@@ -61,13 +61,13 @@ export class JBrowseController {
 
   private configResponse(request: RequestWithUser, assemblies?: string) {
     const { user } = request
-    const assemblyIds = assemblies
+    const assemblyNames = assemblies
       ? assemblies.split(',').filter(Boolean)
       : undefined
     this.logger.debug(
       `config.json requested: user.id=${user?.id}, user.role=${user?.role}, assemblies=${assemblies ?? 'all'}`,
     )
     const requestOrigin = `${request.protocol}://${request.get('host')}`
-    return this.jbrowseService.getConfig(user, assemblyIds, requestOrigin)
+    return this.jbrowseService.getConfig(user, assemblyNames, requestOrigin)
   }
 }

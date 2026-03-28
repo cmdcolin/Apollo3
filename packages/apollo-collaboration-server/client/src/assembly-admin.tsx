@@ -46,21 +46,21 @@ interface User {
   role: string
 }
 
-function getAssemblyId() {
+function getAssemblyName() {
   const parts = globalThis.location.pathname.split('/').filter(Boolean)
   if (
     parts.length >= 3 &&
     parts[0] === 'ui' &&
     parts[1] === 'assembly-admin'
   ) {
-    return parts[2]
+    return decodeURIComponent(parts[2])
   }
 }
 
 type PermRow = AssemblyPermission & { id: string; username: string }
 
 function AssemblyAdminPage() {
-  const assemblyId = getAssemblyId()
+  const assemblyName = getAssemblyName()
   const [assembly, setAssembly] = useState<Assembly>()
   const [currentUser, setCurrentUser] = useState<User>()
   const [permissions, setPermissions] = useState<AssemblyPermission[]>([])
@@ -73,27 +73,29 @@ function AssemblyAdminPage() {
   const [error, setError] = useState<string>()
 
   const loadPermissions = useCallback(async () => {
-    if (!assemblyId) {
+    if (!assembly) {
       return
     }
     const perms = await fetchJson<AssemblyPermission[]>(
-      `/assemblies/${assemblyId}/permissions`,
+      `/assemblies/${assembly._id}/permissions`,
     ).catch(() => [] as AssemblyPermission[])
     setPermissions(perms)
-  }, [assemblyId])
+  }, [assembly])
 
   const load = useCallback(async () => {
-    if (!assemblyId) {
-      setError('No assembly ID in URL')
+    if (!assemblyName) {
+      setError('No assembly name in URL')
       return
     }
     try {
       setError(undefined)
-      const [assemblyData, userData, perms, users] = await Promise.all([
-        fetchJson<Assembly>(`/assemblies/${assemblyId}`),
+      const assemblyData = await fetchJson<Assembly>(
+        `/assemblies/by-name/${encodeURIComponent(assemblyName)}`,
+      )
+      const [userData, perms, users] = await Promise.all([
         fetchJson<User>('/users/me').catch(() => null),
         fetchJson<AssemblyPermission[]>(
-          `/assemblies/${assemblyId}/permissions`,
+          `/assemblies/${assemblyData._id}/permissions`,
         ).catch(() => [] as AssemblyPermission[]),
         fetchJson<User[]>('/users').catch(() => [] as User[]),
       ])
@@ -110,16 +112,19 @@ function AssemblyAdminPage() {
     } catch (error_) {
       setError(error_ instanceof Error ? error_.message : String(error_))
     }
-  }, [assemblyId])
+  }, [assemblyName])
 
   useEffect(() => {
     void load()
   }, [load])
 
   async function handleVisibilityChange(newVisibility: 'public' | 'private') {
+    if (!assembly) {
+      return
+    }
     try {
       setError(undefined)
-      await fetch(`/assemblies/${assemblyId}`, {
+      await fetch(`/assemblies/${assembly._id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ visibility: newVisibility }),
@@ -131,12 +136,12 @@ function AssemblyAdminPage() {
   }
 
   async function handleAddPermission() {
-    if (!selectedUserId) {
+    if (!selectedUserId || !assembly) {
       return
     }
     try {
       setError(undefined)
-      await fetch(`/assemblies/${assemblyId}/permissions`, {
+      await fetch(`/assemblies/${assembly._id}/permissions`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: selectedUserId, role: selectedRole }),
@@ -149,9 +154,12 @@ function AssemblyAdminPage() {
   }
 
   async function handleRemovePermission(userId: string) {
+    if (!assembly) {
+      return
+    }
     try {
       setError(undefined)
-      await fetch(`/assemblies/${assemblyId}/permissions/${userId}`, {
+      await fetch(`/assemblies/${assembly._id}/permissions/${userId}`, {
         method: 'DELETE',
       })
       await loadPermissions()
@@ -170,7 +178,7 @@ function AssemblyAdminPage() {
         .split(',')
         .map((a) => a.trim())
         .filter((a) => a.length > 0)
-      const res = await fetch(`/assemblies/${assemblyId}`, {
+      const res = await fetch(`/assemblies/${assembly._id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ aliases }),
@@ -185,9 +193,12 @@ function AssemblyAdminPage() {
   }
 
   async function handleDelete() {
+    if (!assembly) {
+      return
+    }
     try {
       setError(undefined)
-      const res = await fetch(`/assemblies/${assemblyId}`, {
+      const res = await fetch(`/assemblies/${assembly._id}`, {
         method: 'DELETE',
       })
       if (!res.ok) {
@@ -203,7 +214,7 @@ function AssemblyAdminPage() {
   const usersWithoutPermission = allUsers.filter(
     (u) => u.role !== 'admin' && !permissions.some((p) => p.user === u._id),
   )
-  const displayName = assembly?.displayName ?? assembly?.name ?? assemblyId
+  const displayName = assembly?.displayName ?? assemblyName
 
   const permColumns: GridColDef<PermRow>[] = [
     { field: 'username', headerName: 'User', flex: 1 },
@@ -250,7 +261,7 @@ function AssemblyAdminPage() {
           <Link
             underline="hover"
             color="inherit"
-            href={`/ui/assemblies/${assemblyId}`}
+            href={`/ui/assemblies/${assemblyName}`}
           >
             {displayName}
           </Link>

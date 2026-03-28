@@ -211,7 +211,9 @@ export class FeaturesService {
 
   async searchFeatures(searchDto: { term: string; assemblies: string }) {
     const { assemblies, term } = searchDto
-    const assemblyIds = assemblies.split(',')
+    const assemblyNames = assemblies.split(',')
+    const assemblyRows = await this.db.assembly.findByNames(assemblyNames)
+    const assemblyIds = assemblyRows.map((a) => a._id)
     const refSeqs = await this.db.refSeq.findByAssemblies(assemblyIds)
     const refSeqIds = refSeqs.map((rs) => rs._id)
     return this.db.feature.searchText(refSeqIds, term)

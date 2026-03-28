@@ -10,6 +10,7 @@ import {
   Req,
 } from '@nestjs/common'
 
+import { DatabaseService } from '../mikro-orm/database.service.js'
 import { PermissionService } from '../permissions/permission.service.js'
 import type { RequestWithUser } from '../utils/request-with-user.js'
 import { Role } from '../utils/role/role.enum.js'
@@ -25,6 +26,7 @@ export class RefSeqsController {
     @Inject(RefSeqsService) private readonly refSeqsService: RefSeqsService,
     @Inject(PermissionService)
     private readonly permissionService: PermissionService,
+    @Inject(DatabaseService) private readonly db: DatabaseService,
   ) {}
 
   private readonly logger = new Logger(RefSeqsController.name)
@@ -37,11 +39,16 @@ export class RefSeqsController {
   ) {
     this.logger.debug(`refSeqs findAll called with: ${JSON.stringify(request)}`)
     if (request.assembly) {
+      const assembly = await this.db.assembly.findByName(request.assembly)
+      if (!assembly) {
+        return []
+      }
       await this.permissionService.checkIfUserHasPermissionForAssembly(
         req.user ?? undefined,
-        request.assembly,
+        assembly._id,
         Role.ReadOnly,
       )
+      return this.refSeqsService.findAll({ assembly: assembly._id })
     }
     return this.refSeqsService.findAll(request)
   }

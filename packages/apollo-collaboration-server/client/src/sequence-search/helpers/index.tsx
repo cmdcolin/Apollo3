@@ -100,7 +100,7 @@ export function AssemblyChip({
   const asm = assemblies.find((a) => a._id === id)
   return (
     <Chip
-      label={asm ? (asm.displayName ?? asm.name) : id}
+      label={asm?.displayName ?? id}
       size="small"
       sx={{ mr: 0.5 }}
     />

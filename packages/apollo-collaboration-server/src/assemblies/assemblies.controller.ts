@@ -38,6 +38,11 @@ export class AssembliesController {
     return this.assembliesService.findAll()
   }
 
+  @Get('by-name/:name')
+  findOneByName(@Param('name') name: string) {
+    return this.assembliesService.findOneByName(name)
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.assembliesService.findOne(id)

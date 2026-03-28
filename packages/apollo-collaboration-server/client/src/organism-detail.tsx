@@ -52,7 +52,7 @@ const assemblyColumns: GridColDef<AssemblyRow>[] = [
     headerName: 'Name',
     flex: 1,
     renderCell: (params) => (
-      <Link href={`/ui/assemblies/${params.row._id}`}>{params.value}</Link>
+      <Link href={`/ui/assemblies/${params.row.name}`}>{params.value}</Link>
     ),
   },
   { field: 'displayName', headerName: 'Display Name', flex: 1 },
@@ -81,7 +81,7 @@ const assemblyColumns: GridColDef<AssemblyRow>[] = [
     sortable: false,
     renderCell: (params) => (
       <Link
-        href={`/jbrowse/?config=${encodeURIComponent(`/jbrowse/config.json?assemblies=${params.row._id}`)}`}
+        href={`/jbrowse/?assemblies=${encodeURIComponent(params.row.name)}`}
       >
         Open in JBrowse
       </Link>

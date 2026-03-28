@@ -133,21 +133,17 @@ export class JBrowseService {
   }
 
   getAssemblyConfig(assembly: AssemblyRow, url: string) {
-    const assemblyId = assembly._id
     const trackId = `sequenceConfigId-${assembly.name}`
     return {
-      name: assemblyId,
-      aliases:
-        assembly.aliases && assembly.aliases.length > 0
-          ? [...assembly.aliases]
-          : [assembly.name],
-      displayName: assembly.displayName ?? assembly.name,
+      name: assembly.name,
+      aliases: assembly.aliases ? [...assembly.aliases] : [],
+      displayName: assembly.displayName,
       sequence: {
         trackId,
         type: 'ReferenceSequenceTrack',
         adapter: {
           type: 'ApolloSequenceAdapter',
-          assemblyId,
+          assemblyId: assembly.name,
           baseURL: {
             uri: url,
             locationType: 'UriLocation',
@@ -166,7 +162,7 @@ export class JBrowseService {
       refNameAliases: {
         adapter: {
           type: 'ApolloRefNameAliasAdapter',
-          assemblyId,
+          assemblyId: assembly.name,
           baseURL: { uri: url, locationType: 'UriLocation' },
         },
       },
@@ -174,18 +170,18 @@ export class JBrowseService {
   }
 
   getApolloTrackConfig(assembly: AssemblyRow, url: string) {
-    const trackId = `apollo_track_${assembly._id}`
+    const trackId = `apollo_track_${assembly.name}`
     return {
       type: 'ApolloTrack',
       trackId,
-      name: `Annotations (${assembly.displayName ?? assembly.name})`,
-      assemblyNames: [assembly._id],
+      name: `Annotations (${assembly.displayName})`,
+      assemblyNames: [assembly.name],
       textSearching: {
         textSearchAdapter: {
           type: 'ApolloTextSearchAdapter',
           trackId,
-          assemblyNames: [assembly._id],
-          textSearchAdapterId: `apollo_search_${assembly._id}`,
+          assemblyNames: [assembly.name],
+          textSearchAdapterId: `apollo_search_${assembly.name}`,
           baseURL: {
             uri: url,
             locationType: 'UriLocation',
@@ -198,9 +194,9 @@ export class JBrowseService {
   getApolloTextSearchAdapter(assembly: AssemblyRow, url: string) {
     return {
       type: 'ApolloTextSearchAdapter',
-      textSearchAdapterId: `apollo_search_${assembly._id}`,
-      trackId: `apollo_track_${assembly._id}`,
-      assemblyNames: [assembly._id],
+      textSearchAdapterId: `apollo_search_${assembly.name}`,
+      trackId: `apollo_track_${assembly.name}`,
+      assemblyNames: [assembly.name],
       baseURL: {
         uri: url,
         locationType: 'UriLocation',
@@ -210,12 +206,15 @@ export class JBrowseService {
 
   async getAccessibleAssemblies(
     user: DecodedJWT | undefined,
-    requestedAssemblyIds: string[] | undefined,
+    requestedAssemblyNames: string[] | undefined,
   ) {
-    if (requestedAssemblyIds) {
+    if (requestedAssemblyNames) {
+      const assemblies =
+        await this.db.assembly.findByNames(requestedAssemblyNames)
+      const ids = assemblies.map((a) => a._id)
       const filteredIds = await this.permissionService.filterAccessibleIds(
         user,
-        requestedAssemblyIds,
+        ids,
       )
       return this.db.assembly.findByIds(filteredIds)
     }
@@ -224,10 +223,10 @@ export class JBrowseService {
     return this.db.assembly.findByIds(accessibleIds)
   }
 
-  async getConfig(user: DecodedJWT | undefined, assemblyIds?: string[], requestOrigin?: string) {
+  async getConfig(user: DecodedJWT | undefined, assemblyNames?: string[], requestOrigin?: string) {
     const configuration = await this.getConfiguration(user, requestOrigin)
     const plugins = this.getPlugins()
-    const assemblies = await this.getAccessibleAssemblies(user, assemblyIds)
+    const assemblies = await this.getAccessibleAssemblies(user, assemblyNames)
     const url = requestOrigin ?? this.configService.get('URL', { infer: true })
 
     if (assemblies.length === 0) {

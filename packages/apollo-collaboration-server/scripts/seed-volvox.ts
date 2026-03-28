@@ -90,16 +90,19 @@ for (const featureGroup of features) {
 }
 console.log(`Seeded ${count} top-level features`)
 
-// Add evidence tracks to the volvox assembly
+// Add evidence tracks to the volvox assembly.
+// assemblyIds uses the internal _id (for DB queries/permissions).
+// config.assemblyNames uses the human-readable name (for JBrowse config).
+const assemblyName = 'volvox'
 const tracks = [
   {
-    trackId: `volvox_bw_${assemblyId}`,
+    trackId: `volvox_bw`,
     assemblyIds: [assemblyId],
     config: {
       type: 'QuantitativeTrack',
-      trackId: `volvox_bw_${assemblyId}`,
+      trackId: `volvox_bw`,
       name: 'Volvox BigWig',
-      assemblyNames: [assemblyId],
+      assemblyNames: [assemblyName],
       adapter: {
         type: 'BigWigAdapter',
         bigWigLocation: {
@@ -110,13 +113,13 @@ const tracks = [
     },
   },
   {
-    trackId: `volvox_bam_${assemblyId}`,
+    trackId: `volvox_bam`,
     assemblyIds: [assemblyId],
     config: {
       type: 'AlignmentsTrack',
-      trackId: `volvox_bam_${assemblyId}`,
+      trackId: `volvox_bam`,
       name: 'Volvox Alignments (BAM)',
-      assemblyNames: [assemblyId],
+      assemblyNames: [assemblyName],
       adapter: {
         type: 'BamAdapter',
         bamLocation: {
@@ -133,13 +136,13 @@ const tracks = [
     },
   },
   {
-    trackId: `volvox_vcf_${assemblyId}`,
+    trackId: `volvox_vcf`,
     assemblyIds: [assemblyId],
     config: {
       type: 'VariantTrack',
-      trackId: `volvox_vcf_${assemblyId}`,
+      trackId: `volvox_vcf`,
       name: 'Volvox Variants (VCF)',
-      assemblyNames: [assemblyId],
+      assemblyNames: [assemblyName],
       adapter: {
         type: 'VcfTabixAdapter',
         vcfGzLocation: {
@@ -156,13 +159,13 @@ const tracks = [
     },
   },
   {
-    trackId: `volvox_bed_${assemblyId}`,
+    trackId: `volvox_bed`,
     assemblyIds: [assemblyId],
     config: {
       type: 'FeatureTrack',
-      trackId: `volvox_bed_${assemblyId}`,
+      trackId: `volvox_bed`,
       name: 'Volvox BED12',
-      assemblyNames: [assemblyId],
+      assemblyNames: [assemblyName],
       adapter: {
         type: 'BedTabixAdapter',
         bedGzLocation: {
@@ -179,13 +182,13 @@ const tracks = [
     },
   },
   {
-    trackId: `volvox_rnaseq_${assemblyId}`,
+    trackId: `volvox_rnaseq`,
     assemblyIds: [assemblyId],
     config: {
       type: 'AlignmentsTrack',
-      trackId: `volvox_rnaseq_${assemblyId}`,
+      trackId: `volvox_rnaseq`,
       name: 'Volvox RNA-seq',
-      assemblyNames: [assemblyId],
+      assemblyNames: [assemblyName],
       adapter: {
         type: 'BamAdapter',
         bamLocation: {

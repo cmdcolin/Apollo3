@@ -5,7 +5,7 @@ export type SequenceSource =
 export interface AssemblyRow {
   _id: string
   name: string
-  displayName?: string
+  displayName: string
   aliases?: string[]
   description?: string
   user?: string
@@ -26,6 +26,7 @@ export interface AssemblyRepository {
   deleteById(id: string): Promise<boolean>
   findAll(): Promise<AssemblyRow[]>
   findByIds(ids: string[]): Promise<AssemblyRow[]>
+  findByNames(names: string[]): Promise<AssemblyRow[]>
   findPublic(): Promise<AssemblyRow[]>
   findAllIds(): Promise<string[]>
 }

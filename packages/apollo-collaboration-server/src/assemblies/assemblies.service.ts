@@ -138,6 +138,14 @@ export class AssembliesService {
     return assembly
   }
 
+  async findOneByName(name: string) {
+    const assembly = await this.db.assembly.findByName(name)
+    if (!assembly) {
+      throw new NotFoundException(`Assembly with name "${name}" not found`)
+    }
+    return assembly
+  }
+
   async update(id: string, updateAssemblyDto: UpdateAssemblyDto) {
     return this.db.assembly.updateById(id, updateAssemblyDto)
   }

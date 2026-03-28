@@ -3,12 +3,13 @@ import Box from '@mui/material/Box'
 import Breadcrumbs from '@mui/material/Breadcrumbs'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
+import CircularProgress from '@mui/material/CircularProgress'
 import Container from '@mui/material/Container'
 import Link from '@mui/material/Link'
 import Typography from '@mui/material/Typography'
 import { DataGrid, type GridColDef } from '@mui/x-data-grid'
-import { useCallback, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
+import useSWR from 'swr'
 
 import { Nav } from './Nav.js'
 import { fetchJson } from './fetchUtil.js'
@@ -17,7 +18,7 @@ import { type Organism, organismLabel } from './organism-utils.js'
 interface Assembly {
   _id: string
   name: string
-  displayName?: string
+  displayName: string
   description?: string
   organism?: string
   visibility?: 'public' | 'private'
@@ -41,11 +42,10 @@ interface User {
   role: string
 }
 
-function getAssemblyId() {
+function getAssemblyName() {
   const parts = globalThis.location.pathname.split('/').filter(Boolean)
-  // /ui/assemblies/:id
   if (parts.length >= 3 && parts[0] === 'ui' && parts[1] === 'assemblies') {
-    return parts[2]
+    return decodeURIComponent(parts[2])
   }
   return
 }
@@ -100,57 +100,69 @@ const trackColumns: GridColDef<TrackRow>[] = [
   },
 ]
 
+const assemblyName = getAssemblyName()
+
 function AssemblyDetailPage() {
-  const assemblyId = getAssemblyId()
-  const [assembly, setAssembly] = useState<Assembly>()
-  const [refSeqs, setRefSeqs] = useState<RefSeq[]>([])
-  const [tracks, setTracks] = useState<TrackConfig[]>([])
-  const [organism, setOrganism] = useState<Organism>()
-  const [currentUser, setCurrentUser] = useState<User>()
-  const [error, setError] = useState<string>()
+  const encodedName = assemblyName
+    ? encodeURIComponent(assemblyName)
+    : undefined
+  const {
+    data: assembly,
+    error: assemblyError,
+    isLoading,
+  } = useSWR<Assembly>(
+    encodedName ? `/assemblies/by-name/${encodedName}` : null,
+    fetchJson,
+  )
+  const { data: refSeqs } = useSWR<RefSeq[]>(
+    encodedName ? `/refSeqs?assembly=${encodedName}` : null,
+    fetchJson,
+  )
+  const { data: tracks } = useSWR<TrackConfig[]>(
+    assembly ? `/tracks?assembly=${assembly._id}` : null,
+    fetchJson,
+  )
+  const { data: currentUser } = useSWR<User>('/users/me', fetchJson)
+  const { data: organism } = useSWR<Organism>(
+    assembly?.organism ? `/organisms/${assembly.organism}` : null,
+    fetchJson,
+  )
 
-  const load = useCallback(async () => {
-    if (!assemblyId) {
-      setError('No assembly ID in URL')
-      return
-    }
-    try {
-      setError(undefined)
-      const [assemblyData, refSeqData, trackData, userData] = await Promise.all(
-        [
-          fetchJson<Assembly>(`/assemblies/${assemblyId}`),
-          fetchJson<RefSeq[]>(`/refSeqs?assembly=${assemblyId}`),
-          fetchJson<TrackConfig[]>(`/tracks?assembly=${assemblyId}`),
-          fetchJson<User>('/users/me').catch(() => null),
-        ],
-      )
-      setAssembly(assemblyData)
-      setRefSeqs(refSeqData)
-      setTracks(trackData)
-      if (userData) {
-        setCurrentUser(userData)
-      }
+  if (!assemblyName) {
+    return (
+      <Nav current="assemblies">
+        <Container>
+          <Alert severity="error">No assembly name in URL</Alert>
+        </Container>
+      </Nav>
+    )
+  }
 
-      if (assemblyData.organism) {
-        try {
-          const org = await fetchJson<Organism>(
-            `/organisms/${assemblyData.organism}`,
-          )
-          setOrganism(org)
-        } catch {
-          // organism fetch is non-critical
-        }
-      }
-    } catch (error_) {
-      setError(error_ instanceof Error ? error_.message : String(error_))
-    }
-  }, [assemblyId])
+  if (assemblyError) {
+    return (
+      <Nav current="assemblies">
+        <Container>
+          <Alert severity="error">
+            {assemblyError instanceof Error
+              ? assemblyError.message
+              : String(assemblyError)}
+          </Alert>
+        </Container>
+      </Nav>
+    )
+  }
 
-  useEffect(() => {
-    void load()
-  }, [load])
-
-  const displayName = assembly?.displayName ?? assembly?.name ?? assemblyId
+  if (isLoading || !assembly) {
+    return (
+      <Nav current="assemblies">
+        <Container>
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+            <CircularProgress />
+          </Box>
+        </Container>
+      </Nav>
+    )
+  }
 
   return (
     <Nav current="assemblies">
@@ -159,114 +171,112 @@ function AssemblyDetailPage() {
           <Link underline="hover" color="inherit" href="/ui/assemblies/">
             Assemblies
           </Link>
-          <Typography color="text.primary">{displayName}</Typography>
+          <Typography color="text.primary">{assembly.displayName}</Typography>
         </Breadcrumbs>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            mb: 1,
+          }}
+        >
+          <Typography variant="h4">{assembly.displayName}</Typography>
+          <Chip
+            label={assembly.visibility ?? 'private'}
+            size="small"
+            color={assembly.visibility === 'public' ? 'success' : 'default'}
+            variant="outlined"
+          />
+        </Box>
 
-        {assembly ? (
-          <>
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2,
-                mb: 1,
-              }}
-            >
-              <Typography variant="h4">{displayName}</Typography>
-              <Chip
-                label={assembly.visibility ?? 'private'}
-                size="small"
-                color={assembly.visibility === 'public' ? 'success' : 'default'}
-                variant="outlined"
-              />
-            </Box>
-
-            {assembly.description ? (
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-                {assembly.description}
-              </Typography>
-            ) : null}
-
-            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-              {organism ? (
-                <Chip
-                  label={organismLabel(organism)}
-                  size="small"
-                  variant="outlined"
-                  component="a"
-                  href={`/ui/organisms/${assembly.organism}`}
-                  clickable
-                />
-              ) : null}
-              <Button
-                variant="contained"
-                size="small"
-                href={`/jbrowse/?config=${encodeURIComponent(`/jbrowse/config.json?assemblies=${assembly._id}`)}`}
-              >
-                Open in JBrowse
-              </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                href={`/ui/sequence-search/?assembly=${encodeURIComponent(assembly._id)}`}
-              >
-                Sequence Search
-              </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                href={`/ui/assembly-checks/${assembly._id}`}
-              >
-                Checks
-              </Button>
-              {currentUser?.role === 'admin' ? (
-                <Button
-                  variant="outlined"
-                  size="small"
-                  href={`/ui/assembly-admin/${assembly._id}`}
-                >
-                  Admin
-                </Button>
-              ) : null}
-            </Box>
-
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              Reference Sequences ({refSeqs.length})
-            </Typography>
-            <Box sx={{ height: 400, mb: 3 }}>
-              <DataGrid
-                rows={refSeqs.map((r) => ({ ...r, id: r._id }))}
-                columns={refSeqColumns}
-                density="compact"
-                pageSizeOptions={[25, 50, 100]}
-                initialState={{
-                  pagination: { paginationModel: { pageSize: 25 } },
-                }}
-              />
-            </Box>
-
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              Evidence Tracks ({tracks.length})
-            </Typography>
-            <Box sx={{ height: 400 }}>
-              <DataGrid
-                rows={tracks.map((t) => ({ ...t, id: t._id }))}
-                columns={trackColumns}
-                density="compact"
-                pageSizeOptions={[25, 50, 100]}
-                initialState={{
-                  pagination: { paginationModel: { pageSize: 25 } },
-                }}
-              />
-            </Box>
-          </>
+        {assembly.description ? (
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+            {assembly.description}
+          </Typography>
         ) : null}
+
+        <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+          {organism ? (
+            <Chip
+              label={organismLabel(organism)}
+              size="small"
+              variant="outlined"
+              component="a"
+              href={`/ui/organisms/${assembly.organism}`}
+              clickable
+            />
+          ) : null}
+          <Button
+            variant="contained"
+            size="small"
+            href={`/jbrowse/?assemblies=${encodeURIComponent(assembly.name)}`}
+          >
+            Open in JBrowse
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            href={`/ui/sequence-search/?assembly=${encodeURIComponent(assembly.name)}`}
+          >
+            Sequence Search
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            href={`/ui/assembly-checks/${assembly.name}`}
+          >
+            Checks
+          </Button>
+          {currentUser?.role === 'admin' ? (
+            <Button
+              variant="outlined"
+              size="small"
+              href={`/ui/assembly-admin/${assembly.name}`}
+            >
+              Admin
+            </Button>
+          ) : null}
+        </Box>
+
+        <Typography variant="h6" sx={{ mb: 1 }}>
+          Reference Sequences ({refSeqs?.length ?? '...'})
+        </Typography>
+        <Box sx={{ height: 400, mb: 3 }}>
+          {refSeqs ? (
+            <DataGrid
+              rows={refSeqs.map((r) => ({ ...r, id: r._id }))}
+              columns={refSeqColumns}
+              density="compact"
+              pageSizeOptions={[25, 50, 100]}
+              initialState={{
+                pagination: { paginationModel: { pageSize: 25 } },
+              }}
+            />
+          ) : (
+            <CircularProgress size={24} />
+          )}
+        </Box>
+
+        <Typography variant="h6" sx={{ mb: 1 }}>
+          Evidence Tracks ({tracks?.length ?? '...'})
+        </Typography>
+        <Box sx={{ height: 400 }}>
+          {tracks ? (
+            <DataGrid
+              rows={tracks.map((t) => ({ ...t, id: t._id }))}
+              columns={trackColumns}
+              density="compact"
+              pageSizeOptions={[25, 50, 100]}
+              initialState={{
+                pagination: { paginationModel: { pageSize: 25 } },
+              }}
+            />
+          ) : (
+            <CircularProgress size={24} />
+          )}
+        </Box>
       </Container>
     </Nav>
   )

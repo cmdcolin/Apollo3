@@ -153,9 +153,7 @@ export function LocalToolSearchTab({
                   const asm = assemblies.find((a) =>
                     db.assemblyIds.includes(a._id),
                   )
-                  const asmName = asm
-                    ? (asm.displayName ?? asm.name)
-                    : 'unknown'
+                  const asmName = asm?.displayName ?? 'unknown'
                   const extra =
                     typeof db.params.program === 'string' && db.params.program
                       ? ` (${db.params.program})`

@@ -20,7 +20,7 @@ function toRow(entity: InferEntity<typeof AssemblyEntity>): AssemblyRow {
   return {
     _id: entity._id,
     name: entity.name,
-    displayName: entity.displayName ?? undefined,
+    displayName: entity.displayName ?? entity.name,
     aliases: entity.aliases ?? undefined,
     description: entity.description ?? undefined,
     user: entity.user ?? undefined,
@@ -96,6 +96,20 @@ export class MikroOrmAssemblyRepository implements AssemblyRepository {
       AssemblyEntity,
       {
         _id: { $in: ids },
+      },
+      {},
+    )
+    return entities.map((x) => toRow(x))
+  }
+
+  async findByNames(names: string[]) {
+    if (names.length === 0) {
+      return []
+    }
+    const entities = await this.em.find(
+      AssemblyEntity,
+      {
+        name: { $in: names },
       },
       {},
     )
