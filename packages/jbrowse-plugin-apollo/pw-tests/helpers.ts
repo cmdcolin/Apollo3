@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { gunzipSync } from 'node:zlib'
 
 import { gff3LineToSnapshot } from '@apollo-annotation/shared'
 import { parseStringSync } from '@gmod/gff'
@@ -164,7 +165,7 @@ export async function addAssemblyViaApi(
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
   }
-  const faPath = gffPath.replace(/\.gff3$/, '.fa')
+  const faPath = gffPath.replace(/\.gff3(\.gz)?$/, '.fa')
   const faiPath = `${faPath}.fai`
   const res = await fetch(`${API_BASE}/assemblies`, {
     method: 'POST',
@@ -196,14 +197,21 @@ export async function addAssemblyFromGff(
 
   const assemblyId = await addAssemblyViaApi(assemblyName, gffPath)
 
-  const refSeqsRes = await fetch(`${API_BASE}/refSeqs?assembly=${assemblyId}`, {
-    headers,
-  })
+  const refSeqsRes = await fetch(
+    `${API_BASE}/refSeqs?assembly=${encodeURIComponent(assemblyName)}`,
+    { headers },
+  )
   const refSeqs = (await refSeqsRes.json()) as { _id: string; name: string }[]
+  console.log(
+    `[api] Assembly ${assemblyName}: ${refSeqs.length} refSeqs found`,
+  )
   const refSeqIdMap = new Map(refSeqs.map((rs) => [rs.name, rs._id]))
 
-  const gff3Text = readFileSync(gffPath, 'utf8')
+  const gff3Text = gffPath.endsWith('.gz')
+    ? gunzipSync(readFileSync(gffPath)).toString('utf8')
+    : readFileSync(gffPath, 'utf8')
   const features = parseStringSync(gff3Text, { parseSequences: false })
+  let featCount = 0
 
   for (const featureGroup of features) {
     if (!Array.isArray(featureGroup) || featureGroup.length === 0) {
@@ -218,7 +226,7 @@ export async function addAssemblyFromGff(
       continue
     }
     const snapshot = gff3LineToSnapshot(line, refSeqId)
-    await fetch(`${API_BASE}/features`, {
+    const featRes = await fetch(`${API_BASE}/features`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -226,7 +234,15 @@ export async function addAssemblyFromGff(
         assemblyId,
       }),
     })
+    if (!featRes.ok) {
+      const body = await featRes.text()
+      console.log(
+        `[api] WARNING: Feature POST failed: ${featRes.status} ${body}`,
+      )
+    }
+    featCount++
   }
+  console.log(`[api] Posted ${featCount} features for ${assemblyName}`)
 
   await page.reload()
   await expect(page.getByRole('button', { name: 'Apollo' })).toBeEnabled({

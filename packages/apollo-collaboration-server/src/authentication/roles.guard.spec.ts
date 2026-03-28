@@ -1,6 +1,6 @@
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common'
 
-import { Role } from './role/role.enum.js'
+import { Role } from './role.enum.js'
 import { RolesGuard } from './roles.guard.js'
 
 function makeUser(role: Role) {

@@ -172,7 +172,13 @@ const validationSchema = Joi.object({
     TracksModule,
     PermissionsModule,
     ThrottlerModule.forRoot({
-      throttlers: [{ name: 'default', ttl: 60_000, limit: 100 }],
+      throttlers: [
+        {
+          name: 'default',
+          ttl: 60_000,
+          limit: Number(process.env.THROTTLE_LIMIT) || 100,
+        },
+      ],
     }),
     AuthenticationModule,
     FallbackModule,

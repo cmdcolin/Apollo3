@@ -11,7 +11,7 @@ import {
 import { Reflector } from '@nestjs/core'
 
 import type { RequestWithUser } from './request-with-user.js'
-import { Role, RoleInheritance } from './role/role.enum.js'
+import { Role, RoleInheritance } from './role.enum.js'
 
 export const IS_PUBLIC_KEY = 'isPublic'
 export const ROLES_KEY = 'roles'

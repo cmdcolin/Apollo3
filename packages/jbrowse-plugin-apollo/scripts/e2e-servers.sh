@@ -95,6 +95,9 @@ build_all() {
   echo "Building server + dependencies (esbuild)..."
   pnpm -C packages/apollo-collaboration-server dev:build
 
+  echo "Building web UI client..."
+  pnpm -C packages/apollo-collaboration-server build:client
+
   echo "Generating type declarations for shared packages..."
   pnpm tsc --build --emitDeclarationOnly \
     packages/apollo-common packages/apollo-entities \
@@ -151,6 +154,7 @@ start_servers() {
     TIBERIUS_PATH="${TIBERIUS_PATH:-$SCRIPT_DIR/test_data/mock_tiberius.py}" \
     TIBERIUS_MODEL_CFG="${TIBERIUS_MODEL_CFG:-human}" \
     PATH="$MOCK_TOOLS_DIR:$PATH" \
+    THROTTLE_LIMIT=10000 \
     LOG_LEVELS=error,warn,log NODE_ENV=development node dist/main.js \
     >> "$LOG_FILE" 2>&1 &
   echo $! >> "$PID_FILE"

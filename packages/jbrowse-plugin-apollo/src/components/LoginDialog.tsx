@@ -3,7 +3,9 @@ import {
   Button,
   DialogContent,
   DialogContentText,
+  Divider,
   LinearProgress,
+  TextField,
 } from '@mui/material'
 import React, { useEffect, useState } from 'react'
 
@@ -24,6 +26,7 @@ interface OidcProviderInfo {
 
 interface LoginTypes {
   oidc: OidcProviderInfo[]
+  rootLogin?: boolean
 }
 
 export function LoginDialog({ handleClose, session }: LoginDialogProps) {
@@ -31,6 +34,8 @@ export function LoginDialog({ handleClose, session }: LoginDialogProps) {
   const [loginTypes, setLoginTypes] = useState<LoginTypes>({ oidc: [] })
   const [errorMessage, setErrorMessage] = useState('')
   const [loading, setLoading] = useState(true)
+  const [rootPassword, setRootPassword] = useState('')
+  const [rootLoginError, setRootLoginError] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -66,6 +71,29 @@ export function LoginDialog({ handleClose, session }: LoginDialogProps) {
     globalThis.location.href = url.toString()
   }
 
+  async function handleRootLogin() {
+    setRootLoginError('')
+    const url = new URL('auth/root', baseURL)
+    const response = await fetch(url.toString(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: rootPassword }),
+      credentials: 'include',
+    })
+    if (response.ok) {
+      globalThis.location.reload()
+    } else {
+      setRootLoginError('Invalid password')
+    }
+  }
+
+  const hasOidc = loginTypes.oidc.length > 0
+  const isLocalhost =
+    globalThis.location?.hostname === 'localhost' ||
+    globalThis.location?.hostname === '127.0.0.1'
+  const hasRoot = loginTypes.rootLogin && isLocalhost
+  const hasNoMethods = !loading && !hasOidc && !hasRoot && !errorMessage
+
   return (
     <Dialog
       open
@@ -82,7 +110,7 @@ export function LoginDialog({ handleClose, session }: LoginDialogProps) {
         }}
       >
         {loading ? <LinearProgress /> : null}
-        {!loading && loginTypes.oidc.length === 0 && !errorMessage ? (
+        {hasNoMethods ? (
           <DialogContentText>
             No login methods are configured on this server.
           </DialogContentText>
@@ -99,6 +127,36 @@ export function LoginDialog({ handleClose, session }: LoginDialogProps) {
             Sign in with {provider.displayName}
           </Button>
         ))}
+        {hasOidc && hasRoot ? <Divider /> : null}
+        {hasRoot ? (
+          <>
+            <TextField
+              label="Root password"
+              type="password"
+              size="small"
+              value={rootPassword}
+              onChange={(e) => {
+                setRootPassword(e.target.value)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleRootLogin()
+                }
+              }}
+              error={!!rootLoginError}
+              helperText={rootLoginError}
+            />
+            <Button
+              variant="contained"
+              fullWidth
+              onClick={() => {
+                handleRootLogin()
+              }}
+            >
+              Sign in as Root
+            </Button>
+          </>
+        ) : null}
         {errorMessage ? (
           <DialogContentText color="error">{errorMessage}</DialogContentText>
         ) : null}

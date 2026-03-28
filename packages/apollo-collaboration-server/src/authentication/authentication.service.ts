@@ -135,6 +135,7 @@ export class AuthenticationService {
   getLoginTypes() {
     return {
       oidc: this.oidcService.getProviderNames(),
+      rootLogin: !!this.configService.get('ALLOW_ROOT_USER', { infer: true }),
     }
   }
 

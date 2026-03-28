@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 
-import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common'
+import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import {
   type Configuration,

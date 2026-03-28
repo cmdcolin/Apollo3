@@ -135,7 +135,7 @@ export class AuthenticationController {
   // --- Root password login ---
 
   @Post('root')
-  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @Throttle({ default: { ttl: 60_000, limit: 100 } })
   async rootLogin(
     @Body() { password }: { password: string },
     @Res({ passthrough: true }) res: Response,
