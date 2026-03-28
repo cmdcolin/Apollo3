@@ -8,16 +8,20 @@ const API_BASE = 'http://127.0.0.1:3999'
 
 // ── API helpers (run in Node.js, not the browser) ───────────────────
 
-export async function getGuestToken() {
-  console.log('[api] Fetching guest token...')
-  const res = await fetch(`${API_BASE}/auth/guest`)
+export async function getRootToken() {
+  console.log('[api] Fetching root token...')
+  const res = await fetch(`${API_BASE}/auth/root`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: 'password' }),
+  })
   const data = (await res.json()) as { token: string }
-  console.log('[api] Got guest token')
+  console.log('[api] Got root token')
   return data.token
 }
 
 export async function uploadFileViaApi(filePath: string, fileType: string) {
-  const token = await getGuestToken()
+  const token = await getRootToken()
   const fileContent = readFileSync(filePath)
   const fileName = filePath.split('/').pop()!
   console.log(`[api] Uploading ${fileName} (${fileContent.length} bytes)...`)
@@ -45,7 +49,7 @@ export async function uploadFileViaApi(filePath: string, fileType: string) {
 
 export async function deleteAssemblies() {
   console.log('[cleanup] Deleting all assemblies...')
-  const token = await getGuestToken()
+  const token = await getRootToken()
   const headers = {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
@@ -102,12 +106,13 @@ export function setupBrowserLogging(page: Page) {
   })
 }
 
-export async function loginAsGuest(page: Page) {
+export async function loginAsRoot(page: Page) {
   setupBrowserLogging(page)
   await page.goto('/jbrowse/')
-  const guestButton = page.getByRole('button', { name: 'Continue as Guest' })
-  await expect(guestButton).toBeEnabled({ timeout: 15_000 })
-  await guestButton.click()
+  const passwordField = page.getByLabel('Root password')
+  await expect(passwordField).toBeVisible({ timeout: 15_000 })
+  await passwordField.fill('password')
+  await page.getByRole('button', { name: 'Sign in as Root' }).click()
   await expect(page.getByRole('button', { name: 'Apollo' })).toBeEnabled({
     timeout: 30_000,
   })
@@ -154,7 +159,7 @@ export async function addAssemblyViaApi(
   assemblyName: string,
   gffPath: string,
 ): Promise<string> {
-  const token = await getGuestToken()
+  const token = await getRootToken()
   const headers: Record<string, string> = {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
@@ -183,7 +188,7 @@ export async function addAssemblyFromGff(
   gffPath: string,
   launch = true,
 ): Promise<void> {
-  const token = await getGuestToken()
+  const token = await getRootToken()
   const headers: Record<string, string> = {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',

@@ -6,7 +6,7 @@ import {
   addAssemblyFromGff,
   annotationTrackAppearance,
   deleteAssemblies,
-  loginAsGuest,
+  loginAsRoot,
   refreshTableEditor,
   selectAssemblyToView,
 } from './helpers.js'
@@ -14,7 +14,7 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 test.beforeEach(async ({ page }) => {
-  await loginAsGuest(page)
+  await loginAsRoot(page)
 })
 
 test.afterEach(async ({ page }) => {

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import {
   addAssemblyFromGff,
   deleteAssemblies,
-  loginAsGuest,
+  loginAsRoot,
   selectAssemblyToView,
 } from './helpers.js'
 
@@ -13,7 +13,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const GFF_PATH = path.resolve(__dirname, '../test_data/so_types.gff3')
 
 test.beforeEach(async ({ page }) => {
-  await loginAsGuest(page)
+  await loginAsRoot(page)
 })
 
 test.afterEach(async ({ page }) => {

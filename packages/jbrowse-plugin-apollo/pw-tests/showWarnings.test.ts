@@ -6,7 +6,7 @@ import {
   addAssemblyFromGff,
   annotationTrackAppearance,
   deleteAssemblies,
-  loginAsGuest,
+  loginAsRoot,
   selectAssemblyToView,
 } from './helpers.js'
 
@@ -17,7 +17,7 @@ const GFF_PATH = path.resolve(
 )
 
 test.beforeEach(async ({ page }) => {
-  await loginAsGuest(page)
+  await loginAsRoot(page)
 })
 
 test.afterEach(async ({ page }) => {

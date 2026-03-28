@@ -121,8 +121,6 @@ async function bootstrap() {
   // config.json is excluded — served dynamically by JBrowseController.
   if (JBROWSE_STATIC_DIR) {
     const staticDir = path.resolve(JBROWSE_STATIC_DIR)
-    // eslint-disable-next-line no-console
-    console.log(`Serving JBrowse static files from: ${staticDir}`)
     const jbrowseStatic = express.static(staticDir)
     app.use('/jbrowse', (req: Request, _res: Response, next: () => void) => {
       if (req.path === '/config.json') {
@@ -214,17 +212,6 @@ async function bootstrap() {
   const appUrl = await app.getUrl()
   // eslint-disable-next-line no-console
   console.log(`Application is running on: ${appUrl}, CORS = ${cors}`)
-  if (!isProduction) {
-    // eslint-disable-next-line no-console
-    console.log(
-      'For development, visit the Vite dev server at http://localhost:5173 (it proxies API calls here automatically)',
-    )
-    // eslint-disable-next-line no-console
-    console.log(
-      `Verbose logging is off by default. To enable, set LOG_LEVELS=error,warn,log,debug in .development.env (currently: ${LOG_LEVELS})`,
-    )
-  }
-
   app.enableShutdownHooks()
 }
 // eslint-disable-next-line unicorn/prefer-top-level-await

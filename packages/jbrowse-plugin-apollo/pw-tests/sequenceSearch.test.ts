@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url'
 import {
   addAssemblyViaApi,
   deleteAssemblies,
-  getGuestToken,
+  getRootToken,
 } from './helpers.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -28,7 +28,7 @@ const ASSEMBLY = 'volvox-seq-search'
 const API_BASE = 'http://127.0.0.1:3999'
 
 async function apiHeaders(): Promise<Record<string, string>> {
-  const token = await getGuestToken()
+  const token = await getRootToken()
   return {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',

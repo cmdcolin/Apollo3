@@ -10,7 +10,7 @@ visit this link:
 
 [Try Apollo now!](https://demo.apollo.jbrowse.org/?session=share-oPRJK2yMUq&password=qMrK4)
 
-Log in either as a guest or use a Google account.
+Log in with a Google account to try it out.
 
 The genome annotation database you see when you open this link represents a
 small slice of a genome stored directly in your JBrowse session. This genome

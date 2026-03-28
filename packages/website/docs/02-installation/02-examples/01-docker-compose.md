@@ -53,7 +53,6 @@ JWT_SECRET=some-secret-value
 SESSION_SECRET=some-other-secret-value
 ALLOW_ROOT_USER=true
 ROOT_USER_PASSWORD=some-secret-password
-ALLOW_GUEST_USER=true
 ```
 
 ```yml title="compose.yml"
@@ -378,7 +377,7 @@ docker compose down
 
 We are now ready to access Apollo. Open a web browser and get the URL you
 entered in the `apollo.env` file above. You should see a JBrowse instance with a
-prompt to log in as a guest. You should see a view with an assembly selector,
+login prompt. You should see a view with an assembly selector,
 but there aren't any assemblies yet. You're now ready to head over to our
 [assemblies guide](../../guides/assemblies) to learn how to load data into
 Apollo.

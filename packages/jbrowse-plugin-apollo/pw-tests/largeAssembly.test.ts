@@ -7,7 +7,7 @@ import {
   annotationTrackAppearance,
   currentLocationEquals,
   deleteAssemblies,
-  loginAsGuest,
+  loginAsRoot,
   refreshTableEditor,
   searchFeatures,
   selectAssemblyToView,
@@ -19,7 +19,7 @@ const GFF_PATH = path.resolve(__dirname, '../test_data/SM_V10_3.fasta.gff3.gz')
 const ASSEMBLY = 'SM_V10_3.fasta.gff3.gz'
 
 test.beforeEach(async ({ page }) => {
-  await loginAsGuest(page)
+  await loginAsRoot(page)
 })
 
 test.afterEach(async ({ page }) => {

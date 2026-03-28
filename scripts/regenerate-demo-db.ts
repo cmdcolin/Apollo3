@@ -75,21 +75,6 @@ async function apiPost(token: string, endpoint: string, body: unknown) {
   return res.json()
 }
 
-async function apiPatch(token: string, endpoint: string, body: unknown) {
-  const res = await fetch(`${API_BASE}/${endpoint}`, {
-    method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`PATCH /${endpoint} failed: ${res.status} ${text}`)
-  }
-  return res.json()
-}
 
 async function main() {
   log('=== Regenerating demo database ===')
@@ -136,8 +121,6 @@ async function main() {
       DB_CONNECTION_URL: 'apollo-regen.sqlite',
       ALLOW_ROOT_USER: 'true',
       ROOT_USER_PASSWORD: 'pass',
-      ALLOW_GUEST_USER: 'true',
-      GUEST_USER_ROLE: 'readOnly',
       DEFAULT_NEW_USER_ROLE: 'none',
       LOG_LEVELS: 'error,warn',
       NODE_ENV: 'development',
@@ -178,28 +161,7 @@ async function main() {
     const token = await getToken()
     log('Authenticated as root.')
 
-    // Create assembly — server reads FASTA index to populate refSeqs.
-    // Paths are relative to the server CWD (packages/apollo-collaboration-server/).
-    log('Creating volvox assembly...')
-    const faRelative = '../../demo-data/volvox/volvox.fa'
-    const faiRelative = '../../demo-data/volvox/volvox.fa.fai'
-    const volvoxAssembly = (await apiPost(token, 'assemblies', {
-      name: 'volvox',
-      visibility: 'public',
-      sequenceSource: {
-        type: 'fasta',
-        fa: faRelative,
-        fai: faiRelative,
-      },
-    })) as { _id: string }
-    const volvoxId = volvoxAssembly._id
-    log(`  assembly created: ${volvoxId}`)
-
-    // GFF3 annotations are loaded as a normal JBrowse track (Gff3TabixAdapter)
-    // rather than being bulk-loaded into the database.
-    log('Skipping GFF3 bulk load — will add as a normal track instead.')
-
-    // Create organism and assign to assembly
+    // Create organism first so assembly can reference it at creation time
     log('Creating Volvox carteri organism...')
     const organism = (await apiPost(token, 'organisms', {
       genus: 'Volvox',
@@ -209,10 +171,23 @@ async function main() {
     })) as { _id: string }
     log(`  organism created: ${organism._id}`)
 
-    log('Assigning organism to assembly...')
-    await apiPatch(token, `assemblies/${volvoxId}`, {
+    // Create assembly — server reads FASTA index to populate refSeqs.
+    // Paths are relative to the server CWD (packages/apollo-collaboration-server/).
+    log('Creating volvox assembly...')
+    const faRelative = '../../demo-data/volvox/volvox.fa'
+    const faiRelative = '../../demo-data/volvox/volvox.fa.fai'
+    const volvoxAssembly = (await apiPost(token, 'assemblies', {
+      name: 'volvox',
+      visibility: 'public',
       organism: organism._id,
-    })
+      sequenceSource: {
+        type: 'fasta',
+        fa: faRelative,
+        fai: faiRelative,
+      },
+    })) as { _id: string }
+    const volvoxId = volvoxAssembly._id
+    log(`  assembly created: ${volvoxId}`)
 
     // Add evidence tracks
     // All URIs are relative to the JBrowse static root (/jbrowse/).
@@ -570,7 +545,7 @@ async function main() {
     ).trim()
     log(`Patched sequence_source: ${check}`)
   } catch (error) {
-    log(`WARNING: Could not patch sequence_source: ${error}`)
+    log(`WARNING: Could not patch sequence_source: ${String(error)}`)
   }
 
   const stats = fs.statSync(dest)

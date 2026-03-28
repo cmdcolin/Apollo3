@@ -4,13 +4,15 @@ import { fileURLToPath } from 'node:url'
 
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
-import { APP_GUARD } from '@nestjs/core'
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
 import { ServeStaticModule } from '@nestjs/serve-static'
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import Joi from 'joi'
 
 import { AnalysisModule } from './analysis/analysis.module.js'
 import { AssembliesModule } from './assemblies/assemblies.module.js'
 import { AuthenticationModule } from './authentication/authentication.module.js'
+import { SlidingWindowInterceptor } from './authentication/sliding-window.interceptor.js'
 import { ChecksModule } from './checks/checks.module.js'
 import { ExportModule } from './export/export.module.js'
 import { FallbackModule } from './fallback/fallback.module.js'
@@ -80,10 +82,6 @@ const validationSchema = Joi.object({
   DEFAULT_NEW_USER_ROLE: Joi.string()
     .valid('admin', 'user', 'readOnly', 'none')
     .default('readOnly'),
-  ALLOW_GUEST_USER: Joi.boolean().default(false),
-  GUEST_USER_ROLE: Joi.string()
-    .valid('admin', 'user', 'readOnly')
-    .default('readOnly'),
   PLUGIN_URLS: Joi.string()
     .custom((value) => {
       const errorMessage =
@@ -105,6 +103,25 @@ const validationSchema = Joi.object({
   PLUGIN_URLS_FILE: Joi.string(),
   DB_BACKEND: Joi.string().valid('sqlite', 'postgresql', 'mongo'),
   DB_CONNECTION_URL: Joi.string(),
+  ALLOWED_REDIRECT_ORIGINS: Joi.string().custom((value) => {
+    if (typeof value !== 'string') {
+      throw new TypeError(
+        'ALLOWED_REDIRECT_ORIGINS must be a comma-separated list of origins',
+      )
+    }
+    for (const origin of value.split(',')) {
+      const trimmed = origin.trim()
+      if (trimmed) {
+        const parsed = new URL(trimmed)
+        if (parsed.pathname !== '/' || parsed.search || parsed.hash) {
+          throw new Error(
+            `ALLOWED_REDIRECT_ORIGINS entries must be origins (scheme+host+port), not full URLs: "${trimmed}"`,
+          )
+        }
+      }
+    }
+    return value
+  }),
   OAUTH_HTTP_PROXY: Joi.string(),
   JBROWSE_STATIC_DIR: Joi.string(),
   APOLLO_TOOLS_CONFIG: Joi.string(),
@@ -162,12 +179,17 @@ const validationSchema = Joi.object({
     ExportModule,
     TracksModule,
     PermissionsModule,
+    ThrottlerModule.forRoot({
+      throttlers: [{ name: 'default', ttl: 60_000, limit: 100 }],
+    }),
     AuthenticationModule,
     FallbackModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_INTERCEPTOR, useClass: SlidingWindowInterceptor },
   ],
 })
 export class AppModule {}

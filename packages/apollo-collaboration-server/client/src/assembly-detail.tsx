@@ -110,7 +110,7 @@ function AssemblyDetailPage() {
     data: assembly,
     error: assemblyError,
     isLoading,
-  } = useSWR<Assembly>(
+  } = useSWR<Assembly, unknown>(
     encodedName ? `/assemblies/by-name/${encodedName}` : null,
     fetchJson,
   )
@@ -145,7 +145,7 @@ function AssemblyDetailPage() {
           <Alert severity="error">
             {assemblyError instanceof Error
               ? assemblyError.message
-              : String(assemblyError)}
+              : 'Unknown error'}
           </Alert>
         </Container>
       </Nav>

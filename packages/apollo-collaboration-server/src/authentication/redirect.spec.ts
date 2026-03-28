@@ -33,4 +33,22 @@ describe('safeRedirectUrl', () => {
     )
     expect(result.origin).toBe(new URL(SERVER_URL).origin)
   })
+
+  it('allows a redirect to an explicitly allowed origin', () => {
+    const allowed = ['http://localhost:5173']
+    const url = 'http://localhost:5173/some/page?q=1'
+    const result = safeRedirectUrl(SERVER_URL, url, allowed)
+    expect(result.toString()).toBe(url)
+  })
+
+  it('still blocks origins not in the allowed list', () => {
+    const allowed = ['http://localhost:5173']
+    const result = safeRedirectUrl(SERVER_URL, 'https://evil.com/x', allowed)
+    expect(result.origin).toBe(new URL(SERVER_URL).origin)
+  })
+
+  it('works with no allowedOrigins (backwards compatible)', () => {
+    const result = safeRedirectUrl(SERVER_URL, `${SERVER_URL}/ok`)
+    expect(result.toString()).toBe(`${SERVER_URL}/ok`)
+  })
 })

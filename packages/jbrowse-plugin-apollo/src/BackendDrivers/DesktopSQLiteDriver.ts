@@ -121,6 +121,7 @@ export class DesktopSQLiteDriver extends BackendDriver {
     await dataStore.assemblyRepository.create({
       _id: newAssemblyId,
       name: assemblyName,
+      displayName: assemblyName,
     })
 
     const { assemblyManager } = getSession(this.clientStore)
@@ -162,6 +163,7 @@ export class DesktopSQLiteDriver extends BackendDriver {
     await dataStore.assemblyRepository.create({
       _id: newAssemblyId,
       name: assemblyName,
+      displayName: assemblyName,
     })
 
     const { assemblyManager } = getSession(this.clientStore)

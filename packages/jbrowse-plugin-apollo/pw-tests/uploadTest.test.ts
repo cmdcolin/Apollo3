@@ -16,8 +16,12 @@ test('Upload file via browser fetch', async ({ page }) => {
 
   const result = await page.evaluate(
     async ({ base64Content, apiBase }) => {
-      // Get auth token
-      const authRes = await fetch(`${apiBase}/auth/guest`)
+      // Get auth token via root login
+      const authRes = await fetch(`${apiBase}/auth/root`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: 'password' }),
+      })
       const { token } = (await authRes.json()) as { token: string }
 
       // Convert base64 to File

@@ -115,6 +115,7 @@ export default [
       'unicorn/no-empty-file': 'off', // False positives
       'unicorn/no-null': 'off', // A lot of null in React and other libraries
       'unicorn/prefer-module': 'off', // apollo-collaboration-server needs this
+      'unicorn/no-array-method-this-argument': 'off', // False positives on EntityManager.find()
       'unicorn/prevent-abbreviations': 'off', // Doesn't guess a lot of abbreviations correctly
     },
   },
@@ -160,6 +161,7 @@ export default [
   {
     files: [
       '**/*.mjs',
+      '**/*.mts',
       'packages/apollo-collaboration-server/scripts/**/*.ts',
       'scripts/**/*.ts',
     ],

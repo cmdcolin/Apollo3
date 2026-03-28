@@ -99,7 +99,6 @@ export class MikroOrmAnalysisJobRepository implements AnalysisJobRepository {
   }
 
   async findRunningOlderThan(cutoff: Date) {
-    // eslint-disable-next-line unicorn/no-array-method-this-argument
     const entities = await this.em.find(AnalysisJobEntity, {
       status: 'running',
       startedAt: { $lt: cutoff },
@@ -108,7 +107,6 @@ export class MikroOrmAnalysisJobRepository implements AnalysisJobRepository {
   }
 
   async deleteCompletedOlderThan(cutoff: Date) {
-    // eslint-disable-next-line unicorn/no-array-method-this-argument
     const entities = await this.em.find(AnalysisJobEntity, {
       status: { $in: ['ready', 'failed', 'cancelled'] },
       createdAt: { $lt: cutoff },
@@ -121,7 +119,6 @@ export class MikroOrmAnalysisJobRepository implements AnalysisJobRepository {
   }
 
   async resetOrphanedRunning() {
-    // eslint-disable-next-line unicorn/no-array-method-this-argument
     const entities = await this.em.find(AnalysisJobEntity, {
       status: 'running',
     })

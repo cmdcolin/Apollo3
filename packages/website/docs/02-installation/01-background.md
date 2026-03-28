@@ -67,8 +67,8 @@ be external (for PostgreSQL and MongoDB).
 ## Customizing your deployment
 
 Our deployment examples cover setting up Apollo with the most common default
-settings and guest user access. You'll most likely want to then configure user
-logins, which we cover in our [Login Management](login-management) guide.
+settings. You'll most likely want to then configure user logins, which we cover
+in our [Login Management](login-management) guide.
 
 We also cover more options for customizing Apollo in our
 [Configuration options](./configuration-options) guide.

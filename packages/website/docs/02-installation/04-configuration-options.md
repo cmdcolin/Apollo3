@@ -41,7 +41,7 @@ SESSION_SECRET=g9fGaRuw06T7hs960Tm7KYyfcFaYEIaG9jfFnVEQ4QyFXmq7
 
 ##############################################################################
 ## To enable users to log in, you need either (or both) Google or Microsoft ##
-## OAuth configured. Without them, only userless guest access is possible.  ##
+## OAuth configured, or root user login enabled.                            ##
 ##############################################################################
 
 # Google client id and secret.
@@ -101,19 +101,13 @@ MICROSOFT_CLIENT_SECRET=client_secret_here
 # BROADCAST_USER_LOCATION=true
 
 # Whether to allow a root user that can log in with a name and password. All
-# other users (besides guest) must sign in with an authentication provider.
+# other users must sign in with an authentication provider.
 # Defaults to false
 # ALLOW_ROOT_USER=false
 # The root user password, required if ALLOW_ROOT_USER is true
 # ROOT_USER_PASSWORD=password
 # Alternatively, can be a path to a file with the root user password
 # ROOT_USER_PASSWORD_FILE=/run/secrets/root-user-password
-
-# Whether to allow guest users who do not have to log in, defaults to false
-# ALLOW_GUEST_USER=false
-# If guest users are allowed, what role will they have
-# Possible values are admin, readOnly and user; defaults to readonly
-# GUEST_USER_ROLE=readOnly
 
 # Comma-separated list of Apollo plugins to use
 # PLUGIN_URLS=https://example.com/apollo-plugin-example.umd.production.min.js
@@ -123,4 +117,9 @@ MICROSOFT_CLIENT_SECRET=client_secret_here
 
 # HTTP/HTTPS proxy for OAuth requests, if your server is behind a proxy
 # OAUTH_HTTP_PROXY=http://proxy.example.com:8080
+
+# Comma-separated list of additional origins allowed for post-login redirects.
+# Only needed when the client is served from a different origin than the API
+# (e.g. a Vite dev server). In production this is typically not needed.
+# ALLOWED_REDIRECT_ORIGINS=http://localhost:5173
 ```

@@ -659,8 +659,6 @@ If not set, the server auto-generates random secrets and persists them to
 | `JBROWSE_STATIC_DIR`              | JBrowse static files (single-server only)             |
 | `DB_BACKEND`                      | `sqlite` / `postgresql` / `mongo`                     |
 | `DB_CONNECTION_URL`               | Database connection string                            |
-| `ALLOW_GUEST_USER`                | Allow unauthenticated guest (default: false)          |
-| `GUEST_USER_ROLE`                 | Guest role: `admin` / `user` / `readOnly`             |
 | `DEFAULT_NEW_USER_ROLE`           | New user role: `admin` / `user` / `readOnly` / `none` (default: `readOnly`) |
 | `GOOGLE_CLIENT_ID` / `_SECRET`    | Google OAuth                                          |
 | `MICROSOFT_CLIENT_ID` / `_SECRET` | Microsoft OAuth                                       |
@@ -674,7 +672,7 @@ On first start with no admin, the server prints a one-time setup URL:
     Setup URL: http://localhost:3999/auth/setup?token=<random-token>
 
 Visit it, then log in (Google, Microsoft, or root). That account becomes admin.
-Token is single-use. For dev, `GUEST_USER_ROLE=admin` skips this.
+Token is single-use.
 
 # Architecture Overview
 

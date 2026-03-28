@@ -11,7 +11,6 @@
     "start": "pnpm --filter @apollo-annotation/collaboration-server run start",
     "start:persist": "pnpm --filter @apollo-annotation/collaboration-server run start:persist",
     "start:fresh": "pnpm --filter @apollo-annotation/collaboration-server run start:fresh",
-    "start:guest": "pnpm --filter @apollo-annotation/collaboration-server run start:guest",
     "regenerate-demo-db": "node --experimental-strip-types scripts/regenerate-demo-db.ts",
     "test": "pnpm -r run test:ci",
     "typecheck": "pnpm tsc -b"

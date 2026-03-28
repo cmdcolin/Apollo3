@@ -8,8 +8,9 @@ import List from '@mui/material/List'
 import ListItemButton from '@mui/material/ListItemButton'
 import ListItemText from '@mui/material/ListItemText'
 import Paper from '@mui/material/Paper'
+import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
-import { useEffect, useState } from 'react'
+import { type FormEvent, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { Nav } from './Nav.js'
@@ -107,6 +108,64 @@ function useSetupActive() {
   return active
 }
 
+
+function RootLoginForm() {
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    const res = await fetch('/auth/root', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    })
+    if (res.ok) {
+      globalThis.location.reload()
+    } else {
+      setError('Invalid password')
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Box
+      component="form"
+      onSubmit={(e) => {
+        void handleSubmit(e)
+      }}
+      sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
+    >
+      <TextField
+        label="Root password"
+        type="password"
+        size="small"
+        fullWidth
+        value={password}
+        onChange={(e) => {
+          setPassword(e.target.value)
+        }}
+      />
+      {error ? (
+        <Typography color="error" variant="body2">
+          {error}
+        </Typography>
+      ) : null}
+      <Button
+        type="submit"
+        variant="outlined"
+        fullWidth
+        disabled={loading || !password}
+      >
+        Sign in as Root
+      </Button>
+    </Box>
+  )
+}
+
 function LoginSection() {
   const types = useLoginTypes()
   const setupActive = useSetupActive()
@@ -139,15 +198,7 @@ function LoginSection() {
           Sign in with Microsoft
         </Button>
       ) : null}
-      {types.includes('guest') ? (
-        <Button
-          variant="outlined"
-          fullWidth
-          href={`/auth/login?type=guest&redirect_uri=${encodeURIComponent(currentUrl)}`}
-        >
-          Continue as Guest
-        </Button>
-      ) : null}
+      {types.includes('root') ? <RootLoginForm /> : null}
     </Box>
   )
 }

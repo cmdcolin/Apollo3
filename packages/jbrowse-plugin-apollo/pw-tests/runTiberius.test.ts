@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import {
   addAssemblyFromGff,
   deleteAssemblies,
-  loginAsGuest,
+  loginAsRoot,
   selectAssemblyToView,
 } from './helpers.js'
 
@@ -15,7 +15,7 @@ const GFF_PATH = path.resolve(__dirname, '../test_data/volvox.fasta.gff3')
 const ASSEMBLY = 'volvox'
 
 test.beforeEach(async ({ page }) => {
-  await loginAsGuest(page)
+  await loginAsRoot(page)
 })
 
 test.afterEach(async ({ page }) => {

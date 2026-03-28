@@ -16,11 +16,7 @@ import type { Profile as GoogleProfile } from 'passport-google-oauth20'
 
 import type { CreateUserDto } from '../users/dto/create-user.dto.js'
 import { UsersService } from '../users/users.service.js'
-import {
-  GUEST_USER_EMAIL,
-  GUEST_USER_NAME,
-  ROOT_USER_EMAIL,
-} from '../utils/constants.js'
+import { ROOT_USER_EMAIL } from '../utils/constants.js'
 import { Role } from '../utils/role/role.enum.js'
 import type { Profile as MicrosoftProfile } from '../utils/strategies/microsoft.strategy.js'
 
@@ -32,11 +28,11 @@ export interface RequestWithUserToken extends Request {
 
 interface ConfigValues {
   URL: string
+  ALLOWED_REDIRECT_ORIGINS?: string
   MICROSOFT_CLIENT_ID?: string
   MICROSOFT_CLIENT_ID_FILE?: string
   GOOGLE_CLIENT_ID?: string
   GOOGLE_CLIENT_ID_FILE?: string
-  ALLOW_GUEST_USER: boolean
   DEFAULT_NEW_USER_ROLE: Role
   ALLOW_ROOT_USER: boolean
   ROOT_USER_PASSWORD?: string
@@ -51,12 +47,21 @@ export class AuthenticationService {
   private defaultNewUserRole: Role
   private setupToken: string | undefined
 
+  private readonly allowedRedirectOrigins: string[]
+
   constructor(
     @Inject(UsersService) private readonly usersService: UsersService,
     @Inject(JwtService) private readonly jwtService: JwtService,
     @Inject(ConfigService)
     private readonly configService: ConfigService<ConfigValues, true>,
   ) {
+    const raw = configService.get('ALLOWED_REDIRECT_ORIGINS', { infer: true })
+    this.allowedRedirectOrigins = raw
+      ? raw
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : []
     this.defaultNewUserRole = configService.get('DEFAULT_NEW_USER_ROLE', {
       infer: true,
     })
@@ -105,24 +110,29 @@ export class AuthenticationService {
   private async hasRealAdmin() {
     const users = await this.usersService.findAll()
     return users.some(
-      (u) =>
-        u.role === Role.Admin &&
-        u.email !== ROOT_USER_EMAIL &&
-        u.email !== GUEST_USER_EMAIL,
+      (u) => u.role === Role.Admin && u.email !== ROOT_USER_EMAIL,
     )
   }
 
   getSafeRedirectUrl(redirectUri: string) {
     const serverUrl = this.configService.get('URL', { infer: true })
     const serverOrigin = new URL(serverUrl).origin
+    const allowed = new Set([
+      serverOrigin,
+      ...this.allowedRedirectOrigins,
+    ])
     let inputOrigin: string | undefined
     try {
       inputOrigin = new URL(redirectUri).origin
     } catch {
       // invalid URL — will fall back to server root
     }
-    const result = safeRedirectUrl(serverUrl, redirectUri)
-    if (inputOrigin && inputOrigin !== serverOrigin) {
+    const result = safeRedirectUrl(
+      serverUrl,
+      redirectUri,
+      this.allowedRedirectOrigins,
+    )
+    if (inputOrigin && !allowed.has(inputOrigin)) {
       this.logger.warn(
         `Blocked redirect to external origin: ${inputOrigin} (expected ${serverOrigin})`,
       )
@@ -141,7 +151,7 @@ export class AuthenticationService {
     const redirectUri = authInfo?.state?.redirect_uri
     const serverUrl = this.configService.get('URL', { infer: true })
     const url = redirectUri
-      ? safeRedirectUrl(serverUrl, redirectUri)
+      ? safeRedirectUrl(serverUrl, redirectUri, this.allowedRedirectOrigins)
       : new URL(new URL(serverUrl).origin)
     url.searchParams.set('access_token', req.user.token)
     return { url: url.toString() }
@@ -173,17 +183,11 @@ export class AuthenticationService {
         googleClientID = googleContent.trim()
       }
     }
-    const allowGuestUser = this.configService.get('ALLOW_GUEST_USER', {
-      infer: true,
-    })
     if (microsoftClientID) {
       loginTypes.push('microsoft')
     }
     if (googleClientID) {
       loginTypes.push('google')
-    }
-    if (allowGuestUser) {
-      loginTypes.push('guest')
     }
     const allowRootUser = this.configService.get('ALLOW_ROOT_USER', {
       infer: true,
@@ -221,20 +225,6 @@ export class AuthenticationService {
     return this.logIn(displayName, email.value)
   }
 
-  /**
-   * Log in as a guest
-   * @returns Return either token with HttpResponse status 'HttpStatus.OK' OR null with 'HttpStatus.UNAUTHORIZED'
-   */
-  async guestLogin() {
-    const allowGuestUser = this.configService.get('ALLOW_GUEST_USER', {
-      infer: true,
-    })
-    if (allowGuestUser) {
-      return this.logIn(GUEST_USER_NAME, GUEST_USER_EMAIL)
-    }
-    throw new UnauthorizedException('Guest users are not allowed')
-  }
-
   async rootLogin(password: string) {
     if (!this.configService.get('ALLOW_ROOT_USER', { infer: true })) {
       throw new UnauthorizedException('Root user login is disabled')
@@ -264,14 +254,13 @@ export class AuthenticationService {
    * @returns Return token with HttpResponse status 'HttpStatus.OK'
    */
   async logIn(name: string, email: string) {
-    const isGuestUser = email === GUEST_USER_EMAIL
     let user = await this.usersService.findByEmail(email)
     if (!user) {
       let newUserRole = this.defaultNewUserRole
       const isRootUser = name === ROOT_USER_NAME && email === ROOT_USER_EMAIL
       if (isRootUser) {
         newUserRole = Role.Admin
-      } else if (this.setupActive && !isGuestUser) {
+      } else if (this.setupActive) {
         newUserRole = Role.Admin
         this.consumeSetup()
         this.logger.log(`Setup complete: ${email} promoted to admin`)
@@ -281,10 +270,10 @@ export class AuthenticationService {
         email,
         username: name,
         role: newUserRole,
-        pendingApproval: isDefaultRole && !isGuestUser && !isRootUser,
+        pendingApproval: isDefaultRole && !isRootUser,
       }
       user = await this.usersService.addNew(newUser)
-    } else if (user.role === Role.None && this.setupActive && !isGuestUser) {
+    } else if (user.role === Role.None && this.setupActive) {
       await this.usersService.updateRole(user._id, Role.Admin)
       user = { ...user, role: Role.Admin }
       this.consumeSetup()

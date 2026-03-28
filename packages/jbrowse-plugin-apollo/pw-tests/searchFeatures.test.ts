@@ -6,7 +6,7 @@ import {
   addAssemblyFromGff,
   currentLocationEquals,
   deleteAssemblies,
-  loginAsGuest,
+  loginAsRoot,
   searchFeatures,
   selectAssemblyToView,
 } from './helpers.js'
@@ -17,7 +17,7 @@ test.describe('space.gff3 searches', () => {
   const GFF_PATH = path.resolve(__dirname, '../test_data/space.gff3')
 
   test.beforeEach(async ({ page }) => {
-    await loginAsGuest(page)
+    await loginAsRoot(page)
   })
 
   test.afterEach(async ({ page }) => {
@@ -63,7 +63,7 @@ test.describe('volvox.fasta.gff3 searches', () => {
   const GFF_PATH = path.resolve(__dirname, '../test_data/volvox.fasta.gff3')
 
   test.beforeEach(async ({ page }) => {
-    await loginAsGuest(page)
+    await loginAsRoot(page)
   })
 
   test.afterEach(async ({ page }) => {

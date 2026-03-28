@@ -350,7 +350,7 @@ export class FeaturesService {
       })
     })
 
-    const featureIds = [addedFeature._id]
+    const featureIds: string[] = [String(addedFeature._id)]
     if (parentFeatureId) {
       featureIds.push(parentFeatureId)
     }

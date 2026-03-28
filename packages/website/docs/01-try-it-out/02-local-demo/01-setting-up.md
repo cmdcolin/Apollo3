@@ -42,8 +42,6 @@ services:
       DB_BACKEND: sqlite
       DB_CONNECTION_URL: /data/apollo.sqlite
       FILE_UPLOAD_FOLDER: /data/uploads
-      ALLOW_GUEST_USER: true
-      GUEST_USER_ROLE: admin
       ALLOW_ROOT_USER: true
       ROOT_USER_PASSWORD: password
       JWT_SECRET: local_testing_only

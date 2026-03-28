@@ -6,7 +6,7 @@ import {
   addAssemblyFromGff,
   annotationTrackAppearance,
   deleteAssemblies,
-  loginAsGuest,
+  loginAsRoot,
   selectAssemblyToView,
 } from './helpers.js'
 
@@ -16,7 +16,7 @@ const GFF_PATH = path.resolve(__dirname, '../test_data/mergeTranscripts.gff3')
 const ASSEMBLY = 'mergeTranscripts.gff3'
 
 test.beforeEach(async ({ page }) => {
-  await loginAsGuest(page)
+  await loginAsRoot(page)
 })
 
 test.afterEach(async ({ page }) => {

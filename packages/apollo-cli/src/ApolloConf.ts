@@ -32,7 +32,7 @@ function optionDocs(): { key: string; description: string }[] {
         docs.push({
           key: v,
           description:
-            'How to access Apollo. accessType is typically one of: google, microsoft, guest, root. Allowed types depend on your Apollo setup',
+            'How to access Apollo. accessType is typically one of: google, microsoft, root. Allowed types depend on your Apollo setup',
         })
         break
       }
@@ -147,7 +147,7 @@ export class ApolloConf extends Conf {
 
 const profileSchema = Joi.object({
   address: Joi.string().uri({ scheme: /https?/ }),
-  accessType: Joi.string().valid('google', 'microsoft', 'root', 'guest'),
+  accessType: Joi.string().valid('google', 'microsoft', 'root'),
   accessToken: Joi.string(),
   rootPassword: Joi.string().when('accessType', {
     is: Joi.string().valid('root'),

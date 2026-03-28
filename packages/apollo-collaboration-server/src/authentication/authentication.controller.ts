@@ -19,24 +19,11 @@ import { MicrosoftAuthGuard } from '../utils/microsoft.guard.js'
 import { Public } from '../utils/roles.guard.js'
 import { AUTH_COOKIE_NAME } from '../utils/strategies/jwt.strategy.js'
 
+import { COOKIE_BASE, COOKIE_OPTIONS } from './auth-cookie.js'
 import {
   AuthenticationService,
   type RequestWithUserToken,
 } from './authentication.service.js'
-
-const isProduction = process.env.NODE_ENV === 'production'
-
-const COOKIE_BASE = {
-  httpOnly: true,
-  sameSite: 'lax' as const,
-  secure: isProduction,
-  path: '/',
-}
-
-const COOKIE_OPTIONS = {
-  ...COOKIE_BASE,
-  maxAge: 24 * 60 * 60 * 1000,
-}
 
 @Public()
 @Controller('auth')
@@ -74,7 +61,7 @@ export class AuthenticationController {
     @Query('type') type: string,
     @Query('redirect_uri') redirect_uri?: string,
   ) {
-    if (['google', 'microsoft', 'guest'].includes(type)) {
+    if (['google', 'microsoft'].includes(type)) {
       const url = redirect_uri
         ? `${type}?${new URLSearchParams({ redirect_uri }).toString()}`
         : type
@@ -103,20 +90,6 @@ export class AuthenticationController {
   ) {
     res.cookie(AUTH_COOKIE_NAME, req.user.token, COOKIE_OPTIONS)
     return this.authService.handleRedirect(req)
-  }
-
-  @Get('guest')
-  async guestLogin(
-    @Query('redirect_uri') redirectUri: string | undefined,
-    @Res() res: Response,
-  ) {
-    const result = await this.authService.guestLogin()
-    res.cookie(AUTH_COOKIE_NAME, result.token, COOKIE_OPTIONS)
-    if (redirectUri) {
-      res.redirect(this.authService.getSafeRedirectUrl(redirectUri))
-    } else {
-      res.json(result)
-    }
   }
 
   @Post('root')

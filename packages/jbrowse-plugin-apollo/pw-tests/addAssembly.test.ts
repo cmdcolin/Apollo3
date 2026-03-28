@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 import {
   deleteAssemblies,
-  loginAsGuest,
+  loginAsRoot,
   selectFromApolloMenu,
 } from './helpers.js'
 
@@ -12,7 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const TEST_DATA = path.resolve(__dirname, '../test_data')
 
 test.beforeEach(async ({ page }) => {
-  await loginAsGuest(page)
+  await loginAsRoot(page)
 })
 
 test.afterEach(async ({ page }) => {

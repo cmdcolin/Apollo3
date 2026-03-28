@@ -3,7 +3,7 @@
 ## How it works
 
 Apollo3 uses **cookie-based JWT authentication**. When a user logs in (via
-Google, Microsoft, guest, or root), the server issues a signed JWT and stores it
+Google, Microsoft, or root), the server issues a signed JWT and stores it
 in an HTTP-only cookie called `apollo-token`. Every subsequent request includes
 this cookie automatically. The JBrowse plugin uses `credentials: 'same-origin'`
 on all fetches, so auth is transparent to the frontend.
@@ -48,15 +48,6 @@ for production deployments.
 Each variable has a `_FILE` suffix variant (e.g. `GOOGLE_CLIENT_ID_FILE`) for
 Docker secrets or mounted files. Only one of the pair may be set.
 
-### Guest login
-
-Enabled by setting `ALLOW_GUEST_USER=true`. Creates a synthetic user with email
-`guest_user` (intentionally not a valid email format, to avoid collision with
-real accounts). The guest's role is controlled by `GUEST_USER_ROLE` (defaults to
-`readOnly`).
-
-Guests are useful for public-facing demos. In production, guest access should be
-`readOnly` at most.
 
 ### Root login
 
@@ -90,7 +81,7 @@ exists.
 ## First-time admin setup
 
 When the server starts and finds **no admin user** in the database (excluding
-the synthetic root and guest accounts), it generates a one-time setup URL and
+the synthetic root account), it generates a one-time setup URL and
 prints it to the server log:
 
 ```
@@ -107,19 +98,17 @@ The flow:
 
 - An operator with access to the server log opens this URL in a browser
 - The server enters "setup mode" (a single boolean flag, held in memory)
-- The next person to log in via any method (Google, Microsoft, or guest if
-  enabled) is automatically promoted to Admin
+- The next person to log in via any method (Google or Microsoft) is
+  automatically promoted to Admin
 - Setup mode is consumed after one use — the token becomes invalid and the flag
   is cleared
 
 This replaces the behavior on origin/main where the very first user to log in
-was silently promoted to admin. That old approach had a race condition: if a
-guest user logged in first, the guest would become the admin. The new setup link
-requires deliberate action by someone with server access.
+was silently promoted to admin. The new setup link requires deliberate action by
+someone with server access.
 
 If an existing user with role `readOnly` or `none` logs in while setup is
-active, they are promoted to Admin. Guest users are explicitly excluded from
-setup promotion.
+active, they are promoted to Admin.
 
 ## Role system
 
@@ -175,7 +164,7 @@ Missing auth returns 401. Insufficient role returns 403.
 
 ## Redirect validation
 
-All login flows that redirect the user (OAuth callbacks, guest login) validate
+All login flows that redirect the user (OAuth callbacks) validate
 the `redirect_uri` against the server's configured `URL` origin. If the origin
 doesn't match (e.g. `redirect_uri=https://evil.com`), the redirect falls back to
 the server root. This prevents open-redirect token theft.

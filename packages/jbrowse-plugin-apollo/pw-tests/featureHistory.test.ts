@@ -6,7 +6,7 @@ import {
   addAssemblyFromGff,
   annotationTrackAppearance,
   deleteAssemblies,
-  loginAsGuest,
+  loginAsRoot,
   refreshTableEditor,
   selectAssemblyToView,
 } from './helpers.js'
@@ -16,7 +16,7 @@ const GFF_PATH = path.resolve(__dirname, '../test_data/onegene.fasta.gff3')
 const ASSEMBLY = 'onegene.fasta.gff3'
 
 test.beforeEach(async ({ page }) => {
-  await loginAsGuest(page)
+  await loginAsRoot(page)
 })
 
 test.afterEach(async ({ page }) => {

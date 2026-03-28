@@ -245,8 +245,6 @@ JWT_SECRET=some-secret-value
 SESSION_SECRET=some-other-secret-value
 ALLOW_ROOT_USER=true
 ROOT_USER_PASSWORD=some-secret-password
-ALLOW_GUEST_USER=true
-GUEST_USER_ROLE=admin
 ```
 
 You can find more configuration options in the

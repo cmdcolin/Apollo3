@@ -80,7 +80,7 @@ const columns: GridColDef<Assembly>[] = [
 
 function AssembliesPage() {
   const { data: assemblies, error, isLoading } =
-    useSWR<Assembly[]>('/assemblies', fetchJson)
+    useSWR<Assembly[], unknown>('/assemblies', fetchJson)
 
   return (
     <Nav current="assemblies">
@@ -90,14 +90,14 @@ function AssembliesPage() {
         </Typography>
         {error ? (
           <Alert severity="error" sx={{ mb: 2 }}>
-            {error instanceof Error ? error.message : String(error)}
+            {error instanceof Error ? error.message : 'Unknown error'}
           </Alert>
         ) : null}
         {isLoading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
             <CircularProgress />
           </Box>
-        ) : assemblies ? (
+        ) : (assemblies ? (
           <Box sx={{ height: 600 }}>
             <DataGrid
               rows={assemblies.map((a) => ({ ...a, id: a._id }))}
@@ -109,7 +109,7 @@ function AssembliesPage() {
               }}
             />
           </Box>
-        ) : null}
+        ) : null)}
       </Container>
     </Nav>
   )

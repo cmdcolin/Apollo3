@@ -23,10 +23,9 @@ passing the `--get-config-file` flag to the `apollo config` command.
 It is suggested that if you want to use the CLI as an
 [administrator](administrators) to configure a root user to run the CLI
 commands. See the `ALLOW_ROOT_USER` and `ROOT_USER_PASSWORD` options in the
-[configuration options](../installation/configuration-options). You can also log
-in to Apollo as a guest user with the CLI. Logging in as any other user requires
-OAuth authentication, which is often not straightforward and is not covered
-here.
+[configuration options](../installation/configuration-options). Logging in as
+any other user requires OAuth authentication, which is often not straightforward
+and is not covered here.
 
 You can have multiple login profiles set up with the CLI, and each profile can
 be configured for a different collaboration server. To use a profile other than

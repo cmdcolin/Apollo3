@@ -207,7 +207,7 @@ export function extendSession(
       },
     }))
     .actions((self) => ({
-      async initializeApolloConnection() {
+      initializeApolloConnection() {
         const apolloSession = self as unknown as ApolloSessionModel
         const role = getRole(apolloSession)
         if (!role || role === 'none') {
@@ -219,7 +219,7 @@ export function extendSession(
           }
           return
         }
-        await self.updateLastChangeSequenceNumber()
+        self.updateLastChangeSequenceNumber()
         self.addSocketListeners()
       },
     }))
@@ -252,11 +252,7 @@ export function extendSession(
                 // @ts-expect-error not sure why snapshot type is wrong for snapshot
                 applySnapshot(self, self.previousSnapshot)
                 // Initialize WebSocket after config is loaded
-                try {
-                  await self.initializeApolloConnection()
-                } catch {
-                  // initialization may fail if server is unavailable
-                }
+                self.initializeApolloConnection()
                 reaction.dispose()
                 return
               }

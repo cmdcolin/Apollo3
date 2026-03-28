@@ -10,15 +10,16 @@ import { readFileSync } from 'node:fs'
 import { gff3LineToSnapshot } from '@apollo-annotation/shared'
 import { parseStringSync } from '@gmod/gff'
 
-const [, , gff3Path, faPath, faiPath] = process.argv
+const args = process.argv.slice(2)
+const [gff3Path, faPath, faiPath] = args
 if (!gff3Path || !faPath || !faiPath) {
   console.error('Usage: seed-volvox.ts <gff3Path> <faPath> <faiPath>')
   process.exit(1)
 }
 
-const port = process.env['PORT'] ?? '3999'
+const port = process.env.PORT ?? '3999'
 const API_BASE = `http://127.0.0.1:${port}`
-const password = process.env['ROOT_USER_PASSWORD'] ?? 'devpass'
+const password = process.env.ROOT_USER_PASSWORD ?? 'devpass'
 
 const tokenRes = await fetch(`${API_BASE}/auth/root`, {
   method: 'POST',
@@ -34,6 +35,25 @@ const headers = {
   'Content-Type': 'application/json',
 }
 
+// Create organism first so assemblies can reference it at creation time
+const organismRes = await fetch(`${API_BASE}/organisms`, {
+  method: 'POST',
+  headers,
+  body: JSON.stringify({
+    genus: 'Volvox',
+    species: 'carteri',
+    commonName: 'Volvox',
+    description: 'Multicellular green alga',
+  }),
+})
+if (!organismRes.ok) {
+  throw new Error(
+    `POST /organisms failed: ${organismRes.status} ${await organismRes.text()}`,
+  )
+}
+const organism = (await organismRes.json()) as { _id: string }
+console.log(`Organism created: ${organism._id}`)
+
 const assemblyRes = await fetch(`${API_BASE}/assemblies`, {
   method: 'POST',
   headers,
@@ -41,6 +61,7 @@ const assemblyRes = await fetch(`${API_BASE}/assemblies`, {
     name: 'volvox',
     sequenceSource: { type: 'fasta', fa: faPath, fai: faiPath },
     visibility: 'public',
+    organism: organism._id,
   }),
 })
 if (!assemblyRes.ok) {
@@ -51,7 +72,6 @@ if (!assemblyRes.ok) {
 const assembly = (await assemblyRes.json()) as { _id: string }
 const assemblyId = assembly._id
 console.log(`Assembly created: ${assemblyId}`)
-
 
 const refSeqsRes = await fetch(`${API_BASE}/refSeqs?assembly=${assemblyId}`, {
   headers,
@@ -68,7 +88,7 @@ for (const featureGroup of features) {
   if (!Array.isArray(featureGroup) || featureGroup.length === 0) {
     continue
   }
-  const line = featureGroup[0]
+  const [line] = featureGroup
   if (!line.seq_id || !line.type) {
     continue
   }
@@ -228,6 +248,7 @@ const assembly2Res = await fetch(`${API_BASE}/assemblies`, {
     name: 'volvox2',
     sequenceSource: { type: 'fasta', fa: faPath, fai: faiPath },
     visibility: 'private',
+    organism: organism._id,
   }),
 })
 if (!assembly2Res.ok) {
@@ -251,7 +272,7 @@ for (const featureGroup of features) {
   if (!Array.isArray(featureGroup) || featureGroup.length === 0) {
     continue
   }
-  const line = featureGroup[0]
+  const [line] = featureGroup
   if (!line.seq_id || !line.type) {
     continue
   }

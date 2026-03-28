@@ -5,8 +5,7 @@ more secure, since it doesn't store passwords, but means you'll have to set up
 third-party logins through Google or Microsoft.
 
 Apollo also allows a single admin-level access root user with a password,
-usually for use with the CLI, and a passwordless guest user with configurable
-access level.
+usually for use with the CLI.
 
 In order to set up these logins, you'll need Apollo to be hosted at a domain
 name that you own (e.g. the "Public IPv4 DNS" of an AWS EC2 instance will not

@@ -139,7 +139,7 @@ function NavMenu({
   const anchorRef = useRef<HTMLButtonElement>(null)
 
   const totalBadge = badgeCounts
-    ? Object.values(badgeCounts).reduce((sum, n) => sum + (n ?? 0), 0)
+    ? Object.values(badgeCounts).reduce((sum, n) => sum + (n || 0), 0)
     : 0
 
   return (

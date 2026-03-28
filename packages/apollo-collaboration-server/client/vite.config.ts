@@ -99,6 +99,10 @@ export default defineConfig({
           __dirname,
           'ui/assembly-admin/index.html',
         ),
+        'ui/root-login/index': path.resolve(
+          __dirname,
+          'ui/root-login/index.html',
+        ),
         'error/index': path.resolve(__dirname, 'error/index.html'),
       },
     },

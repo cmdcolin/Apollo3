@@ -204,8 +204,6 @@ function startServer(
     PORT: String(port),
     ALLOW_ROOT_USER: 'true',
     ROOT_USER_PASSWORD: 'pass',
-    ALLOW_GUEST_USER: 'true',
-    GUEST_USER_ROLE: 'admin',
     LOG_LEVELS: 'error,warn',
     NODE_ENV: 'development',
     FILE_UPLOAD_FOLDER: path.join(serverDir, 'uploads'),

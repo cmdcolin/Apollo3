@@ -2,23 +2,20 @@
 # Dev start: build everything, set up JBrowse, seed demo data, start server.
 #
 # Usage:
-#   bash scripts/dev-start.sh [--persist] [--fresh] [--guest]
+#   bash scripts/dev-start.sh [--persist] [--fresh]
 #
 #   (default) Use a fresh in-memory SQLite database, seeded with volvox data
 #   --persist Use a persistent apollo-dev.sqlite file (copied from demo.sqlite if absent)
 #   --fresh   Delete existing persistent database and re-seed from demo data
-#   --guest   Enable guest user with admin role
 set -euo pipefail
 export COREPACK_ENABLE_AUTO_INSTALL=0
 
 PERSIST=false
 FRESH=false
-GUEST=false
 for arg in "$@"; do
   case "$arg" in
     --persist) PERSIST=true ;;
     --fresh)   FRESH=true ;;
-    --guest)   GUEST=true ;;
     *) echo "Unknown option: $arg"; exit 1 ;;
   esac
 done
@@ -82,12 +79,6 @@ else
   # Enable root user so we can seed volvox data via API after startup
   export ALLOW_ROOT_USER=true
   export ROOT_USER_PASSWORD=devpass
-fi
-
-if [ "$GUEST" = true ]; then
-  echo '[start] Guest user enabled with admin role'
-  export ALLOW_GUEST_USER=true
-  export GUEST_USER_ROLE=admin
 fi
 
 # Auto-detect Tiberius if installed at common location

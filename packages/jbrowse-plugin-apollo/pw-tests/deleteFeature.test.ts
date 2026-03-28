@@ -6,7 +6,7 @@ import {
   addAssemblyFromGff,
   annotationTrackAppearance,
   deleteAssemblies,
-  loginAsGuest,
+  loginAsRoot,
   selectAssemblyToView,
 } from './helpers.js'
 
@@ -14,7 +14,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const GFF_PATH = path.resolve(__dirname, '../test_data/deleteFeature.gff3')
 
 test.beforeEach(async ({ page }) => {
-  await loginAsGuest(page)
+  await loginAsRoot(page)
 })
 
 test.afterEach(async ({ page }) => {

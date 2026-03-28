@@ -99,8 +99,6 @@ need to execute this command again unless the token has expired. To setup a new 
           this.error('Username and password must be set')
         }
         userCredentials = await this.startRootLogin(address, password)
-      } else if (accessType === 'guest') {
-        userCredentials = await this.startGuestLogin(address)
       } else if (accessType === undefined) {
         this.error('Undefined access type')
       } else {
@@ -156,25 +154,6 @@ need to execute this command again unless the token has expired. To setup a new 
       const errorMessage = await createFetchErrorMessage(
         response,
         'startRootLogin failed',
-      )
-      throw new Error(errorMessage)
-    }
-    const dat = await response.json()
-    if (typeof dat === 'object' && dat !== null && 'token' in dat) {
-      return { accessToken: dat.token as string }
-    }
-    throw new Error(`Unexpected response: ${JSON.stringify(dat)}`)
-  }
-
-  private async startGuestLogin(address: string): Promise<UserCredentials> {
-    const url = `${address}/auth/login?type=guest`
-    const response = await fetch(url, {
-      headers: { 'Content-Type': 'application/json' },
-    })
-    if (!response.ok) {
-      const errorMessage = await createFetchErrorMessage(
-        response,
-        'startGuestLogin failed',
       )
       throw new Error(errorMessage)
     }

@@ -6,14 +6,14 @@ import {
   addAssemblyFromGff,
   deleteAssemblies,
   downloadGff,
-  loginAsGuest,
+  loginAsRoot,
 } from './helpers.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const GFF_PATH = path.resolve(__dirname, '../test_data/volvox.fasta.gff3')
 
 test.beforeEach(async ({ page }) => {
-  await loginAsGuest(page)
+  await loginAsRoot(page)
 })
 
 test.afterEach(async ({ page }) => {

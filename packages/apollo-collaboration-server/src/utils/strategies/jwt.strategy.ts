@@ -1,11 +1,13 @@
 import fs from 'node:fs'
 
 import type { DecodedJWT } from '@apollo-annotation/shared'
-import { Inject, Injectable, Logger } from '@nestjs/common'
+import { Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { PassportStrategy } from '@nestjs/passport'
 import type { Request } from 'express'
 import { ExtractJwt, Strategy } from 'passport-jwt'
+
+import { UsersService } from '../../users/users.service.js'
 
 export const AUTH_COOKIE_NAME = 'apollo-token'
 
@@ -31,6 +33,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   private readonly logger = new Logger(JwtStrategy.name)
   constructor(
     @Inject(ConfigService) configService: ConfigService<JWTSecretConfig, true>,
+    @Inject(UsersService) private readonly usersService: UsersService,
   ) {
     let jwtSecret = configService.get('JWT_SECRET', { infer: true })
     if (!jwtSecret) {
@@ -46,7 +49,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     })
   }
 
-  validate(payload: DecodedJWT): DecodedJWT {
-    return payload
+  async validate(payload: DecodedJWT): Promise<DecodedJWT> {
+    const user = await this.usersService.findById(payload.id)
+    if (!user) {
+      throw new UnauthorizedException('User no longer exists')
+    }
+    return { ...payload, role: user.role }
   }
 }

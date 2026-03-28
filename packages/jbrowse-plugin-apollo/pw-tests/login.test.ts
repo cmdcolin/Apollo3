@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test'
 
-import { loginAsGuest, setupBrowserLogging } from './helpers.js'
+import { loginAsRoot, setupBrowserLogging } from './helpers.js'
 
 test.describe('Login workflow', () => {
-  test('shows login dialog for unauthenticated user and allows guest login', async ({
+  test('shows login dialog for unauthenticated user and allows root login', async ({
     page,
   }) => {
     setupBrowserLogging(page)
@@ -16,22 +16,21 @@ test.describe('Login workflow', () => {
     await expect(loginDialog).toBeVisible({ timeout: 20_000 })
     console.log('[test] Login dialog appeared')
 
-    // The "Continue as Guest" button should be available
-    const guestButton = loginDialog.getByRole('button', {
-      name: 'Continue as Guest',
-    })
-    await expect(guestButton).toBeVisible({ timeout: 10_000 })
-    console.log('[test] Guest button visible')
+    // The root password field should be available
+    const passwordField = loginDialog.getByLabel('Root password')
+    await expect(passwordField).toBeVisible({ timeout: 10_000 })
+    console.log('[test] Root password field visible')
 
-    // Click guest login — this should set a cookie and reload the page
-    await guestButton.click()
+    // Fill in password and submit
+    await passwordField.fill('password')
+    await loginDialog.getByRole('button', { name: 'Sign in as Root' }).click()
 
     // After reload, the login dialog should be gone and Apollo menu should
     // be enabled (indicating authenticated session loaded)
     await expect(page.getByRole('button', { name: 'Apollo' })).toBeEnabled({
       timeout: 20_000,
     })
-    console.log('[test] Apollo button ready after guest login')
+    console.log('[test] Apollo button ready after root login')
 
     // Verify the login dialog is no longer visible
     await expect(loginDialog).not.toBeVisible()
@@ -40,7 +39,7 @@ test.describe('Login workflow', () => {
 
   test('logout redirects to server and clears auth', async ({ page }) => {
     // Start authenticated
-    await loginAsGuest(page)
+    await loginAsRoot(page)
 
     // Open Apollo > Log out
     await page.getByRole('button', { name: 'Apollo' }).click()

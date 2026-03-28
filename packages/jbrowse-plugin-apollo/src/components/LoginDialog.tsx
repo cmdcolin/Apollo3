@@ -4,8 +4,9 @@ import {
   DialogContent,
   DialogContentText,
   LinearProgress,
+  TextField,
 } from '@mui/material'
-import React, { useEffect, useState } from 'react'
+import React, { type FormEvent, useEffect, useState } from 'react'
 
 import type { ApolloSessionModel } from '../session'
 import { getBaseURL } from '../util'
@@ -22,6 +23,7 @@ export function LoginDialog({ handleClose, session }: LoginDialogProps) {
   const [loginTypes, setLoginTypes] = useState<string[]>([])
   const [errorMessage, setErrorMessage] = useState('')
   const [loading, setLoading] = useState(true)
+  const [rootPassword, setRootPassword] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -54,15 +56,20 @@ export function LoginDialog({ handleClose, session }: LoginDialogProps) {
     }
   }, [baseURL])
 
-  async function handleGuestLogin() {
+  async function handleRootLogin(e: FormEvent) {
+    e.preventDefault()
     setLoading(true)
     setErrorMessage('')
-    const url = new URL('auth/guest', baseURL)
-    const response = await fetch(url.toString())
+    const url = new URL('auth/root', baseURL)
+    const response = await fetch(url.toString(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: rootPassword }),
+    })
     if (response.ok) {
       globalThis.location.reload()
     } else {
-      setErrorMessage('Guest login failed')
+      setErrorMessage('Invalid password')
       setLoading(false)
     }
   }
@@ -118,15 +125,30 @@ export function LoginDialog({ handleClose, session }: LoginDialogProps) {
             Sign in with Microsoft
           </Button>
         ) : null}
-        {loginTypes.includes('guest') ? (
-          <Button
-            variant="outlined"
-            fullWidth
-            onClick={handleGuestLogin}
-            disabled={loading}
+        {loginTypes.includes('root') ? (
+          <form
+            onSubmit={handleRootLogin}
+            style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
           >
-            Continue as Guest
-          </Button>
+            <TextField
+              label="Root password"
+              type="password"
+              size="small"
+              fullWidth
+              value={rootPassword}
+              onChange={(e) => {
+                setRootPassword(e.target.value)
+              }}
+            />
+            <Button
+              type="submit"
+              variant="outlined"
+              fullWidth
+              disabled={loading || !rootPassword}
+            >
+              Sign in as Root
+            </Button>
+          </form>
         ) : null}
         {errorMessage ? (
           <DialogContentText color="error">{errorMessage}</DialogContentText>
