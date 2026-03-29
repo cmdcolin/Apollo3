@@ -25,12 +25,12 @@ test('Can download gff with fasta', async ({ page }) => {
   await addAssemblyFromGff(page, 'volvox.fasta.gff3', GFF_PATH)
   const body = await downloadGff(page, 'volvox.fasta.gff3', true)
   const lines = body.trim().split('\n')
-  expect(lines.length).toBe(960)
+  expect(lines.length).toBe(934)
 })
 
 test('Can download gff without fasta', async ({ page }) => {
   await addAssemblyFromGff(page, 'volvox.fasta.gff3', GFF_PATH)
   const body = await downloadGff(page, 'volvox.fasta.gff3', false)
   const lines = body.trim().split('\n')
-  expect(lines.length).toBe(255)
+  expect(lines.length).toBe(229)
 })

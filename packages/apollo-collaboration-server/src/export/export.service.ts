@@ -40,7 +40,12 @@ export class ExportService {
     if (!exportID.startsWith('v2export:')) {
       throw new NotFoundException(`Export ${exportID} not found`)
     }
-    const assemblyId = exportID.slice('v2export:'.length)
+    const assemblyName = exportID.slice('v2export:'.length)
+    const assembly = await this.db.assembly.findByName(assemblyName)
+    if (!assembly) {
+      throw new NotFoundException(`Assembly "${assemblyName}" not found`)
+    }
+    const assemblyId = assembly._id
     const { fastaWidth = 80, includeFASTA } = opts
     const refSeqs = await this.db.refSeq.findByAssembly(assemblyId)
     const refSeqNames = Object.fromEntries(

@@ -187,8 +187,9 @@ function AddAssemblyPage() {
           />
 
           <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Sequence source type</InputLabel>
+            <InputLabel id="source-type-label">Sequence source type</InputLabel>
             <Select
+              labelId="source-type-label"
               value={sourceType}
               label="Sequence source type"
               onChange={(e) => {

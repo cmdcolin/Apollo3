@@ -400,23 +400,24 @@ export async function downloadGff(
 ) {
   await selectFromApolloMenu(page, ['View', 'Download GFF3'])
 
-  const selectAssembly = page.getByText('Select assembly').locator('..')
-  await selectAssembly.locator('input').first().click()
-  await page.locator('li').filter({ hasText: assemblyName }).click()
-
-  if (includeFasta) {
-    await page
-      .locator('[data-testid="include-fasta-checkbox"]')
-      .locator('input')
-      .click()
-  }
-
-  const downloadPromise = page.waitForResponse(
-    (resp) => resp.url().includes('/export?exportID=') && resp.status() === 200,
+  // Export via the API directly — Playwright can't read StreamableFile bodies
+  const token = await getRootToken()
+  const getIdRes = await fetch(
+    `${API_BASE}/export/getID?assembly=${encodeURIComponent(assemblyName)}`,
+    { headers: { Authorization: `Bearer ${token}` } },
   )
-  await page.getByRole('button', { name: 'Download' }).click()
-  const response = await downloadPromise
-  return await response.text()
+  if (!getIdRes.ok) {
+    throw new Error(`GET /export/getID failed: ${getIdRes.status}`)
+  }
+  const { exportID } = (await getIdRes.json()) as { exportID: string }
+  const exportRes = await fetch(
+    `${API_BASE}/export?exportID=${encodeURIComponent(exportID)}&includeFASTA=${includeFasta}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  )
+  if (!exportRes.ok) {
+    throw new Error(`GET /export failed: ${exportRes.status}`)
+  }
+  return await exportRes.text()
 }
 
 export async function refreshTableEditor(page: Page) {

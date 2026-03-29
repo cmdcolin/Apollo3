@@ -1,42 +1,30 @@
 # E2E Test Fixes — Next Steps
 
-## Current state (2026-03-29)
+See `E2E_COMPLETED.md` for all completed fixes and passing tests (19/~30).
 
-**Verified passing (12 tests):**
+## Instructions for future agents
 
-- `login.test.ts` — 2/2
-- `searchFeatures.test.ts` — 7/7
-- `editFeature.test.ts` — 2/3 ("Edit feature", "Suggest SO terms" pass;
-  "Can delete feature" deadlocks)
-- `uploadTest.test.ts` — 1/1
-
-**Table editor locator fixes applied but tests still blocked:**
-
-- `featureHistory.test.ts` — locator fixes done, but "View feature history"
-  context menu item doesn't exist in plugin source code (unimplemented)
-- `undo.test.ts` — locator fixes done, but feature edits don't persist after
-  `refreshTableEditor` toggle. The save might not be triggered properly.
-- `showWarnings.test.ts` — likely same table editor locator issues
-
-### Fixes applied this round
-
-- **SlidingWindowInterceptor** re-set the auth cookie after `/auth/logout`
-  cleared it. Fixed by skipping the interceptor for the logout path.
-- **`searchFeatures` helper** had three issues: (a) `not.toHaveValue(query)`
-  resolved instantly because JBrowse clears the input before navigating;
-  (b) multi-hit dialog locator `getByText('Search results').locator('..')`
-  only went to the `<h2>` parent, not the `[role="dialog"]` ancestor that
-  contains the `<table>`;
-  (c) `currentLocationEquals` read the value once instead of polling — now
-  uses `waitForFunction` with tolerance.
-- **`annotationTrackAppearance`** now detects when the annotation track is
-  already open (e.g. after feature-name navigation) and skips the track
-  selector.
-- **`editFeature` "Edit feature"** no longer calls `annotationTrackAppearance`
-  after `page.reload()` — JBrowse remembers the display mode. Assertions
-  changed from `input[value="CDS"]` to `getByText('CDS')`.
-- **`editFeature` "Can delete"** fixed `=tx1` strict-mode violation (matched
-  both `ID=tx1` and `Parent=tx1`). Still deadlocks the server — see below.
+- Tests are VERY slow (~30s–2min each). Run only the specific test you're
+  working on: `pnpm exec playwright test pw-tests/foo.test.ts -g "test name"`
+- After changing server code, you must rebuild and restart:
+  `pnpm -C packages/apollo-collaboration-server dev:build` (fast esbuild, ~1s)
+  then `bash scripts/e2e-servers.sh stop && bash scripts/e2e-servers.sh start`
+- After changing client UI code (in `client/src/`), use the full build:
+  `pnpm -C packages/apollo-collaboration-server build` (includes Vite client build)
+- After changing the JBrowse plugin code, it needs a plugin rebuild
+  (`pnpm -C packages/jbrowse-plugin-apollo build`) AND a server restart
+- Add `console.log` debug logging to tests/helpers freely — it shows up in
+  the Playwright output and is essential for diagnosing timing issues
+- Check failed screenshots at `test-results/*/test-failed-1.png` — they often
+  reveal the actual page state immediately
+- MUI Select components need `id` on `InputLabel` + `labelId` on `Select` for
+  Playwright's `getByLabel()` to work
+- MUI Select click: use `locator('[role="combobox"]').click()`, NOT
+  `locator('input').click()` (the native input is hidden/aria-hidden)
+- Playwright's `response.text()` returns empty for NestJS `StreamableFile`
+  responses — use direct Node.js `fetch()` instead
+- Statements in this doc about what is/isn't working should be treated with
+  skepticism — always verify by running the test
 
 ## Server deadlock on database reset
 
@@ -66,76 +54,62 @@ content. Playwright's `hasText` and `getByText` do NOT match input values.
 - `row.locator('input').nth(2)` — position-based (0=type, 1=start, 2=end)
 - `row.locator('input')` + loop with `inputValue()` — value-based matching
 - `page.locator('input[type="text"][value="CDS"]')` — CSS attribute selector
-  (works for initial render but React may not update the HTML attribute)
 
 **Broken patterns:**
 - `td.filter({ hasText: '99' }).locator('input')` — `hasText` never matches
-  because input values aren't text content
 - `row.getByText('99')` — same issue
 
-**Coordinate verification:** CDS values in DB are correct (min=0, max=99 for
-`onegene.fasta.gff3`). The table displays Start=min+1=1, End=max=99. Earlier
-screenshots showing "95" were likely from stale server state or CDSCheck
-modification.
-
 ## Remaining test failures
-
-### `downloadGff.test.ts` — assembly dropdown empty
-
-Both tests time out because the "Select assembly" dropdown in the Export GFF3
-dialog is empty. The dialog opens (via Apollo > View > Download GFF3) but the
-assembly list never populates.
 
 ### `editFeature.test.ts` "Can delete feature" — server deadlock
 
 Right-click delete triggers `broadcastAndCheck` which holds the database.
 Subsequent `resetDatabase()` calls deadlock. See "Server deadlock" above.
 
-### `featureHistory.test.ts` — coordinate mismatch
+### `visualGeneModel.test.ts` — features not rendering
 
-All 3 tests fail because the table shows CDS end=95 instead of 99.
-See "Table editor coordinate mismatch" above.
+The canvas overlay is blank — the gene model features don't appear at all.
+This is NOT a simple snapshot mismatch; the data isn't loading/rendering.
+May be a timing issue or a data-loading problem with the `so_types.gff3`
+assembly.
 
-### `undo.test.ts` — same coordinate issue
+### `featureHistory.test.ts` — likely coordinate/table issues
 
-Both tests fail at the same CDS end=99 locator.
+3 tests. May have table editor locator issues and/or depend on feature
+history UI that may not be implemented.
 
-### `showWarnings.test.ts` — same coordinate issue + check interaction
+### `undo.test.ts` — edits not persisting
 
-Both tests fail. Additionally, the CDSCheck runs after mutations and may
-interfere.
+2 tests. Feature edits don't persist after `refreshTableEditor` toggle.
 
-### `addAssembly.test.ts` — admin UI tests
+### `showWarnings.test.ts` — table editor + CDSCheck interaction
 
-- **2bit**: times out — check if 2bit source type selector and Create Assembly
-  button work
-- **Source type switch**: `getByLabel('Sequence source type')` may not find the
-  MUI Select
+2 tests. Table editor locator issues plus CDSCheck may interfere.
 
-### `splitTranscript.test.ts`
+### `splitTranscript.test.ts` — dialog/API interaction
 
-- "Split at first exon boundary" — check if split-transcript dialog submit
-  sends `POST /features/split-transcript`
-- "Split and undo" — depends on split working plus undo
+2 tests. Check if split-transcript dialog submit works.
 
-### `visualGeneModel.test.ts` — screenshot mismatch
+### `mergeTranscripts.test.ts` — likely stuck on table editor
 
-Reference screenshot needs regeneration. Run with `--update-snapshots`.
+Times out — probably table editor interaction issue.
 
-### `largeAssembly.test.ts`
+### `deleteFeature.test.ts` — server deadlock
+
+Same SQLite deadlock issue as editFeature "Can delete".
+
+### `addAssembly.test.ts` — DONE (5/5 passing)
+
+### `downloadGff.test.ts` — DONE (2/2 passing)
+
+### `largeAssembly.test.ts` — external dependency
 
 Uses SM_V10_3 assembly which may have a missing `.fai` file.
 
-### Other tests
+### `runTiberius.test.ts` — GTF track test
 
-- **mergeTranscripts**: times out — likely stuck on table editor interaction
-- **runTiberius**: GTF track test may need route or UI adjustments
-- **sequenceSearch**: skipped — needs mock tool setup + analysis cascade fixes
+May need route or UI adjustments.
 
-## Key files
+### `sequenceSearch.test.ts` — skipped
 
-- `packages/apollo-collaboration-server/src/authentication/sliding-window.interceptor.ts` — cookie fix
-- `packages/apollo-collaboration-server/src/health/health.controller.ts` — reset endpoint
-- `packages/jbrowse-plugin-apollo/pw-tests/helpers.ts` — search, location, track helpers
-- `packages/jbrowse-plugin-apollo/pw-tests/editFeature.test.ts` — table editor + delete tests
-- `packages/jbrowse-plugin-apollo/scripts/e2e-servers.sh` — server startup with `:memory:` SQLite
+Needs mock tool setup + analysis cascade fixes.
