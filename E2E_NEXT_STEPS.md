@@ -10,6 +10,14 @@
   "Can delete feature" deadlocks)
 - `uploadTest.test.ts` — 1/1
 
+**Table editor locator fixes applied but tests still blocked:**
+
+- `featureHistory.test.ts` — locator fixes done, but "View feature history"
+  context menu item doesn't exist in plugin source code (unimplemented)
+- `undo.test.ts` — locator fixes done, but feature edits don't persist after
+  `refreshTableEditor` toggle. The save might not be triggered properly.
+- `showWarnings.test.ts` — likely same table editor locator issues
+
 ### Fixes applied this round
 
 - **SlidingWindowInterceptor** re-set the auth cookie after `/auth/logout`
@@ -49,16 +57,26 @@ one. With a single-connection in-memory SQLite, this creates a deadlock.
 - Add a timeout on the `schema.drop()` call with a fallback to kill+restart
   the ORM connection
 
-## Table editor coordinate mismatch
+## Table editor locator pattern
 
-Tests that use `onegene.fasta.gff3` expect CDS end=99 (from the GFF3 file),
-but the table displays 95. This affects: `featureHistory` (3), `undo` (2),
-`showWarnings` (2), `deleteFeature` (indirectly).
+The table editor renders number values inside `<input>` elements, not as text
+content. Playwright's `hasText` and `getByText` do NOT match input values.
 
-**Investigation needed:** Check whether the coordinate conversion (GFF3
-1-based inclusive to internal 0-based half-open) or the `addAssemblyFromGff`
-API helper is changing the end coordinate. Verify the stored value in the
-database after upload.
+**Working patterns:**
+- `row.locator('input').nth(2)` — position-based (0=type, 1=start, 2=end)
+- `row.locator('input')` + loop with `inputValue()` — value-based matching
+- `page.locator('input[type="text"][value="CDS"]')` — CSS attribute selector
+  (works for initial render but React may not update the HTML attribute)
+
+**Broken patterns:**
+- `td.filter({ hasText: '99' }).locator('input')` — `hasText` never matches
+  because input values aren't text content
+- `row.getByText('99')` — same issue
+
+**Coordinate verification:** CDS values in DB are correct (min=0, max=99 for
+`onegene.fasta.gff3`). The table displays Start=min+1=1, End=max=99. Earlier
+screenshots showing "95" were likely from stale server state or CDSCheck
+modification.
 
 ## Remaining test failures
 
