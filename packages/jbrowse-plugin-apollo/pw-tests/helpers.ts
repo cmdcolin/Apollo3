@@ -420,11 +420,33 @@ export async function downloadGff(
 }
 
 export async function refreshTableEditor(page: Page) {
+  // Toggle to graphical-only then back to both, using the same submenu
+  // navigation as annotationTrackAppearance.
+  await setTrackDisplay(page, 'Show graphical display')
+  await setTrackDisplay(page, 'Show both graphical and table display')
+}
+
+async function setTrackDisplay(page: Page, option: string) {
   const trackMenu = page.locator('[data-testid="track_menu_icon"]').first()
   await trackMenu.click()
-  await page.getByText('Show graphical display').click()
-  await trackMenu.click()
-  await page.getByText('Show both graphical and table display').click()
+
+  const appearanceMenu = page
+    .locator('[role="menuitem"]')
+    .filter({ hasText: 'Appearance' })
+  if (await appearanceMenu.isVisible().catch(() => false)) {
+    await appearanceMenu.hover()
+    const optionEl = page.getByText(option)
+    if (await optionEl.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await optionEl.click()
+      return
+    }
+  }
+
+  await page
+    .locator('[role="menuitem"]')
+    .filter({ hasText: 'Display types' })
+    .hover()
+  await page.getByText(option).click()
 }
 
 export async function annotationTrackAppearance(page: Page, option: string) {

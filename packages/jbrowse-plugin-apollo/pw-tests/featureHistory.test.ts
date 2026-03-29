@@ -36,8 +36,8 @@ test('Feature history dialog opens and shows changes after an edit', async ({
 
   // Make an edit so the history has at least one entry
   const cds1Row = tbody.locator('tr').filter({ hasText: 'CDS1' })
-  const endCell = cds1Row.locator('td').filter({ hasText: '99' })
-  const endInput = endCell.locator('input')
+  // End column is the 3rd input (type, start, end)
+  const endInput = cds1Row.locator('input').nth(2)
   await endInput.fill('95')
   await endInput.press('Enter')
   await page.waitForResponse(
@@ -50,7 +50,7 @@ test('Feature history dialog opens and shows changes after an edit', async ({
   // Right-click on the gene feature and open "View feature history"
   await tbody
     .locator('tr')
-    .filter({ hasText: '=gx1' })
+    .filter({ hasText: 'ID=gx1' })
     .click({ button: 'right' })
   await page.getByText('View feature history').click({ timeout: 10_000 })
 
@@ -79,9 +79,10 @@ test('Feature history shows changes for child features of the same gene', async 
 
   // Edit CDS1 to create a change entry
   const cds1Row = tbody.locator('tr').filter({ hasText: 'CDS1' })
-  const endCell = cds1Row.locator('td').filter({ hasText: '99' })
-  await endCell.locator('input').fill('80')
-  await endCell.locator('input').press('Enter')
+  // End column is the 3rd input (type, start, end)
+  const endInput = cds1Row.locator('input').nth(2)
+  await endInput.fill('80')
+  await endInput.press('Enter')
   await page.waitForResponse(
     (resp) => resp.url().includes('/features') && resp.status() === 200,
   )
@@ -92,7 +93,7 @@ test('Feature history shows changes for child features of the same gene', async 
   // Open history from the gene row — it should also include changes to child features
   await tbody
     .locator('tr')
-    .filter({ hasText: '=gx1' })
+    .filter({ hasText: 'ID=gx1' })
     .click({ button: 'right' })
   await page.getByText('View feature history').click({ timeout: 10_000 })
 
@@ -122,16 +123,10 @@ test('Feature history API returns changes for a specific feature', async ({
 
   // Make two edits to create two change records
   const cds1Row = tbody.locator('tr').filter({ hasText: 'CDS1' })
-  await cds1Row
-    .locator('td')
-    .filter({ hasText: '99' })
-    .locator('input')
-    .fill('90')
-  await cds1Row
-    .locator('td')
-    .filter({ hasText: '99' })
-    .locator('input')
-    .press('Enter')
+  // End column is the 3rd input (type, start, end)
+  const endInput = cds1Row.locator('input').nth(2)
+  await endInput.fill('90')
+  await endInput.press('Enter')
   const firstChange = page.waitForResponse(
     (resp) => resp.url().includes('/features') && resp.status() === 200,
   )
@@ -143,7 +138,7 @@ test('Feature history API returns changes for a specific feature', async ({
   // Open history for the tx1 transcript
   await tbody
     .locator('tr')
-    .filter({ hasText: '=tx1' })
+    .filter({ hasText: 'ID=tx1' })
     .click({ button: 'right' })
   await page.getByText('View feature history').click({ timeout: 10_000 })
 

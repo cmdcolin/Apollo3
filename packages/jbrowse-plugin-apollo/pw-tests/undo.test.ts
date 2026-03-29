@@ -27,7 +27,7 @@ test.afterEach(async ({ page }) => {
 
 async function setupUndoTest(page: import('@playwright/test').Page) {
   await addAssemblyFromGff(page, ASSEMBLY, GFF_PATH)
-  await selectAssemblyToView(page, ASSEMBLY, 'ctgA:1..200')
+  await selectAssemblyToView(page, ASSEMBLY, 'gx1')
   await annotationTrackAppearance(page, 'Show both graphical and table display')
 }
 
@@ -39,10 +39,31 @@ async function editCds1EndValue(
   const tbody = page.locator('tbody')
   await expect(tbody).toBeVisible({ timeout: 10_000 })
   const cds1Row = tbody.locator('tr').filter({ hasText: 'CDS1' })
-  const cell = cds1Row.locator('td').filter({ hasText: currentValue })
-  const input = cell.locator('input')
-  await input.fill(newValue)
-  await input.press('Enter')
+  // Wait for the row to appear and have inputs (table may take time to render)
+  await expect(cds1Row.locator('input').first()).toBeVisible({ timeout: 30_000 })
+  const inputs = cds1Row.locator('input')
+  const count = await inputs.count()
+  for (let i = 0; i < count; i++) {
+    const val = await inputs.nth(i).inputValue()
+    if (val === currentValue) {
+      const saveResponse = page.waitForResponse(
+        (resp) =>
+          resp.url().includes('/features') && resp.status() === 200,
+      )
+      await inputs.nth(i).fill(newValue)
+      // Click outside to trigger blur/save
+      await page.click('body', { position: { x: 0, y: 0 } })
+      await saveResponse.catch(() => {})
+      return
+    }
+  }
+  const allValues = []
+  for (let i = 0; i < count; i++) {
+    allValues.push(await inputs.nth(i).inputValue())
+  }
+  throw new Error(
+    `No input with value "${currentValue}" found in CDS1 row (found: ${allValues.join(', ')})`,
+  )
 }
 
 async function expectCds1HasValue(
@@ -52,7 +73,9 @@ async function expectCds1HasValue(
   const tbody = page.locator('tbody')
   await expect(tbody).toBeVisible({ timeout: 10_000 })
   const cds1Row = tbody.locator('tr').filter({ hasText: 'CDS1' })
-  await expect(cds1Row.getByText(value)).toBeVisible()
+  // Check the End input's current value
+  const endInput = cds1Row.locator('input').nth(2)
+  await expect(endInput).toHaveValue(value, { timeout: 10_000 })
 }
 
 test('Undo chain of edits', async ({ page }) => {
