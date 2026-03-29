@@ -4,21 +4,21 @@ import { fileURLToPath } from 'node:url'
 
 import {
   addAssemblyFromGff,
-  deleteAssemblies,
   downloadGff,
   loginAsRoot,
+  resetDatabase,
 } from './helpers.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const GFF_PATH = path.resolve(__dirname, '../test_data/volvox.fasta.gff3')
 
 test.beforeEach(async ({ page }) => {
+  await resetDatabase()
   await loginAsRoot(page)
 })
 
 test.afterEach(async ({ page }) => {
   await page.goto('about:blank')
-  await deleteAssemblies()
 })
 
 test('Can download gff with fasta', async ({ page }) => {

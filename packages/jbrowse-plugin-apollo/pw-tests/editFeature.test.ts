@@ -5,21 +5,21 @@ import { fileURLToPath } from 'node:url'
 import {
   addAssemblyFromGff,
   annotationTrackAppearance,
-  deleteAssemblies,
   loginAsRoot,
   refreshTableEditor,
+  resetDatabase,
   selectAssemblyToView,
 } from './helpers.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 test.beforeEach(async ({ page }) => {
+  await resetDatabase()
   await loginAsRoot(page)
 })
 
 test.afterEach(async ({ page }) => {
   await page.goto('about:blank')
-  await deleteAssemblies()
 })
 
 test('Edit feature via table editor', async ({ page }) => {

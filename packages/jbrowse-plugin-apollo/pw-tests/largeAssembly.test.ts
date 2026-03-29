@@ -6,9 +6,9 @@ import {
   addAssemblyFromGff,
   annotationTrackAppearance,
   currentLocationEquals,
-  deleteAssemblies,
   loginAsRoot,
   refreshTableEditor,
+  resetDatabase,
   searchFeatures,
   selectAssemblyToView,
   selectFromApolloMenu,
@@ -19,12 +19,12 @@ const GFF_PATH = path.resolve(__dirname, '../test_data/SM_V10_3.fasta.gff3.gz')
 const ASSEMBLY = 'SM_V10_3.fasta.gff3.gz'
 
 test.beforeEach(async ({ page }) => {
+  await resetDatabase()
   await loginAsRoot(page)
 })
 
 test.afterEach(async ({ page }) => {
   await page.goto('about:blank')
-  await deleteAssemblies()
 })
 
 test('Navigate to feature from table editor', async ({ page }) => {

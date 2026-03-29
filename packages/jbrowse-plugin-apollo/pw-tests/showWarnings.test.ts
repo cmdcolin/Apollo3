@@ -5,8 +5,8 @@ import { fileURLToPath } from 'node:url'
 import {
   addAssemblyFromGff,
   annotationTrackAppearance,
-  deleteAssemblies,
   loginAsRoot,
+  resetDatabase,
   selectAssemblyToView,
 } from './helpers.js'
 
@@ -17,12 +17,12 @@ const GFF_PATH = path.resolve(
 )
 
 test.beforeEach(async ({ page }) => {
+  await resetDatabase()
   await loginAsRoot(page)
 })
 
 test.afterEach(async ({ page }) => {
   await page.goto('about:blank')
-  await deleteAssemblies()
 })
 
 test('Show warnings after editing and after fixing', async ({ page }) => {

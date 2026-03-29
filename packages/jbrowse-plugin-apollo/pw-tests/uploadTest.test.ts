@@ -3,9 +3,15 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { resetDatabase } from './helpers.js'
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const GFF_PATH = path.resolve(__dirname, '../test_data/deleteFeature.gff3')
 const API_BASE = 'http://localhost:3999'
+
+test.beforeEach(async () => {
+  await resetDatabase()
+})
 
 test('Upload file via browser fetch', async ({ page }) => {
   // Load the app page (same server as API)

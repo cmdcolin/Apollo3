@@ -3,8 +3,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import {
-  deleteAssemblies,
   loginAsRoot,
+  resetDatabase,
   selectFromApolloMenu,
 } from './helpers.js'
 
@@ -12,12 +12,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const TEST_DATA = path.resolve(__dirname, '../test_data')
 
 test.beforeEach(async ({ page }) => {
+  await resetDatabase()
   await loginAsRoot(page)
 })
 
 test.afterEach(async ({ page }) => {
   await page.goto('about:blank')
-  await deleteAssemblies()
 })
 
 async function assertAssemblyLoaded(

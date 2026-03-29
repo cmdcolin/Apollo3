@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url'
 
 import {
   addAssemblyFromGff,
-  deleteAssemblies,
   loginAsRoot,
+  resetDatabase,
   selectAssemblyToView,
 } from './helpers.js'
 
@@ -13,12 +13,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const GFF_PATH = path.resolve(__dirname, '../test_data/so_types.gff3')
 
 test.beforeEach(async ({ page }) => {
+  await resetDatabase()
   await loginAsRoot(page)
 })
 
 test.afterEach(async ({ page }) => {
   await page.goto('about:blank')
-  await deleteAssemblies()
 })
 
 test('Shows correct gene model', async ({ page }) => {

@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url'
 
 import {
   addAssemblyFromGff,
-  deleteAssemblies,
   loginAsRoot,
+  resetDatabase,
   selectAssemblyToView,
 } from './helpers.js'
 
@@ -15,12 +15,12 @@ const GFF_PATH = path.resolve(__dirname, '../test_data/volvox.fasta.gff3')
 const ASSEMBLY = 'volvox'
 
 test.beforeEach(async ({ page }) => {
+  await resetDatabase()
   await loginAsRoot(page)
 })
 
 test.afterEach(async ({ page }) => {
   await page.goto('about:blank')
-  await deleteAssemblies()
 })
 
 test('Tiberius: gene prediction creates and shows a GTF track', async ({

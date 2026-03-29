@@ -5,8 +5,8 @@ import { fileURLToPath } from 'node:url'
 import {
   addAssemblyFromGff,
   annotationTrackAppearance,
-  deleteAssemblies,
   loginAsRoot,
+  resetDatabase,
   selectAssemblyToView,
 } from './helpers.js'
 
@@ -14,14 +14,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const GFF_PATH = path.resolve(__dirname, '../test_data/deleteFeature.gff3')
 
 test.beforeEach(async ({ page }) => {
+  await resetDatabase()
   await loginAsRoot(page)
 })
 
 test.afterEach(async ({ page }) => {
-  // Navigate away to close the websocket connection before cleanup.
-  // Otherwise the websocket holds the SQLite connection and API calls deadlock.
   await page.goto('about:blank')
-  await deleteAssemblies()
 })
 
 async function setupDeleteFeatureTest(page: import('@playwright/test').Page) {

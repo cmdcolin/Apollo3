@@ -147,7 +147,8 @@ start_servers() {
   # JBROWSE_STATIC_DIR tells the server where to find the JBrowse web app.
   cd "$REPO_ROOT/packages/apollo-collaboration-server" || exit 1
   MOCK_TOOLS_DIR="$SCRIPT_DIR/test_data/mock_tools"
-  DB_BACKEND="${DB_BACKEND:-sqlite}" DB_CONNECTION_URL="${DB_CONNECTION_URL:-apollo-dev.sqlite}" \
+  DB_BACKEND="${DB_BACKEND:-sqlite}" DB_CONNECTION_URL="${DB_CONNECTION_URL:-:memory:}" \
+    ALLOW_TEST_RESET=true \
     JBROWSE_STATIC_DIR="$SCRIPT_DIR/.jbrowse" \
     PLUGIN_LOCATION="/jbrowse/apollo-plugin.js" \
     FEATURE_TYPE_ONTOLOGY_LOCATION="/jbrowse/so-v3.1.json" \

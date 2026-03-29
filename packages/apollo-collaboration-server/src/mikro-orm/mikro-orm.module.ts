@@ -3,9 +3,27 @@ import {
   createMikroOrmConfig,
 } from '@apollo-annotation/entities'
 import { EntityManager, MikroORM } from '@mikro-orm/core'
-import { type DynamicModule, Logger, Module } from '@nestjs/common'
+import {
+  type DynamicModule,
+  Inject,
+  Injectable,
+  Logger,
+  Module,
+  type OnModuleDestroy,
+} from '@nestjs/common'
 
 import { DatabaseService } from './database.service.js'
+
+@Injectable()
+class OrmLifecycleService implements OnModuleDestroy {
+  private readonly logger = new Logger(OrmLifecycleService.name)
+  constructor(@Inject(MikroORM) private readonly orm: MikroORM) {}
+  async onModuleDestroy() {
+    this.logger.log('Closing MikroORM connection...')
+    await this.orm.close()
+    this.logger.log('MikroORM connection closed')
+  }
+}
 
 @Module({})
 export class ApolloMikroOrmModule {
@@ -60,6 +78,7 @@ export class ApolloMikroOrmModule {
           inject: [MikroORM],
         },
         DatabaseService,
+        OrmLifecycleService,
       ],
       exports: [DatabaseService, EntityManager, MikroORM],
       global: true,

@@ -1,8 +1,12 @@
 import { expect, test } from '@playwright/test'
 
-import { loginAsRoot, setupBrowserLogging } from './helpers.js'
+import { loginAsRoot, resetDatabase, setupBrowserLogging } from './helpers.js'
 
 test.describe('Login workflow', () => {
+  test.beforeEach(async () => {
+    await resetDatabase()
+  })
+
   test('shows login dialog for unauthenticated user and allows root login', async ({
     page,
   }) => {

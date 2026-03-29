@@ -9,7 +9,12 @@ const API_BASE = 'http://127.0.0.1:3999'
 
 // ── API helpers (run in Node.js, not the browser) ───────────────────
 
+let cachedRootToken: string | undefined
+
 export async function getRootToken() {
+  if (cachedRootToken) {
+    return cachedRootToken
+  }
   console.log('[api] Fetching root token...')
   const res = await fetch(`${API_BASE}/auth/root`, {
     method: 'POST',
@@ -18,7 +23,21 @@ export async function getRootToken() {
   })
   const data = (await res.json()) as { token: string }
   console.log('[api] Got root token')
-  return data.token
+  cachedRootToken = data.token
+  return cachedRootToken
+}
+
+export async function resetDatabase() {
+  console.log('[cleanup] Resetting database...')
+  cachedRootToken = undefined
+  const res = await fetch(`${API_BASE}/health/test-reset-db`, {
+    method: 'POST',
+  })
+  if (!res.ok) {
+    const body = await res.text()
+    throw new Error(`DB reset failed: ${res.status} ${body}`)
+  }
+  console.log('[cleanup] Database reset complete')
 }
 
 export async function uploadFileViaApi(filePath: string, fileType: string) {

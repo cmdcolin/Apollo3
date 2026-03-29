@@ -5,9 +5,9 @@ import { fileURLToPath } from 'node:url'
 import {
   addAssemblyFromGff,
   annotationTrackAppearance,
-  deleteAssemblies,
   loginAsRoot,
   refreshTableEditor,
+  resetDatabase,
   selectAssemblyToView,
   selectFromApolloMenu,
 } from './helpers.js'
@@ -17,12 +17,12 @@ const GFF_PATH = path.resolve(__dirname, '../test_data/onegene.fasta.gff3')
 const ASSEMBLY = 'onegene.fasta.gff3'
 
 test.beforeEach(async ({ page }) => {
+  await resetDatabase()
   await loginAsRoot(page)
 })
 
 test.afterEach(async ({ page }) => {
   await page.goto('about:blank')
-  await deleteAssemblies()
 })
 
 async function setupUndoTest(page: import('@playwright/test').Page) {
