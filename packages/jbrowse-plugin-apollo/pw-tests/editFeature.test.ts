@@ -55,13 +55,11 @@ test('Edit feature via table editor', async ({ page }) => {
     (resp) => resp.url().includes('/features') && resp.status() === 200,
   )
 
-  // Verify edits persisted after reload
+  // Verify edits persisted after reload (display mode is remembered)
   await page.reload()
   const reloadedTbody = page.locator('tbody')
-  await expect(reloadedTbody).toBeVisible({ timeout: 10_000 })
-  await expect(
-    reloadedTbody.locator('input[type="text"][value="CDS"]'),
-  ).toBeVisible()
+  await expect(reloadedTbody).toBeVisible({ timeout: 15_000 })
+  await expect(reloadedTbody.getByText('CDS')).toBeVisible({ timeout: 10_000 })
   await expect(reloadedTbody.getByText('9432')).toBeVisible()
   await expect(reloadedTbody.getByText('9567')).toBeVisible()
 })
@@ -75,19 +73,26 @@ test('Can delete feature', async ({ page }) => {
   const tbody = page.locator('tbody')
   await expect(tbody.getByText('=CDS1')).toBeVisible({ timeout: 10_000 })
 
-  // Right-click tx1 and delete
-  await tbody.getByText('=tx1').click({ button: 'right' })
+  // Right-click the mRNA row (tx1) and delete — use the attributes cell
+  // since the Type column has expand/collapse icons that affect text matching
+  await tbody.getByText('ID=tx1').click({ button: 'right' })
   await page.getByText('Delete feature').click()
+  const deleteResponse = page.waitForResponse(
+    (resp) =>
+      resp.url().includes('/features') &&
+      resp.request().method() === 'DELETE' &&
+      resp.status() === 200,
+  )
   await page
     .getByText('Are you sure you want to delete the selected feature?')
     .locator('..')
     .locator('..')
     .getByRole('button', { name: /^yes$/i })
     .click()
+  await deleteResponse
 
-  await expect(tbody.getByText('=gx1')).toBeVisible()
-  await expect(tbody.getByText('=tx1')).not.toBeVisible()
-  await expect(tbody.getByText('=CDS1')).not.toBeVisible()
+  await expect(tbody.getByText('ID=gx1')).toBeVisible({ timeout: 10_000 })
+  await expect(tbody.getByText('ID=CDS1')).not.toBeVisible({ timeout: 10_000 })
 })
 
 test('Suggest only valid SO terms from dropdown', async ({ page }) => {

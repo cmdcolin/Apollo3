@@ -1,61 +1,91 @@
 # E2E Test Fixes — Next Steps
 
-## Current state (2026-03-28)
+## Current state (2026-03-29)
 
-The E2E test infrastructure has been overhauled:
+**Verified passing (12 tests):**
 
-- Server uses **in-memory SQLite** (`:memory:`) instead of file-based
-- `POST /health/test-reset-db` drops+recreates schema between tests, giving
-  each test a guaranteed clean database
-- All test files call `resetDatabase()` in `beforeEach` instead of the old
-  `deleteAssemblies()` (which missed analysis records and could silently fail)
-- Root token cached across API calls within a test
-- `OrmLifecycleService` closes MikroORM connections on server shutdown
-- `sequenceSearch.test.ts` skipped pending mock tool + analysis cascade fixes
+- `login.test.ts` — 2/2
+- `searchFeatures.test.ts` — 7/7
+- `editFeature.test.ts` — 2/3 ("Edit feature", "Suggest SO terms" pass;
+  "Can delete feature" deadlocks)
+- `uploadTest.test.ts` — 1/1
 
-**Verified working:** login (root login), uploadTest, DB reset (idempotent).
+### Fixes applied this round
 
-## Server bug: CDSCheck crash
+- **SlidingWindowInterceptor** re-set the auth cookie after `/auth/logout`
+  cleared it. Fixed by skipping the interceptor for the logout path.
+- **`searchFeatures` helper** had three issues: (a) `not.toHaveValue(query)`
+  resolved instantly because JBrowse clears the input before navigating;
+  (b) multi-hit dialog locator `getByText('Search results').locator('..')`
+  only went to the `<h2>` parent, not the `[role="dialog"]` ancestor that
+  contains the `<table>`;
+  (c) `currentLocationEquals` read the value once instead of polling — now
+  uses `waitForFunction` with tolerance.
+- **`annotationTrackAppearance`** now detects when the annotation track is
+  already open (e.g. after feature-name navigation) and skips the track
+  selector.
+- **`editFeature` "Edit feature"** no longer calls `annotationTrackAppearance`
+  after `page.reload()` — JBrowse remembers the display mode. Assertions
+  changed from `input[value="CDS"]` to `getByText('CDS')`.
+- **`editFeature` "Can delete"** fixed `=tx1` strict-mode violation (matched
+  both `ID=tx1` and `Parent=tx1`). Still deadlocks the server — see below.
 
-The CDSCheck in `packages/apollo-shared/src/Checks/CDSCheck.ts` crashes with
-`Cannot read properties of undefined (reading 'min')` when a CDS has no
-overlapping exons (empty `phasedLocs` array). Fix is already staged — skip
-pushing empty arrays into `cdsLocations`. This crash fires during
-`broadcastAndCheck` after every feature mutation, causing 500 errors that block
-many tests.
+## Server deadlock on database reset
 
-## Table editor locators
+After certain test interactions (especially feature deletion), the in-memory
+SQLite database gets into a state where `POST /health/test-reset-db` hangs
+indefinitely. The log shows repeated "Resetting database for test..." without
+"Database reset complete".
 
-Tests use locators like `input[type="text"][value="EST_match"]` which break
-after Playwright's `.fill()` changes the value — the locator no longer matches.
-Fix: use cell-based locators (`td.filter(...).locator('input')`) or grab the
-input reference before filling.
+**Root cause hypothesis:** `schema.drop()` or `schema.create()` acquires a
+write lock, but another in-flight request (e.g., the `broadcastAndCheck`
+pipeline triggered by a feature mutation) holds a read lock or is waiting for
+one. With a single-connection in-memory SQLite, this creates a deadlock.
 
-Affected tests: editFeature (all 3), featureHistory (all 3), undo (2),
-showWarnings (2), deleteFeature (2).
+**Possible fixes:**
+- Add a mutex/semaphore around the reset endpoint so concurrent resets queue
+- Force-close all open entity-manager forks before calling `schema.drop()`
+- Use WAL mode (not available for `:memory:`, but works for file-based SQLite)
+- Add a timeout on the `schema.drop()` call with a fallback to kill+restart
+  the ORM connection
 
-## waitForResponse too broad
+## Table editor coordinate mismatch
 
-`resp.url().includes('/features') && resp.status() === 200` matches any GET to
-`/features/*` endpoints, not just PATCH mutations. Fix: check
-`resp.request().method() === 'PATCH'` or match more specific URL patterns.
+Tests that use `onegene.fasta.gff3` expect CDS end=99 (from the GFF3 file),
+but the table displays 95. This affects: `featureHistory` (3), `undo` (2),
+`showWarnings` (2), `deleteFeature` (indirectly).
+
+**Investigation needed:** Check whether the coordinate conversion (GFF3
+1-based inclusive to internal 0-based half-open) or the `addAssemblyFromGff`
+API helper is changing the end coordinate. Verify the stored value in the
+database after upload.
 
 ## Remaining test failures
-
-### `login.test.ts` — logout does not clear auth
-
-The "logout redirects to server and clears auth" test fails because after
-clicking Log Out and navigating to `/auth/logout`, the auth cookie is not
-cleared. Going back to `/jbrowse/` does not show the login dialog.
-
-**Likely fix:** Check that `/auth/logout` clears the JWT cookie with matching
-path/domain/httpOnly flags.
 
 ### `downloadGff.test.ts` — assembly dropdown empty
 
 Both tests time out because the "Select assembly" dropdown in the Export GFF3
-dialog is empty even though the assembly was created. The dialog opens but the
+dialog is empty. The dialog opens (via Apollo > View > Download GFF3) but the
 assembly list never populates.
+
+### `editFeature.test.ts` "Can delete feature" — server deadlock
+
+Right-click delete triggers `broadcastAndCheck` which holds the database.
+Subsequent `resetDatabase()` calls deadlock. See "Server deadlock" above.
+
+### `featureHistory.test.ts` — coordinate mismatch
+
+All 3 tests fail because the table shows CDS end=95 instead of 99.
+See "Table editor coordinate mismatch" above.
+
+### `undo.test.ts` — same coordinate issue
+
+Both tests fail at the same CDS end=99 locator.
+
+### `showWarnings.test.ts` — same coordinate issue + check interaction
+
+Both tests fail. Additionally, the CDSCheck runs after mutations and may
+interfere.
 
 ### `addAssembly.test.ts` — admin UI tests
 
@@ -64,40 +94,19 @@ assembly list never populates.
 - **Source type switch**: `getByLabel('Sequence source type')` may not find the
   MUI Select
 
-### `editFeature.test.ts` — changes don't persist after reload
-
-After editing fields and reloading, the table display may not auto-appear.
-
-**Likely fix:** After `page.reload()`, call
-`annotationTrackAppearance(page, 'Show both graphical and table display')`.
-
-### `searchFeatures.test.ts` — coordinate assertions fail
-
-`currentLocationEquals()` fails because JBrowse auto-adjusts the view,
-shifting coordinates beyond the tolerance (10bp).
-
-**Likely fix:** Increase tolerance or check feature visibility instead of exact
-coordinates.
-
-### `deleteFeature.test.ts` — UI interaction failures
-
-Delete/resize tests fail during table editor interactions after deletion.
-Likely timing issues with table re-rendering.
-
-### `visualGeneModel.test.ts` — screenshot mismatch
-
-Reference screenshot needs regeneration. Run with `--update-snapshots`.
-
 ### `splitTranscript.test.ts`
 
 - "Split at first exon boundary" — check if split-transcript dialog submit
   sends `POST /features/split-transcript`
 - "Split and undo" — depends on split working plus undo
 
+### `visualGeneModel.test.ts` — screenshot mismatch
+
+Reference screenshot needs regeneration. Run with `--update-snapshots`.
+
 ### `largeAssembly.test.ts`
 
-Uses SM_V10_3 assembly which may have a missing `.fai` file — assembly
-creation fails.
+Uses SM_V10_3 assembly which may have a missing `.fai` file.
 
 ### Other tests
 
@@ -105,29 +114,10 @@ creation fails.
 - **runTiberius**: GTF track test may need route or UI adjustments
 - **sequenceSearch**: skipped — needs mock tool setup + analysis cascade fixes
 
-## Resource leak fixes still needed
-
-- **MessagesGateway**: No `handleDisconnect` — socket references may accumulate
-- **Assembly deletion cascade**: `AnalysisDb` pivot table and `AnalysisJob`
-  records not cleaned up on assembly delete (production bug)
-- **run-command.ts**: No SIGKILL fallback for unresponsive child processes
-
-## Recommended fix order
-
-- Fix CDSCheck crash (already staged, rebuild + test)
-- Fix table editor locators (biggest bang — unblocks ~12 tests)
-- Fix `login.test.ts` logout (likely 1-line cookie fix)
-- Fix `searchFeatures.test.ts` tolerance
-- Fix `editFeature.test.ts` table re-enable after reload
-- Fix waitForResponse specificity
-- Fix `downloadGff.test.ts` assembly list population
-- Fix individual UI interaction tests
-- Fix admin UI tests (lower priority)
-- Re-enable `sequenceSearch.test.ts` (last)
-
 ## Key files
 
+- `packages/apollo-collaboration-server/src/authentication/sliding-window.interceptor.ts` — cookie fix
 - `packages/apollo-collaboration-server/src/health/health.controller.ts` — reset endpoint
-- `packages/apollo-collaboration-server/src/mikro-orm/mikro-orm.module.ts` — ORM lifecycle
-- `packages/jbrowse-plugin-apollo/pw-tests/helpers.ts` — `resetDatabase()`, cached `getRootToken()`
+- `packages/jbrowse-plugin-apollo/pw-tests/helpers.ts` — search, location, track helpers
+- `packages/jbrowse-plugin-apollo/pw-tests/editFeature.test.ts` — table editor + delete tests
 - `packages/jbrowse-plugin-apollo/scripts/e2e-servers.sh` — server startup with `:memory:` SQLite

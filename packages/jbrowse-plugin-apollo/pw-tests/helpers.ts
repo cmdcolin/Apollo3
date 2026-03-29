@@ -323,19 +323,34 @@ export async function searchFeatures(
 ) {
   const locationInput = page.getByPlaceholder('Search for location')
   await locationInput.fill(query)
-  await locationInput.press('Enter')
 
   if (expectedNumOfHits === 0) {
+    await locationInput.press('Enter')
     await expect(
       page.getByText(`Error: Unknown feature or sequence "${query}"`),
     ).toBeVisible({ timeout: 10_000 })
   } else if (expectedNumOfHits === 1) {
-    // Single hit navigates directly - wait for the location bar to update
-    await expect(locationInput).not.toHaveValue(query, { timeout: 10_000 })
+    // Single hit navigates directly. Wait for the search API response, then
+    // give JBrowse time to process navigation and update the location bar.
+    const searchResponse = page.waitForResponse(
+      (resp) =>
+        resp.url().includes('/features/searchFeatures') &&
+        resp.status() === 200,
+    )
+    await locationInput.press('Enter')
+    await searchResponse
+    await page
+      .waitForLoadState('networkidle', { timeout: 5_000 })
+      .catch(() => {})
+    // JBrowse needs a moment to process the result and update the view
+    await page.waitForTimeout(2_000)
   } else {
-    const searchResults = page.getByText('Search results').locator('..')
-    await expect(searchResults).toBeVisible({ timeout: 10_000 })
-    const rows = searchResults.locator('tbody tr')
+    await locationInput.press('Enter')
+    const searchDialog = page.locator('[role="dialog"]').filter({
+      hasText: 'Search results',
+    })
+    await expect(searchDialog).toBeVisible({ timeout: 10_000 })
+    const rows = searchDialog.locator('tbody tr')
     await expect(rows).toHaveCount(expectedNumOfHits, { timeout: 10_000 })
   }
 }
@@ -347,16 +362,35 @@ export async function currentLocationEquals(
   end: number,
   tolerance: number,
 ) {
-  const locationInput = page.getByPlaceholder('Search for location')
-  const currentLocation = await locationInput.inputValue()
-  const [xcontig, s, e] = currentLocation.split(/:|\.\./)
-  const xstart = Number.parseInt(s.replace(',', ''), 10)
-  const xend = Number.parseInt(e.replace(',', ''), 10)
-  expect(xcontig).toBe(contig)
-  expect(xstart).toBeGreaterThanOrEqual(start - tolerance)
-  expect(xstart).toBeLessThanOrEqual(start + tolerance)
-  expect(xend).toBeGreaterThanOrEqual(end - tolerance)
-  expect(xend).toBeLessThanOrEqual(end + tolerance)
+  // Poll until the location bar matches the expected coordinate range.
+  // JBrowse may take time to update the location after navigation.
+  await page.waitForFunction(
+    ([selector, expectedContig, expectedStart, expectedEnd, tol]) => {
+      const input = document.querySelector<HTMLInputElement>(
+        `input[placeholder="${selector}"]`,
+      )
+      if (!input) {
+        return false
+      }
+      const val = input.value
+      const parts = val.split(/:|\.\./)
+      if (parts.length < 3) {
+        return false
+      }
+      const xcontig = parts[0]
+      const xstart = Number.parseInt(parts[1].replaceAll(',', ''), 10)
+      const xend = Number.parseInt(parts[2].replaceAll(',', ''), 10)
+      return (
+        xcontig === expectedContig &&
+        xstart >= expectedStart - tol &&
+        xstart <= expectedStart + tol &&
+        xend >= expectedEnd - tol &&
+        xend <= expectedEnd + tol
+      )
+    },
+    ['Search for location', contig, start, end, tolerance] as const,
+    { timeout: 10_000 },
+  )
 }
 
 export async function downloadGff(
@@ -395,12 +429,22 @@ export async function refreshTableEditor(page: Page) {
 
 export async function annotationTrackAppearance(page: Page, option: string) {
   console.log(`[track] Setting display: "${option}"`)
-  await page.getByText('Open track selector', { exact: false }).click()
-  // Track selector needs time to load available tracks
-  const annotationTrack = page.getByText('Annotations (', { exact: false })
-  await expect(annotationTrack).toBeVisible({ timeout: 15_000 })
-  await annotationTrack.click()
-  await page.getByRole('button', { name: 'Minimize drawer' }).click()
+
+  // If the annotation track is already open, skip the track selector
+  const existingTrack = page.getByText('Annotations (', { exact: false })
+  const trackAlreadyOpen = await existingTrack
+    .isVisible({ timeout: 2_000 })
+    .catch(() => false)
+
+  if (!trackAlreadyOpen) {
+    await page.getByText('Open track selector', { exact: false }).click()
+    const annotationTrack = page.getByText('Annotations (', { exact: false })
+    await expect(annotationTrack).toBeVisible({ timeout: 15_000 })
+    await annotationTrack.click()
+    await page.getByRole('button', { name: 'Minimize drawer' }).click()
+  } else {
+    console.log('[track] Annotation track already open, skipping track selector')
+  }
 
   const trackMenu = page.locator('[data-testid="track_menu_icon"]').first()
   await trackMenu.click()

@@ -18,6 +18,9 @@ export class SlidingWindowInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap(() => {
         const req = context.switchToHttp().getRequest<RequestWithUser>()
+        if (req.path === '/auth/logout') {
+          return
+        }
         const cookies = req.cookies as Record<string, string> | undefined
         const token = cookies?.[AUTH_COOKIE_NAME]
         if (token) {
