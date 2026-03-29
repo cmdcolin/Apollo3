@@ -230,7 +230,11 @@ export class FeaturesService {
     if (!refSeq) {
       throw new NotFoundException(`RefSeq not found: ${feature.refSeq}`)
     }
-    return refSeq.assembly
+    const assembly = await this.db.assembly.findById(refSeq.assembly)
+    if (!assembly) {
+      throw new NotFoundException(`Assembly not found: ${refSeq.assembly}`)
+    }
+    return assembly.name
   }
 
   private async getRootFeatureTrees(featureIds: string[]) {
@@ -797,7 +801,11 @@ export class FeaturesService {
     if (!refSeqRow) {
       throw new NotFoundException(`RefSeq not found: ${firstRefSeq}`)
     }
-    const assemblyId = refSeqRow.assembly
+    const assemblyRow = await this.db.assembly.findById(refSeqRow.assembly)
+    if (!assemblyRow) {
+      throw new NotFoundException(`Assembly not found: ${refSeqRow.assembly}`)
+    }
+    const assemblyId = assemblyRow.name
 
     const undoSequence = await this.db.transactional(async (scope) => {
       const seq = await scope.counter.getNextSequenceValue('changeCounter')

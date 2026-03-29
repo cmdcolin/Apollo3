@@ -1,115 +1,90 @@
-# E2E Test Fixes — Next Steps
+# E2E Test Status and Next Steps
 
-See `E2E_COMPLETED.md` for all completed fixes and passing tests (19/~30).
+## Current State (21+ tests passing, up from 19)
 
-## Instructions for future agents
+### Passing Tests (run individually; batch runs can hit server deadlock)
+- **login.test.ts** — 2/2
+- **searchFeatures.test.ts** — 5/5
+- **uploadTest.test.ts** — 1/1
+- **addAssembly.test.ts** — 5/5
+- **downloadGff.test.ts** — 2/2
+- **editFeature.test.ts** — 2/3 ("Edit feature", "Suggest SO terms" pass; "Can delete feature" hits server deadlock)
+- **undo.test.ts** — 2/2 (NEW: "Undo chain of edits", "Undo and redo")
 
-- Tests are VERY slow (~30s–2min each). Run only the specific test you're
-  working on: `pnpm exec playwright test pw-tests/foo.test.ts -g "test name"`
-- After changing server code, you must rebuild and restart:
-  `pnpm -C packages/apollo-collaboration-server dev:build` (fast esbuild, ~1s)
-  then `bash scripts/e2e-servers.sh stop && bash scripts/e2e-servers.sh start`
-- After changing client UI code (in `client/src/`), use the full build:
-  `pnpm -C packages/apollo-collaboration-server build` (includes Vite client build)
-- After changing the JBrowse plugin code, it needs a plugin rebuild
-  (`pnpm -C packages/jbrowse-plugin-apollo build`) AND a server restart
-- Add `console.log` debug logging to tests/helpers freely — it shows up in
-  the Playwright output and is essential for diagnosing timing issues
-- Check failed screenshots at `test-results/*/test-failed-1.png` — they often
-  reveal the actual page state immediately
-- MUI Select components need `id` on `InputLabel` + `labelId` on `Select` for
-  Playwright's `getByLabel()` to work
-- MUI Select click: use `locator('[role="combobox"]').click()`, NOT
-  `locator('input').click()` (the native input is hidden/aria-hidden)
-- Playwright's `response.text()` returns empty for NestJS `StreamableFile`
-  responses — use direct Node.js `fetch()` instead
-- Statements in this doc about what is/isn't working should be treated with
-  skepticism — always verify by running the test
+### Key Fixes Made This Session
 
-## Server deadlock on database reset
+**Server: Assembly name in mutation responses**
+- `getAssemblyForFeature()` now returns assembly NAME instead of _id
+- `undoChange()` now returns assembly NAME instead of _id
+- **Root cause**: Client indexes assemblies by name (from JBrowse assembly manager), but the server was returning the internal database _id in all mutation results. This caused `applyResult()` to fail with "Could not find assembly" every time a PATCH, undo, or other mutation was performed from the browser.
 
-After certain test interactions (especially feature deletion), the in-memory
-SQLite database gets into a state where `POST /health/test-reset-db` hangs
-indefinitely. The log shows repeated "Resetting database for test..." without
-"Database reset complete".
+**Client: Parse string attributes in mutation responses**
+- Added `fixFeatureSnapshot()` in `FeatureService.ts` to recursively parse `attributes` fields that arrive as JSON strings (from raw SQL queries) instead of objects
+- Handles double-stringified attributes that occur after undo-then-edit cycles
+- **Root cause**: Raw SQL queries return JSON columns as TEXT. The `rawToRow` function parses them, but NestJS serialization produces JSON with string attributes. MST expects `types.map(types.array(types.string))` which rejects string values.
 
-**Root cause hypothesis:** `schema.drop()` or `schema.create()` acquires a
-write lock, but another in-flight request (e.g., the `broadcastAndCheck`
-pipeline triggered by a feature mutation) holds a read lock or is waiting for
-one. With a single-connection in-memory SQLite, this creates a deadlock.
+**Test: undo.test.ts rewritten**
+- Position-based column targeting (td index) instead of input value matching — avoids race condition where the OntologyTermAutocomplete input loads asynchronously and shifts input indices
+- Correct Apollo menu paths: `['Edit', 'Undo']` and `['Edit', 'Redo']` (submenu)
+- Wait for `/features/undo` API response before refreshing table editor
+- Regex matching for notification text (`/No changes to undo/`)
 
-**Possible fixes:**
-- Add a mutex/semaphore around the reset endpoint so concurrent resets queue
-- Force-close all open entity-manager forks before calling `schema.drop()`
-- Use WAL mode (not available for `:memory:`, but works for file-based SQLite)
-- Add a timeout on the `schema.drop()` call with a fallback to kill+restart
-  the ORM connection
+**Test: splitTranscript.test.ts partial fix**
+- Fixed "Split transcript at:" text match to use regex (`/Split transcript.*at:/`)
+- Fixed exon coordinate expectations (were off by 1)
+- Split operation itself works, but post-split verification still fails (MST detached node errors during `applyResult`)
 
-## Table editor locator pattern
+## Remaining Failing Tests
 
-The table editor renders number values inside `<input>` elements, not as text
-content. Playwright's `hasText` and `getByText` do NOT match input values.
+### Server deadlock (affects batch runs and deleteFeature)
+- `deleteFeature.test.ts` and `editFeature.test.ts` "Can delete feature" — both hit server deadlock during `resetDatabase()` after feature mutations
+- Tests that pass individually can fail in batch runs due to this
+- Likely caused by SQLite write lock conflicts — the in-memory SQLite database doesn't handle concurrent write operations well
+- Possible fix: add a mutex/semaphore around the `test-reset-db` endpoint, or use WAL mode for SQLite
 
-**Working patterns:**
-- `row.locator('input').nth(2)` — position-based (0=type, 1=start, 2=end)
-- `row.locator('input')` + loop with `inputValue()` — value-based matching
-- `page.locator('input[type="text"][value="CDS"]')` — CSS attribute selector
+### splitTranscript.test.ts
+- Split operation works but `applyResult` from the split response causes MST "no longer part of a state tree" errors
+- After split, the old transcript is deleted and new ones created — the `addFeature`/`deleteFeature` sequence in `applyResult` may conflict with each other
+- Post-split verification (`getByText('Id=mrna03,')`) finds 2 elements in strict mode
 
-**Broken patterns:**
-- `td.filter({ hasText: '99' }).locator('input')` — `hasText` never matches
-- `row.getByText('99')` — same issue
+### mergeTranscripts.test.ts
+- Likely same issues as splitTranscript (MST errors during merge result application)
+- Not yet investigated in detail
 
-## Remaining test failures
+### featureHistory.test.ts
+- "View feature history" context menu item and dialog don't exist in the codebase
+- Tests are for unimplemented UI functionality — should be deferred or implemented
 
-### `editFeature.test.ts` "Can delete feature" — server deadlock
+### showWarnings.test.ts
+- CDSCheck ErrorIcon elements (`data-testid^="ErrorIcon-"`) not rendering
+- The check system may not be running or the results aren't displayed in the table editor
+- Needs investigation of how CDSCheck results are surfaced in the HybridGrid display
 
-Right-click delete triggers `broadcastAndCheck` which holds the database.
-Subsequent `resetDatabase()` calls deadlock. See "Server deadlock" above.
+### visualGeneModel.test.ts
+- Canvas overlay is blank, features not rendering in the graphical display
+- May be related to how the canvas rendering works in headless Chromium
 
-### `visualGeneModel.test.ts` — features not rendering
+### largeAssembly.test.ts
+- External dependency: needs `SM_V10_3` assembly `.fai` file
 
-The canvas overlay is blank — the gene model features don't appear at all.
-This is NOT a simple snapshot mismatch; the data isn't loading/rendering.
-May be a timing issue or a data-loading problem with the `so_types.gff3`
-assembly.
+### runTiberius.test.ts
+- GTF track test, needs route/UI adjustments
 
-### `featureHistory.test.ts` — likely coordinate/table issues
+### sequenceSearch.test.ts
+- Skipped (needs mock tool setup)
 
-3 tests. May have table editor locator issues and/or depend on feature
-history UI that may not be implemented.
+## Root Cause: Double-Stringified Attributes
 
-### `undo.test.ts` — edits not persisting
+The `FeatureHistorySubscriber` captures entity state for undo. When features are restored via undo and then edited again, the attributes can become double-stringified:
+1. Original: `{"ID":["CDS1"]}` (object)
+2. After undo cycle: `'{"ID":["CDS1"]}'` (string in database)
+3. After another undo: `'"{\\"ID\\":[\\"CDS1\\"]}"'` (double-escaped)
 
-2 tests. Feature edits don't persist after `refreshTableEditor` toggle.
+The client-side `fixFeatureSnapshot` handles this with a while loop, but the server-side should be fixed to prevent the corruption. The issue is likely in how MikroORM handles JSON columns during the undo `updateById` call — the `attributes` field from the history record may already be a string when it should be an object.
 
-### `showWarnings.test.ts` — table editor + CDSCheck interaction
+## Architecture Notes
 
-2 tests. Table editor locator issues plus CDSCheck may interfere.
-
-### `splitTranscript.test.ts` — dialog/API interaction
-
-2 tests. Check if split-transcript dialog submit works.
-
-### `mergeTranscripts.test.ts` — likely stuck on table editor
-
-Times out — probably table editor interaction issue.
-
-### `deleteFeature.test.ts` — server deadlock
-
-Same SQLite deadlock issue as editFeature "Can delete".
-
-### `addAssembly.test.ts` — DONE (5/5 passing)
-
-### `downloadGff.test.ts` — DONE (2/2 passing)
-
-### `largeAssembly.test.ts` — external dependency
-
-Uses SM_V10_3 assembly which may have a missing `.fai` file.
-
-### `runTiberius.test.ts` — GTF track test
-
-May need route or UI adjustments.
-
-### `sequenceSearch.test.ts` — skipped
-
-Needs mock tool setup + analysis cascade fixes.
+- Client indexes assemblies by NAME (JBrowse convention), server uses internal _id
+- All mutation responses (PATCH, DELETE, undo, split, merge) go through `broadcastAndCheck` which includes `assemblyId` — this must be the assembly NAME
+- The `addFeature` server endpoint receives `assemblyId` from the client DTO directly; test helpers send the _id, browser UI sends the name
+- Raw SQL queries (`findRootParentsOfMany`, `findDescendantsOfMany`) return JSON columns as strings; `rawToRow` parses them, but the result still gets stringified during HTTP serialization

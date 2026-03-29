@@ -6,6 +6,22 @@ import type { IAnyStateTreeNode } from '@jbrowse/mobx-state-tree'
 import type { ApolloSessionModel } from './session'
 import { createFetchErrorMessage, getBaseURL, isReadOnly } from './util'
 
+// The server may serialize attributes as a JSON string instead of an object
+// (e.g. from raw SQL queries or after undo cycles where attributes get
+// double-stringified). Parse them recursively until we get an object.
+function fixFeatureSnapshot(f: NestedFeature) {
+  let attrs = f.attributes as Record<string, string[]> | string | undefined
+  while (typeof attrs === 'string') {
+    attrs = JSON.parse(attrs) as Record<string, string[]> | string
+  }
+  f.attributes = attrs
+  if (f.children) {
+    for (const child of Object.values(f.children)) {
+      fixFeatureSnapshot(child)
+    }
+  }
+}
+
 interface MutationResult {
   features: NestedFeature[]
   deletedFeatureIds: string[]
@@ -230,6 +246,7 @@ export class FeatureService {
     }
 
     for (const feature of features) {
+      fixFeatureSnapshot(feature)
       apolloDataStore.addFeature(assemblyId, feature as AnnotationFeatureSnapshot)
     }
   }
