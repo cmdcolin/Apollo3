@@ -284,22 +284,23 @@ export class FeaturesService {
     featureId: string,
     featureRepository: FeatureRepository,
   ) {
-    let current = await featureRepository.findById(featureId)
-    while (current?.parentId) {
-      const siblings = await featureRepository.findChildren(current.parentId)
-      if (siblings.length > 0) {
+    let currentId: string | undefined = featureId
+    while (currentId) {
+      const children = await featureRepository.findChildren(currentId)
+      if (children.length > 0) {
         let newMin = Infinity
         let newMax = -Infinity
-        for (const s of siblings) {
-          newMin = Math.min(newMin, s.min)
-          newMax = Math.max(newMax, s.max)
+        for (const c of children) {
+          newMin = Math.min(newMin, c.min)
+          newMax = Math.max(newMax, c.max)
         }
-        await featureRepository.updateById(current.parentId, {
+        await featureRepository.updateById(currentId, {
           min: newMin,
           max: newMax,
         })
       }
-      current = await featureRepository.findById(current.parentId)
+      const current = await featureRepository.findById(currentId)
+      currentId = current?.parentId
     }
   }
 

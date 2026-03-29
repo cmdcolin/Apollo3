@@ -54,7 +54,8 @@ function placeholders(count: number) {
  */
 export class MikroOrmFeatureRepository extends BaseFeatureRepository {
   private sql(query: string, params?: unknown[]) {
-    return this.em.getConnection().execute(query, params, 'all')
+    const ctx = this.em.getTransactionContext()
+    return this.em.getConnection().execute(query, params, 'all', ctx)
   }
 
   async findDescendants(rootId: string) {

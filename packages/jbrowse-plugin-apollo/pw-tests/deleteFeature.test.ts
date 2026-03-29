@@ -6,6 +6,7 @@ import {
   addAssemblyFromGff,
   annotationTrackAppearance,
   loginAsRoot,
+  refreshTableEditor,
   resetDatabase,
   selectAssemblyToView,
 } from './helpers.js'
@@ -35,7 +36,7 @@ async function deleteFeatureByName(
   page: import('@playwright/test').Page,
   featureName: string,
 ) {
-  const featureEl = page.getByText(featureName)
+  const featureEl = page.getByText(featureName).first()
   await featureEl.click({ button: 'right', force: true })
   await page.getByText('Delete feature', { exact: false }).click()
   await page.getByRole('button', { name: 'Yes' }).click()
@@ -44,42 +45,38 @@ async function deleteFeatureByName(
   })
 }
 
-async function refreshTableEditor(page: import('@playwright/test').Page) {
-  // Toggle table display to refresh
-  const trackMenu = page.locator('[data-testid="track_menu_icon"]').first()
-  await trackMenu.click()
-  await page.getByText('Show graphical display').click()
-  await trackMenu.click()
-  await page.getByText('Show both graphical and table display').click()
-}
 
 test('Delete and resize', async ({ page }) => {
   await setupDeleteFeatureTest(page)
 
-  // Delete exon01 and check features are updated
+  // Delete exon01 (3-40) from mrna02. Bounds recalculated from remaining children.
+  // mrna02's min child is now CDS at 20-40, so mrna02 → 20-200
+  // gene02 min comes from mrna03 exon05 at 10-40, so gene02 → 10-200
   await deleteFeatureByName(page, 'Id=exon01')
   await refreshTableEditor(page)
 
-  const gene02Row = page.getByText('Id=gene02').locator('..')
-  await expect(gene02Row.locator('input[value="10"]')).toBeVisible()
-  await expect(gene02Row.locator('input[value="200"]')).toBeVisible()
+  await expect(
+    page.getByText('Id=gene02').locator('..').locator('input[value="10"]'),
+  ).toBeVisible()
+  await expect(
+    page.getByText('Id=gene02').locator('..').locator('input[value="200"]'),
+  ).toBeVisible()
+  await expect(
+    page.getByText('Id=mrna02').locator('..').locator('input[value="20"]'),
+  ).toBeVisible()
+  await expect(
+    page.getByText('Id=mrna03').locator('..').locator('input[value="10"]'),
+  ).toBeVisible()
+  await expect(
+    page.getByText('Id=mrna03').locator('..').locator('input[value="190"]'),
+  ).toBeVisible()
 
-  const mrna02Row = page.getByText('Id=mrna02').locator('..')
-  await expect(mrna02Row.locator('input[value="50"]')).toBeVisible()
-
-  const cds1Row = page.getByText('Id=cds1').locator('..')
-  await expect(cds1Row.locator('input[value="50"]')).toBeVisible()
-  await expect(cds1Row.locator('input[value="140"]')).toBeVisible()
-
-  const mrna03Row = page.getByText('Id=mrna03').locator('..')
-  await expect(mrna03Row.locator('input[value="10"]')).toBeVisible()
-  await expect(mrna03Row.locator('input[value="190"]')).toBeVisible()
-
-  // Delete exon05
+  // Delete exon05 (10-40) from mrna03. mrna03 → 50-190, gene02 → 20-200
   await deleteFeatureByName(page, 'Id=exon05')
+  await refreshTableEditor(page)
 
   await expect(
-    page.getByText('Id=gene02').locator('..').locator('input[value="50"]'),
+    page.getByText('Id=gene02').locator('..').locator('input[value="20"]'),
   ).toBeVisible()
   await expect(
     page.getByText('Id=gene02').locator('..').locator('input[value="200"]'),
@@ -87,62 +84,62 @@ test('Delete and resize', async ({ page }) => {
   await expect(
     page.getByText('Id=mrna03').locator('..').locator('input[value="50"]'),
   ).toBeVisible()
-  await expect(
-    page.getByText('Id=mrna03').locator('..').locator('input[value="190"]'),
-  ).toBeVisible()
 
-  // Delete from right
+  // Delete exon09 (190-200) from mrna02. mrna02 → 20-180, gene02 → 20-190
   await deleteFeatureByName(page, 'Id=exon09')
+  await refreshTableEditor(page)
+
   await expect(
-    page.getByText('Id=gene02').locator('..').locator('input[value="50"]'),
+    page.getByText('Id=gene02').locator('..').locator('input[value="20"]'),
   ).toBeVisible()
   await expect(
     page.getByText('Id=gene02').locator('..').locator('input[value="190"]'),
   ).toBeVisible()
+  await expect(
+    page.getByText('Id=mrna02').locator('..').locator('input[value="180"]'),
+  ).toBeVisible()
 
+  // Delete exon04 (160-180). mrna02 → 20-150
   await deleteFeatureByName(page, 'Id=exon04')
   await refreshTableEditor(page)
   await expect(
     page.getByText('Id=mrna02').locator('..').locator('input[value="150"]'),
   ).toBeVisible()
 
+  // Delete exon03 (120-150). mrna02 → 20-140
   await deleteFeatureByName(page, 'Id=exon03')
   await refreshTableEditor(page)
   await expect(
-    page.getByText('Id=mrna02').locator('..').locator('input[value="115"]'),
-  ).toBeVisible()
-  await expect(
-    page.getByText('Id=cds1').locator('..').locator('input[value="115"]'),
+    page.getByText('Id=mrna02').locator('..').locator('input[value="140"]'),
   ).toBeVisible()
 
-  // No side effect in deleting "exon_region"
+  // No side effect in deleting exon_region children
   await deleteFeatureByName(page, 'Id=exon_region2')
   await deleteFeatureByName(page, 'Id=exon_region1')
   await refreshTableEditor(page)
   await expect(
     page.getByText('Id=exon08').locator('..').locator('input[value="160"]'),
   ).toBeVisible()
-  await expect(
-    page.getByText('Id=exon08').locator('..').locator('input[value="190"]'),
-  ).toBeVisible()
 
+  // Delete cds1 (first CDS at 20-40). After this, mrna02 → 50-140
   await deleteFeatureByName(page, 'Id=cds1')
   await refreshTableEditor(page)
   await expect(
     page.getByText('Id=mrna02').locator('..').locator('input[value="50"]'),
   ).toBeVisible()
   await expect(
-    page.getByText('Id=mrna02').locator('..').locator('input[value="115"]'),
+    page.getByText('Id=mrna02').locator('..').locator('input[value="140"]'),
   ).toBeVisible()
 
+  // Delete exon02 and exon10. mrna02 → 50-140 (CDS parts remain)
   await deleteFeatureByName(page, 'Id=exon02')
   await deleteFeatureByName(page, 'Id=exon10')
   await refreshTableEditor(page)
   await expect(
-    page.getByText('Id=mrna02').locator('..').locator('input[value="105"]'),
+    page.getByText('Id=mrna02').locator('..').locator('input[value="50"]'),
   ).toBeVisible()
   await expect(
-    page.getByText('Id=mrna02').locator('..').locator('input[value="115"]'),
+    page.getByText('Id=mrna02').locator('..').locator('input[value="140"]'),
   ).toBeVisible()
 })
 

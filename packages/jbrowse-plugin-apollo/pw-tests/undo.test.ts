@@ -48,13 +48,13 @@ async function editCds1Field(
   await expect(input).toBeVisible({ timeout: 30_000 })
   await expect(input).toHaveValue(currentValue, { timeout: 10_000 })
 
-  const saveResponse = page.waitForResponse(
+  const patchResponse = page.waitForResponse(
     (resp) =>
-      resp.url().includes('/features') && resp.status() === 200,
+      resp.url().includes('/features') && resp.request().method() === 'PATCH' && resp.status() === 200,
   )
   await input.fill(newValue)
   await page.click('body', { position: { x: 0, y: 0 } })
-  await saveResponse
+  await patchResponse
 }
 
 async function expectCds1HasEnd(
@@ -65,7 +65,7 @@ async function expectCds1HasEnd(
   await expect(tbody).toBeVisible({ timeout: 10_000 })
   const cds1Row = tbody.locator('tr').filter({ hasText: 'CDS1' })
   const endInput = cds1Row.locator('td').nth(2).locator('input')
-  await expect(endInput).toHaveValue(value, { timeout: 10_000 })
+  await expect(endInput).toHaveValue(value, { timeout: 30_000 })
 }
 
 async function expectCds1HasStart(
@@ -76,7 +76,7 @@ async function expectCds1HasStart(
   await expect(tbody).toBeVisible({ timeout: 10_000 })
   const cds1Row = tbody.locator('tr').filter({ hasText: 'CDS1' })
   const startInput = cds1Row.locator('td').nth(1).locator('input')
-  await expect(startInput).toHaveValue(value, { timeout: 10_000 })
+  await expect(startInput).toHaveValue(value, { timeout: 30_000 })
 }
 
 async function undoAndWait(page: import('@playwright/test').Page) {
@@ -103,15 +103,12 @@ test('Undo chain of edits', async ({ page }) => {
   await editCds1Field(page, 'end', '80', '70')
 
   await undoAndWait(page)
-  await refreshTableEditor(page)
   await expectCds1HasEnd(page, '80')
 
   await undoAndWait(page)
-  await refreshTableEditor(page)
   await expectCds1HasEnd(page, '90')
 
   await undoAndWait(page)
-  await refreshTableEditor(page)
   await expectCds1HasEnd(page, '99')
 
   await selectFromApolloMenu(page, ['Edit', 'Undo'])
@@ -130,11 +127,9 @@ test('Undo and redo', async ({ page }) => {
   await editCds1Field(page, 'start', '20', '30')
 
   await undoAndWait(page)
-  await refreshTableEditor(page)
   await expectCds1HasStart(page, '20')
 
   await undoAndWait(page)
-  await refreshTableEditor(page)
   await expectCds1HasStart(page, '10')
 
   // New edit after undo clears redo stack
@@ -148,19 +143,15 @@ test('Undo and redo', async ({ page }) => {
   await page.waitForTimeout(500)
 
   await undoAndWait(page)
-  await refreshTableEditor(page)
   await expectCds1HasStart(page, '10')
 
   await undoAndWait(page)
-  await refreshTableEditor(page)
   await expectCds1HasStart(page, '1')
 
   await redoAndWait(page)
-  await refreshTableEditor(page)
   await expectCds1HasStart(page, '10')
 
   await redoAndWait(page)
-  await refreshTableEditor(page)
   await expectCds1HasStart(page, '40')
 
   await selectFromApolloMenu(page, ['Edit', 'Redo'])

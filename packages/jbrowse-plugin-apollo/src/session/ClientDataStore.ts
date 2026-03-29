@@ -269,13 +269,18 @@ export function clientDataStoreFactory(
         features: AnnotationFeatureSnapshot[],
         deletedFeatureIds: string[],
       ) {
+        // Add updated features first — the server returns the complete root
+        // feature tree (e.g. gene→mRNA→children) with child deletions already
+        // applied. Replacing the root feature before deleting avoids MST
+        // "detached node" errors from observers that still reference the old
+        // child node.
+        for (const feature of features) {
+          self.addFeature(assemblyId, feature)
+        }
         for (const id of deletedFeatureIds) {
           if (self.getFeature(id)) {
             self.deleteFeature(id)
           }
-        }
-        for (const feature of features) {
-          self.addFeature(assemblyId, feature)
         }
       },
       refreshLoadedRegions: flow(function* refreshLoadedRegions() {
@@ -298,7 +303,12 @@ export function clientDataStoreFactory(
                 start: min,
                 end: max,
               })) as AnnotationFeatureSnapshot[]
-              refSeq.features.clear()
+              const serverIds = new Set(features.map((f) => f._id))
+              for (const [id] of refSeq.features) {
+                if (!serverIds.has(id)) {
+                  refSeq.features.delete(id)
+                }
+              }
               for (const feature of features) {
                 refSeq.features.put(feature)
               }

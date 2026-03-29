@@ -40,10 +40,12 @@ export function DeleteFeature({
       setSelectedFeature()
     }
 
-    await featureService.deleteFeature(sourceFeature._id)
-
-    handleClose()
-    event.preventDefault()
+    try {
+      await featureService.deleteFeature(sourceFeature._id)
+      handleClose()
+    } catch (error) {
+      setErrorMessage(String(error))
+    }
   }
 
   return (

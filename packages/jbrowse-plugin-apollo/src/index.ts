@@ -1,7 +1,10 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 /* eslint-disable @typescript-eslint/no-misused-promises */
+import { setLivelinessChecking } from '@jbrowse/mobx-state-tree'
 import { checkRegistry } from '@apollo-annotation/common'
+
+setLivelinessChecking('warn')
 import { CDSCheck, TranscriptCheck } from '@apollo-annotation/shared'
 import Plugin from '@jbrowse/core/Plugin'
 import type PluginManager from '@jbrowse/core/PluginManager'

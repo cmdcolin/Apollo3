@@ -6,9 +6,8 @@ import type { IAnyStateTreeNode } from '@jbrowse/mobx-state-tree'
 import type { ApolloSessionModel } from './session'
 import { createFetchErrorMessage, getBaseURL, isReadOnly } from './util'
 
-// The server may serialize attributes as a JSON string instead of an object
-// (e.g. from raw SQL queries or after undo cycles where attributes get
-// double-stringified). Parse them recursively until we get an object.
+// Raw SQL queries and undo cycles can produce attributes as JSON strings
+// instead of objects. Parse them recursively before applying to the MST tree.
 function fixFeatureSnapshot(f: NestedFeature) {
   let attrs = f.attributes as Record<string, string[]> | string | undefined
   while (typeof attrs === 'string') {
@@ -239,15 +238,14 @@ export class FeatureService {
     const { apolloDataStore } = this.getSession()
     const { assemblyId, deletedFeatureIds, features } = result
 
-    for (const id of deletedFeatureIds) {
-      if (apolloDataStore.getFeature(id)) {
-        apolloDataStore.deleteFeature(id)
-      }
-    }
-
     for (const feature of features) {
       fixFeatureSnapshot(feature)
-      apolloDataStore.addFeature(assemblyId, feature as AnnotationFeatureSnapshot)
     }
+
+    apolloDataStore.applyFeatureUpdate(
+      assemblyId,
+      features as AnnotationFeatureSnapshot[],
+      deletedFeatureIds,
+    )
   }
 }
