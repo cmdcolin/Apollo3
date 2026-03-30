@@ -1,4 +1,7 @@
+import { randomBytes } from 'node:crypto'
+
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -8,6 +11,7 @@ import {
   NotFoundException,
   Param,
   Patch,
+  Post,
   Req,
 } from '@nestjs/common'
 
@@ -44,9 +48,56 @@ export class UsersController {
     }
   }
 
+  @Post()
+  async createUser(
+    @Body() body: { email: string; username: string; role?: Role },
+  ) {
+    const existing = await this.usersService.findByEmail(body.email)
+    if (existing) {
+      throw new BadRequestException('A user with that email already exists')
+    }
+    const inviteToken = randomBytes(32).toString('hex')
+    const user = await this.usersService.addNew({
+      email: body.email,
+      username: body.username,
+      role: body.role ?? Role.User,
+      pendingApproval: false,
+    })
+    await this.usersService.setInviteToken(user._id, inviteToken)
+    const { passwordHash: _, inviteToken: _t, ...safeUser } = user
+    return { ...safeUser, inviteToken }
+  }
+
+  @Post(':id/reinvite')
+  async reinvite(@Param('id') id: string) {
+    const user = await this.usersService.findById(id)
+    if (!user) {
+      throw new NotFoundException(`User with id "${id}" not found`)
+    }
+    const inviteToken = randomBytes(32).toString('hex')
+    await this.usersService.setInviteToken(id, inviteToken)
+    return { inviteToken }
+  }
+
+  @Patch(':id/password')
+  async resetPassword(
+    @Param('id') id: string,
+    @Body() body: { password: string },
+  ) {
+    const { hash } = await import('bcryptjs')
+    const user = await this.usersService.findById(id)
+    if (!user) {
+      throw new NotFoundException(`User with id "${id}" not found`)
+    }
+    const passwordHash = await hash(body.password, 10)
+    await this.usersService.setPassword(id, passwordHash)
+    return { message: 'Password updated' }
+  }
+
   @Get()
-  findAll() {
-    return this.usersService.findAll()
+  async findAll() {
+    const users = await this.usersService.findAll()
+    return users.map(({ passwordHash: _, inviteToken: _t, ...rest }) => rest)
   }
 
   @Authenticated()
@@ -71,8 +122,13 @@ export class UsersController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findById(id)
+  async findOne(@Param('id') id: string) {
+    const user = await this.usersService.findById(id)
+    if (!user) {
+      throw new NotFoundException(`User with id "${id}" not found`)
+    }
+    const { passwordHash: _, inviteToken: _t, ...rest } = user
+    return rest
   }
 
   @Patch(':id')

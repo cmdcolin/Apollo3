@@ -132,6 +132,32 @@ export class AuthenticationController {
     return { url }
   }
 
+  // --- Password login ---
+
+  @Post('login')
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  async passwordLogin(
+    @Body() { email, password }: { email: string; password: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.passwordLogin(email, password)
+    res.cookie(AUTH_COOKIE_NAME, result.token, COOKIE_OPTIONS)
+    return result
+  }
+
+  // --- Accept invite ---
+
+  @Post('accept-invite')
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  async acceptInvite(
+    @Body() { token, password }: { token: string; password: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.acceptInvite(token, password)
+    res.cookie(AUTH_COOKIE_NAME, result.token, COOKIE_OPTIONS)
+    return result
+  }
+
   // --- Root password login ---
 
   @Post('root')

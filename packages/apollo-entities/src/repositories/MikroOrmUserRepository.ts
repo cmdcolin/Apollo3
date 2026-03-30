@@ -9,6 +9,8 @@ function toRow(entity: InferEntity<typeof UserEntity>): UserRow {
     username: entity.username,
     email: entity.email,
     role: entity.role as UserRow['role'],
+    passwordHash: entity.passwordHash ?? undefined,
+    inviteToken: entity.inviteToken ?? undefined,
     pendingApproval: entity.pendingApproval ?? undefined,
     createdAt: entity.createdAt ?? undefined,
     updatedAt: entity.updatedAt ?? undefined,
@@ -58,6 +60,8 @@ export class MikroOrmUserRepository implements UserRepository {
       username: row.username,
       email: row.email,
       role: row.role as UserRole,
+      passwordHash: row.passwordHash ?? null,
+      inviteToken: row.inviteToken ?? null,
       pendingApproval: row.pendingApproval ?? null,
       createdAt: row.createdAt ?? new Date(),
       updatedAt: row.updatedAt ?? new Date(),
@@ -72,9 +76,15 @@ export class MikroOrmUserRepository implements UserRepository {
     if (!entity) {
       return
     }
-    const { role, pendingApproval, ...rest } = data
+    const { role, passwordHash, inviteToken, pendingApproval, ...rest } = data
     if (role !== undefined) {
       entity.role = role as UserRole
+    }
+    if (passwordHash !== undefined) {
+      entity.passwordHash = passwordHash
+    }
+    if (inviteToken !== undefined) {
+      entity.inviteToken = inviteToken
     }
     if (pendingApproval !== undefined) {
       entity.pendingApproval = pendingApproval

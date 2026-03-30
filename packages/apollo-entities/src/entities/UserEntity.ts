@@ -15,6 +15,8 @@ export const UserEntity = defineEntity({
     username: p.string(),
     email: p.string().unique(),
     role: p.enum(() => UserRole),
+    passwordHash: p.string().nullable(),
+    inviteToken: p.string().nullable(),
     pendingApproval: p.boolean().nullable(),
     createdAt: p.datetime().nullable(),
     updatedAt: p

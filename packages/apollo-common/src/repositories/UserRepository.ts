@@ -3,6 +3,8 @@ export interface UserRow {
   username: string
   email: string
   role: 'readOnly' | 'admin' | 'user' | 'none'
+  passwordHash?: string
+  inviteToken?: string
   pendingApproval?: boolean
   createdAt?: Date
   updatedAt?: Date

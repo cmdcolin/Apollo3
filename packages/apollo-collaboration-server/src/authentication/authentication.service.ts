@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
+import bcrypt from 'bcryptjs'
 
 import type { CreateUserDto } from '../users/dto/create-user.dto.js'
 import { UsersService } from '../users/users.service.js'
@@ -135,6 +136,7 @@ export class AuthenticationService {
   getLoginTypes() {
     return {
       oidc: this.oidcService.getProviderNames(),
+      passwordLogin: true,
       rootLogin: !!this.configService.get('ALLOW_ROOT_USER', { infer: true }),
     }
   }
@@ -159,6 +161,42 @@ export class AuthenticationService {
       return this.logIn(ROOT_USER_NAME, ROOT_USER_EMAIL)
     }
     throw new UnauthorizedException('Invalid password for ROOT user')
+  }
+
+  async passwordLogin(email: string, password: string) {
+    const user = await this.usersService.findByEmail(email)
+    if (!user?.passwordHash) {
+      throw new UnauthorizedException('Invalid email or password')
+    }
+    const valid = await bcrypt.compare(password, user.passwordHash)
+    if (!valid) {
+      throw new UnauthorizedException('Invalid email or password')
+    }
+    const payload: JWTPayload = {
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      id: user._id,
+    }
+    const returnToken = this.jwtService.sign(payload)
+    return { token: returnToken }
+  }
+
+  async acceptInvite(token: string, password: string) {
+    const user = await this.usersService.findByInviteToken(token)
+    if (!user) {
+      throw new BadRequestException('Invalid or expired invite link')
+    }
+    const passwordHash = await bcrypt.hash(password, 10)
+    await this.usersService.setPassword(user._id, passwordHash)
+    const payload: JWTPayload = {
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      id: user._id,
+    }
+    const returnToken = this.jwtService.sign(payload)
+    return { token: returnToken }
   }
 
   async logIn(name: string, email: string) {

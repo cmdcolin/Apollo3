@@ -91,6 +91,14 @@ export default defineConfig({
           __dirname,
           'admin/add-assembly/index.html',
         ),
+        'admin/login/index': path.resolve(
+          __dirname,
+          'admin/login/index.html',
+        ),
+        'ui/invite/index': path.resolve(
+          __dirname,
+          'ui/invite/index.html',
+        ),
         'ui/assembly-checks/index': path.resolve(
           __dirname,
           'ui/assembly-checks/index.html',

@@ -4,5 +4,6 @@ export class CreateUserDto {
   readonly email: string
   readonly username: string
   role?: Role
+  passwordHash?: string
   pendingApproval?: boolean
 }

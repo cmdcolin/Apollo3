@@ -41,8 +41,22 @@ export class UsersService {
       email: user.email,
       username: user.username,
       role: user.role ?? Role.None,
+      passwordHash: user.passwordHash,
       pendingApproval: user.pendingApproval,
     })
+  }
+
+  async setPassword(id: string, passwordHash: string) {
+    return this.db.user.updateById(id, { passwordHash, inviteToken: '' })
+  }
+
+  async setInviteToken(id: string, inviteToken: string) {
+    return this.db.user.updateById(id, { inviteToken })
+  }
+
+  async findByInviteToken(token: string) {
+    const users = await this.db.user.findAll()
+    return users.find((u) => u.inviteToken === token)
   }
 
   async updateRole(id: string, role: Role) {

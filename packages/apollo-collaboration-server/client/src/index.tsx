@@ -8,6 +8,7 @@ import List from '@mui/material/List'
 import ListItemButton from '@mui/material/ListItemButton'
 import ListItemText from '@mui/material/ListItemText'
 import Paper from '@mui/material/Paper'
+import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -56,6 +57,8 @@ interface OidcProviderInfo {
 
 interface LoginTypes {
   oidc: OidcProviderInfo[]
+  passwordLogin?: boolean
+  rootLogin?: boolean
 }
 
 function useLoginTypes() {
@@ -119,9 +122,31 @@ function useSetupActive() {
 
 
 function LoginSection() {
-  const { oidc } = useLoginTypes()
+  const { oidc, passwordLogin, rootLogin } = useLoginTypes()
   const setupActive = useSetupActive()
   const currentUrl = globalThis.location.href
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loginError, setLoginError] = useState('')
+
+  async function handlePasswordLogin() {
+    setLoginError('')
+    const response = await fetch('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password }),
+    })
+    if (response.ok) {
+      globalThis.location.reload()
+    } else {
+      setLoginError('Invalid email or password')
+    }
+  }
+
+  const hasOidc = oidc.length > 0
+  const hasRoot = rootLogin
+  const hasAnyMethod = hasOidc || passwordLogin || hasRoot || setupActive
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -142,7 +167,49 @@ function LoginSection() {
           Sign in with {provider.displayName}
         </Button>
       ))}
-      {oidc.length === 0 && !setupActive ? (
+      {passwordLogin ? (
+        <>
+          {hasOidc ? <Divider>or</Divider> : null}
+          {loginError ? <Alert severity="error">{loginError}</Alert> : null}
+          <TextField
+            label="Email"
+            type="email"
+            size="small"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value)
+              setLoginError('')
+            }}
+          />
+          <TextField
+            label="Password"
+            type="password"
+            size="small"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value)
+              setLoginError('')
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handlePasswordLogin()
+              }
+            }}
+          />
+          <Button variant="contained" onClick={handlePasswordLogin}>
+            Sign in
+          </Button>
+        </>
+      ) : null}
+      {hasRoot ? (
+        <>
+          <Divider />
+          <Button variant="outlined" fullWidth href="/admin/login/">
+            Admin login
+          </Button>
+        </>
+      ) : null}
+      {!hasAnyMethod ? (
         <Typography variant="body2" color="text.secondary">
           No login providers configured. Contact your administrator.
         </Typography>

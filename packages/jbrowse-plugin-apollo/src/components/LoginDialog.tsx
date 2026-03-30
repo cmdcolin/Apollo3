@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-misused-promises */
 import {
   Button,
   DialogContent,
@@ -26,6 +25,7 @@ interface OidcProviderInfo {
 
 interface LoginTypes {
   oidc: OidcProviderInfo[]
+  passwordLogin?: boolean
   rootLogin?: boolean
 }
 
@@ -34,6 +34,9 @@ export function LoginDialog({ handleClose, session }: LoginDialogProps) {
   const [loginTypes, setLoginTypes] = useState<LoginTypes>({ oidc: [] })
   const [errorMessage, setErrorMessage] = useState('')
   const [loading, setLoading] = useState(true)
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [loginError, setLoginError] = useState('')
   const [rootPassword, setRootPassword] = useState('')
   const [rootLoginError, setRootLoginError] = useState('')
 
@@ -64,6 +67,22 @@ export function LoginDialog({ handleClose, session }: LoginDialogProps) {
     }
   }, [baseURL])
 
+  async function handlePasswordLogin() {
+    setLoginError('')
+    const url = new URL('auth/login', baseURL)
+    const response = await fetch(url.toString(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+      credentials: 'include',
+    })
+    if (response.ok) {
+      globalThis.location.reload()
+    } else {
+      setLoginError('Invalid email or password')
+    }
+  }
+
   function handleOAuthLogin(providerName: string) {
     const redirectUri = globalThis.location.href
     const url = new URL(`auth/oidc/${providerName}`, baseURL)
@@ -88,11 +107,13 @@ export function LoginDialog({ handleClose, session }: LoginDialogProps) {
   }
 
   const hasOidc = loginTypes.oidc.length > 0
+  const hasPassword = loginTypes.passwordLogin
   const isLocalhost =
     globalThis.location?.hostname === 'localhost' ||
     globalThis.location?.hostname === '127.0.0.1'
   const hasRoot = loginTypes.rootLogin && isLocalhost
-  const hasNoMethods = !loading && !hasOidc && !hasRoot && !errorMessage
+  const hasNoMethods =
+    !loading && !hasOidc && !hasPassword && !hasRoot && !errorMessage
 
   return (
     <Dialog
@@ -127,7 +148,51 @@ export function LoginDialog({ handleClose, session }: LoginDialogProps) {
             Sign in with {provider.displayName}
           </Button>
         ))}
-        {hasOidc && hasRoot ? <Divider /> : null}
+        {hasPassword ? (
+          <>
+            {hasOidc ? <Divider>or</Divider> : null}
+            {loginError ? (
+              <DialogContentText color="error">{loginError}</DialogContentText>
+            ) : null}
+            <TextField
+              label="Email"
+              type="email"
+              size="small"
+              value={loginEmail}
+              onChange={(e) => {
+                setLoginEmail(e.target.value)
+                setLoginError('')
+              }}
+            />
+            <TextField
+              label="Password"
+              type="password"
+              size="small"
+              value={loginPassword}
+              onChange={(e) => {
+                setLoginPassword(e.target.value)
+                setLoginError('')
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                  handlePasswordLogin()
+                }
+              }}
+            />
+            <Button
+              variant="contained"
+              fullWidth
+              onClick={() => {
+                // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                handlePasswordLogin()
+              }}
+            >
+              Sign in
+            </Button>
+          </>
+        ) : null}
+        {(hasOidc || hasPassword) && hasRoot ? <Divider /> : null}
         {hasRoot ? (
           <>
             <TextField
