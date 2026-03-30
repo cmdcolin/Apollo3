@@ -22,6 +22,8 @@ interface Assembly {
   displayName: string
   description?: string
   organism?: string
+  organismDisplayName?: string
+  organismScientificName?: string
   visibility?: 'public' | 'private'
 }
 
@@ -37,12 +39,19 @@ const columns: GridColDef<Assembly>[] = [
   { field: 'displayName', headerName: 'Display Name', flex: 1 },
   { field: 'description', headerName: 'Description', flex: 1.5 },
   {
+    field: 'organismScientificName',
+    headerName: 'Scientific Name',
+    flex: 1,
+  },
+  {
     field: 'organism',
-    headerName: 'Organism',
+    headerName: 'Common Name',
     flex: 1,
     renderCell: (params) =>
       params.value ? (
-        <Link href={`/ui/organisms/${params.value}`}>{params.value}</Link>
+        <Link href={`/ui/organisms/${params.value}`}>
+          {params.row.organismDisplayName ?? params.value}
+        </Link>
       ) : null,
   },
   {

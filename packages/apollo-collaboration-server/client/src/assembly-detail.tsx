@@ -174,40 +174,40 @@ function AssemblyDetailPage() {
           <Typography color="text.primary">{assembly.displayName}</Typography>
         </Breadcrumbs>
 
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            mb: 1,
-          }}
-        >
-          <Typography variant="h4">{assembly.displayName}</Typography>
-          <Chip
-            label={assembly.visibility ?? 'private'}
-            size="small"
-            color={assembly.visibility === 'public' ? 'success' : 'default'}
-            variant="outlined"
-          />
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="body1">
+            <strong>Name:</strong> {assembly.name}
+          </Typography>
+          {assembly.displayName !== assembly.name ? (
+            <Typography variant="body1">
+              <strong>Display name:</strong> {assembly.displayName}
+            </Typography>
+          ) : null}
+          {assembly.description ? (
+            <Typography variant="body1">
+              <strong>Description:</strong> {assembly.description}
+            </Typography>
+          ) : null}
+          {organism ? (
+            <Typography variant="body1">
+              <strong>Organism:</strong>{' '}
+              <Link href={`/ui/organisms/${assembly.organism}`}>
+                {organismLabel(organism)}
+              </Link>
+            </Typography>
+          ) : null}
+          <Typography variant="body1">
+            <strong>Visibility:</strong>{' '}
+            <Chip
+              label={assembly.visibility ?? 'private'}
+              size="small"
+              color={assembly.visibility === 'public' ? 'success' : 'default'}
+              variant="outlined"
+            />
+          </Typography>
         </Box>
 
-        {assembly.description ? (
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-            {assembly.description}
-          </Typography>
-        ) : null}
-
         <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-          {organism ? (
-            <Chip
-              label={organismLabel(organism)}
-              size="small"
-              variant="outlined"
-              component="a"
-              href={`/ui/organisms/${assembly.organism}`}
-              clickable
-            />
-          ) : null}
           <Button
             variant="contained"
             size="small"
@@ -233,9 +233,9 @@ function AssemblyDetailPage() {
             <Button
               variant="outlined"
               size="small"
-              href={`/ui/assembly-admin/${assembly.name}`}
+              href={`/ui/edit-assembly/${assembly.name}`}
             >
-              Admin
+              Edit assembly
             </Button>
           ) : null}
         </Box>

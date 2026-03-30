@@ -5,8 +5,6 @@ import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Container from '@mui/material/Container'
 import Link from '@mui/material/Link'
-import Paper from '@mui/material/Paper'
-import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import {
   DataGrid,
@@ -89,175 +87,6 @@ const assemblyColumns: GridColDef<AssemblyRow>[] = [
   },
 ]
 
-function OrganismEditSection({
-  organism,
-  onUpdated,
-  onDeleted,
-}: {
-  organism: Organism
-  onUpdated: (updated: Organism) => void
-  onDeleted: () => void
-}) {
-  const [genus, setGenus] = useState(organism.genus ?? '')
-  const [species, setSpecies] = useState(organism.species ?? '')
-  const [commonName, setCommonName] = useState(organism.commonName ?? '')
-  const [description, setDescription] = useState(organism.description ?? '')
-  const [saving, setSaving] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  const [editError, setEditError] = useState<string>()
-
-  async function handleSave() {
-    setSaving(true)
-    setEditError(undefined)
-    try {
-      const res = await fetch(`/organisms/${organism._id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          genus: genus.trim(),
-          species: species.trim(),
-          commonName: commonName.trim(),
-          description: description.trim(),
-        }),
-      })
-      if (!res.ok) {
-        throw new Error(`Failed: ${res.status}`)
-      }
-      const updated = (await res.json()) as Organism
-      onUpdated(updated)
-    } catch (error_) {
-      setEditError(error_ instanceof Error ? error_.message : String(error_))
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function handleDelete() {
-    setEditError(undefined)
-    try {
-      const res = await fetch(`/organisms/${organism._id}`, {
-        method: 'DELETE',
-      })
-      if (!res.ok) {
-        throw new Error(`Failed: ${res.status}`)
-      }
-      onDeleted()
-    } catch (error_) {
-      setEditError(error_ instanceof Error ? error_.message : String(error_))
-    }
-  }
-
-  return (
-    <>
-      <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>
-        Edit Organism
-      </Typography>
-
-      {editError ? (
-        <Alert severity="error" sx={{ mb: 1 }}>
-          {editError}
-        </Alert>
-      ) : null}
-
-      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
-        <TextField
-          size="small"
-          label="Genus"
-          value={genus}
-          onChange={(e) => {
-            setGenus(e.target.value)
-          }}
-        />
-        <TextField
-          size="small"
-          label="Species"
-          value={species}
-          onChange={(e) => {
-            setSpecies(e.target.value)
-          }}
-        />
-        <TextField
-          size="small"
-          label="Common name"
-          value={commonName}
-          onChange={(e) => {
-            setCommonName(e.target.value)
-          }}
-        />
-      </Box>
-      <Box sx={{ mb: 2 }}>
-        <TextField
-          fullWidth
-          size="small"
-          label="Description"
-          value={description}
-          onChange={(e) => {
-            setDescription(e.target.value)
-          }}
-        />
-      </Box>
-      <Box sx={{ mb: 3 }}>
-        <Button
-          variant="contained"
-          size="small"
-          disabled={saving}
-          onClick={() => {
-            void handleSave()
-          }}
-        >
-          {saving ? 'Saving...' : 'Save'}
-        </Button>
-      </Box>
-
-      <Typography variant="h6" sx={{ mt: 3, mb: 1, color: 'error.main' }}>
-        Danger Zone
-      </Typography>
-      <Paper variant="outlined" sx={{ p: 2, borderColor: 'error.main' }}>
-        <Typography variant="body2" sx={{ mb: 1 }}>
-          Deleting an organism removes its record but does not delete associated
-          assemblies.
-        </Typography>
-        {confirmDelete ? (
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            <Typography variant="body2" color="error">
-              Are you sure?
-            </Typography>
-            <Button
-              variant="contained"
-              color="error"
-              size="small"
-              onClick={() => {
-                void handleDelete()
-              }}
-            >
-              Yes, delete permanently
-            </Button>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={() => {
-                setConfirmDelete(false)
-              }}
-            >
-              Cancel
-            </Button>
-          </Box>
-        ) : (
-          <Button
-            variant="outlined"
-            color="error"
-            size="small"
-            onClick={() => {
-              setConfirmDelete(true)
-            }}
-          >
-            Delete Organism
-          </Button>
-        )}
-      </Paper>
-    </>
-  )
-}
 
 function OrganismDetailPage() {
   const organismId = getOrganismId()
@@ -310,40 +139,47 @@ function OrganismDetailPage() {
 
         {organism ? (
           <>
-            <Typography variant="h4" sx={{ mb: 1 }}>
+            <Box sx={{ mb: 3 }}>
               {organism.genus || organism.species ? (
-                <em>
-                  {organism.genus ?? ''} {organism.species ?? ''}
-                </em>
-              ) : (
-                (organism.commonName ?? organismId)
-              )}
-            </Typography>
-
-            {organism.commonName && (organism.genus || organism.species) ? (
-              <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
-                {organism.commonName}
-              </Typography>
-            ) : null}
-
-            {organism.description ? (
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-                {organism.description}
-              </Typography>
-            ) : null}
-
-            {organism.taxid ? (
-              <Chip
-                label={`Taxid: ${organism.taxid}`}
-                size="small"
-                variant="outlined"
-                sx={{ mb: 3 }}
-              />
-            ) : null}
+                <Typography variant="body1">
+                  <strong>Scientific name:</strong>{' '}
+                  <em>
+                    {`${organism.genus ?? ''} ${organism.species ?? ''}`.trim()}
+                  </em>
+                </Typography>
+              ) : null}
+              {organism.commonName ? (
+                <Typography variant="body1">
+                  <strong>Common name:</strong> {organism.commonName}
+                </Typography>
+              ) : null}
+              {organism.description ? (
+                <Typography variant="body1">
+                  <strong>Description:</strong> {organism.description}
+                </Typography>
+              ) : null}
+              {organism.taxid ? (
+                <Typography variant="body1">
+                  <strong>Taxid:</strong> {organism.taxid}
+                </Typography>
+              ) : null}
+              {currentUser?.role === 'admin' && organismId ? (
+                <Box sx={{ mt: 1 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    href={`/ui/edit-organism/${organismId}`}
+                  >
+                    Edit organism
+                  </Button>
+                </Box>
+              ) : null}
+            </Box>
 
             <Typography variant="h6" sx={{ mb: 1 }}>
-              Assemblies ({assemblies.length})
+              Assemblies for this organism ({assemblies.length})
             </Typography>
+
             <Box sx={{ height: 400 }}>
               <DataGrid
                 rows={assemblies.map((a) => ({ ...a, id: a._id }))}
@@ -355,18 +191,6 @@ function OrganismDetailPage() {
                 }}
               />
             </Box>
-
-            {currentUser?.role === 'admin' && organismId ? (
-              <OrganismEditSection
-                organism={organism}
-                onUpdated={(updated) => {
-                  setOrganism(updated)
-                }}
-                onDeleted={() => {
-                  globalThis.location.href = '/ui/organisms/'
-                }}
-              />
-            ) : null}
           </>
         ) : null}
       </Container>

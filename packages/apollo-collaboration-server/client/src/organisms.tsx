@@ -9,7 +9,7 @@ import { createRoot } from 'react-dom/client'
 
 import { Nav } from './Nav.js'
 import { fetchJson } from './fetchUtil.js'
-import type { Organism } from './organism-utils.js'
+import { type Organism, organismLabel } from './organism-utils.js'
 
 function OrganismsPage() {
   const [organisms, setOrganisms] = useState<Organism[]>([])
@@ -44,8 +44,12 @@ function OrganismsPage() {
       ),
     },
     { field: 'taxid', headerName: 'Taxid', width: 100 },
-    { field: 'genus', headerName: 'Genus', flex: 1 },
-    { field: 'species', headerName: 'Species', flex: 1 },
+    {
+      field: 'scientificName',
+      headerName: 'Scientific Name',
+      flex: 1,
+      valueGetter: (_value, row) => organismLabel(row),
+    },
     { field: 'commonName', headerName: 'Common Name', flex: 1 },
     { field: 'description', headerName: 'Description', flex: 2 },
   ]
