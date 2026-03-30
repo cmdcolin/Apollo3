@@ -183,12 +183,16 @@ export class AuthenticationService {
   }
 
   async acceptInvite(token: string, password: string) {
+    if (!token) {
+      throw new BadRequestException('Invalid or expired invite link')
+    }
     const user = await this.usersService.findByInviteToken(token)
     if (!user) {
       throw new BadRequestException('Invalid or expired invite link')
     }
     const passwordHash = await bcrypt.hash(password, 10)
     await this.usersService.setPassword(user._id, passwordHash)
+    await this.usersService.clearInviteToken(user._id)
     const payload: JWTPayload = {
       username: user.username,
       email: user.email,

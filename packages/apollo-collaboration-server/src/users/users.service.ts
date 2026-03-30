@@ -47,7 +47,11 @@ export class UsersService {
   }
 
   async setPassword(id: string, passwordHash: string) {
-    return this.db.user.updateById(id, { passwordHash, inviteToken: '' })
+    return this.db.user.updateById(id, { passwordHash })
+  }
+
+  async clearInviteToken(id: string) {
+    return this.db.user.updateById(id, { inviteToken: '' })
   }
 
   async setInviteToken(id: string, inviteToken: string) {
@@ -55,6 +59,9 @@ export class UsersService {
   }
 
   async findByInviteToken(token: string) {
+    if (!token) {
+      return undefined
+    }
     const users = await this.db.user.findAll()
     return users.find((u) => u.inviteToken === token)
   }

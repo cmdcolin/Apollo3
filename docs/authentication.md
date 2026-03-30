@@ -2,18 +2,22 @@
 
 ## Overview
 
-Apollo3 supports three authentication methods:
+Apollo3 supports four authentication methods:
 
 - **OIDC (OpenID Connect)** — the primary method for production. Works with
   Google, Microsoft, Keycloak, Auth0, Okta, institutional identity providers,
   and any other standard OIDC-compliant provider.
+- **Password login (invite-based)** — admin creates a user and shares an invite
+  link; the user sets their own password. Matches the Apollo2 workflow where
+  admins control access directly. See `docs/password-authentication.md` for
+  details.
 - **REMOTE_USER (trusted header)** — for deployments behind a reverse proxy that
   handles authentication (e.g. Apache with Shibboleth, nginx with LDAP/CAS).
 - **Root login** — a password-based emergency mechanism for initial setup and
   recovery.
 
-Multiple OIDC providers can be configured simultaneously (e.g. Google _and_ an
-institutional Keycloak), and REMOTE_USER can coexist with OIDC.
+All methods can coexist — e.g. OIDC for most users, password login for users
+without institutional SSO, and REMOTE_USER behind a reverse proxy.
 
 ## What is OIDC?
 
