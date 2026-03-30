@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  Inject,
-  Param,
-  ParseIntPipe,
-  Query,
-} from '@nestjs/common'
+import { Controller, Get, Inject, Param } from '@nestjs/common'
 import {
   FeatureHistoryEntity,
   RefSeqEntity,
@@ -24,18 +17,15 @@ export class ChangesController {
   ) {}
 
   // Recent changes across all assemblies, grouped by sequence (operation).
+  // Returns up to 1000 most recent raw history rows, grouped into operations.
   @Roles(Role.ReadOnly)
   @Get('recent')
-  async getRecentChanges(
-    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
-  ) {
-    const take = limit ?? 50
-
+  async getRecentChanges() {
     const fork = this.em.fork()
     const rows = await fork.find(
       FeatureHistoryEntity,
       {},
-      { orderBy: { changedAt: 'DESC' }, limit: take * 10 },
+      { orderBy: { changedAt: 'DESC' }, limit: 1000 },
     )
 
     // Resolve assembly names for all refSeqs in one query
@@ -55,7 +45,7 @@ export class ChangesController {
       }
     }
 
-    const changes = [...grouped.values()].slice(0, take).map((group) => {
+    const changes = [...grouped.values()].map((group) => {
       const first = group[0]
       const changeTypes = [...new Set(group.map((r) => r.changeType))]
       const featureTypes = [...new Set(group.map((r) => r.type))]
