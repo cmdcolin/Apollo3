@@ -2,7 +2,7 @@ export interface AnalysisJobRow {
   _id: string
   status: string
   tool: string
-  assemblyId?: string
+  assemblyName?: string
   params: Record<string, unknown>
   results?: unknown
   metadata?: Record<string, unknown>

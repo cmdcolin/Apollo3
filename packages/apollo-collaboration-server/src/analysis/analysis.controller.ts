@@ -117,7 +117,7 @@ export class AnalysisController {
     @Body()
     body: {
       tool: string
-      assemblyId?: string
+      assemblyName?: string
       params: Record<string, unknown>
     },
     @Req() request: RequestWithUser,

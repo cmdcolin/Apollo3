@@ -168,7 +168,7 @@ export class AnalysisService {
 
   async submitJob(jobParams: {
     tool: string
-    assemblyId?: string
+    assemblyName?: string
     params: Record<string, unknown>
     createdBy?: string
   }) {
@@ -181,7 +181,7 @@ export class AnalysisService {
       _id,
       status: 'pending',
       tool: jobParams.tool,
-      assemblyId: jobParams.assemblyId,
+      assemblyName: jobParams.assemblyName,
       params: jobParams.params,
       createdBy: jobParams.createdBy,
       createdAt: new Date(),

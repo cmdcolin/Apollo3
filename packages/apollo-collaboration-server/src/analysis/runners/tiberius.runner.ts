@@ -95,7 +95,12 @@ export class TiberiusRunner implements AnalysisRunner, OnModuleInit {
         ? params.modelCfg
         : this.config.modelCfg
     const { useSingularity } = this.config
-    const assemblyId = context.job.assemblyId ?? ''
+    const assemblyName = context.job.assemblyName ?? ''
+    const assembly = await context.db.assembly.findByName(assemblyName)
+    if (!assembly) {
+      throw new Error(`Assembly not found: ${assemblyName}`)
+    }
+    const assemblyId = assembly._id
 
     const regionSize = end - start
     if (regionSize > this.config.maxRegionSize) {
@@ -115,11 +120,11 @@ export class TiberiusRunner implements AnalysisRunner, OnModuleInit {
     const fileUploadFolder = this.configService.get('FILE_UPLOAD_FOLDER', {
       infer: true,
     })!
-    const jobDir = path.join(fileUploadFolder, 'analysis-jobs', context.job._id)
+    const jobDir = path.resolve(fileUploadFolder, 'analysis-jobs', context.job._id)
     mkdirSync(jobDir, { recursive: true })
 
-    const inputPath = path.join(jobDir, 'input.fasta')
-    const outputPath = path.join(jobDir, 'output.gtf')
+    const inputPath = path.resolve(jobDir, 'input.fasta')
+    const outputPath = path.resolve(jobDir, 'output.gtf')
     const fastaContent = `>${refSeqName}:${start}-${end}\n${sequence}\n`
     writeFileSync(inputPath, fastaContent)
 
@@ -163,7 +168,7 @@ export class TiberiusRunner implements AnalysisRunner, OnModuleInit {
         trackId,
         name: `Tiberius: ${refSeqName}:${start.toLocaleString()}-${end.toLocaleString()}`,
         category: ['Gene Predictions'],
-        assemblyNames: [assemblyId],
+        assemblyNames: [assemblyName],
         adapter: {
           type: 'GtfAdapter',
           gtfLocation: {

@@ -152,7 +152,7 @@ export function RunTiberius({
 
       const result = await backendDriver.submitAnalysisJob({
         tool: 'tiberius',
-        assemblyId: region.assemblyName,
+        assemblyName: region.assemblyName,
         params: {
           refSeqId,
           refSeqName: region.refName,

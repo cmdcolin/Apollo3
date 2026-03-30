@@ -335,7 +335,7 @@ export class CollaborationServerDriver extends BackendDriver {
 
   async submitAnalysisJob(params: {
     tool: string
-    assemblyId?: string
+    assemblyName?: string
     params: Record<string, unknown>
   }) {
     const baseURL = this.getBaseURL()

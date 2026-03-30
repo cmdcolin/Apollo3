@@ -7,7 +7,7 @@ export const AnalysisJobEntity = defineEntity({
     _id: p.string().primary(),
     status: p.string().default('pending'),
     tool: p.string(),
-    assemblyId: p.string().nullable(),
+    assemblyName: p.string().nullable(),
     params: p.json<Record<string, unknown>>().default('{}'),
     results: p.json<unknown>().nullable(),
     metadata: p.json<Record<string, unknown>>().nullable(),
