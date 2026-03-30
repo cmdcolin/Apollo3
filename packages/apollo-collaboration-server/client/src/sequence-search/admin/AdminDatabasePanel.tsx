@@ -8,7 +8,6 @@ import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
 import Paper from '@mui/material/Paper'
 import Select from '@mui/material/Select'
-import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { DataGrid, type GridColDef } from '@mui/x-data-grid'
 import { useCallback, useState } from 'react'
@@ -36,11 +35,17 @@ export function AdminDatabasePanel({
   const [buildAssembly, setBuildAssembly] = useState('')
   const [buildTool, setBuildTool] = useState('local-blast')
   const [buildProgram, setBuildProgram] = useState('blastn')
-  const [buildName, setBuildName] = useState('')
   const [building, setBuilding] = useState(false)
   const [adminError, setAdminError] = useState<string>()
 
   const handleBuildLocal = useCallback(async () => {
+    const asm = assemblies.find((a) => a._id === buildAssembly)
+    const asmLabel = asm?.displayName ?? asm?.name ?? buildAssembly
+    const toolLabel = TOOL_LABELS[buildTool] ?? buildTool
+    const name =
+      buildTool === 'local-blast'
+        ? `${asmLabel} — ${toolLabel} (${buildProgram})`
+        : `${asmLabel} — ${toolLabel}`
     setBuilding(true)
     setAdminError(undefined)
     try {
@@ -50,7 +55,7 @@ export function AdminDatabasePanel({
         body: JSON.stringify({
           assemblyId: buildAssembly,
           tool: buildTool,
-          name: buildName,
+          name,
           params: buildTool === 'local-blast' ? { program: buildProgram } : {},
         }),
       })
@@ -58,14 +63,13 @@ export function AdminDatabasePanel({
         const text = await res.text()
         throw new Error(`${res.status}: ${text}`)
       }
-      setBuildName('')
       setBuildAssembly('')
       onChanged()
     } catch (error_) {
       setAdminError(error_ instanceof Error ? error_.message : String(error_))
     }
     setBuilding(false)
-  }, [buildAssembly, buildTool, buildProgram, buildName, onChanged])
+  }, [assemblies, buildAssembly, buildTool, buildProgram, onChanged])
 
   const handleDelete = useCallback(
     async (id: string) => {
@@ -171,21 +175,13 @@ export function AdminDatabasePanel({
           Build Database
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Extract sequences from an assembly and build a searchable database.
-          Requires the selected tool to be installed on the server. BLAT and
-          isPCR databases use the same .2bit format — a BLAT database can be
-          used for isPCR searches without building a separate one.
+          Extracts the assembly's sequences and indexes them for the selected
+          tool. The job runs in the background — check{' '}
+          <a href="/admin/jobs/">Analysis Jobs</a> for progress. BLAT and isPCR
+          share the same .2bit format, so a BLAT database works for isPCR
+          without building a separate one.
         </Typography>
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
-          <TextField
-            label="Name"
-            size="small"
-            value={buildName}
-            onChange={(e) => {
-              setBuildName(e.target.value)
-            }}
-            sx={{ minWidth: 200 }}
-          />
           <FormControl size="small" sx={{ minWidth: 200 }}>
             <InputLabel>Tool</InputLabel>
             <Select
@@ -240,7 +236,7 @@ export function AdminDatabasePanel({
         <Button
           variant="contained"
           size="small"
-          disabled={building || buildName.trim().length === 0 || !buildAssembly}
+          disabled={building || !buildAssembly}
           onClick={() => {
             void handleBuildLocal()
           }}

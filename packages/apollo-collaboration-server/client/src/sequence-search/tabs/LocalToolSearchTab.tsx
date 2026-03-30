@@ -125,9 +125,10 @@ export function LocalToolSearchTab({
 
       {dbs.length === 0 ? (
         <Alert severity="info" sx={{ mb: 2 }}>
-          No {TOOL_LABELS[tool] ?? tool} databases configured. An admin can
-          build databases from assemblies in the admin panel below.
-          {tool === 'ispcr' ? ' isPCR can also use BLAT databases.' : ''}
+          No {TOOL_LABELS[tool] ?? tool} databases configured.
+          {tool === 'ispcr' ? ' isPCR can also use BLAT databases.' : ''}{' '}
+          Admins can build databases from the{' '}
+          <a href="/admin/analysis-databases/">Analysis Databases</a> page.
         </Alert>
       ) : (
         <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
