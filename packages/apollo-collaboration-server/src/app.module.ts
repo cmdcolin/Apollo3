@@ -52,9 +52,7 @@ const validationSchema = Joi.object({
   FEATURE_TYPE_ONTOLOGY_LOCATION: Joi.string(),
   PLUGIN_LOCATION: Joi.string(),
   INDEXED_IDS: Joi.string().default('gff_id'),
-  ALLOW_ROOT_USER: Joi.boolean().default(false),
-  ROOT_USER_PASSWORD: Joi.string(),
-  ROOT_USER_PASSWORD_FILE: Joi.string(),
+  ALLOW_PASSWORD_LOGIN: Joi.boolean().default(true),
 
   PORT: Joi.number().default(3999),
   CORS: Joi.boolean().default(true),
@@ -123,7 +121,6 @@ const validationSchema = Joi.object({
   APOLLO_TOOLS_CONFIG: Joi.string(),
 })
   .oxor('OIDC_PROVIDERS', 'OIDC_PROVIDERS_FILE')
-  .oxor('ROOT_USER_PASSWORD', 'ROOT_USER_PASSWORD_FILE')
   .oxor('JWT_SECRET', 'JWT_SECRET_FILE')
   .oxor('SESSION_SECRET', 'SESSION_SECRET_FILE')
   .xor('PLUGIN_URLS', 'PLUGIN_URLS_FILE')

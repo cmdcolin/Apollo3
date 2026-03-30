@@ -7,10 +7,12 @@ const detailRoutes: Record<string, string> = {
   '/ui/assemblies/': '/ui/assembly-detail/index.html',
   '/ui/organisms/': '/ui/organism-detail/index.html',
   '/ui/assembly-checks/': '/ui/assembly-checks/index.html',
-  '/ui/assembly-admin/': '/ui/assembly-admin/index.html',
+  '/ui/edit-assembly/': '/ui/edit-assembly/index.html',
+  '/ui/edit-organism/': '/ui/edit-organism/index.html',
 }
 
 export default defineConfig({
+  clearScreen: false,
   plugins: [
     react(),
     {
@@ -81,6 +83,22 @@ export default defineConfig({
           __dirname,
           'ui/sequence-search/index.html',
         ),
+        'ui/sequence-search/local-blast/index': path.resolve(
+          __dirname,
+          'ui/sequence-search/local-blast/index.html',
+        ),
+        'ui/sequence-search/blat/index': path.resolve(
+          __dirname,
+          'ui/sequence-search/blat/index.html',
+        ),
+        'ui/sequence-search/miniprot/index': path.resolve(
+          __dirname,
+          'ui/sequence-search/miniprot/index.html',
+        ),
+        'ui/sequence-search/ispcr/index': path.resolve(
+          __dirname,
+          'ui/sequence-search/ispcr/index.html',
+        ),
         'admin/users/index': path.resolve(__dirname, 'admin/users/index.html'),
         'admin/approve-users/index': path.resolve(
           __dirname,
@@ -91,10 +109,6 @@ export default defineConfig({
           __dirname,
           'admin/add-assembly/index.html',
         ),
-        'admin/login/index': path.resolve(
-          __dirname,
-          'admin/login/index.html',
-        ),
         'ui/invite/index': path.resolve(
           __dirname,
           'ui/invite/index.html',
@@ -103,9 +117,13 @@ export default defineConfig({
           __dirname,
           'ui/assembly-checks/index.html',
         ),
-        'ui/assembly-admin/index': path.resolve(
+        'ui/edit-assembly/index': path.resolve(
           __dirname,
-          'ui/assembly-admin/index.html',
+          'ui/edit-assembly/index.html',
+        ),
+        'ui/edit-organism/index': path.resolve(
+          __dirname,
+          'ui/edit-organism/index.html',
         ),
         'error/index': path.resolve(__dirname, 'error/index.html'),
       },

@@ -107,8 +107,7 @@ If not set, the server auto-generates random secrets and persists them to
 | `DEFAULT_NEW_USER_ROLE`           | New user role: `admin` / `user` / `readOnly` / `none` (default: `readOnly`) |
 | `OIDC_PROVIDERS`                  | JSON array of OIDC provider configs (see docs/authentication.md) |
 | `REMOTE_USER_HEADER`              | HTTP header for trusted reverse proxy auth            |
-| `ALLOW_ROOT_USER`                 | Enable root password login                            |
-| `ROOT_USER_PASSWORD`              | Root admin password                                   |
+| `ALLOW_PASSWORD_LOGIN`            | Enable email/password login (default: `true`; set `false` for OIDC-only) |
 | `ALLOWED_REDIRECT_ORIGINS`        | Extra origins for post-login redirects (dev only)     |
 
 ## First-Time Setup
@@ -119,5 +118,5 @@ On first start with no admin, the server prints a one-time setup URL:
 Setup URL: http://localhost:3999/auth/setup?token=<random-token>
 ```
 
-Visit it, then log in (Google, Microsoft, or root). That account becomes admin.
-Token is single-use.
+Visit it, fill in email, display name, and password. That account becomes admin with a bcrypt-hashed password.
+Token is single-use and is invalidated immediately after the account is created.

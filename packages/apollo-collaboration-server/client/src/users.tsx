@@ -28,8 +28,6 @@ interface User {
   createdAt?: string
 }
 
-const ROOT_USER_EMAIL = 'root_user'
-
 function CreateUserDialog({
   onCreated,
   onClose,
@@ -238,9 +236,7 @@ function UsersPage() {
       headerName: 'Role',
       width: 160,
       renderCell: (params) => {
-        const isRestricted =
-          params.row.email === currentUser?.email ||
-          params.row.email === ROOT_USER_EMAIL
+        const isRestricted = params.row.email === currentUser?.email
         return (
           <Select
             size="small"
@@ -274,9 +270,7 @@ function UsersPage() {
       align: 'right',
       headerAlign: 'right',
       renderCell: (params) => {
-        const isRestricted =
-          params.row.email === currentUser?.email ||
-          params.row.email === ROOT_USER_EMAIL
+        const isRestricted = params.row.email === currentUser?.email
         return (
           <Box sx={{ display: 'flex', gap: 0.5 }}>
             {!isRestricted ? (

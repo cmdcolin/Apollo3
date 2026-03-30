@@ -12,9 +12,10 @@ branch.
 | 2   | CRITICAL | **Missing Secure flag** — session cookie set without `secure: true`                                                           | `secure: true` when `NODE_ENV=production`                                |
 | 3   | HIGH     | **WebSocket CORS wildcard** — `cors: { origin: '*' }` on WebSocket gateway                                                    | Locked to server's configured `URL` origin                               |
 | 4   | HIGH     | **JWT logged in plaintext** — full token logged at DEBUG level                                                                | Log only email and role                                                  |
-| 5   | BUG      | **OAuth client ID file-read** — file contents overwritten by file path (`microsoftClientID = clientIDFile?.trim()`)           | Correctly read and trim file contents                                    |
-| 6   | MEDIUM   | **Session cookies lacked security options** — no `httpOnly`, `secure`, `sameSite`, `maxAge`                                   | Added `httpOnly: true`, `secure: true`, `sameSite: 'lax'`, `maxAge: 24h` |
-| 7   | MEDIUM   | **No minimum secret length** — single-char secrets accepted                                                                   | Require 32+ characters for `JWT_SECRET` and `SESSION_SECRET`             |
+| 5   | HIGH     | **Root login backdoor removed** — `POST /auth/root` accepted a static plaintext server password to log in as a synthetic admin user with no audit trail, loose rate-limiting (100 req/min vs 10 for regular login), and no bcrypt hashing | Endpoint and all supporting config (`ALLOW_ROOT_USER`, `ROOT_USER_PASSWORD`) removed. First-admin bootstrapping now uses the one-time setup token flow, which is consumed on first use and creates a real account with a bcrypt-hashed password. |
+| 6   | BUG      | **OAuth client ID file-read** — file contents overwritten by file path (`microsoftClientID = clientIDFile?.trim()`)           | Correctly read and trim file contents                                    |
+| 7   | MEDIUM   | **Session cookies lacked security options** — no `httpOnly`, `secure`, `sameSite`, `maxAge`                                   | Added `httpOnly: true`, `secure: true`, `sameSite: 'lax'`, `maxAge: 24h` |
+| 8   | MEDIUM   | **No minimum secret length** — single-char secrets accepted                                                                   | Require 32+ characters for `JWT_SECRET` and `SESSION_SECRET`             |
 
 ### Code citations (origin/main)
 
@@ -72,9 +73,7 @@ these actions were visible but would silently fail.
 - All 14 controllers have class-level auth decorators; default is `Role.Admin`
 - SQL queries use MikroORM parameterized queries (no injection risk)
 - File uploads store by checksum, not user-provided filename (no path traversal)
-- Root password comparison uses plaintext `===` against env var (intentional —
-  hashing env vars provides no security since attacker with env access already
-  has the password)
+- No shared-secret backdoors; every login path creates or validates a real user account
 
 ## Accepted Risks
 

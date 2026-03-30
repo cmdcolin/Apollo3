@@ -75,9 +75,7 @@ MongoDB).
 ## User-Facing Pages
 
 - `/ui/invite/?token=...` — Set password page (linked from invite)
-- `/admin/login/` — Admin root login page (separate from main login)
-- Main login page — Shows OIDC buttons, email/password form, and admin login
-  link as applicable
+- Main login page — Shows OIDC buttons and email/password form as applicable
 
 ## API Endpoints
 

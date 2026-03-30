@@ -40,7 +40,7 @@ fi
 
 # Build server (esbuild, fast)
 echo '[start] Building server...'
-pnpm dev:build
+pnpm --silent dev:build
 
 # Set up JBrowse web app if not present
 if [ ! -f "$JBROWSE_DIR/index.html" ]; then
@@ -76,9 +76,6 @@ else
   # Randomize session secret so stale browser cookies don't resolve to missing users
   SESSION_SECRET="$(head -c 32 /dev/urandom | base64)"
   export SESSION_SECRET
-  # Enable root user so we can seed volvox data via API after startup
-  export ALLOW_ROOT_USER=true
-  export ROOT_USER_PASSWORD=devpass
 fi
 
 # Auto-detect Tiberius if installed at common location
@@ -93,23 +90,25 @@ if [ -z "${TIBERIUS_PATH:-}" ]; then
 fi
 
 SERVER_PORT="${PORT:-3999}"
+VITE_PORT="${VITE_PORT:-5173}"
 API_BASE="http://127.0.0.1:$SERVER_PORT"
+SERVER_LOG=$(mktemp)
 
-# Start NestJS server in background
+# Start NestJS server in background, tee output so we can extract the setup token
 echo '[start] Starting server...'
 JBROWSE_STATIC_DIR="$JBROWSE_DIR" \
   PLUGIN_LOCATION="/jbrowse/apollo-plugin.js" \
   FEATURE_TYPE_ONTOLOGY_LOCATION="/jbrowse/so-v3.1.json" \
   NODE_ENV=development \
-  node --watch-path dist dist/main.js &
+  node --no-warnings=ExperimentalWarning --watch-path dist dist/main.js 2>&1 \
+  | tee "$SERVER_LOG" | grep -v -e '^SETUP_TOKEN=' -e 'Setup URL' &
 NODE_PID=$!
 
-cleanup() { kill "$NODE_PID" 2>/dev/null || true; }
+cleanup() { kill "$NODE_PID" 2>/dev/null || true; rm -f "$SERVER_LOG"; }
 trap cleanup EXIT INT TERM
 
 # Seed volvox data into in-memory DB after server is ready
 if [ "$PERSIST" = false ]; then
-  echo '[start] Waiting for server to be ready for seeding...'
   max_wait=60 waited=0
   while [ $waited -lt $max_wait ]; do
     if curl -sf "$API_BASE/health" >/dev/null 2>&1; then
@@ -121,15 +120,27 @@ if [ "$PERSIST" = false ]; then
   if [ $waited -ge $max_wait ]; then
     echo '[start] ERROR: server did not become ready in time'
   else
+    # Create a dev admin account via the setup flow so the seed script can authenticate
+    DEV_ADMIN_EMAIL="admin@apollo-dev.example"
+    DEV_ADMIN_PASSWORD="devpass"
+    SETUP_TOKEN=$(grep -oP 'SETUP_TOKEN=\K.*' "$SERVER_LOG" 2>/dev/null || true)
+    if [ -n "$SETUP_TOKEN" ]; then
+      curl -sf "$API_BASE/auth/setup?token=$SETUP_TOKEN" -o /dev/null || true
+      curl -sf -X POST "$API_BASE/auth/setup-account" \
+        -H 'Content-Type: application/json' \
+        -d "{\"email\":\"$DEV_ADMIN_EMAIL\",\"username\":\"admin\",\"password\":\"$DEV_ADMIN_PASSWORD\"}" \
+        -o /dev/null || true
+    fi
+    echo "[start] Dev admin account: $DEV_ADMIN_EMAIL / $DEV_ADMIN_PASSWORD"
     echo "[start] Server ready (${waited}s), seeding volvox assembly..."
-    PORT="$SERVER_PORT" node --experimental-strip-types \
+    ADMIN_EMAIL="$DEV_ADMIN_EMAIL" ADMIN_PASSWORD="$DEV_ADMIN_PASSWORD" \
+      PORT="$SERVER_PORT" node --no-warnings=ExperimentalWarning --experimental-strip-types \
       "$SCRIPT_DIR/seed-volvox.ts" \
       "$VOLVOX_DIR/volvox.sort.gff3" \
       "$VOLVOX_DIR/volvox.fa" \
       "$VOLVOX_DIR/volvox.fa.fai"
-    echo '[start] Volvox assembly seeded (assembly name: volvox, gff3: volvox.sort.gff3)'
   fi
 fi
 
-echo '[start] Starting Vite dev server (UI at http://localhost:5173)...'
-exec pnpm --filter @apollo-annotation/web-ui dev
+echo "[start] Starting Vite dev server (UI at http://localhost:$VITE_PORT)..."
+exec pnpm --silent --filter @apollo-annotation/web-ui dev

@@ -2,7 +2,7 @@
 // Seed a volvox assembly into a fresh Apollo server.
 // Usage: node --experimental-strip-types seed-volvox.ts <gff3Path> <faPath> <faiPath>
 //
-// Expects ROOT_USER_PASSWORD env var and an Apollo server running on
+// Expects ADMIN_EMAIL and ADMIN_PASSWORD env vars and an Apollo server running on
 // http://127.0.0.1:3999 (or PORT env var).
 
 import { readFileSync } from 'node:fs'
@@ -19,12 +19,13 @@ if (!gff3Path || !faPath || !faiPath) {
 
 const port = process.env.PORT ?? '3999'
 const API_BASE = `http://127.0.0.1:${port}`
-const password = process.env.ROOT_USER_PASSWORD ?? 'devpass'
+const email = process.env.ADMIN_EMAIL ?? 'admin@apollo-dev.example'
+const password = process.env.ADMIN_PASSWORD ?? 'devpass'
 
-const tokenRes = await fetch(`${API_BASE}/auth/root`, {
+const tokenRes = await fetch(`${API_BASE}/auth/login`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ password }),
+  body: JSON.stringify({ email, password }),
 })
 if (!tokenRes.ok) {
   throw new Error(`Auth failed: ${tokenRes.status} ${await tokenRes.text()}`)
@@ -52,7 +53,6 @@ if (!organismRes.ok) {
   )
 }
 const organism = (await organismRes.json()) as { _id: string }
-console.log(`Organism created: ${organism._id}`)
 
 const assemblyRes = await fetch(`${API_BASE}/assemblies`, {
   method: 'POST',
@@ -71,14 +71,12 @@ if (!assemblyRes.ok) {
 }
 const assembly = (await assemblyRes.json()) as { _id: string }
 const assemblyId = assembly._id
-console.log(`Assembly created: ${assemblyId}`)
 
 const refSeqsRes = await fetch(`${API_BASE}/refSeqs?assembly=${assemblyId}`, {
   headers,
 })
 const refSeqs = (await refSeqsRes.json()) as { _id: string; name: string }[]
 const refSeqIdMap = new Map(refSeqs.map((rs) => [rs.name, rs._id]))
-console.log(`RefSeqs: ${refSeqs.map((rs) => rs.name).join(', ')}`)
 
 const gff3Text = readFileSync(gff3Path, 'utf8')
 const features = parseStringSync(gff3Text, { parseSequences: false })
@@ -108,8 +106,6 @@ for (const featureGroup of features) {
   }
   count++
 }
-console.log(`Seeded ${count} top-level features`)
-
 // Add evidence tracks to the volvox assembly.
 // assemblyIds uses the internal _id (for DB queries/permissions).
 // config.assemblyNames uses the human-readable name (for JBrowse config).
@@ -238,8 +234,6 @@ for (const track of tracks) {
     )
   }
 }
-console.log(`Added ${tracks.length} evidence tracks`)
-
 // Create a second, private assembly with the same data
 const assembly2Res = await fetch(`${API_BASE}/assemblies`, {
   method: 'POST',
@@ -258,7 +252,6 @@ if (!assembly2Res.ok) {
 }
 const assembly2 = (await assembly2Res.json()) as { _id: string }
 const assembly2Id = assembly2._id
-console.log(`Private assembly created: ${assembly2Id}`)
 
 const refSeqs2Res = await fetch(
   `${API_BASE}/refSeqs?assembly=${assembly2Id}`,
@@ -294,4 +287,6 @@ for (const featureGroup of features) {
   }
   count2++
 }
-console.log(`Seeded ${count2} top-level features into volvox2`)
+console.log(
+  `[start] Seeded volvox (${count} features, ${tracks.length} tracks) + volvox2 (${count2} features)`,
+)

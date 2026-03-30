@@ -1,5 +1,4 @@
 import { randomBytes } from 'node:crypto'
-import fs from 'node:fs/promises'
 
 import type { JWTPayload } from '@apollo-annotation/shared'
 import {
@@ -15,7 +14,6 @@ import bcrypt from 'bcryptjs'
 
 import type { CreateUserDto } from '../users/dto/create-user.dto.js'
 import { UsersService } from '../users/users.service.js'
-import { ROOT_USER_EMAIL } from './constants.js'
 import { Role } from './role.enum.js'
 
 import { OidcService } from './oidc.service.js'
@@ -25,12 +23,8 @@ interface ConfigValues {
   URL: string
   ALLOWED_REDIRECT_ORIGINS?: string
   DEFAULT_NEW_USER_ROLE: Role
-  ALLOW_ROOT_USER: boolean
-  ROOT_USER_PASSWORD?: string
-  ROOT_USER_PASSWORD_FILE?: string
+  ALLOW_PASSWORD_LOGIN: boolean
 }
-
-const ROOT_USER_NAME = 'root'
 
 @Injectable()
 export class AuthenticationService {
@@ -63,19 +57,6 @@ export class AuthenticationService {
     const hasAdmin = await this.hasRealAdmin()
     if (!hasAdmin && !this.setupToken) {
       this.setupToken = randomBytes(32).toString('hex')
-      this.logger.log(
-        '========================================================',
-      )
-      this.logger.log(
-        'No admin user found. Use the following URL to set up the',
-      )
-      this.logger.log('first admin account:')
-      this.logger.log('')
-      this.logger.log(`  /auth/setup?token=${this.setupToken}`)
-      this.logger.log('')
-      this.logger.log(
-        '========================================================',
-      )
     }
     return this.setupToken
   }
@@ -101,9 +82,7 @@ export class AuthenticationService {
 
   private async hasRealAdmin() {
     const users = await this.usersService.findAll()
-    return users.some(
-      (u) => u.role === Role.Admin && u.email !== ROOT_USER_EMAIL,
-    )
+    return users.some((u) => u.role === Role.Admin)
   }
 
   getServerUrl() {
@@ -136,31 +115,37 @@ export class AuthenticationService {
   getLoginTypes() {
     return {
       oidc: this.oidcService.getProviderNames(),
-      passwordLogin: true,
-      rootLogin: !!this.configService.get('ALLOW_ROOT_USER', { infer: true }),
+      passwordLogin: this.configService.get('ALLOW_PASSWORD_LOGIN', {
+        infer: true,
+      }),
     }
   }
 
-  async rootLogin(password: string) {
-    if (!this.configService.get('ALLOW_ROOT_USER', { infer: true })) {
-      throw new UnauthorizedException('Root user login is disabled')
+  async setupAccount(email: string, username: string, password: string) {
+    if (!this.setupActive) {
+      throw new BadRequestException('Setup mode is not active')
     }
-    let rootPassword = this.configService.get('ROOT_USER_PASSWORD', {
-      infer: true,
+    const existing = await this.usersService.findByEmail(email)
+    if (existing) {
+      throw new BadRequestException('A user with that email already exists')
+    }
+    const passwordHash = await bcrypt.hash(password, 10)
+    const user = await this.usersService.addNew({
+      email,
+      username,
+      role: Role.Admin,
+      passwordHash,
     })
-    if (!rootPassword) {
-      const passwordFile = this.configService.get('ROOT_USER_PASSWORD_FILE', {
-        infer: true,
-      })
-      if (passwordFile) {
-        const passwordContent = await fs.readFile(passwordFile, 'utf8')
-        rootPassword = passwordContent.trim()
-      }
+    this.consumeSetup()
+    this.logger.log(`Setup complete: ${email} promoted to admin`)
+    const payload: JWTPayload = {
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      id: user._id,
     }
-    if (rootPassword && password === rootPassword) {
-      return this.logIn(ROOT_USER_NAME, ROOT_USER_EMAIL)
-    }
-    throw new UnauthorizedException('Invalid password for ROOT user')
+    const returnToken = this.jwtService.sign(payload)
+    return { token: returnToken }
   }
 
   async passwordLogin(email: string, password: string) {
@@ -207,10 +192,7 @@ export class AuthenticationService {
     let user = await this.usersService.findByEmail(email)
     if (!user) {
       let newUserRole = this.defaultNewUserRole
-      const isRootUser = name === ROOT_USER_NAME && email === ROOT_USER_EMAIL
-      if (isRootUser) {
-        newUserRole = Role.Admin
-      } else if (this.setupActive) {
+      if (this.setupActive) {
         newUserRole = Role.Admin
         this.consumeSetup()
         this.logger.log(`Setup complete: ${email} promoted to admin`)
@@ -220,7 +202,7 @@ export class AuthenticationService {
         email,
         username: name,
         role: newUserRole,
-        pendingApproval: isDefaultRole && !isRootUser,
+        pendingApproval: isDefaultRole,
       }
       user = await this.usersService.addNew(newUser)
     } else if (user.role === Role.None && this.setupActive) {

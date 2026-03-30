@@ -13,15 +13,12 @@ import {
   Redirect,
   Req,
   Res,
-  UnauthorizedException,
 } from '@nestjs/common'
 import { Throttle } from '@nestjs/throttler'
 import type { Request, Response } from 'express'
 
 import { Public } from './roles.guard.js'
-import { AUTH_COOKIE_NAME } from './auth-cookie.js'
-
-import { COOKIE_BASE, COOKIE_OPTIONS } from './auth-cookie.js'
+import { AUTH_COOKIE_NAME, COOKIE_BASE, COOKIE_OPTIONS } from './auth-cookie.js'
 import { AuthenticationService } from './authentication.service.js'
 import { OidcService } from './oidc.service.js'
 
@@ -132,6 +129,20 @@ export class AuthenticationController {
     return { url }
   }
 
+  // --- Setup account (first admin) ---
+
+  @Post('setup-account')
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  async setupAccount(
+    @Body()
+    { email, username, password }: { email: string; username: string; password: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.setupAccount(email, username, password)
+    res.cookie(AUTH_COOKIE_NAME, result.token, COOKIE_OPTIONS)
+    return result
+  }
+
   // --- Password login ---
 
   @Post('login')
@@ -154,19 +165,6 @@ export class AuthenticationController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.acceptInvite(token, password)
-    res.cookie(AUTH_COOKIE_NAME, result.token, COOKIE_OPTIONS)
-    return result
-  }
-
-  // --- Root password login ---
-
-  @Post('root')
-  @Throttle({ default: { ttl: 60_000, limit: 100 } })
-  async rootLogin(
-    @Body() { password }: { password: string },
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const result = await this.authService.rootLogin(password)
     res.cookie(AUTH_COOKIE_NAME, result.token, COOKIE_OPTIONS)
     return result
   }

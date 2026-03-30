@@ -2,7 +2,7 @@
 
 ## Overview
 
-Apollo3 supports four authentication methods:
+Apollo3 supports three authentication methods:
 
 - **OIDC (OpenID Connect)** — the primary method for production. Works with
   Google, Microsoft, Keycloak, Auth0, Okta, institutional identity providers,
@@ -13,8 +13,6 @@ Apollo3 supports four authentication methods:
   details.
 - **REMOTE_USER (trusted header)** — for deployments behind a reverse proxy that
   handles authentication (e.g. Apache with Shibboleth, nginx with LDAP/CAS).
-- **Root login** — a password-based emergency mechanism for initial setup and
-  recovery.
 
 All methods can coexist — e.g. OIDC for most users, password login for users
 without institutional SSO, and REMOTE_USER behind a reverse proxy.
@@ -124,22 +122,6 @@ your proxy's documentation for how to enforce this.
 REMOTE_USER can be combined with OIDC. Users behind the proxy are
 auto-authenticated; users accessing directly see the OIDC login page.
 
-### Root login
-
-A password-based emergency login that creates a synthetic admin user with email
-`root_user`. Disabled by default.
-
-| Variable                  | Purpose                                             |
-| ------------------------- | --------------------------------------------------- |
-| `ALLOW_ROOT_USER`         | Enable/disable root login (default: `false`)        |
-| `ROOT_USER_PASSWORD`      | The root password                                   |
-| `ROOT_USER_PASSWORD_FILE` | Alternative: path to a file containing the password |
-
-Root login is accessible at `/ui/root-login/` — it is intentionally not linked
-from the main login page. Use it for initial setup or recovery, then disable it.
-
-Root login is rate-limited to 5 attempts per minute.
-
 ## How authentication works internally
 
 Apollo uses **cookie-based JWT authentication**:
@@ -175,25 +157,36 @@ root login endpoint has a tighter limit of 5 requests per minute.
 
 ## First-time admin setup
 
-When the server starts and finds no admin user in the database, it generates a
-one-time setup URL and prints it to the server log:
+When the server starts and finds no admin user in the database, it prints a
+one-time setup URL to stdout:
 
 ```
-========================================================
-No admin user found. Use the following URL to set up the
-first admin account:
-
-  /auth/setup?token=<64-char-hex>
-
-========================================================
+SETUP_TOKEN=a3f9...
+[start] Setup URL (create first admin account): https://apollo.example.org/auth/setup?token=a3f9...
 ```
 
-The flow:
+The operator reads this from the server logs and visits the URL. The flow:
 
-- An operator with access to the server log opens this URL in a browser
-- The server enters "setup mode"
-- The next person to log in via any method is promoted to admin
-- Setup mode is consumed after one use
+- Operator opens the URL — the server activates "setup mode" and the browser
+  lands on the account-creation form
+- Operator fills in email, display name, and password
+- The server creates the account with a bcrypt-hashed password and admin role
+- Setup mode is consumed: the token is invalidated and the endpoint rejects all
+  further requests
+
+**How to read the log in common environments:**
+
+| Environment | Command |
+| ----------- | ------- |
+| Docker | `docker logs <container>` |
+| systemd | `journalctl -u apollo` |
+| Kubernetes | `kubectl logs <pod>` |
+| Heroku / Railway / Render | Dashboard log stream |
+
+The `SETUP_TOKEN=` line is intentionally machine-readable for automated
+provisioning scripts. A new token is generated each time the server restarts
+without an admin account (in-memory only — old tokens from previous boots are
+forgotten).
 
 ## Role system
 
@@ -249,9 +242,7 @@ post-login redirects back to the Vite dev server.
 | `OIDC_PROVIDERS`           | no       | JSON array of OIDC provider configs                  |
 | `OIDC_PROVIDERS_FILE`      | no       | Path to a file containing the JSON array             |
 | `REMOTE_USER_HEADER`       | no       | HTTP header name for trusted reverse proxy auth      |
-| `ALLOW_ROOT_USER`          | no       | Enable root login (default: `false`)                 |
-| `ROOT_USER_PASSWORD`       | no       | Root password (required if root login enabled)       |
-| `ROOT_USER_PASSWORD_FILE`  | no       | Path to file containing root password                |
+| `ALLOW_PASSWORD_LOGIN`     | no       | Enable email/password login (default: `true`; set `false` for OIDC-only deployments) |
 | `JWT_SECRET`               | yes*     | Secret for signing JWTs (min 32 chars)               |
 | `JWT_SECRET_FILE`          | yes*     | Path to file containing JWT secret                   |
 | `SESSION_SECRET`           | yes*     | Secret for express-session (min 32 chars)            |
