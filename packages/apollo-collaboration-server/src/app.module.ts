@@ -14,6 +14,7 @@ import { AssembliesModule } from './assemblies/assemblies.module.js'
 import { AuthenticationModule } from './authentication/authentication.module.js'
 import { RemoteUserMiddleware } from './authentication/remote-user.middleware.js'
 import { SlidingWindowInterceptor } from './authentication/sliding-window.interceptor.js'
+import { ChangesModule } from './changes/changes.module.js'
 import { ChecksModule } from './checks/checks.module.js'
 import { ExportModule } from './export/export.module.js'
 import { FallbackModule } from './fallback/fallback.module.js'
@@ -161,6 +162,7 @@ const validationSchema = Joi.object({
     RefSeqsModule,
     UsersModule,
     FilesModule,
+    ChangesModule,
     ChecksModule,
     SequenceModule,
     FeaturesModule,

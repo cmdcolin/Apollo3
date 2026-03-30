@@ -17,7 +17,6 @@ interface ChangeRow {
   sequence?: number
   typeName: string
   user: string
-  assembly?: string
   changedIds?: string[]
   createdAt?: string
 }
@@ -35,21 +34,32 @@ const columns: GridColDef<ChangeGridRow>[] = [
   { field: 'sequence', headerName: 'Sequence', width: 100 },
   { field: 'typeName', headerName: 'Type', flex: 1 },
   { field: 'user', headerName: 'User', flex: 1 },
-  { field: 'assembly', headerName: 'Assembly', flex: 1 },
   {
     field: 'changedIds',
     headerName: 'Changed IDs',
     flex: 1.5,
     renderCell: (params) => {
       const ids = (params.value as string[] | undefined) ?? []
-      const display = ids.slice(0, 3).join(', ') + (ids.length > 3 ? '...' : '')
       return (
-        <Typography
-          variant="body2"
-          sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
-        >
-          {display}
-        </Typography>
+        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+          {ids.slice(0, 3).map((id) => (
+            <Chip
+              key={id}
+              label={id}
+              size="small"
+              variant="outlined"
+              component="a"
+              href={`/ui/changes/?geneId=${encodeURIComponent(id)}`}
+              clickable
+              sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}
+            />
+          ))}
+          {ids.length > 3 && (
+            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+              +{ids.length - 3} more
+            </Typography>
+          )}
+        </Box>
       )
     },
   },

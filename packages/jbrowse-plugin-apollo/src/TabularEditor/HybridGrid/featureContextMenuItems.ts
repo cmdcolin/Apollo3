@@ -18,7 +18,7 @@ import {
   SplitTranscript,
 } from '../../components'
 import type { ApolloSessionModel } from '../../session'
-import { getRole, isReadOnly } from '../../util'
+import { getBaseURL, getRole, isReadOnly } from '../../util'
 
 export function featureContextMenuItems(
   feature: AnnotationFeature | undefined,
@@ -209,7 +209,17 @@ export function featureContextMenuItems(
           )
         },
       },
+      {
+        label: 'View feature history',
+        onClick: () => {
+          const baseURL = getBaseURL(session)
+          const url = new URL('/ui/changes/', baseURL)
+          url.searchParams.set('geneId', feature._id)
+          globalThis.open(url.toString(), '_blank')
+        },
+      },
     )
+
     const { featureTypeOntology } = session.apolloDataStore.ontologyManager
     if (!featureTypeOntology) {
       throw new Error('featureTypeOntology is undefined')
