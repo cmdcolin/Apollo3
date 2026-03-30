@@ -71,7 +71,9 @@ export class JBrowseController {
     // (nginx) sits in front, the generated baseURL reflects the browser's
     // actual origin — not the internal backend host. Without this, the Apollo
     // plugin would make cross-origin API calls that don't carry auth cookies.
-    const host = request.get('x-forwarded-host') ?? request.get('host')
+    const host = (request.get('x-forwarded-host') ?? request.get('host'))
+      ?.split(',')[0]
+      .trim()
     const proto = request.get('x-forwarded-proto') ?? request.protocol
     const requestOrigin = `${proto}://${host}`
     return this.jbrowseService.getConfig(user, assemblyNames, requestOrigin)

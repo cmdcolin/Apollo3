@@ -150,7 +150,6 @@ async function bootstrap() {
     assemblies: path.join(pagesDir, 'ui/assembly-detail/index.html'),
     organisms: path.join(pagesDir, 'ui/organism-detail/index.html'),
     'assembly-checks': path.join(pagesDir, 'ui/assembly-checks/index.html'),
-    'assembly-admin': path.join(pagesDir, 'ui/assembly-admin/index.html'),
   }
   for (const [resource, htmlFile] of Object.entries(detailPages)) {
     app.use(
@@ -204,14 +203,18 @@ async function bootstrap() {
     const setupToken = await authService.generateSetupTokenIfNeeded()
     if (setupToken) {
       const appUrl = await app.getUrl()
+      // Machine-readable line for dev-start.sh to extract the token
       // eslint-disable-next-line no-console
-      console.log(`Setup URL: ${appUrl}/auth/setup?token=${setupToken}`)
+      console.log(`SETUP_TOKEN=${setupToken}`)
+      // Human-readable fallback for production (non-dev) usage
+      // eslint-disable-next-line no-console
+      console.log(`[start] Setup URL (create first admin account): ${appUrl}/auth/setup?token=${setupToken}`)
     }
   })
 
   const appUrl = await app.getUrl()
   // eslint-disable-next-line no-console
-  console.log(`Application is running on: ${appUrl}, CORS = ${cors}`)
+  console.log(`[start] NestJS API server running on ${appUrl} (use the Vite dev URL to access the UI)`)
   app.enableShutdownHooks()
 }
 // eslint-disable-next-line unicorn/prefer-top-level-await
