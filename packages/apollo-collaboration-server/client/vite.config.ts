@@ -7,6 +7,7 @@ const detailRoutes: Record<string, string> = {
   '/ui/assemblies/': '/ui/assembly-detail/index.html',
   '/ui/organisms/': '/ui/organism-detail/index.html',
   '/ui/assembly-checks/': '/ui/assembly-checks/index.html',
+  '/ui/assembly-tracks/': '/ui/assembly-tracks/index.html',
   '/ui/edit-assembly/': '/ui/edit-assembly/index.html',
   '/ui/edit-organism/': '/ui/edit-organism/index.html',
 }
@@ -105,6 +106,10 @@ export default defineConfig({
           'admin/approve-users/index.html',
         ),
         'admin/jobs/index': path.resolve(__dirname, 'admin/jobs/index.html'),
+        'admin/analysis-databases/index': path.resolve(
+          __dirname,
+          'admin/analysis-databases/index.html',
+        ),
         'admin/add-assembly/index': path.resolve(
           __dirname,
           'admin/add-assembly/index.html',
@@ -116,6 +121,10 @@ export default defineConfig({
         'ui/assembly-checks/index': path.resolve(
           __dirname,
           'ui/assembly-checks/index.html',
+        ),
+        'ui/assembly-tracks/index': path.resolve(
+          __dirname,
+          'ui/assembly-tracks/index.html',
         ),
         'ui/edit-assembly/index': path.resolve(
           __dirname,

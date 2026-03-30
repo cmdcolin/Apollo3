@@ -2,7 +2,6 @@ import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
-import Divider from '@mui/material/Divider'
 import FormControl from '@mui/material/FormControl'
 import IconButton from '@mui/material/IconButton'
 import InputLabel from '@mui/material/InputLabel'
@@ -19,7 +18,7 @@ import {
   type AnalysisDb,
   type Assembly,
   BLAST_PROGRAMS,
-  TAB_TOOLS,
+  TOOLS,
   TOOL_LABELS,
 } from '../types.js'
 
@@ -149,11 +148,6 @@ export function AdminDatabasePanel({
 
   return (
     <>
-      <Divider sx={{ my: 4 }} />
-      <Typography variant="h5" sx={{ mb: 2 }}>
-        Admin: Configure Sequence Search Databases
-      </Typography>
-
       {adminError ? (
         <Alert severity="error" sx={{ mb: 2 }}>
           {adminError}
@@ -201,7 +195,7 @@ export function AdminDatabasePanel({
                 setBuildTool(e.target.value)
               }}
             >
-              {TAB_TOOLS.map((eng) => (
+              {TOOLS.map((eng) => (
                 <MenuItem key={eng} value={eng}>
                   {TOOL_LABELS[eng] ?? eng}
                 </MenuItem>

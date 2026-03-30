@@ -158,4 +158,4 @@ export const TOOL_DESCRIPTIONS: Record<string, string> = {
     'In-silico PCR: predict amplification products from a primer pair against a genome database.',
 }
 
-export const TAB_TOOLS = ['local-blast', 'blat', 'miniprot', 'ispcr']
+export const TOOLS = ['local-blast', 'blat', 'miniprot', 'ispcr']

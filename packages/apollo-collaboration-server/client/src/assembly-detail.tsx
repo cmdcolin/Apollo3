@@ -31,12 +31,6 @@ interface RefSeq {
   description?: string
 }
 
-interface TrackConfig {
-  _id: string
-  trackId: string
-  config: Record<string, unknown>
-}
-
 interface User {
   _id: string
   role: string
@@ -51,7 +45,6 @@ function getAssemblyName() {
 }
 
 type RefSeqRow = RefSeq & { id: string }
-type TrackRow = TrackConfig & { id: string }
 
 const refSeqColumns: GridColDef<RefSeqRow>[] = [
   { field: 'name', headerName: 'Name', flex: 1 },
@@ -64,40 +57,6 @@ const refSeqColumns: GridColDef<RefSeqRow>[] = [
       typeof params.value === 'number' ? params.value.toLocaleString() : '',
   },
   { field: 'description', headerName: 'Description', flex: 2 },
-]
-
-const trackColumns: GridColDef<TrackRow>[] = [
-  {
-    field: 'name',
-    headerName: 'Name',
-    flex: 1,
-    renderCell: (params) => {
-      const n = params.row.config.name
-      return typeof n === 'string' ? n : params.row.trackId
-    },
-  },
-  {
-    field: 'type',
-    headerName: 'Type',
-    flex: 1,
-    renderCell: (params) => {
-      const t = params.row.config.type
-      return typeof t === 'string' ? t : ''
-    },
-  },
-  {
-    field: 'trackId',
-    headerName: 'Track ID',
-    flex: 1.5,
-    renderCell: (params) => (
-      <Typography
-        variant="body2"
-        sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
-      >
-        {params.value}
-      </Typography>
-    ),
-  },
 ]
 
 const assemblyName = getAssemblyName()
@@ -116,10 +75,6 @@ function AssemblyDetailPage() {
   )
   const { data: refSeqs } = useSWR<RefSeq[]>(
     encodedName ? `/refSeqs?assembly=${encodedName}` : null,
-    fetchJson,
-  )
-  const { data: tracks } = useSWR<TrackConfig[]>(
-    assembly ? `/tracks?assembly=${assembly._id}` : null,
     fetchJson,
   )
   const { data: currentUser } = useSWR<User>('/users/me', fetchJson)
@@ -229,6 +184,13 @@ function AssemblyDetailPage() {
           >
             Checks
           </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            href={`/ui/assembly-tracks/${assembly.name}`}
+          >
+            Tracks
+          </Button>
           {currentUser?.role === 'admin' ? (
             <Button
               variant="outlined"
@@ -248,25 +210,6 @@ function AssemblyDetailPage() {
             <DataGrid
               rows={refSeqs.map((r) => ({ ...r, id: r._id }))}
               columns={refSeqColumns}
-              density="compact"
-              pageSizeOptions={[25, 50, 100]}
-              initialState={{
-                pagination: { paginationModel: { pageSize: 25 } },
-              }}
-            />
-          ) : (
-            <CircularProgress size={24} />
-          )}
-        </Box>
-
-        <Typography variant="h6" sx={{ mb: 1 }}>
-          Evidence Tracks ({tracks?.length ?? '...'})
-        </Typography>
-        <Box sx={{ height: 400 }}>
-          {tracks ? (
-            <DataGrid
-              rows={tracks.map((t) => ({ ...t, id: t._id }))}
-              columns={trackColumns}
               density="compact"
               pageSizeOptions={[25, 50, 100]}
               initialState={{

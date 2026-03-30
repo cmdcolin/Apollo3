@@ -92,6 +92,7 @@ type Page =
   | 'users'
   | 'approve-users'
   | 'jobs'
+  | 'analysis-dbs'
 
 interface NavMenuItem {
   label: string
@@ -150,6 +151,11 @@ const adminMenuItems: NavMenuItem[] = [
     value: 'approve-users',
   },
   { label: 'Analysis Jobs', href: '/admin/jobs/', value: 'jobs' },
+  {
+    label: 'Analysis Databases',
+    href: '/admin/analysis-databases/',
+    value: 'analysis-dbs',
+  },
   {
     label: 'Add Assembly',
     href: '/admin/add-assembly/',

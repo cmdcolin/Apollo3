@@ -10,7 +10,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { Nav } from '../Nav.js'
 import { fetchJson } from '../fetchUtil.js'
 
-import { AdminDatabasePanel } from './admin/AdminDatabasePanel.js'
 import { useAnalysisSearch } from './hooks/useAnalysisSearch.js'
 import { useCurrentUser } from './hooks/useCurrentUser.js'
 import { SearchResults } from './results/SearchResults.js'
@@ -18,27 +17,15 @@ import { LocalToolSearchTab } from './tabs/LocalToolSearchTab.js'
 import {
   type AnalysisDb,
   type Assembly,
-  TAB_TOOLS,
+  TOOLS,
   TOOL_DESCRIPTIONS,
   TOOL_LABELS,
 } from './types.js'
 
-const TOOL_PAGE: Record<
-  string,
-  'seq-local-blast' | 'seq-blat' | 'seq-miniprot' | 'seq-ispcr'
-> = {
-  'local-blast': 'seq-local-blast',
-  blat: 'seq-blat',
-  miniprot: 'seq-miniprot',
-  ispcr: 'seq-ispcr',
-}
+const toolPage = (tool: string) =>
+  `seq-${tool}` as 'seq-local-blast' | 'seq-blat' | 'seq-miniprot' | 'seq-ispcr'
 
-const TOOL_HREF: Record<string, string> = {
-  'local-blast': '/ui/sequence-search/local-blast/',
-  blat: '/ui/sequence-search/blat/',
-  miniprot: '/ui/sequence-search/miniprot/',
-  ispcr: '/ui/sequence-search/ispcr/',
-}
+const toolHref = (tool: string) => `/ui/sequence-search/${tool}/`
 
 export function SequenceSearchPortal() {
   return (
@@ -51,12 +38,12 @@ export function SequenceSearchPortal() {
           Choose a search tool:
         </Typography>
         <Grid container spacing={3}>
-          {TAB_TOOLS.map((tool) => (
+          {TOOLS.map((tool) => (
             <Grid key={tool} size={{ xs: 12, sm: 6, md: 3 }}>
               <Card variant="outlined" sx={{ height: '100%' }}>
                 <CardActionArea
                   component="a"
-                  href={TOOL_HREF[tool]}
+                  href={toolHref(tool)}
                   sx={{ height: '100%', alignItems: 'flex-start' }}
                 >
                   <CardContent>
@@ -128,7 +115,7 @@ export function SequenceSearchPage({ tool }: { tool: string }) {
     assemblies.find((a) => a._id === search.assemblyId)?.name ?? ''
 
   return (
-    <Nav current={TOOL_PAGE[tool]}>
+    <Nav current={toolPage(tool)}>
       <Container maxWidth="lg">
         <Typography variant="h4" sx={{ mb: 3 }}>
           {TOOL_LABELS[tool] ?? tool}
@@ -156,16 +143,6 @@ export function SequenceSearchPage({ tool }: { tool: string }) {
         />
 
         <SearchResults search={search} assemblyName={assemblyName} />
-
-        {user?.role === 'admin' ? (
-          <AdminDatabasePanel
-            assemblies={assemblies}
-            analysisDbs={analysisDbs}
-            onChanged={() => {
-              void loadDatabases()
-            }}
-          />
-        ) : null}
       </Container>
     </Nav>
   )
