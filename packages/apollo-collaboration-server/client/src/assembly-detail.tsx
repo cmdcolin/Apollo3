@@ -7,7 +7,6 @@ import CircularProgress from '@mui/material/CircularProgress'
 import Container from '@mui/material/Container'
 import Link from '@mui/material/Link'
 import Typography from '@mui/material/Typography'
-import { DataGrid, type GridColDef } from '@mui/x-data-grid'
 import { createRoot } from 'react-dom/client'
 import useSWR from 'swr'
 
@@ -24,13 +23,6 @@ interface Assembly {
   visibility?: 'public' | 'private'
 }
 
-interface RefSeq {
-  _id: string
-  name: string
-  length: number
-  description?: string
-}
-
 interface User {
   _id: string
   role: string
@@ -44,21 +36,6 @@ function getAssemblyName() {
   return
 }
 
-type RefSeqRow = RefSeq & { id: string }
-
-const refSeqColumns: GridColDef<RefSeqRow>[] = [
-  { field: 'name', headerName: 'Name', flex: 1 },
-  {
-    field: 'length',
-    headerName: 'Length',
-    width: 130,
-    type: 'number',
-    renderCell: (params) =>
-      typeof params.value === 'number' ? params.value.toLocaleString() : '',
-  },
-  { field: 'description', headerName: 'Description', flex: 2 },
-]
-
 const assemblyName = getAssemblyName()
 
 function AssemblyDetailPage() {
@@ -71,10 +48,6 @@ function AssemblyDetailPage() {
     isLoading,
   } = useSWR<Assembly, unknown>(
     encodedName ? `/assemblies/by-name/${encodedName}` : null,
-    fetchJson,
-  )
-  const { data: refSeqs } = useSWR<RefSeq[]>(
-    encodedName ? `/refSeqs?assembly=${encodedName}` : null,
     fetchJson,
   )
   const { data: currentUser } = useSWR<User>('/users/me', fetchJson)
@@ -202,24 +175,6 @@ function AssemblyDetailPage() {
           ) : null}
         </Box>
 
-        <Typography variant="h6" sx={{ mb: 1 }}>
-          Reference Sequences ({refSeqs?.length ?? '...'})
-        </Typography>
-        <Box sx={{ height: 400, mb: 3 }}>
-          {refSeqs ? (
-            <DataGrid
-              rows={refSeqs.map((r) => ({ ...r, id: r._id }))}
-              columns={refSeqColumns}
-              density="compact"
-              pageSizeOptions={[25, 50, 100]}
-              initialState={{
-                pagination: { paginationModel: { pageSize: 25 } },
-              }}
-            />
-          ) : (
-            <CircularProgress size={24} />
-          )}
-        </Box>
       </Container>
     </Nav>
   )
