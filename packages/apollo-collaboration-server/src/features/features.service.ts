@@ -239,15 +239,11 @@ export class FeaturesService {
     if (!feature) {
       throw new NotFoundException(`Feature not found: ${featureId}`)
     }
-    const refSeq = await this.db.refSeq.findById(feature.refSeq)
-    if (!refSeq) {
-      throw new NotFoundException(`RefSeq not found: ${feature.refSeq}`)
+    const name = await this.db.getAssemblyNameByRefSeq(feature.refSeq)
+    if (!name) {
+      throw new NotFoundException(`Assembly not found for feature: ${featureId}`)
     }
-    const assembly = await this.db.assembly.findById(refSeq.assembly)
-    if (!assembly) {
-      throw new NotFoundException(`Assembly not found: ${refSeq.assembly}`)
-    }
-    return assembly.name
+    return name
   }
 
   private async getRootFeatureTrees(featureIds: string[]) {
@@ -274,11 +270,9 @@ export class FeaturesService {
 
     // Collect check results for all affected features so the client
     // can update its check result store without a separate fetch
-    const allIds: string[] = []
-    for (const root of rootFeatures) {
-      const descendants = await this.db.feature.findDescendants(root._id)
-      allIds.push(root._id, ...descendants.map((d) => d._id))
-    }
+    const rootIds = rootFeatures.map((r) => r._id)
+    const descendants = await this.db.feature.findDescendantsOfMany(rootIds)
+    const allIds = [...rootIds, ...descendants.map((d) => d._id)]
     const checkResults: CheckResultData[] = []
     for (const fid of allIds) {
       const results = await this.db.check.findByFeatureId(fid)
@@ -827,15 +821,10 @@ export class FeaturesService {
     const [firstRecord] = historyRecords
     const firstRefSeq: string = firstRecord.refSeq
 
-    const refSeqRow = await this.db.refSeq.findById(firstRefSeq)
-    if (!refSeqRow) {
-      throw new NotFoundException(`RefSeq not found: ${firstRefSeq}`)
+    const assemblyId = await this.db.getAssemblyNameByRefSeq(firstRefSeq)
+    if (!assemblyId) {
+      throw new NotFoundException(`Assembly not found for refSeq: ${firstRefSeq}`)
     }
-    const assemblyRow = await this.db.assembly.findById(refSeqRow.assembly)
-    if (!assemblyRow) {
-      throw new NotFoundException(`Assembly not found: ${refSeqRow.assembly}`)
-    }
-    const assemblyId = assemblyRow.name
 
     const undoSequence = await this.db.transactional(async (scope) => {
       const seq = await scope.counter.getNextSequenceValue('changeCounter')

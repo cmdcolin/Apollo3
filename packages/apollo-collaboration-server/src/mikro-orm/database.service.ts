@@ -30,6 +30,7 @@ import {
   MikroOrmTrackConfigRepository,
   MikroOrmUserRepository,
   MongoFeatureRepository,
+  RefSeqEntity,
 } from '@apollo-annotation/entities'
 import { EntityManager } from '@mikro-orm/core'
 import { Inject, Injectable } from '@nestjs/common'
@@ -93,6 +94,22 @@ export class DatabaseService {
     this.trackConfig = new MikroOrmTrackConfigRepository(em)
     this.textSearchAdapterConfig =
       new MikroOrmTextSearchAdapterConfigRepository(em)
+  }
+
+  async getAssemblyNameByRefSeq(refSeqId: string) {
+    const refSeq = await this.em.findOne(
+      RefSeqEntity,
+      { _id: refSeqId },
+      { populate: ['assembly'] },
+    )
+    if (!refSeq) {
+      return undefined
+    }
+    const asm = refSeq.assembly
+    if (typeof asm === 'object' && asm.name) {
+      return asm.name
+    }
+    return undefined
   }
 
   async transactional<T>(callback: (scope: TransactionScope) => Promise<T>) {

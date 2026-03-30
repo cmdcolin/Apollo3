@@ -53,10 +53,7 @@ export class ChecksService {
       throw new Error(`Could not find refSeq ${refSeqId}`)
     }
     const assembly = await this.db.assembly.findById(refSeq.assembly)
-    if (!assembly) {
-      throw new Error(`Could not find assembly ${refSeq.assembly}`)
-    }
-    if (!assembly.checks || assembly.checks.length === 0) {
+    if (!assembly || !assembly.checks || assembly.checks.length === 0) {
       return []
     }
     return this.db.checkConfig.findByIds(assembly.checks)
