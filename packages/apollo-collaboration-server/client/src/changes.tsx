@@ -22,8 +22,6 @@ interface RecentChangeRow {
   assembly?: string
   summary: string
   featureIds: string[]
-  featureCount: number
-  changeTypes: string[]
 }
 
 const recentColumns: GridColDef<RecentChangeRow & { id: string }>[] = [
@@ -69,13 +67,7 @@ const recentColumns: GridColDef<RecentChangeRow & { id: string }>[] = [
   },
 ]
 
-// --- Gene history (per-record with diffs) ---
-
-interface FieldDiff {
-  field: string
-  from: unknown
-  to: unknown
-}
+// --- Gene history (per-record) ---
 
 interface GeneHistoryRow {
   _id: string
@@ -85,16 +77,9 @@ interface GeneHistoryRow {
   changeType: string
   user: string
   createdAt?: string
-  diffs?: FieldDiff[]
-}
-
-function formatDiffs(diffs: FieldDiff[] | undefined) {
-  if (!diffs || diffs.length === 0) {
-    return null
-  }
-  return diffs
-    .map((d) => `${d.field}: ${String(d.from)} \u2192 ${String(d.to)}`)
-    .join(', ')
+  min: number
+  max: number
+  strand?: number | null
 }
 
 const geneHistoryColumns: GridColDef<GeneHistoryRow & { id: string }>[] = [
@@ -119,7 +104,7 @@ const geneHistoryColumns: GridColDef<GeneHistoryRow & { id: string }>[] = [
       )
     },
   },
-  { field: 'featureType', headerName: 'Feature Type', width: 120 },
+  { field: 'featureType', headerName: 'Type', width: 100 },
   {
     field: 'featureId',
     headerName: 'Feature ID',
@@ -133,21 +118,14 @@ const geneHistoryColumns: GridColDef<GeneHistoryRow & { id: string }>[] = [
       </Typography>
     ),
   },
+  { field: 'min', headerName: 'Start', width: 100 },
+  { field: 'max', headerName: 'End', width: 100 },
   {
-    field: 'diffs',
-    headerName: 'Changes',
-    flex: 2,
-    renderCell: (params) => {
-      const text = formatDiffs(params.value as FieldDiff[] | undefined)
-      if (!text) {
-        return null
-      }
-      return (
-        <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-          {text}
-        </Typography>
-      )
-    },
+    field: 'strand',
+    headerName: 'Strand',
+    width: 80,
+    valueFormatter: (value: number | null | undefined) =>
+      value === 1 ? '+' : value === -1 ? '-' : '',
   },
   { field: 'user', headerName: 'User', flex: 1 },
   {
@@ -159,15 +137,6 @@ const geneHistoryColumns: GridColDef<GeneHistoryRow & { id: string }>[] = [
   },
 ]
 
-// --- Shared types ---
-
-interface PaginatedResponse<T> {
-  changes: T[]
-  total: number
-  page: number
-  limit: number
-}
-
 function clearGeneIdParam() {
   const url = new URL(globalThis.location.href)
   url.searchParams.delete('geneId')
@@ -178,45 +147,27 @@ function RecentChangesPage() {
   const params = new URLSearchParams(globalThis.location.search)
   const initialGeneId = params.get('geneId') ?? ''
 
-  const [recentChanges, setRecentChanges] = useState<RecentChangeRow[]>([])
-  const [geneHistory, setGeneHistory] = useState<GeneHistoryRow[]>([])
-  const [total, setTotal] = useState(0)
+  const [rows, setRows] = useState<(RecentChangeRow | GeneHistoryRow)[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>()
   const [geneIdInput, setGeneIdInput] = useState(initialGeneId)
   const [activeGeneId, setActiveGeneId] = useState(initialGeneId)
-  const [paginationModel, setPaginationModel] = useState({
-    page: 0,
-    pageSize: 25,
-  })
 
   const load = useCallback(async () => {
     try {
       setError(undefined)
       setLoading(true)
-      const page = paginationModel.page + 1
-      const limit = paginationModel.pageSize
-      if (activeGeneId) {
-        const data = await fetchJson<PaginatedResponse<GeneHistoryRow>>(
-          `/changes/gene/${encodeURIComponent(activeGeneId)}?limit=${limit}&page=${page}`,
-        )
-        setGeneHistory(data.changes)
-        setRecentChanges([])
-        setTotal(data.total)
-      } else {
-        const data = await fetchJson<PaginatedResponse<RecentChangeRow>>(
-          `/changes/recent?limit=${limit}&page=${page}`,
-        )
-        setRecentChanges(data.changes)
-        setGeneHistory([])
-        setTotal(data.total)
-      }
+      const endpoint = activeGeneId
+        ? `/changes/gene/${encodeURIComponent(activeGeneId)}`
+        : '/changes/recent'
+      const data = await fetchJson<{ changes: (RecentChangeRow | GeneHistoryRow)[] }>(endpoint)
+      setRows(data.changes)
     } catch (error_) {
       setError(error_ instanceof Error ? error_.message : String(error_))
     } finally {
       setLoading(false)
     }
-  }, [paginationModel.page, paginationModel.pageSize, activeGeneId])
+  }, [activeGeneId])
 
   useEffect(() => {
     void load()
@@ -225,7 +176,6 @@ function RecentChangesPage() {
   function clearFilter() {
     setGeneIdInput('')
     setActiveGeneId('')
-    setPaginationModel((m) => ({ ...m, page: 0 }))
     clearGeneIdParam()
   }
 
@@ -242,7 +192,6 @@ function RecentChangesPage() {
           onSubmit={(e) => {
             e.preventDefault()
             const trimmed = geneIdInput.trim()
-            setPaginationModel((m) => ({ ...m, page: 0 }))
             setActiveGeneId(trimmed)
             if (trimmed) {
               const url = new URL(globalThis.location.href)
@@ -293,27 +242,17 @@ function RecentChangesPage() {
         <Box sx={{ height: 600 }}>
           {activeGeneId ? (
             <DataGrid
-              rows={geneHistory.map((c) => ({ ...c, id: c._id }))}
+              rows={(rows as GeneHistoryRow[]).map((c) => ({ ...c, id: c._id }))}
               columns={geneHistoryColumns}
               density="compact"
               loading={loading}
-              paginationMode="server"
-              rowCount={total}
-              paginationModel={paginationModel}
-              onPaginationModelChange={setPaginationModel}
-              pageSizeOptions={[25, 50, 100]}
             />
           ) : (
             <DataGrid
-              rows={recentChanges.map((c) => ({ ...c, id: c._id }))}
+              rows={(rows as RecentChangeRow[]).map((c) => ({ ...c, id: c._id }))}
               columns={recentColumns}
               density="compact"
               loading={loading}
-              paginationMode="server"
-              rowCount={total}
-              paginationModel={paginationModel}
-              onPaginationModelChange={setPaginationModel}
-              pageSizeOptions={[25, 50, 100]}
             />
           )}
         </Box>
