@@ -193,11 +193,13 @@ function LoginSection() {
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
-                void handleRootLogin()
+                // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                handleRootLogin()
               }
             }}
           />
-          <Button variant="contained" onClick={() => void handleRootLogin()}>
+          {/* eslint-disable-next-line @typescript-eslint/no-floating-promises */}
+          <Button variant="contained" onClick={() => handleRootLogin()}>
             Sign in
           </Button>
         </>
@@ -242,13 +244,15 @@ function LoginSection() {
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
-                      void handlePasswordLogin()
+                      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                      handlePasswordLogin()
                     }
                   }}
                 />
                 <Button
                   variant="contained"
-                  onClick={() => void handlePasswordLogin()}
+                  // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                  onClick={() => handlePasswordLogin()}
                 >
                   Sign in
                 </Button>

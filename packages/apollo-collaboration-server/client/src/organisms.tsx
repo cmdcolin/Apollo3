@@ -30,7 +30,8 @@ function OrganismsPage() {
   }, [])
 
   useEffect(() => {
-    void load()
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    load()
   }, [load])
 
   const columns: GridColDef<Organism>[] = [

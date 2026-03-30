@@ -52,14 +52,16 @@ function AdminLoginPage() {
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  void handleLogin()
+                  // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                  handleLogin()
                 }
               }}
             />
             <Button
               variant="contained"
               disabled={password.length === 0}
-              onClick={() => void handleLogin()}
+              // eslint-disable-next-line @typescript-eslint/no-floating-promises
+              onClick={() => handleLogin()}
             >
               Sign in
             </Button>

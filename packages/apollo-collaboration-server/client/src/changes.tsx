@@ -170,7 +170,8 @@ function RecentChangesPage() {
   }, [activeGeneId])
 
   useEffect(() => {
-    void load()
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    load()
   }, [load])
 
   function clearFilter() {
