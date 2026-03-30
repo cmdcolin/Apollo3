@@ -18,6 +18,9 @@ export class PermissionService {
     user: UserInfo | undefined,
     assemblyId: string,
   ): Promise<Role | undefined> {
+    this.logger.debug(
+      `getAssemblyRole: userId=${user?.id ?? 'none'}, userRole=${user?.role ?? 'none'}, assemblyId=${assemblyId}`,
+    )
     if (user?.role === Role.Admin) {
       return Role.Admin
     }

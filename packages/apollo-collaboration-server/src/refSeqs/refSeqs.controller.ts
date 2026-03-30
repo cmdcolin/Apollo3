@@ -37,7 +37,9 @@ export class RefSeqsController {
     @Query() request: FindRefSeqDto,
     @Req() req: RequestWithUser,
   ) {
-    this.logger.debug(`refSeqs findAll called with: ${JSON.stringify(request)}`)
+    this.logger.debug(
+      `refSeqs findAll: query=${JSON.stringify(request)}, userId=${req.user?.id ?? 'none'}, userRole=${req.user?.role ?? 'none'}`,
+    )
     if (request.assembly) {
       const assembly = await this.db.assembly.findByName(request.assembly)
       if (!assembly) {

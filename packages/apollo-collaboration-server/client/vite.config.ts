@@ -47,7 +47,14 @@ export default defineConfig({
       '/export': 'http://localhost:3999',
       '/features': 'http://localhost:3999',
       '/files': 'http://localhost:3999',
-      '/jbrowse': 'http://localhost:3999',
+      // Set x-forwarded-host so the NestJS JBrowse config endpoint generates a
+      // baseURL pointing at the Vite dev server (port 5173) rather than the
+      // backend (port 3999). This keeps all API calls same-origin, so auth
+      // cookies are sent correctly.
+      '/jbrowse': {
+        target: 'http://localhost:3999',
+        headers: { 'x-forwarded-host': 'localhost:5173' },
+      },
       '/organisms': 'http://localhost:3999',
       '/permissions': 'http://localhost:3999',
       '/refSeqs': 'http://localhost:3999',

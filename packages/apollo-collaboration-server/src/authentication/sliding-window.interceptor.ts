@@ -25,7 +25,9 @@ export class SlidingWindowInterceptor implements NestInterceptor {
         const token = cookies?.[AUTH_COOKIE_NAME]
         if (token) {
           const res = context.switchToHttp().getResponse<Response>()
-          res.cookie(AUTH_COOKIE_NAME, token, COOKIE_OPTIONS)
+          if (!res.headersSent) {
+            res.cookie(AUTH_COOKIE_NAME, token, COOKIE_OPTIONS)
+          }
         }
       }),
     )

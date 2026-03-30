@@ -67,7 +67,13 @@ export class JBrowseController {
     this.logger.debug(
       `config.json requested: user.id=${user?.id}, user.role=${user?.role}, assemblies=${assemblies ?? 'all'}`,
     )
-    const requestOrigin = `${request.protocol}://${request.get('host')}`
+    // Prefer X-Forwarded-Host so that when a dev proxy (Vite) or reverse proxy
+    // (nginx) sits in front, the generated baseURL reflects the browser's
+    // actual origin — not the internal backend host. Without this, the Apollo
+    // plugin would make cross-origin API calls that don't carry auth cookies.
+    const host = request.get('x-forwarded-host') ?? request.get('host')
+    const proto = request.get('x-forwarded-proto') ?? request.protocol
+    const requestOrigin = `${proto}://${host}`
     return this.jbrowseService.getConfig(user, assemblyNames, requestOrigin)
   }
 }
