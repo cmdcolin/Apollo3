@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { Nav } from './Nav.js'
+import { useCurrentUser } from './hooks.js'
 
 const jsonHeaders = { Accept: 'application/json' }
 
@@ -102,29 +103,6 @@ function useSetupActive() {
   }, [])
 
   return active
-}
-
-function useIsAuthenticated() {
-  const [authenticated, setAuthenticated] = useState<boolean | undefined>(
-    undefined,
-  )
-
-  useEffect(() => {
-    fetch('/users/me', { headers: jsonHeaders })
-      .then(async (r) => {
-        if (!r.ok) {
-          setAuthenticated(false)
-          return
-        }
-        const data = await r.json()
-        setAuthenticated(data !== null)
-      })
-      .catch(() => {
-        setAuthenticated(false)
-      })
-  }, [])
-
-  return authenticated
 }
 
 async function parseErrorMessage(response: Response) {
@@ -440,15 +418,15 @@ function LoginSection() {
 }
 
 function SignInPage() {
-  const authenticated = useIsAuthenticated()
+  const { user, checked } = useCurrentUser()
 
   useEffect(() => {
-    if (authenticated) {
+    if (user) {
       globalThis.location.href = getReturnUrl()
     }
-  }, [authenticated])
+  }, [user])
 
-  if (authenticated === undefined || authenticated) {
+  if (!checked || user) {
     return (
       <Nav>
         <Container maxWidth="xs" sx={{ mt: 4, textAlign: 'center' }}>

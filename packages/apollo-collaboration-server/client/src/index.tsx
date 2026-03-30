@@ -10,73 +10,12 @@ import ListItemButton from '@mui/material/ListItemButton'
 import ListItemText from '@mui/material/ListItemText'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
-import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { Nav } from './Nav.js'
+import { type CurrentUser, useCurrentUser, useDashboard } from './hooks.js'
 
-const jsonHeaders = { Accept: 'application/json' }
-
-interface CurrentUser {
-  username: string
-  email: string
-  role: string
-  pendingApproval?: boolean
-  needsRelogin?: boolean
-}
-
-function useCurrentUser() {
-  const [user, setUser] = useState<CurrentUser | null>(null)
-  const [checked, setChecked] = useState(false)
-
-  useEffect(() => {
-    fetch('/users/me', { headers: jsonHeaders })
-      .then((r) => {
-        if (r.ok) {
-          return r.json() as Promise<CurrentUser>
-        }
-        return null
-      })
-      .then((data) => {
-        setUser(data)
-        setChecked(true)
-      })
-      .catch((error: unknown) => {
-        console.error('Failed to fetch current user:', error)
-        setChecked(true)
-      })
-  }, [])
-
-  return { user, checked }
-}
-
-function useAdminContact() {
-  const [adminEmail, setAdminEmail] = useState<string>()
-
-  useEffect(() => {
-    fetch('/users/admin', { headers: jsonHeaders })
-      .then((r) => {
-        if (r.ok) {
-          return r.json() as Promise<{ email: string }>
-        }
-        return null
-      })
-      .then((data) => {
-        if (data?.email) {
-          setAdminEmail(data.email)
-        }
-      })
-      .catch(() => {
-        /* ignore */
-      })
-  }, [])
-
-  return adminEmail
-}
-
-function PendingApproval({ user }: { user: CurrentUser }) {
-  const adminEmail = useAdminContact()
-
+function PendingApproval({ user, adminEmail }: { user: CurrentUser; adminEmail?: string }) {
   return (
     <Box>
       <Alert severity="info" sx={{ mb: 2 }}>
@@ -96,87 +35,31 @@ function PendingApproval({ user }: { user: CurrentUser }) {
   )
 }
 
-function useUserStats(isAdmin: boolean) {
-  const [stats, setStats] = useState<{ active: number; total: number }>()
-
-  useEffect(() => {
-    if (!isAdmin) {
-      return
-    }
-    fetch('/users/stats', { headers: jsonHeaders })
-      .then((r) => {
-        if (r.ok) {
-          return r.json() as Promise<{ active: number; total: number }>
-        }
-        return null
-      })
-      .then((data) => {
-        if (data) {
-          setStats(data)
-        }
-      })
-      .catch(() => {
-        /* ignore */
-      })
-  }, [isAdmin])
-
-  return stats
-}
-
-function usePendingCount(isAdmin: boolean) {
-  const [count, setCount] = useState(0)
-
-  useEffect(() => {
-    if (!isAdmin) {
-      return
-    }
-    fetch('/users/pending-count', { headers: jsonHeaders })
-      .then((r) => {
-        if (r.ok) {
-          return r.json() as Promise<{ count: number }>
-        }
-        return null
-      })
-      .then((data) => {
-        if (data) {
-          setCount(data.count)
-        }
-      })
-      .catch(() => {
-        /* ignore */
-      })
-  }, [isAdmin])
-
-  return count
-}
-
 function LoggedInContent({ user }: { user: CurrentUser }) {
-  const isAdmin = user.role === 'admin'
-  const stats = useUserStats(isAdmin)
-  const pendingCount = usePendingCount(isAdmin)
+  const dashboard = useDashboard(true)
 
   return (
     <Box>
-      {stats ? (
+      {dashboard.activeUsers !== undefined ? (
         <Box
           sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 1 }}
         >
           <Chip
-            label={`${stats.active} active`}
+            label={`${dashboard.activeUsers} active`}
             size="small"
             color="success"
             variant="outlined"
           />
           <Chip
-            label={`${stats.total} registered`}
+            label={`${dashboard.totalUsers} registered`}
             size="small"
             variant="outlined"
           />
         </Box>
       ) : null}
-      {pendingCount > 0 ? (
+      {(dashboard.pendingCount ?? 0) > 0 ? (
         <Alert severity="warning" sx={{ mb: 1, textAlign: 'left' }}>
-          {pendingCount} user{pendingCount === 1 ? '' : 's'} pending approval.{' '}
+          {dashboard.pendingCount} user{dashboard.pendingCount === 1 ? '' : 's'} pending approval.{' '}
           <Link href="/admin/approve-users/">Review now</Link>
         </Alert>
       ) : null}
@@ -197,6 +80,7 @@ function LoggedInContent({ user }: { user: CurrentUser }) {
 
 function IndexPage() {
   const { user, checked } = useCurrentUser()
+  const dashboard = useDashboard(!!user)
 
   if (!checked) {
     return (
@@ -235,7 +119,7 @@ function IndexPage() {
         {user ? (
           <Paper variant="outlined" sx={{ p: 3 }}>
             {isPendingApproval ? (
-              <PendingApproval user={user} />
+              <PendingApproval user={user} adminEmail={dashboard.adminEmail} />
             ) : (
               <LoggedInContent user={user} />
             )}

@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 
 import { type SequenceSource, assemblyId } from '@apollo-annotation/common'
 import { TwoBitFile } from '@gmod/twobit'
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common'
+import { ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { LocalFile, RemoteFile } from 'generic-filehandle2'
 
 import { ChecksService } from '../checks/checks.service.js'
@@ -134,10 +134,39 @@ export class AssembliesService {
     return this.db.assembly.findPublic()
   }
 
+  async findForUser(user: { id?: string; role?: string } | undefined) {
+    if (user) {
+      return this.findAll()
+    }
+    return this.findPublic()
+  }
+
   async findOne(id: string) {
     const assembly = await this.db.assembly.findById(id)
     if (!assembly) {
       throw new NotFoundException(`Assembly with id "${id}" not found`)
+    }
+    return assembly
+  }
+
+  async findOneForUser(
+    id: string,
+    user: { id?: string; role?: string } | undefined,
+  ) {
+    const assembly = await this.findOne(id)
+    if (!user && assembly.visibility !== 'public') {
+      throw new ForbiddenException()
+    }
+    return assembly
+  }
+
+  async findOneByNameForUser(
+    name: string,
+    user: { id?: string; role?: string } | undefined,
+  ) {
+    const assembly = await this.findOneByName(name)
+    if (!user && assembly.visibility !== 'public') {
+      throw new ForbiddenException()
     }
     return assembly
   }

@@ -9,6 +9,7 @@ import { Roles } from '../authentication/roles.guard.js'
 import { Role } from '../authentication/role.enum.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
 
+@Roles(Role.ReadOnly)
 @Controller('changes')
 export class ChangesController {
   constructor(
@@ -16,8 +17,6 @@ export class ChangesController {
     @Inject(DatabaseService) private readonly db: DatabaseService,
   ) {}
 
-  // Recent changes across all assemblies, grouped by sequence (operation).
-  @Roles(Role.ReadOnly)
   @Get('recent')
   async getRecentChanges() {
     const em = this.em.fork()
@@ -76,8 +75,6 @@ export class ChangesController {
     return { changes }
   }
 
-  // All history for a specific gene and its subfeatures.
-  @Roles(Role.ReadOnly)
   @Get('gene/:featureId')
   async getGeneHistory(@Param('featureId') featureId: string) {
     const descendants = await this.db.feature.findDescendants(featureId)

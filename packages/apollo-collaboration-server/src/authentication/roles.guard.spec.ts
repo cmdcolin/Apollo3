@@ -60,7 +60,7 @@ describe('RolesGuard', () => {
     })
   })
 
-  describe('@Authenticated() (Role.None)', () => {
+  describe('@Roles(Role.None) — any authenticated user', () => {
     const roles = [Role.None, Role.ReadOnly, Role.User, Role.Admin] as const
     for (const role of roles) {
       it(`allows ${role} user`, () => {

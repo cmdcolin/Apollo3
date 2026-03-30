@@ -8,6 +8,7 @@ import { Public } from '../authentication/roles.guard.js'
 import type { GetSequenceDto } from './dto/get-sequence.dto.js'
 import { SequenceService } from './sequence.service.js'
 
+@Public()
 @Controller('sequence')
 export class SequenceController {
   constructor(
@@ -18,7 +19,6 @@ export class SequenceController {
 
   private readonly logger = new Logger(SequenceController.name)
 
-  @Public()
   @Get()
   async getSequence(
     @Query() request: GetSequenceDto,

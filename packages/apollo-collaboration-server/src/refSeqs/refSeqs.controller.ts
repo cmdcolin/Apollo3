@@ -20,6 +20,7 @@ import type { FindRefSeqDto } from './dto/find-refSeq.dto.js'
 import type { UpdateRefSeqDto } from './dto/update-refSeq.dto.js'
 import { RefSeqsService } from './refSeqs.service.js'
 
+@Public()
 @Controller('refSeqs')
 export class RefSeqsController {
   constructor(

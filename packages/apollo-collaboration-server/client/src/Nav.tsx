@@ -12,8 +12,9 @@ import MenuItem from '@mui/material/MenuItem'
 import Toolbar from '@mui/material/Toolbar'
 import Typography from '@mui/material/Typography'
 import { ThemeProvider } from '@mui/material/styles'
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 
+import { type CurrentUser, useCurrentUser, useDashboard } from './hooks.js'
 import logoUrl from './apollo_logo.svg'
 
 const theme = createJBrowseTheme({
@@ -22,63 +23,6 @@ const theme = createJBrowseTheme({
     secondary: { main: '#1AA39B' },
   },
 })
-
-interface UserInfo {
-  username: string
-  email: string
-  role: string
-}
-
-function useCurrentUser() {
-  const [user, setUser] = useState<UserInfo>()
-
-  useEffect(() => {
-    fetch('/users/me', { headers: { Accept: 'application/json' } })
-      .then((r) => {
-        if (r.ok) {
-          return r.json() as Promise<UserInfo>
-        }
-        return null
-      })
-      .then((data) => {
-        if (data) {
-          setUser(data)
-        }
-      })
-      .catch(() => {
-        /* ignore */
-      })
-  }, [])
-
-  return user
-}
-
-function usePendingCount(isAdmin: boolean) {
-  const [count, setCount] = useState(0)
-
-  useEffect(() => {
-    if (!isAdmin) {
-      return
-    }
-    fetch('/users/pending-count', { headers: { Accept: 'application/json' } })
-      .then((r) => {
-        if (r.ok) {
-          return r.json() as Promise<{ count: number }>
-        }
-        return null
-      })
-      .then((data) => {
-        if (data) {
-          setCount(data.count)
-        }
-      })
-      .catch(() => {
-        /* ignore */
-      })
-  }, [isAdmin])
-
-  return count
-}
 
 type Page =
   | 'organisms'
@@ -249,8 +193,9 @@ function NavMenu({
   )
 }
 
-function NavBar({ current, user }: { current?: Page; user?: UserInfo }) {
-  const pendingCount = usePendingCount(user?.role === 'admin')
+function NavBar({ current, user }: { current?: Page; user?: CurrentUser }) {
+  const dashboard = useDashboard(!!user)
+  const pendingCount = dashboard.pendingCount ?? 0
 
   return (
     <AppBar position="static" color="secondary" sx={{ mb: 3 }}>
@@ -334,7 +279,7 @@ export function Nav({
   current?: Page
   children: React.ReactNode
 }) {
-  const user = useCurrentUser()
+  const { user } = useCurrentUser()
 
   return (
     <ThemeProvider theme={theme}>

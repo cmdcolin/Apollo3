@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
   Inject,
   Logger,
@@ -39,33 +38,19 @@ export class AssembliesController {
   @Get()
   @Public()
   findAll(@Req() req: RequestWithUser) {
-    if (req.user) {
-      return this.assembliesService.findAll()
-    }
-    return this.assembliesService.findPublic()
+    return this.assembliesService.findForUser(req.user ?? undefined)
   }
 
   @Get('by-name/:name')
   @Public()
-  async findOneByName(
-    @Param('name') name: string,
-    @Req() req: RequestWithUser,
-  ) {
-    const assembly = await this.assembliesService.findOneByName(name)
-    if (!req.user && assembly.visibility !== 'public') {
-      throw new ForbiddenException()
-    }
-    return assembly
+  findOneByName(@Param('name') name: string, @Req() req: RequestWithUser) {
+    return this.assembliesService.findOneByNameForUser(name, req.user ?? undefined)
   }
 
   @Get(':id')
   @Public()
-  async findOne(@Param('id') id: string, @Req() req: RequestWithUser) {
-    const assembly = await this.assembliesService.findOne(id)
-    if (!req.user && assembly.visibility !== 'public') {
-      throw new ForbiddenException()
-    }
-    return assembly
+  findOne(@Param('id') id: string, @Req() req: RequestWithUser) {
+    return this.assembliesService.findOneForUser(id, req.user ?? undefined)
   }
 
   @Patch(':id')

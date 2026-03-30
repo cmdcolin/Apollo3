@@ -6,6 +6,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpStatus,
   Inject,
   Logger,
   NotFoundException,
@@ -13,11 +14,13 @@ import {
   Patch,
   Post,
   Req,
+  Res,
 } from '@nestjs/common'
+import type { Response } from 'express'
 
 import type { RequestWithUser } from '../authentication/request-with-user.js'
 import { Role } from '../authentication/role.enum.js'
-import { Authenticated, Public, Roles } from '../authentication/roles.guard.js'
+import { Public, Roles } from '../authentication/roles.guard.js'
 
 import { ActiveUsersService } from './active-users.service.js'
 import { UsersService } from './users.service.js'
@@ -34,9 +37,13 @@ export class UsersController {
 
   @Public()
   @Get('me')
-  async getMe(@Req() req: RequestWithUser) {
+  async getMe(
+    @Req() req: RequestWithUser,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     if (!req.user) {
-      return null
+      res.status(HttpStatus.NO_CONTENT).send()
+      return
     }
     const user = req.user.id
       ? await this.usersService.findById(req.user.id)
@@ -87,6 +94,14 @@ export class UsersController {
     @Param('id') id: string,
     @Body() body: { password: string },
   ) {
+    if (body.password.length < 8) {
+      throw new BadRequestException('Password must be at least 8 characters')
+    }
+    if (body.password.length > 72) {
+      throw new BadRequestException(
+        'Password must be at most 72 characters (bcrypt limit)',
+      )
+    }
     const { hash } = await import('bcryptjs')
     const user = await this.usersService.findById(id)
     if (!user) {
@@ -103,25 +118,19 @@ export class UsersController {
     return users.map(({ passwordHash: _, inviteToken: _t, ...rest }) => rest)
   }
 
-  @Authenticated()
-  @Get('admin')
-  findAdmin() {
-    return this.usersService.findByRole(Role.Admin)
-  }
-
-  @Authenticated()
-  @Get('stats')
-  async getStats() {
-    return {
-      active: this.activeUsersService.getActiveCount(),
-      total: await this.usersService.getCount(),
+  @Roles(Role.ReadOnly)
+  @Get('dashboard')
+  async getDashboard(@Req() req: RequestWithUser) {
+    const admins = await this.usersService.findByRole(Role.Admin)
+    const result: Record<string, unknown> = {
+      adminEmail: admins[0]?.email,
     }
-  }
-
-  @Roles(Role.Admin)
-  @Get('pending-count')
-  async getPendingCount() {
-    return { count: await this.usersService.getPendingCount() }
+    if (req.user?.role === Role.Admin) {
+      result.activeUsers = this.activeUsersService.getActiveCount()
+      result.totalUsers = await this.usersService.getCount()
+      result.pendingCount = await this.usersService.getPendingCount()
+    }
+    return result
   }
 
   @Get(':id')

@@ -27,6 +27,16 @@ export class OrganismsService {
     return this.db.organism.findAll(opts)
   }
 
+  async findForUser(
+    user: { id?: string; role?: string } | undefined,
+    opts?: { offset?: number; limit?: number },
+  ) {
+    if (user) {
+      return this.findAll(opts)
+    }
+    return this.findPublic()
+  }
+
   async findPublic() {
     const publicAssemblies = await this.db.assembly.findPublic()
     const uniqueOrganismIds = [

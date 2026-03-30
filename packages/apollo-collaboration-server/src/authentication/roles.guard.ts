@@ -18,7 +18,6 @@ export const ROLES_KEY = 'roles'
 
 export const Public = () => SetMetadata(IS_PUBLIC_KEY, true)
 export const Roles = (role: Role) => SetMetadata(ROLES_KEY, role)
-export const Authenticated = () => SetMetadata(ROLES_KEY, Role.None)
 
 @Injectable()
 export class RolesGuard implements CanActivate {

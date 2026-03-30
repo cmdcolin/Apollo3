@@ -17,6 +17,7 @@ export const UserEntity = defineEntity({
     role: p.enum(() => UserRole),
     passwordHash: p.string().nullable(),
     inviteToken: p.string().nullable(),
+    inviteTokenCreatedAt: p.datetime().nullable(),
     pendingApproval: p.boolean().nullable(),
     createdAt: p.datetime().nullable(),
     updatedAt: p

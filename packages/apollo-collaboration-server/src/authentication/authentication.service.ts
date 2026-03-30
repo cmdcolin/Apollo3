@@ -19,6 +19,17 @@ import { Role } from './role.enum.js'
 import { OidcService } from './oidc.service.js'
 import { safeRedirectUrl } from './redirect.js'
 
+function validatePassword(password: string) {
+  if (password.length < 8) {
+    throw new BadRequestException('Password must be at least 8 characters')
+  }
+  if (password.length > 72) {
+    throw new BadRequestException(
+      'Password must be at most 72 characters (bcrypt limit)',
+    )
+  }
+}
+
 interface ConfigValues {
   URL: string
   ALLOWED_REDIRECT_ORIGINS?: string
@@ -125,6 +136,7 @@ export class AuthenticationService {
     if (!this.setupActive) {
       throw new BadRequestException('Setup mode is not active')
     }
+    validatePassword(password)
     const existing = await this.usersService.findByEmail(email)
     if (existing) {
       throw new BadRequestException('A user with that email already exists')
@@ -175,6 +187,16 @@ export class AuthenticationService {
     if (!user) {
       throw new BadRequestException('Invalid or expired invite link')
     }
+    const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000
+    if (
+      user.inviteTokenCreatedAt &&
+      Date.now() - user.inviteTokenCreatedAt.getTime() > INVITE_TTL_MS
+    ) {
+      throw new BadRequestException(
+        'Invite link has expired. Ask an admin to re-invite you.',
+      )
+    }
+    validatePassword(password)
     const passwordHash = await bcrypt.hash(password, 10)
     await this.usersService.setPassword(user._id, passwordHash)
     await this.usersService.clearInviteToken(user._id)

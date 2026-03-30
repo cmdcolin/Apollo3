@@ -41,6 +41,7 @@ import {
 } from './dto/feature-schemas.js'
 import { FeaturesService } from './features.service.js'
 
+@Roles(Role.ReadOnly)
 @Controller('features')
 export class FeaturesController {
   constructor(

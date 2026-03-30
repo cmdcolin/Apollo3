@@ -116,9 +116,9 @@ Auth was simplified from a 5-file indirection chain down to a single file
 — just pick one of three:
 
 - `@Public()` — no login needed (auth endpoints, health, config.json)
-- `@Authenticated()` — logged in, any role (even pending users)
 - `@Roles(Role.ReadOnly | Role.User | Role.Admin)` — logged in with a specific
-  role or higher (admin > user > readOnly)
+  role or higher (admin > user > readOnly). Use `@Roles(Role.None)` for any
+  authenticated user regardless of role.
 
 Missing auth returns 401; insufficient role returns 403. The frontend redirects
 to the login page on 401.

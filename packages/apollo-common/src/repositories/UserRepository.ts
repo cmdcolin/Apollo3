@@ -5,6 +5,7 @@ export interface UserRow {
   role: 'readOnly' | 'admin' | 'user' | 'none'
   passwordHash?: string
   inviteToken?: string
+  inviteTokenCreatedAt?: Date
   pendingApproval?: boolean
   createdAt?: Date
   updatedAt?: Date

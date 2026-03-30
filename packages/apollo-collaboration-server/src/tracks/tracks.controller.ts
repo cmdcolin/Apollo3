@@ -18,7 +18,7 @@ import { DatabaseService } from '../mikro-orm/database.service.js'
 import { PermissionService } from '../permissions/permission.service.js'
 import type { RequestWithUser } from '../authentication/request-with-user.js'
 import { Role } from '../authentication/role.enum.js'
-import { Authenticated, Public } from '../authentication/roles.guard.js'
+import { Public, Roles } from '../authentication/roles.guard.js'
 
 interface CreateTrackBody {
   trackId: string
@@ -31,7 +31,7 @@ interface UpdateTrackBody {
   assemblyIds?: string[]
 }
 
-@Authenticated()
+@Public()
 @Controller('tracks')
 export class TracksController {
   constructor(
@@ -40,6 +40,7 @@ export class TracksController {
     private readonly permissionService: PermissionService,
   ) {}
 
+  @Roles(Role.User)
   @Post()
   async create(@Req() request: RequestWithUser, @Body() body: CreateTrackBody) {
     await this.permissionService.checkIfUserHasPermissionForAssemblies(
@@ -56,7 +57,6 @@ export class TracksController {
     })
   }
 
-  @Public()
   @Get()
   async list(
     @Req() request: RequestWithUser,
@@ -76,6 +76,7 @@ export class TracksController {
     return this.db.trackConfig.findByAssemblyIds(accessibleIds)
   }
 
+  @Roles(Role.User)
   @Patch(':id')
   async update(
     @Req() request: RequestWithUser,
@@ -101,6 +102,7 @@ export class TracksController {
     return this.db.trackConfig.updateById(id, body)
   }
 
+  @Roles(Role.User)
   @Delete(':id')
   async remove(@Req() request: RequestWithUser, @Param('id') id: string) {
     const existing = await this.db.trackConfig.findById(id)

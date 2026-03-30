@@ -48,12 +48,9 @@ export class OrganismsController {
     @Query('offset') offsetStr?: string,
     @Query('limit') limitStr?: string,
   ) {
-    if (req.user) {
-      const offset = offsetStr ? Number(offsetStr) : undefined
-      const limit = limitStr ? Number(limitStr) : undefined
-      return this.organismsService.findAll({ offset, limit })
-    }
-    return this.organismsService.findPublic()
+    const offset = offsetStr ? Number(offsetStr) : undefined
+    const limit = limitStr ? Number(limitStr) : undefined
+    return this.organismsService.findForUser(req.user ?? undefined, { offset, limit })
   }
 
   @Get(':id')

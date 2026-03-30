@@ -55,7 +55,10 @@ export class UsersService {
   }
 
   async setInviteToken(id: string, inviteToken: string) {
-    return this.db.user.updateById(id, { inviteToken })
+    return this.db.user.updateById(id, {
+      inviteToken,
+      inviteTokenCreatedAt: new Date(),
+    })
   }
 
   async findByInviteToken(token: string) {

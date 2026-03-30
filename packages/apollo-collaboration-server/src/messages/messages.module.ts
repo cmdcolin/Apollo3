@@ -23,7 +23,11 @@ async function jwtConfigFactory(
     const jwtFileText = await fs.readFile(jwtFile, 'utf8')
     jwtSecret = jwtFileText.trim()
   }
-  return { secret: jwtSecret, signOptions: { expiresIn: '1d' } }
+  return {
+    secret: jwtSecret,
+    signOptions: { expiresIn: '1d', algorithm: 'HS256' },
+    verifyOptions: { algorithms: ['HS256'] },
+  }
 }
 
 @Module({
