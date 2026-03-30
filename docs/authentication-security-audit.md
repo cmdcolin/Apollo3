@@ -68,12 +68,22 @@ Write actions (adding features, creating annotations) and analysis tools are
 hidden from unauthenticated and read-only users in the UI. Previously some of
 these actions were visible but would silently fail.
 
+## Additional Hardening (post-audit)
+
+| # | Issue | Fix |
+| - | ----- | --- |
+| 9 | **Invite tokens never expire** — tokens valid indefinitely | Added `inviteTokenCreatedAt` field; `acceptInvite()` rejects tokens older than 7 days |
+| 10 | **No server-side password length validation** — bcrypt silently truncates >72 bytes | `validatePassword()` enforces 8–72 chars on all password-setting endpoints |
+| 11 | **JWT algorithm not pinned** — defaults to HS256 but could be misconfigured | `signOptions.algorithm` and `verifyOptions.algorithms` pinned to `['HS256']` in both JwtModule registrations |
+
 ## Verified Secure
 
 - All 14 controllers have class-level auth decorators; default is `Role.Admin`
 - SQL queries use MikroORM parameterized queries (no injection risk)
 - File uploads store by checksum, not user-provided filename (no path traversal)
 - No shared-secret backdoors; every login path creates or validates a real user account
+- JWT algorithm pinned to HS256; `none` algorithm attack impossible
+- Invite tokens expire after 7 days; password length validated server-side
 
 ## Accepted Risks
 

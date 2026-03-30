@@ -126,8 +126,8 @@ auto-authenticated; users accessing directly see the OIDC login page.
 
 Apollo uses **cookie-based JWT authentication**:
 
-- When a user logs in (OIDC, REMOTE_USER, or root), the server issues a signed
-  JWT and stores it in an HTTP-only cookie called `apollo-token`
+- When a user logs in (OIDC, REMOTE_USER, or password), the server issues a
+  signed JWT and stores it in an HTTP-only cookie called `apollo-token`
 - Every subsequent request includes this cookie automatically
 - The `JwtAuthGuard` extracts and verifies the token, then looks up the user's
   current role from the database (roles are never read from the JWT payload)
@@ -219,10 +219,10 @@ Two global guards run on every request:
   Bearer` header), verifies it, and looks up the current role from the database.
   For `@Public()` endpoints, a missing token is allowed.
 - **RolesGuard** — checks the user's role against the endpoint's requirement.
-  Every controller must have a class-level decorator:
+  Every controller must have a class-level decorator — just pick one of two:
   - `@Public()` — no login needed
-  - `@Authenticated()` — any role, including `none`
-  - `@Roles(Role.User)` — specific minimum role
+  - `@Roles(Role.ReadOnly | Role.User | Role.Admin)` — specific minimum role
+    (use `@Roles(Role.None)` for any authenticated user regardless of role)
 
 Missing auth returns 401. Insufficient role returns 403.
 
