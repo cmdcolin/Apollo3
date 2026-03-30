@@ -10,11 +10,30 @@ import {
   type GridColDef,
   type GridRenderCellParams,
 } from '@mui/x-data-grid'
+import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import useSWR from 'swr'
 
 import { Nav } from './Nav.js'
 import { fetchJson } from './fetchUtil.js'
+
+function useIsAuthenticated() {
+  const [authenticated, setAuthenticated] = useState<boolean | undefined>(
+    undefined,
+  )
+
+  useEffect(() => {
+    fetch('/users/me', { headers: { Accept: 'application/json' } })
+      .then((r) => {
+        setAuthenticated(r.ok)
+      })
+      .catch(() => {
+        setAuthenticated(false)
+      })
+  }, [])
+
+  return authenticated
+}
 
 interface Assembly {
   _id: string
@@ -88,25 +107,41 @@ const columns: GridColDef<Assembly>[] = [
 ]
 
 function AssembliesPage() {
-  const { data: assemblies, error, isLoading } =
-    useSWR<Assembly[], unknown>('/assemblies', fetchJson)
+  const authenticated = useIsAuthenticated()
+  const endpoint =
+    authenticated === undefined
+      ? null
+      : authenticated
+        ? '/assemblies'
+        : '/assemblies/public'
+  const { data: assemblies, error, isLoading } = useSWR<Assembly[], unknown>(
+    endpoint,
+    fetchJson,
+  )
+  const isGuest = authenticated === false
 
   return (
     <Nav current="assemblies">
       <Container>
         <Typography variant="h4" gutterBottom>
-          Assemblies
+          {isGuest ? 'Public Assemblies' : 'Assemblies'}
         </Typography>
+        {isGuest ? (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Showing publicly accessible assemblies.{' '}
+            <Link href="/">Sign in</Link> to see all assemblies.
+          </Alert>
+        ) : null}
         {error ? (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error instanceof Error ? error.message : 'Unknown error'}
           </Alert>
         ) : null}
-        {isLoading ? (
+        {isLoading || authenticated === undefined ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
             <CircularProgress />
           </Box>
-        ) : (assemblies ? (
+        ) : assemblies ? (
           <Box sx={{ height: 600 }}>
             <DataGrid
               rows={assemblies.map((a) => ({ ...a, id: a._id }))}
@@ -118,7 +153,7 @@ function AssembliesPage() {
               }}
             />
           </Box>
-        ) : null)}
+        ) : null}
       </Container>
     </Nav>
   )

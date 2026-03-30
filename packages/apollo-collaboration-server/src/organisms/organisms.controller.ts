@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common'
 
 import { Role } from '../authentication/role.enum.js'
-import { Roles } from '../authentication/roles.guard.js'
+import { Public, Roles } from '../authentication/roles.guard.js'
 
 import type { CreateOrganismDto } from './dto/create-organism.dto.js'
 import type { UpdateOrganismDto } from './dto/update-organism.dto.js'
@@ -31,6 +31,12 @@ export class OrganismsController {
   async getCount() {
     const count = await this.organismsService.count()
     return { count }
+  }
+
+  @Get('public')
+  @Public()
+  findPublic() {
+    return this.organismsService.findPublic()
   }
 
   @Post()

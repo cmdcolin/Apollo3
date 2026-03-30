@@ -27,6 +27,17 @@ export class OrganismsService {
     return this.db.organism.findAll(opts)
   }
 
+  async findPublic() {
+    const publicAssemblies = await this.db.assembly.findPublic()
+    const uniqueOrganismIds = [
+      ...new Set(publicAssemblies.map((a) => a.organism).filter(Boolean)),
+    ]
+    const organisms = await Promise.all(
+      uniqueOrganismIds.map((id) => this.db.organism.findById(id!)),
+    )
+    return organisms.filter(Boolean)
+  }
+
   async count() {
     return this.db.organism.count()
   }

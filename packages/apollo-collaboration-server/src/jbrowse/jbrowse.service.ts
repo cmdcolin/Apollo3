@@ -72,6 +72,13 @@ export class JBrowseService {
       ApolloPlugin: { hasRole: false, baseURL: url },
     }
     if (!role) {
+      const publicAssemblies = await this.db.assembly.findPublic()
+      if (publicAssemblies.length > 0) {
+        return {
+          ...configuration,
+          ApolloPlugin: { hasRole: false, baseURL: url, hasPublicData: true },
+        }
+      }
       return configuration
     }
     if (role === Role.None) {

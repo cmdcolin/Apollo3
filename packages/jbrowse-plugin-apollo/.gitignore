@@ -8,6 +8,12 @@ conf/*.cjs
 conf/*.cjs.map
 conf/*.js
 conf/*.js.map
+conf/*.d.ts
+conf/*.d.ts.map
+conf/*.d.mts
+conf/*.d.mts.map
+conf/*.d.cts
+conf/*.d.cts.map
 conf/*.tsbuildinfo
 
 # Playwright

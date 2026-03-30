@@ -23,6 +23,8 @@ interface TiberiusConfig {
   tiberiusPath: string
   modelCfg?: string
   useSingularity: boolean
+  singularityImage?: string
+  dockerImage?: string
   maxRegionSize: number
   timeout: number
 }
@@ -128,11 +130,14 @@ export class TiberiusRunner implements AnalysisRunner, OnModuleInit {
     const fastaContent = `>${refSeqName}:${start}-${end}\n${sequence}\n`
     writeFileSync(inputPath, fastaContent)
 
-    const { executable, args } = this.buildCommand(
+    const { executable, args, env } = this.buildCommand(
       {
         tiberiusPath: this.config.tiberiusPath,
         modelCfg,
         useSingularity,
+        singularityImage: this.config.singularityImage,
+        dockerImage: this.config.dockerImage,
+        jobDir,
       },
       inputPath,
       outputPath,
@@ -142,7 +147,7 @@ export class TiberiusRunner implements AnalysisRunner, OnModuleInit {
       `Starting Tiberius for job ${context.job._id}: ${executable} ${args.join(' ')}`,
     )
 
-    await this.spawnAndWait(executable, args, jobDir, context.signal)
+    await this.spawnAndWait(executable, args, jobDir, context.signal, env)
 
     if (!existsSync(outputPath)) {
       throw new Error('Tiberius did not produce output')
@@ -305,6 +310,7 @@ export class TiberiusRunner implements AnalysisRunner, OnModuleInit {
     args: string[],
     cwd: string,
     signal: AbortSignal,
+    env?: NodeJS.ProcessEnv,
   ) {
     return new Promise<void>((resolve, reject) => {
       let child: ChildProcess
@@ -312,6 +318,7 @@ export class TiberiusRunner implements AnalysisRunner, OnModuleInit {
         child = spawn(executable, args, {
           cwd,
           stdio: ['ignore', 'pipe', 'pipe'],
+          ...(env ? { env } : {}),
         })
       } catch (error) {
         reject(error instanceof Error ? error : new Error(String(error)))
@@ -356,11 +363,15 @@ export class TiberiusRunner implements AnalysisRunner, OnModuleInit {
       tiberiusPath: string
       modelCfg?: string
       useSingularity: boolean
+      singularityImage?: string
+      dockerImage?: string
+      jobDir: string
     },
     inputPath: string,
     outputPath: string,
   ) {
-    const args = [
+    const tiberiusDir = path.dirname(config.tiberiusPath)
+    const tiberiusArgs = [
       config.tiberiusPath,
       '--genome',
       inputPath,
@@ -368,14 +379,44 @@ export class TiberiusRunner implements AnalysisRunner, OnModuleInit {
       outputPath,
     ]
 
-    if (config.useSingularity) {
-      args.push('--singularity')
-    }
-
     if (config.modelCfg) {
-      args.push('--model_cfg', config.modelCfg)
+      tiberiusArgs.push('--model_cfg', config.modelCfg)
     }
 
-    return { executable: 'python3', args }
+    if (config.dockerImage) {
+      const args = [
+        'run',
+        '--rm',
+        '--gpus', 'all',
+        '-v', `${tiberiusDir}:${tiberiusDir}:ro`,
+        '-v', `${config.jobDir}:${config.jobDir}`,
+        '-e', 'TIBERIUS_IN_SINGULARITY=1',
+        config.dockerImage,
+        'python3',
+        ...tiberiusArgs,
+      ]
+      return { executable: 'docker', args, env: undefined }
+    }
+
+    if (config.singularityImage) {
+      const args = [
+        'exec',
+        '--nv',
+        config.singularityImage,
+        'python3',
+        ...tiberiusArgs,
+      ]
+      return {
+        executable: 'singularity',
+        args,
+        env: { ...process.env, TIBERIUS_IN_SINGULARITY: '1' },
+      }
+    }
+
+    if (config.useSingularity) {
+      tiberiusArgs.push('--singularity')
+    }
+
+    return { executable: 'python3', args: tiberiusArgs, env: undefined }
   }
 }

@@ -109,9 +109,13 @@ interface NavMenuSubheader {
 
 type NavEntry = NavMenuItem | NavMenuSubheader
 
-const fileMenuItems: NavEntry[] = [
+const publicFileMenuItems: NavEntry[] = [
   { label: 'Organisms', href: '/ui/organisms/', value: 'organisms' },
   { label: 'Assemblies', href: '/ui/assemblies/', value: 'assemblies' },
+]
+
+const fileMenuItems: NavEntry[] = [
+  ...publicFileMenuItems,
   { label: 'Recent Changes', href: '/ui/changes/', value: 'changes' },
 ]
 
@@ -281,9 +285,13 @@ function NavBar({ current, user }: { current?: Page; user?: UserInfo }) {
         >
           Apollo
         </Typography>
+        <NavMenu
+          label="File"
+          items={user ? fileMenuItems : publicFileMenuItems}
+          current={current}
+        />
         {user ? (
           <>
-            <NavMenu label="File" items={fileMenuItems} current={current} />
             <NavMenu label="Tools" items={toolsMenuItems} current={current} />
             {user.role === 'admin' ? (
               <NavMenu
@@ -296,7 +304,7 @@ function NavBar({ current, user }: { current?: Page; user?: UserInfo }) {
           </>
         ) : null}
         <Box sx={{ flexGrow: 1 }} />
-        {user && (
+        {user ? (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Typography variant="body2">{user.username}</Typography>
             <Chip
@@ -309,6 +317,10 @@ function NavBar({ current, user }: { current?: Page; user?: UserInfo }) {
               Sign out
             </Button>
           </Box>
+        ) : (
+          <Button color="inherit" size="small" href="/">
+            Sign in
+          </Button>
         )}
       </Toolbar>
     </AppBar>

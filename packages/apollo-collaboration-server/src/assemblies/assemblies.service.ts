@@ -130,6 +130,10 @@ export class AssembliesService {
     return this.db.assembly.findAll()
   }
 
+  async findPublic() {
+    return this.db.assembly.findPublic()
+  }
+
   async findOne(id: string) {
     const assembly = await this.db.assembly.findById(id)
     if (!assembly) {

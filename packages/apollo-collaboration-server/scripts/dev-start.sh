@@ -73,9 +73,11 @@ if [ "$PERSIST" = true ]; then
 else
   echo '[start] Using in-memory SQLite database (fresh on every start)'
   export DB_CONNECTION_URL=':memory:'
-  # Randomize session secret so stale browser cookies don't resolve to missing users
+  # Randomize secrets so stale browser cookies/JWTs don't resolve to missing users
   SESSION_SECRET="$(head -c 32 /dev/urandom | base64)"
   export SESSION_SECRET
+  JWT_SECRET="$(head -c 32 /dev/urandom | base64)"
+  export JWT_SECRET
 fi
 
 # Auto-detect Tiberius if installed at common location
@@ -100,7 +102,7 @@ JBROWSE_STATIC_DIR="$JBROWSE_DIR" \
   PLUGIN_LOCATION="/jbrowse/apollo-plugin.js" \
   FEATURE_TYPE_ONTOLOGY_LOCATION="/jbrowse/so-v3.1.json" \
   NODE_ENV=development \
-  node --no-warnings=ExperimentalWarning --watch-path dist dist/main.js 2>&1 \
+  node --env-file=.development.env --no-warnings=ExperimentalWarning --watch-path dist dist/main.js 2>&1 \
   | tee "$SERVER_LOG" | grep -v -e '^SETUP_TOKEN=' -e 'Setup URL' &
 NODE_PID=$!
 
@@ -131,7 +133,7 @@ if [ "$PERSIST" = false ]; then
         -d "{\"email\":\"$DEV_ADMIN_EMAIL\",\"username\":\"admin\",\"password\":\"$DEV_ADMIN_PASSWORD\"}" \
         -o /dev/null || true
     fi
-    echo "[start] Dev admin account: $DEV_ADMIN_EMAIL / $DEV_ADMIN_PASSWORD"
+    echo "[start] You can login as admin with: $DEV_ADMIN_EMAIL / $DEV_ADMIN_PASSWORD"
     echo "[start] Server ready (${waited}s), seeding volvox assembly..."
     ADMIN_EMAIL="$DEV_ADMIN_EMAIL" ADMIN_PASSWORD="$DEV_ADMIN_PASSWORD" \
       PORT="$SERVER_PORT" node --no-warnings=ExperimentalWarning --experimental-strip-types \

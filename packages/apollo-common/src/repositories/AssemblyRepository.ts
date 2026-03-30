@@ -12,6 +12,8 @@ export interface AssemblyRow {
   sequenceSource?: SequenceSource
   checks?: string[]
   organism?: string
+  organismDisplayName?: string
+  organismScientificName?: string
   visibility?: 'public' | 'private'
 }
 

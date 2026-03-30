@@ -12,7 +12,15 @@ export class GlobalExceptionsFilter extends BaseExceptionFilter {
   private readonly logger = new Logger(GlobalExceptionsFilter.name)
 
   catch(exception: unknown, host: ArgumentsHost) {
-    this.logger.error(exception)
+    const status =
+      exception instanceof HttpException ? exception.getStatus() : 500
+    if (status >= 500) {
+      this.logger.error(exception)
+    } else {
+      this.logger.warn(
+        `${status} ${exception instanceof HttpException ? exception.message : exception}`,
+      )
+    }
 
     if (host.getType() === 'http') {
       const ctx = host.switchToHttp()

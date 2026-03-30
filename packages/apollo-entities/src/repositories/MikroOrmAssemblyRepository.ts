@@ -16,6 +16,24 @@ function organismId(val: InferEntity<typeof AssemblyEntity>['organism']) {
   return val._id
 }
 
+function toOrganismDisplayName(
+  val: InferEntity<typeof AssemblyEntity>['organism'],
+) {
+  if (!val || typeof val === 'string') {
+    return
+  }
+  return val.commonName ?? undefined
+}
+
+function toOrganismScientificName(
+  val: InferEntity<typeof AssemblyEntity>['organism'],
+) {
+  if (!val || typeof val === 'string') {
+    return
+  }
+  return [val.genus, val.species].filter(Boolean).join(' ') || undefined
+}
+
 function toRow(entity: InferEntity<typeof AssemblyEntity>): AssemblyRow {
   return {
     _id: entity._id,
@@ -27,6 +45,8 @@ function toRow(entity: InferEntity<typeof AssemblyEntity>): AssemblyRow {
     sequenceSource: entity.sequenceSource ?? undefined,
     checks: entity.checks ?? undefined,
     organism: organismId(entity.organism),
+    organismDisplayName: toOrganismDisplayName(entity.organism),
+    organismScientificName: toOrganismScientificName(entity.organism),
     visibility: entity.visibility,
   }
 }
@@ -84,7 +104,11 @@ export class MikroOrmAssemblyRepository implements AssemblyRepository {
   }
 
   async findAll() {
-    const entities = await this.em.find(AssemblyEntity, {}, {})
+    const entities = await this.em.find(
+      AssemblyEntity,
+      {},
+      { populate: ['organism'] },
+    )
     return entities.map((x) => toRow(x))
   }
 

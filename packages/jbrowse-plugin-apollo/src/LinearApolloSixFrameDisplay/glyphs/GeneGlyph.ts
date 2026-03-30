@@ -43,55 +43,44 @@ import type { CanvasMouseEvent } from '../types'
 
 import type { Glyph } from './Glyph'
 
-let forwardFillLight: CanvasPattern | null = null
-let backwardFillLight: CanvasPattern | null = null
-let forwardFillDark: CanvasPattern | null = null
-let backwardFillDark: CanvasPattern | null = null
-const canvas = globalThis.document.createElement('canvas')
-// @ts-expect-error getContext is undefined in the web worker
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-if (canvas?.getContext) {
-  for (const direction of ['forward', 'backward']) {
-    for (const themeMode of ['light', 'dark']) {
-      const canvas = document.createElement('canvas')
-      const canvasSize = 10
-      canvas.width = canvas.height = canvasSize
-      const ctx = canvas.getContext('2d')
-      if (ctx) {
-        const stripeColor1 =
-          themeMode === 'light' ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,0.75)'
-        const stripeColor2 =
-          themeMode === 'light' ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.50)'
-        const gradient =
-          direction === 'forward'
-            ? ctx.createLinearGradient(0, canvasSize, canvasSize, 0)
-            : ctx.createLinearGradient(0, 0, canvasSize, canvasSize)
-        gradient.addColorStop(0, stripeColor1)
-        gradient.addColorStop(0.25, stripeColor1)
-        gradient.addColorStop(0.25, stripeColor2)
-        gradient.addColorStop(0.5, stripeColor2)
-        gradient.addColorStop(0.5, stripeColor1)
-        gradient.addColorStop(0.75, stripeColor1)
-        gradient.addColorStop(0.75, stripeColor2)
-        gradient.addColorStop(1, stripeColor2)
-        ctx.fillStyle = gradient
-        ctx.fillRect(0, 0, 10, 10)
-        if (direction === 'forward') {
-          if (themeMode === 'light') {
-            forwardFillLight = ctx.createPattern(canvas, 'repeat')
-          } else {
-            forwardFillDark = ctx.createPattern(canvas, 'repeat')
-          }
-        } else {
-          if (themeMode === 'light') {
-            backwardFillLight = ctx.createPattern(canvas, 'repeat')
-          } else {
-            backwardFillDark = ctx.createPattern(canvas, 'repeat')
-          }
-        }
-      }
-    }
+const stripePatternCache = new Map<string, CanvasPattern | null>()
+
+function getStripePattern(direction: 'forward' | 'backward', mode: 'light' | 'dark') {
+  const key = `${direction}-${mode}`
+  if (stripePatternCache.has(key)) {
+    return stripePatternCache.get(key) ?? null
   }
+  const canvas = globalThis.document?.createElement('canvas')
+  if (!canvas?.getContext) {
+    return null
+  }
+  const canvasSize = 10
+  canvas.width = canvas.height = canvasSize
+  const ctx = canvas.getContext('2d')
+  if (!ctx) {
+    return null
+  }
+  const stripeColor1 =
+    mode === 'light' ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,0.75)'
+  const stripeColor2 =
+    mode === 'light' ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.50)'
+  const gradient =
+    direction === 'forward'
+      ? ctx.createLinearGradient(0, canvasSize, canvasSize, 0)
+      : ctx.createLinearGradient(0, 0, canvasSize, canvasSize)
+  gradient.addColorStop(0, stripeColor1)
+  gradient.addColorStop(0.25, stripeColor1)
+  gradient.addColorStop(0.25, stripeColor2)
+  gradient.addColorStop(0.5, stripeColor2)
+  gradient.addColorStop(0.5, stripeColor1)
+  gradient.addColorStop(0.75, stripeColor1)
+  gradient.addColorStop(0.75, stripeColor2)
+  gradient.addColorStop(1, stripeColor2)
+  ctx.fillStyle = gradient
+  ctx.fillRect(0, 0, canvasSize, canvasSize)
+  const pattern = ctx.createPattern(canvas, 'repeat')
+  stripePatternCache.set(key, pattern)
+  return pattern
 }
 
 function deepSetHas<T>(set: Set<T>, item: T): boolean {
@@ -218,10 +207,8 @@ function draw(
     labelArray.push(label)
   }
 
-  const forwardFill =
-    theme.palette.mode === 'dark' ? forwardFillDark : forwardFillLight
-  const backwardFill =
-    theme.palette.mode === 'dark' ? backwardFillDark : backwardFillLight
+  const forwardFill = getStripePattern('forward', theme.palette.mode)
+  const backwardFill = getStripePattern('backward', theme.palette.mode)
   const reversal = reversed ? -1 : 1
   let topFill: CanvasPattern | null = null,
     bottomFill: CanvasPattern | null = null

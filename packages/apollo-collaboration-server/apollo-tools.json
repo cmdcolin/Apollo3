@@ -1,0 +1,7 @@
+{
+  "tools": {
+    "tiberius": {
+      "dockerImage": "larsgabriel23/tiberius:latest"
+    }
+  }
+}

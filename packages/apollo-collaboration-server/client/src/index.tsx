@@ -440,10 +440,18 @@ function LoginSection() {
             passwordForm
           ) : (
             <Button
-              variant="contained"
+              variant="outlined"
               fullWidth
               onClick={() => {
                 setShowPasswordForm(true)
+              }}
+              sx={{
+                backgroundColor: '#fff',
+                borderColor: '#dadce0',
+                color: '#3c4043',
+                justifyContent: 'flex-start',
+                px: 2,
+                '&:hover': { backgroundColor: '#f8f9fa', borderColor: '#dadce0' },
               }}
             >
               Sign in with password
@@ -584,8 +592,35 @@ function LoggedInContent({ user }: { user: CurrentUser }) {
   )
 }
 
+function usePublicAssemblies() {
+  const [assemblies, setAssemblies] = useState<
+    { _id: string; displayName: string; organism?: string }[]
+  >([])
+
+  useEffect(() => {
+    fetch('/assemblies/public', { headers: jsonHeaders })
+      .then((r) => {
+        if (r.ok) {
+          return r.json() as Promise<
+            { _id: string; displayName: string; organism?: string }[]
+          >
+        }
+        return []
+      })
+      .then((data) => {
+        setAssemblies(data)
+      })
+      .catch(() => {
+        /* ignore */
+      })
+  }, [])
+
+  return assemblies
+}
+
 function IndexPage() {
   const { user, checked } = useCurrentUser()
+  const publicAssemblies = usePublicAssemblies()
 
   if (!checked) {
     return (
@@ -632,6 +667,13 @@ function IndexPage() {
             <LoginSection />
           )}
         </Paper>
+        {!user && publicAssemblies.length > 0 ? (
+          <Box sx={{ mt: 4 }}>
+            <Button variant="contained" color="secondary" fullWidth href="/ui/assemblies/">
+              Browse public data
+            </Button>
+          </Box>
+        ) : null}
       </Container>
     </Nav>
   )

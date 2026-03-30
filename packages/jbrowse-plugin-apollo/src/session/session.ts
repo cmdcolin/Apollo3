@@ -31,6 +31,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import FactCheckIcon from '@mui/icons-material/FactCheck'
 import FileOpenIcon from '@mui/icons-material/FileOpen'
 import LockIcon from '@mui/icons-material/Lock'
+import LoginIcon from '@mui/icons-material/Login'
 import LogoutIcon from '@mui/icons-material/Logout'
 import RedoIcon from '@mui/icons-material/Redo'
 import SaveIcon from '@mui/icons-material/Save'
@@ -297,18 +298,28 @@ export function extendSession(
               const serverHasRole = jbrowseConfig?.configuration?.ApolloPlugin
                 ?.hasRole as boolean | undefined
               if (!serverHasRole) {
-                // User is not authenticated — show login dialog
-                ;(self as unknown as AbstractSessionModel).queueDialog(
-                  (doneCallback) => [
-                    LoginDialog,
-                    {
-                      session: self as unknown as ApolloSessionModel,
-                      handleClose: () => {
-                        doneCallback()
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                const hasPublicData = jbrowseConfig?.configuration?.ApolloPlugin
+                  ?.hasPublicData as boolean | undefined
+                if (!hasPublicData) {
+                  // No public data available — show login dialog
+                  ;(self as unknown as AbstractSessionModel).queueDialog(
+                    (doneCallback) => [
+                      LoginDialog,
+                      {
+                        session: self as unknown as ApolloSessionModel,
+                        handleClose: () => {
+                          doneCallback()
+                        },
                       },
-                    },
-                  ],
-                )
+                    ],
+                  )
+                  reaction.dispose()
+                  return
+                }
+                // Public data available — load config and allow guest browsing
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+                reloadPluginManagerCallback(jbrowseConfig, self.previousSnapshot)
                 reaction.dispose()
                 return
               }
@@ -349,8 +360,37 @@ export function extendSession(
       return {
         menus() {
           const role = getRole(self)
-          if (!role || role === 'none') {
+          if (role === 'none') {
             return superMenus()
+          }
+          if (!role) {
+            const pluginConfiguration = self.getPluginConfiguration()
+            const hasPublicData = readConfObject(
+              pluginConfiguration,
+              'hasPublicData',
+            ) as boolean
+            if (!hasPublicData) {
+              return superMenus()
+            }
+            const baseURL = readConfObject(
+              pluginConfiguration,
+              'baseURL',
+            ) as string
+            return [
+              ...superMenus(),
+              {
+                label: 'Apollo',
+                menuItems: [
+                  {
+                    label: 'Sign in',
+                    icon: LoginIcon,
+                    onClick: () => {
+                      globalThis.location.href = new URL('/', baseURL).href
+                    },
+                  },
+                ],
+              },
+            ]
           }
           const readOnly = isReadOnly(self)
           const apolloMenuItems = [

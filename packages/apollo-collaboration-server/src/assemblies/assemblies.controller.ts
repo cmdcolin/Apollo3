@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common'
 
 import { Role } from '../authentication/role.enum.js'
-import { Roles } from '../authentication/roles.guard.js'
+import { Public, Roles } from '../authentication/roles.guard.js'
 
 import { AssembliesService } from './assemblies.service.js'
 import type { CreateAssemblyDto } from './dto/create-assembly.dto.js'
@@ -31,6 +31,12 @@ export class AssembliesController {
   @Roles(Role.Admin)
   createAssembly(@Body() body: CreateAssemblyDto) {
     return this.assembliesService.create(body)
+  }
+
+  @Get('public')
+  @Public()
+  findPublic() {
+    return this.assembliesService.findPublic()
   }
 
   @Get()

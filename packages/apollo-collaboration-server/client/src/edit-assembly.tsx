@@ -51,7 +51,7 @@ function getAssemblyName() {
   if (
     parts.length >= 3 &&
     parts[0] === 'ui' &&
-    parts[1] === 'assembly-admin'
+    parts[1] === 'edit-assembly'
   ) {
     return decodeURIComponent(parts[2])
   }
@@ -265,7 +265,7 @@ function AssemblyAdminPage() {
           >
             {displayName}
           </Link>
-          <Typography color="text.primary">Admin</Typography>
+          <Typography color="text.primary">Edit</Typography>
         </Breadcrumbs>
 
         {error ? (
@@ -277,7 +277,7 @@ function AssemblyAdminPage() {
         {currentUser?.role === 'admin' && assembly ? (
           <>
             <Typography variant="h4" sx={{ mb: 3 }}>
-              Admin — {displayName}
+              Edit — {displayName}
             </Typography>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
