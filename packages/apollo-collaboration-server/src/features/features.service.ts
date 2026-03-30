@@ -73,11 +73,24 @@ function flattenNestedFeature(
   return rows
 }
 
+interface CheckResultData {
+  _id: string
+  name: string
+  cause?: string
+  featureId: string
+  refSeq: string
+  start: number
+  end: number
+  ignored: boolean
+  message?: string
+}
+
 interface MutationResult {
   features: NestedFeature[]
   deletedFeatureIds: string[]
   changeSequence: number
   assemblyId: string
+  checkResults?: CheckResultData[]
 }
 
 @Injectable()
@@ -258,6 +271,22 @@ export class FeaturesService {
     for (const root of rootFeatures) {
       await this.checksService.checkFeature(root._id)
     }
+
+    // Collect check results for all affected features so the client
+    // can update its check result store without a separate fetch
+    const allIds: string[] = []
+    for (const root of rootFeatures) {
+      const descendants = await this.db.feature.findDescendants(root._id)
+      allIds.push(root._id, ...descendants.map((d) => d._id))
+    }
+    const checkResults: CheckResultData[] = []
+    for (const fid of allIds) {
+      const results = await this.db.check.findByFeatureId(fid)
+      for (const r of results) {
+        checkResults.push(r)
+      }
+    }
+    result.checkResults = checkResults
 
     const userSessionId = makeUserSessionId(user)
     const message: FeatureUpdateMessage = {

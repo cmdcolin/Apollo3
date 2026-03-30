@@ -1,5 +1,8 @@
 import type { NestedFeature } from '@apollo-annotation/common'
-import type { AnnotationFeatureSnapshot } from '@apollo-annotation/mst'
+import type {
+  AnnotationFeatureSnapshot,
+  CheckResultSnapshot,
+} from '@apollo-annotation/mst'
 import { getSession } from '@jbrowse/core/util'
 import type { IAnyStateTreeNode } from '@jbrowse/mobx-state-tree'
 
@@ -26,6 +29,7 @@ interface MutationResult {
   deletedFeatureIds: string[]
   changeSequence: number
   assemblyId: string
+  checkResults?: CheckResultSnapshot[]
 }
 
 export class FeatureService {
@@ -236,7 +240,7 @@ export class FeatureService {
 
   applyResult(result: MutationResult) {
     const { apolloDataStore } = this.getSession()
-    const { assemblyId, deletedFeatureIds, features } = result
+    const { assemblyId, checkResults, deletedFeatureIds, features } = result
 
     for (const feature of features) {
       fixFeatureSnapshot(feature)
@@ -247,5 +251,9 @@ export class FeatureService {
       features as AnnotationFeatureSnapshot[],
       deletedFeatureIds,
     )
+
+    if (checkResults) {
+      apolloDataStore.addCheckResults(checkResults)
+    }
   }
 }

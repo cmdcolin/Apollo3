@@ -69,12 +69,14 @@ export class ChecksService {
       return
     }
     if (featureRow.parentId) {
+      this.logger.debug(`Skipping check for child feature ${featureId}`)
       return
     }
     const descendants = await this.db.feature.findDescendants(featureId)
     const allRows = [featureRow, ...descendants]
     const trees = assembleFeatureTrees(allRows)
     if (trees.length === 0) {
+      this.logger.warn(`No feature trees assembled for ${featureId}`)
       return
     }
     const [tree] = trees
@@ -82,32 +84,44 @@ export class ChecksService {
     const snapshot = tree as AnnotationFeatureSnapshot
 
     const checks = await this.getChecksForAssembly(featureRow.refSeq)
+    this.logger.debug(
+      `Running ${checks.length} checks on feature ${featureId} (${allRows.length} rows)`,
+    )
     for (const check of checks) {
       await this.db.check.deleteByFeatureIdsAndName(allIds, check.name)
       const c = checkRegistry.getCheck(check.name)
-      const result = await c.checkFeature(
-        snapshot,
-        (start: number, end: number) => {
-          return this.sequenceService.getSequence({
-            start,
-            end,
-            refSeq: featureRow.refSeq,
-          })
-        },
-      )
-      if (result.length > 0) {
-        const rows = result.map((r) => ({
-          _id: r._id,
-          name: r.name,
-          cause: r.cause,
-          featureId: r.featureId,
-          refSeq: r.refSeq,
-          start: r.start,
-          end: r.end,
-          ignored: r.ignored ?? false,
-          message: r.message,
-        }))
-        await this.db.check.createMany(rows)
+      try {
+        const result = await c.checkFeature(
+          snapshot,
+          (start: number, end: number) => {
+            return this.sequenceService.getSequence({
+              start,
+              end,
+              refSeq: featureRow.refSeq,
+            })
+          },
+        )
+        this.logger.debug(
+          `Check ${check.name} returned ${result.length} results for feature ${featureId}`,
+        )
+        if (result.length > 0) {
+          const rows = result.map((r) => ({
+            _id: r._id,
+            name: r.name,
+            cause: r.cause,
+            featureId: r.featureId,
+            refSeq: r.refSeq,
+            start: r.start,
+            end: r.end,
+            ignored: r.ignored ?? false,
+            message: r.message,
+          }))
+          await this.db.check.createMany(rows)
+        }
+      } catch (error) {
+        this.logger.error(
+          `Check ${check.name} failed for feature ${featureId}: ${error}`,
+        )
       }
     }
   }

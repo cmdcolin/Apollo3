@@ -1,6 +1,12 @@
-//import { randomBytes } from 'node:crypto'
-
 import type { GFF3FeatureLineWithRefs } from '@gmod/gff'
+import ObjectID from 'bson-objectid'
+
+import {
+  gffColumnToInternal,
+  gffToInternal,
+  isGFFColumn,
+  isGFFReservedAttribute,
+} from './gffReservedKeys.js'
 
 export interface FeatureSnapshot {
   _id: string
@@ -17,14 +23,22 @@ export function gff3LineToSnapshot(
   line: GFF3FeatureLineWithRefs,
   refSeqId: string,
 ): FeatureSnapshot {
-  const _id = `${Math.random()}` //randomBytes(12).toString('hex')
+  const _id = new ObjectID().toHexString()
   const strand = line.strand === '+' ? 1 : (line.strand === '-' ? -1 : undefined)
   const attributes: Record<string, string[]> = {}
+  if (line.score != null) {
+    attributes[gffColumnToInternal.score] = [String(line.score)]
+  }
+  if (line.source != null) {
+    attributes[gffColumnToInternal.source] = [line.source]
+  }
   if (line.attributes) {
     for (const [key, vals] of Object.entries(line.attributes)) {
-      if (vals.length > 0) {
-        attributes[key] = vals
+      if (key === 'Parent' || vals.length === 0) {
+        continue
       }
+      const internalKey = isGFFReservedAttribute(key) ? gffToInternal[key] : key
+      attributes[internalKey] = vals
     }
   }
   const children: Record<string, FeatureSnapshot> = {}

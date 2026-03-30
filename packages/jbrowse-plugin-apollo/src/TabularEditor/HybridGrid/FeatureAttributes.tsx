@@ -1,5 +1,11 @@
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
 import type { AnnotationFeature } from '@apollo-annotation/mst'
+import {
+  internalToGFF,
+  isGFFInternalAttribute,
+  gffInternalToColumn,
+  isGFFColumnInternal,
+} from '@apollo-annotation/shared'
 import { getSnapshot } from '@jbrowse/mobx-state-tree'
 import { observer } from 'mobx-react'
 import React from 'react'
@@ -15,10 +21,11 @@ export const FeatureAttributes = observer(function FeatureAttributes({
 }) {
   const attrString = [...feature.attributes.entries()]
     .map(([key, value]) => {
-      if (key.startsWith('gff_')) {
-        const newKey = key.slice(4)
-        const capitalizedKey = newKey.charAt(0).toUpperCase() + newKey.slice(1)
-        return [capitalizedKey, getSnapshot(value)]
+      if (isGFFInternalAttribute(key)) {
+        return [internalToGFF[key], getSnapshot(value)]
+      }
+      if (isGFFColumnInternal(key)) {
+        return [gffInternalToColumn[key], getSnapshot(value)]
       }
       if (key === '_id') {
         return ['ID', getSnapshot(value)]

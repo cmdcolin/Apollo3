@@ -245,18 +245,23 @@ function getCDSLocations(
   if (cdsChildren.length === 0) {
     return
   }
+  const exonChildren = Object.values(children).filter(
+    (child) => child.type === 'exon',
+  )
   const cdsLocations: CDSLocations = []
   for (const cds of cdsChildren) {
     const { max: cdsMax, min: cdsMin } = cds
     const locs: { min: number; max: number }[] = []
-    for (const child of Object.values(children)) {
-      if (child.type !== 'exon') {
-        continue
+    if (exonChildren.length > 0) {
+      for (const exon of exonChildren) {
+        const [start, end] = intersection2(cdsMin, cdsMax, exon.min, exon.max)
+        if (start !== undefined && end !== undefined) {
+          locs.push({ min: start, max: end })
+        }
       }
-      const [start, end] = intersection2(cdsMin, cdsMax, child.min, child.max)
-      if (start !== undefined && end !== undefined) {
-        locs.push({ min: start, max: end })
-      }
+    } else {
+      // No exons — use the CDS boundaries directly
+      locs.push({ min: cdsMin, max: cdsMax })
     }
     locs.sort(({ min: a }, { min: b }) => a - b)
     if (strand === -1) {
