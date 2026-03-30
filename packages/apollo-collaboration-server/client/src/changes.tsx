@@ -12,31 +12,28 @@ import { createRoot } from 'react-dom/client'
 import { Nav } from './Nav.js'
 import { fetchJson } from './fetchUtil.js'
 
-interface ChangeRow {
+// --- Recent changes (grouped by operation) ---
+
+interface RecentChangeRow {
   _id: string
   sequence?: number
-  typeName: string
   user: string
-  changedIds?: string[]
   createdAt?: string
+  assembly?: string
+  summary: string
+  featureIds: string[]
+  featureCount: number
+  changeTypes: string[]
 }
 
-interface GeneHistoryResponse {
-  changes: ChangeRow[]
-  total: number
-  page: number
-  limit: number
-}
-
-type ChangeGridRow = ChangeRow & { id: string }
-
-const columns: GridColDef<ChangeGridRow>[] = [
-  { field: 'sequence', headerName: 'Sequence', width: 100 },
-  { field: 'typeName', headerName: 'Type', flex: 1 },
+const recentColumns: GridColDef<RecentChangeRow & { id: string }>[] = [
+  { field: 'sequence', headerName: 'Seq', width: 80 },
+  { field: 'summary', headerName: 'Summary', flex: 2 },
   { field: 'user', headerName: 'User', flex: 1 },
+  { field: 'assembly', headerName: 'Assembly', flex: 1 },
   {
-    field: 'changedIds',
-    headerName: 'Changed IDs',
+    field: 'featureIds',
+    headerName: 'Features',
     flex: 1.5,
     renderCell: (params) => {
       const ids = (params.value as string[] | undefined) ?? []
@@ -72,6 +69,105 @@ const columns: GridColDef<ChangeGridRow>[] = [
   },
 ]
 
+// --- Gene history (per-record with diffs) ---
+
+interface FieldDiff {
+  field: string
+  from: unknown
+  to: unknown
+}
+
+interface GeneHistoryRow {
+  _id: string
+  sequence?: number
+  featureId: string
+  featureType: string
+  changeType: string
+  user: string
+  createdAt?: string
+  diffs?: FieldDiff[]
+}
+
+function formatDiffs(diffs: FieldDiff[] | undefined) {
+  if (!diffs || diffs.length === 0) {
+    return null
+  }
+  return diffs
+    .map((d) => `${d.field}: ${String(d.from)} \u2192 ${String(d.to)}`)
+    .join(', ')
+}
+
+const geneHistoryColumns: GridColDef<GeneHistoryRow & { id: string }>[] = [
+  { field: 'sequence', headerName: 'Seq', width: 80 },
+  {
+    field: 'changeType',
+    headerName: 'Action',
+    width: 90,
+    renderCell: (params) => {
+      const colorMap: Record<string, 'success' | 'info' | 'error'> = {
+        insert: 'success',
+        update: 'info',
+        delete: 'error',
+      }
+      return (
+        <Chip
+          label={params.value as string}
+          size="small"
+          color={colorMap[params.value as string] ?? 'default'}
+          variant="outlined"
+        />
+      )
+    },
+  },
+  { field: 'featureType', headerName: 'Feature Type', width: 120 },
+  {
+    field: 'featureId',
+    headerName: 'Feature ID',
+    flex: 1,
+    renderCell: (params) => (
+      <Typography
+        variant="body2"
+        sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
+      >
+        {params.value as string}
+      </Typography>
+    ),
+  },
+  {
+    field: 'diffs',
+    headerName: 'Changes',
+    flex: 2,
+    renderCell: (params) => {
+      const text = formatDiffs(params.value as FieldDiff[] | undefined)
+      if (!text) {
+        return null
+      }
+      return (
+        <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+          {text}
+        </Typography>
+      )
+    },
+  },
+  { field: 'user', headerName: 'User', flex: 1 },
+  {
+    field: 'createdAt',
+    headerName: 'Date',
+    flex: 1,
+    renderCell: (params) =>
+      params.value ? new Date(params.value as string).toLocaleString() : '',
+  },
+]
+
+// --- Shared types ---
+
+interface PaginatedResponse<T> {
+  changes: T[]
+  total: number
+  page: number
+  limit: number
+}
+
 function clearGeneIdParam() {
   const url = new URL(globalThis.location.href)
   url.searchParams.delete('geneId')
@@ -82,8 +178,10 @@ function RecentChangesPage() {
   const params = new URLSearchParams(globalThis.location.search)
   const initialGeneId = params.get('geneId') ?? ''
 
-  const [changes, setChanges] = useState<ChangeRow[]>([])
-  const [total, setTotal] = useState<number>()
+  const [recentChanges, setRecentChanges] = useState<RecentChangeRow[]>([])
+  const [geneHistory, setGeneHistory] = useState<GeneHistoryRow[]>([])
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>()
   const [geneIdInput, setGeneIdInput] = useState(initialGeneId)
   const [activeGeneId, setActiveGeneId] = useState(initialGeneId)
@@ -95,23 +193,28 @@ function RecentChangesPage() {
   const load = useCallback(async () => {
     try {
       setError(undefined)
+      setLoading(true)
       const page = paginationModel.page + 1
       const limit = paginationModel.pageSize
       if (activeGeneId) {
-        const data = await fetchJson<GeneHistoryResponse>(
+        const data = await fetchJson<PaginatedResponse<GeneHistoryRow>>(
           `/changes/gene/${encodeURIComponent(activeGeneId)}?limit=${limit}&page=${page}`,
         )
-        setChanges(data.changes)
+        setGeneHistory(data.changes)
+        setRecentChanges([])
         setTotal(data.total)
       } else {
-        const data = await fetchJson<ChangeRow[]>(
+        const data = await fetchJson<PaginatedResponse<RecentChangeRow>>(
           `/changes/recent?limit=${limit}&page=${page}`,
         )
-        setChanges(data)
-        setTotal(undefined)
+        setRecentChanges(data.changes)
+        setGeneHistory([])
+        setTotal(data.total)
       }
     } catch (error_) {
       setError(error_ instanceof Error ? error_.message : String(error_))
+    } finally {
+      setLoading(false)
     }
   }, [paginationModel.page, paginationModel.pageSize, activeGeneId])
 
@@ -126,17 +229,9 @@ function RecentChangesPage() {
     clearGeneIdParam()
   }
 
-  // For recent changes where total is unknown, estimate rowCount so DataGrid
-  // shows a "next" button only when the current page is full.
-  const unknownRowCount =
-    changes.length >= paginationModel.pageSize
-      ? (paginationModel.page + 2) * paginationModel.pageSize
-      : paginationModel.page * paginationModel.pageSize + changes.length
-  const rowCount = total ?? unknownRowCount
-
   return (
     <Nav current="changes">
-      <Container>
+      <Container maxWidth="xl">
         <Typography variant="h4" gutterBottom>
           {activeGeneId ? 'Gene History' : 'Recent Changes'}
         </Typography>
@@ -196,16 +291,31 @@ function RecentChangesPage() {
         )}
 
         <Box sx={{ height: 600 }}>
-          <DataGrid
-            rows={changes.map((c) => ({ ...c, id: c._id }))}
-            columns={columns}
-            density="compact"
-            paginationMode="server"
-            rowCount={rowCount}
-            paginationModel={paginationModel}
-            onPaginationModelChange={setPaginationModel}
-            pageSizeOptions={[25, 50, 100]}
-          />
+          {activeGeneId ? (
+            <DataGrid
+              rows={geneHistory.map((c) => ({ ...c, id: c._id }))}
+              columns={geneHistoryColumns}
+              density="compact"
+              loading={loading}
+              paginationMode="server"
+              rowCount={total}
+              paginationModel={paginationModel}
+              onPaginationModelChange={setPaginationModel}
+              pageSizeOptions={[25, 50, 100]}
+            />
+          ) : (
+            <DataGrid
+              rows={recentChanges.map((c) => ({ ...c, id: c._id }))}
+              columns={recentColumns}
+              density="compact"
+              loading={loading}
+              paginationMode="server"
+              rowCount={total}
+              paginationModel={paginationModel}
+              onPaginationModelChange={setPaginationModel}
+              pageSizeOptions={[25, 50, 100]}
+            />
+          )}
         </Box>
       </Container>
     </Nav>
