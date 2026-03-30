@@ -31,9 +31,14 @@ function extractTokenFromCookie(cookieHeader: string) {
   return
 }
 
+// Mirror the HTTP CORS policy: when CORS=true (dev/open mode) allow any
+// origin; otherwise restrict to the configured public URL.
 @WebSocketGateway({
   cors: {
-    origin: new URL(process.env.URL ?? 'http://localhost:3999').origin,
+    origin:
+      process.env.CORS === 'true'
+        ? true
+        : new URL(process.env.URL ?? 'http://localhost:3999').origin,
     credentials: true,
   },
 })

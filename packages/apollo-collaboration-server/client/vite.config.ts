@@ -3,6 +3,9 @@ import path from 'node:path'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
+const VITE_PORT = 5173
+const BACKEND = 'http://localhost:3999'
+
 const detailRoutes: Record<string, string> = {
   '/ui/assemblies/': '/ui/assembly-detail/index.html',
   '/ui/organisms/': '/ui/organism-detail/index.html',
@@ -37,31 +40,30 @@ export default defineConfig({
     },
   ],
   server: {
-    port: 5173,
+    port: VITE_PORT,
     proxy: {
-      '/analysis': 'http://localhost:3999',
-      '/assemblies': 'http://localhost:3999',
-      '/auth': 'http://localhost:3999',
-      '/changes': 'http://localhost:3999',
-      '/checks': 'http://localhost:3999',
-      '/export': 'http://localhost:3999',
-      '/features': 'http://localhost:3999',
-      '/files': 'http://localhost:3999',
+      '/analysis': BACKEND,
+      '/assemblies': BACKEND,
+      '/auth': BACKEND,
+      '/changes': BACKEND,
+      '/checks': BACKEND,
+      '/export': BACKEND,
+      '/features': BACKEND,
+      '/files': BACKEND,
       // Set x-forwarded-host so the NestJS JBrowse config endpoint generates a
-      // baseURL pointing at the Vite dev server (port 5173) rather than the
-      // backend (port 3999). This keeps all API calls same-origin, so auth
-      // cookies are sent correctly.
+      // baseURL pointing at the Vite dev server rather than the backend. This
+      // keeps all API calls same-origin, so auth cookies are sent correctly.
       '/jbrowse': {
-        target: 'http://localhost:3999',
-        headers: { 'x-forwarded-host': 'localhost:5173' },
+        target: BACKEND,
+        headers: { 'x-forwarded-host': `localhost:${VITE_PORT}` },
       },
-      '/organisms': 'http://localhost:3999',
-      '/permissions': 'http://localhost:3999',
-      '/refSeqs': 'http://localhost:3999',
-      '/sequence': 'http://localhost:3999',
-      '/socket.io': { target: 'http://localhost:3999', ws: true },
-      '/tracks': 'http://localhost:3999',
-      '/users': 'http://localhost:3999',
+      '/organisms': BACKEND,
+      '/permissions': BACKEND,
+      '/refSeqs': BACKEND,
+      '/sequence': BACKEND,
+      '/socket.io': { target: BACKEND, ws: true },
+      '/tracks': BACKEND,
+      '/users': BACKEND,
     },
   },
   build: {
