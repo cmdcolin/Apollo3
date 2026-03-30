@@ -101,7 +101,8 @@ build_all() {
   echo "Generating type declarations for shared packages..."
   pnpm tsc --build --emitDeclarationOnly \
     packages/apollo-common packages/apollo-entities \
-    packages/apollo-mst packages/apollo-shared
+    packages/apollo-mst packages/apollo-shared || \
+    echo "Warning: type declaration build had errors (non-fatal for E2E)"
 
   echo "Building JBrowse plugin..."
   cd "$REPO_ROOT/packages/jbrowse-plugin-apollo"
@@ -203,7 +204,7 @@ show_logs() {
 
 case "${1:-status}" in
   test)   shift; run_tests "$@" ;;
-  start)  build_all; start_servers ;;
+  start)  stop_servers; build_all; start_servers ;;
   stop)   stop_servers ;;
   status) check_status ;;
   logs)   show_logs ;;
