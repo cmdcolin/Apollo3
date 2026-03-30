@@ -50,13 +50,13 @@ export class OrganismsController {
   ) {
     const offset = offsetStr ? Number(offsetStr) : undefined
     const limit = limitStr ? Number(limitStr) : undefined
-    return this.organismsService.findForUser(req.user ?? undefined, { offset, limit })
+    return this.organismsService.findForUser(req.user, { offset, limit })
   }
 
   @Get(':id')
   @Public()
-  findOne(@Param('id') id: string) {
-    return this.organismsService.findOne(id)
+  findOne(@Param('id') id: string, @Req() req: RequestWithUser) {
+    return this.organismsService.findOneForUser(id, req.user)
   }
 
   @Patch(':id')

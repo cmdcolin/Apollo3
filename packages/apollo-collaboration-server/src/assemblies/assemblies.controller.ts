@@ -38,19 +38,19 @@ export class AssembliesController {
   @Get()
   @Public()
   findAll(@Req() req: RequestWithUser) {
-    return this.assembliesService.findForUser(req.user ?? undefined)
+    return this.assembliesService.findForUser(req.user)
   }
 
   @Get('by-name/:name')
   @Public()
   findOneByName(@Param('name') name: string, @Req() req: RequestWithUser) {
-    return this.assembliesService.findOneByNameForUser(name, req.user ?? undefined)
+    return this.assembliesService.findOneByNameForUser(name, req.user)
   }
 
   @Get(':id')
   @Public()
   findOne(@Param('id') id: string, @Req() req: RequestWithUser) {
-    return this.assembliesService.findOneForUser(id, req.user ?? undefined)
+    return this.assembliesService.findOneForUser(id, req.user)
   }
 
   @Patch(':id')

@@ -47,7 +47,7 @@ export class RefSeqsController {
         return []
       }
       await this.permissionService.checkIfUserHasPermissionForAssembly(
-        req.user ?? undefined,
+        req.user,
         assembly._id,
         Role.ReadOnly,
       )

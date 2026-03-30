@@ -16,10 +16,8 @@ Remaining issues, roughly by impact:
    memory in production. For single-instance deployments this is survivable but
    it's a real gap.
 
-4. OIDC_PROVIDERS JSON.parse without error handling (oidc.service.ts) — if
-   OIDC_PROVIDERS contains malformed JSON, the server crashes on startup with an
-   uncaught exception. Wrapping in try/catch with a clear error message would
-   make misconfigurations much easier to diagnose.
+4. ~~OIDC_PROVIDERS JSON.parse without error handling~~ **FIXED** — wrapped in
+   try/catch with a clear error log. Malformed JSON no longer crashes the server.
 
 5. 50MB body limit applies to all endpoints (main.ts) — auth endpoints should
    not accept 50MB payloads. The large limit should be applied only to the file
@@ -47,8 +45,9 @@ Not real concerns (things that look scary but aren't):
 - JWT revocation on logout — standard accepted trade-off for stateless JWTs.
 - The 7-day JWT expiry — the sliding-window interceptor refreshes the cookie on
   every request, so this is effectively "expires 7 days after last activity."
+  Cookie maxAge now matches JWT expiry (both 7 days).
 
 ---
 
 Next priority: MemoryStore replacement (use the MikroORM-backed session or a
-simple file store), then OIDC_PROVIDERS error handling.
+simple file store), then body limit / timeout scoping.

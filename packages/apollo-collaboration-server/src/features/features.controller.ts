@@ -70,7 +70,7 @@ export class FeaturesController {
       `getFeatures endpoint: refSeq: ${request.refSeq}, start: ${request.start}, end: ${request.end}`,
     )
     await this.permissionService.checkRefSeqPermission(
-      req.user ?? undefined,
+      req.user,
       request.refSeq,
       Role.ReadOnly,
     )
@@ -137,111 +137,90 @@ export class FeaturesController {
 
   // --- Mutation endpoints (User role) ---
 
+  // All mutation endpoints below are guarded by @Roles(Role.User), which
+  // guarantees request.user is set before the handler runs.
+
   @Roles(Role.User)
   @Patch(':featureid')
-  async updateFeature(
+  updateFeature(
     @Param('featureid') featureid: string,
     @Body(new ZodValidationPipe(featureUpdateSchema)) dto: FeatureUpdateDto,
     @Req() request: RequestWithUser,
   ) {
-    const { user } = request
-    if (!user) {
-      throw new Error('User not found on request')
-    }
-    return this.featuresService.updateFeature(featureid, dto, user)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return this.featuresService.updateFeature(featureid, dto, request.user!)
   }
 
   @Roles(Role.User)
   @Post()
-  async addFeature(
+  addFeature(
     @Body(new ZodValidationPipe(addFeatureSchema)) dto: AddFeatureDto,
     @Req() request: RequestWithUser,
   ) {
-    const { user } = request
-    if (!user) {
-      throw new Error('User not found on request')
-    }
-    return this.featuresService.addFeature(dto, user)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return this.featuresService.addFeature(dto, request.user!)
   }
 
   @Roles(Role.User)
   @Delete(':featureid')
-  async deleteFeature(
+  deleteFeature(
     @Param('featureid') featureid: string,
     @Req() request: RequestWithUser,
   ) {
-    const { user } = request
-    if (!user) {
-      throw new Error('User not found on request')
-    }
-    return this.featuresService.deleteFeature(featureid, user)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return this.featuresService.deleteFeature(featureid, request.user!)
   }
 
   @Roles(Role.User)
   @Post('merge-exons')
-  async mergeExons(
+  mergeExons(
     @Body(new ZodValidationPipe(mergeExonsSchema)) dto: MergeExonsDto,
     @Req() request: RequestWithUser,
   ) {
-    const { user } = request
-    if (!user) {
-      throw new Error('User not found on request')
-    }
-    return this.featuresService.mergeExons(dto, user)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return this.featuresService.mergeExons(dto, request.user!)
   }
 
   @Roles(Role.User)
   @Post('split-exon')
-  async splitExon(
+  splitExon(
     @Body(new ZodValidationPipe(splitExonSchema)) dto: SplitExonDto,
     @Req() request: RequestWithUser,
   ) {
-    const { user } = request
-    if (!user) {
-      throw new Error('User not found on request')
-    }
-    return this.featuresService.splitExon(dto, user)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return this.featuresService.splitExon(dto, request.user!)
   }
 
   @Roles(Role.User)
   @Post('merge-transcripts')
-  async mergeTranscripts(
+  mergeTranscripts(
     @Body(new ZodValidationPipe(mergeTranscriptsSchema))
     dto: MergeTranscriptsDto,
     @Req() request: RequestWithUser,
   ) {
-    const { user } = request
-    if (!user) {
-      throw new Error('User not found on request')
-    }
-    return this.featuresService.mergeTranscripts(dto, user)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return this.featuresService.mergeTranscripts(dto, request.user!)
   }
 
   @Roles(Role.User)
   @Post('split-transcript')
-  async splitTranscript(
+  splitTranscript(
     @Body(new ZodValidationPipe(splitTranscriptSchema))
     dto: SplitTranscriptDto,
     @Req() request: RequestWithUser,
   ) {
-    const { user } = request
-    if (!user) {
-      throw new Error('User not found on request')
-    }
-    return this.featuresService.splitTranscript(dto, user)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return this.featuresService.splitTranscript(dto, request.user!)
   }
 
   @Roles(Role.User)
   @Post('undo')
-  async undo(
+  undo(
     @Body(new ZodValidationPipe(undoSchema)) body: { sequence: number },
     @Req() request: RequestWithUser,
   ) {
-    const { user } = request
-    if (!user) {
-      throw new Error('User not found on request')
-    }
-    return this.featuresService.undoChange(body.sequence, user)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return this.featuresService.undoChange(body.sequence, request.user!)
   }
 
   // Keep single-feature GET last to avoid route conflicts

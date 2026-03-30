@@ -13,5 +13,5 @@ export const COOKIE_BASE: CookieOptions = {
 
 export const COOKIE_OPTIONS: CookieOptions = {
   ...COOKIE_BASE,
-  maxAge: 24 * 60 * 60 * 1000,
+  maxAge: 7 * 24 * 60 * 60 * 1000,
 }

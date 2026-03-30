@@ -26,7 +26,7 @@ export class SequenceController {
   ) {
     this.logger.debug(`getSequence: ${JSON.stringify(request)}`)
     await this.permissionService.checkRefSeqPermission(
-      req.user ?? undefined,
+      req.user,
       request.refSeq,
       Role.ReadOnly,
     )

@@ -1,5 +1,5 @@
 import { organismId } from '@apollo-annotation/common'
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common'
+import { ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common'
 
 import { DatabaseService } from '../mikro-orm/database.service.js'
 
@@ -60,6 +60,21 @@ export class OrganismsService {
     const organism = await this.db.organism.findById(id)
     if (!organism) {
       throw new NotFoundException(`Organism with id "${id}" not found`)
+    }
+    return organism
+  }
+
+  async findOneForUser(
+    id: string,
+    user: { id?: string; role?: string } | undefined,
+  ) {
+    const organism = await this.findOne(id)
+    if (!user) {
+      const publicOrganisms = await this.findPublic()
+      const isPublic = publicOrganisms.some((o) => o._id === id)
+      if (!isPublic) {
+        throw new ForbiddenException()
+      }
     }
     return organism
   }

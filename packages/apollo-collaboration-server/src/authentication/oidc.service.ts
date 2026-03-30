@@ -79,7 +79,14 @@ export class OidcService implements OnModuleInit {
     if (!raw) {
       return []
     }
-    return JSON.parse(raw) as ProviderJson[]
+    try {
+      return JSON.parse(raw) as ProviderJson[]
+    } catch (error) {
+      this.logger.error(
+        `Failed to parse OIDC_PROVIDERS JSON — check syntax: ${String(error)}`,
+      )
+      return []
+    }
   }
 
   getProvider(name: string) {
