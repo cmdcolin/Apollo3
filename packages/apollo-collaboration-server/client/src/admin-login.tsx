@@ -24,8 +24,11 @@ function AdminLoginPage() {
     })
     if (response.ok) {
       globalThis.location.href = '/'
-    } else {
+    } else if (response.status === 401) {
       setError('Invalid password')
+    } else {
+      const text = await response.text().catch(() => '')
+      setError(`Login failed (${response.status}): ${text || response.statusText}`)
     }
   }
 
@@ -49,11 +52,15 @@ function AdminLoginPage() {
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  handleLogin()
+                  void handleLogin()
                 }
               }}
             />
-            <Button variant="contained" onClick={handleLogin}>
+            <Button
+              variant="contained"
+              disabled={password.length === 0}
+              onClick={() => void handleLogin()}
+            >
               Sign in
             </Button>
           </Box>

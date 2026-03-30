@@ -13,15 +13,19 @@ import type { Organism } from './organism-utils.js'
 
 function OrganismsPage() {
   const [organisms, setOrganisms] = useState<Organism[]>([])
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>()
 
   const load = useCallback(async () => {
     try {
       setError(undefined)
+      setLoading(true)
       const items = await fetchJson<Organism[]>('/organisms')
       setOrganisms(items)
     } catch (error_) {
       setError(error_ instanceof Error ? error_.message : String(error_))
+    } finally {
+      setLoading(false)
     }
   }, [])
 
@@ -61,6 +65,7 @@ function OrganismsPage() {
             rows={organisms.map((o) => ({ ...o, id: o._id }))}
             columns={columns}
             density="compact"
+            loading={loading}
             pageSizeOptions={[25, 50, 100]}
             initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
           />

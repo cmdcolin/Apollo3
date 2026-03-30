@@ -2,6 +2,7 @@ import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
+import CircularProgress from '@mui/material/CircularProgress'
 import Container from '@mui/material/Container'
 import Divider from '@mui/material/Divider'
 import List from '@mui/material/List'
@@ -392,7 +393,13 @@ function IndexPage() {
   const { user, checked } = useCurrentUser()
 
   if (!checked) {
-    return null
+    return (
+      <Nav>
+        <Container maxWidth="sm" sx={{ mt: 4, textAlign: 'center' }}>
+          <CircularProgress />
+        </Container>
+      </Nav>
+    )
   }
 
   const isPendingApproval = user?.pendingApproval === true
