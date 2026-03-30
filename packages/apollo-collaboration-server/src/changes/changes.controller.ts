@@ -17,20 +17,29 @@ export class ChangesController {
   ) {}
 
   // Recent changes across all assemblies, grouped by sequence (operation).
-  // Returns up to 1000 most recent raw history rows, grouped into operations.
   @Roles(Role.ReadOnly)
   @Get('recent')
   async getRecentChanges() {
-    const fork = this.em.fork()
-    const rows = await fork.find(
+    const em = this.em.fork()
+    const rows = await em.find(
       FeatureHistoryEntity,
       {},
       { orderBy: { changedAt: 'DESC' }, limit: 1000 },
     )
 
-    // Resolve assembly names for all refSeqs in one query
+    // Resolve refSeq → assembly name in one query with populate
     const refSeqIds = [...new Set(rows.map((r) => r.refSeq))]
-    const refSeqToAssembly = await this.resolveAssemblyNames(refSeqIds)
+    const refSeqs = await em.find(
+      RefSeqEntity,
+      { _id: { $in: refSeqIds } },
+      { populate: ['assembly'] },
+    )
+    const refSeqToAssembly = new Map<string, string>()
+    for (const rs of refSeqs) {
+      if (typeof rs.assembly === 'object' && rs.assembly.name) {
+        refSeqToAssembly.set(rs._id, rs.assembly.name)
+      }
+    }
 
     // Group by sequence number
     const grouped = new Map<number | string, (typeof rows)[number][]>()
@@ -60,7 +69,6 @@ export class ChangesController {
         changeTypes,
         featureTypes,
         featureIds,
-        featureCount: featureIds.length,
         summary: `${changeTypes.join('/')} ${featureIds.length} feature${featureIds.length > 1 ? 's' : ''} (${featureTypes.join(', ')})`,
       }
     })
@@ -71,9 +79,7 @@ export class ChangesController {
   // All history for a specific gene and its subfeatures.
   @Roles(Role.ReadOnly)
   @Get('gene/:featureId')
-  async getGeneHistory(
-    @Param('featureId') featureId: string,
-  ) {
+  async getGeneHistory(@Param('featureId') featureId: string) {
     const descendants = await this.db.feature.findDescendants(featureId)
     const featureIds = [featureId, ...descendants.map((d) => d._id)]
 
@@ -98,24 +104,5 @@ export class ChangesController {
     }))
 
     return { changes }
-  }
-
-  private async resolveAssemblyNames(refSeqIds: string[]) {
-    const result = new Map<string, string>()
-    if (refSeqIds.length === 0) {
-      return result
-    }
-    const refSeqs = await this.em.fork().find(
-      RefSeqEntity,
-      { _id: { $in: refSeqIds } },
-      { populate: ['assembly'] },
-    )
-    for (const rs of refSeqs) {
-      const asm = rs.assembly
-      if (typeof asm === 'object' && asm.name) {
-        result.set(rs._id, asm.name)
-      }
-    }
-    return result
   }
 }
