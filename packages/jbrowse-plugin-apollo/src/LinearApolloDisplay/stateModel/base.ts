@@ -3,74 +3,31 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
-import type { AnnotationFeature } from '@apollo-annotation/mst'
 import type PluginManager from '@jbrowse/core/PluginManager'
-import {
-  type AnyConfigurationSchemaType,
-  ConfigurationReference,
-  getConf,
-} from '@jbrowse/core/configuration'
-import { BaseDisplay } from '@jbrowse/core/pluggableElementTypes'
-import {
-  type AbstractSessionModel,
-  type SessionWithWidgets,
-  getContainingView,
-  getSession,
-} from '@jbrowse/core/util'
-import { getParentRenderProps } from '@jbrowse/core/util/tracks'
-// import type LinearGenomeViewPlugin from '@jbrowse/plugin-linear-genome-view'
-import { addDisposer, cast, getSnapshot, types } from '@jbrowse/mobx-state-tree'
-import type { LinearGenomeViewModel } from '@jbrowse/plugin-linear-genome-view'
+import type { AnyConfigurationSchemaType } from '@jbrowse/core/configuration'
+import { type AbstractSessionModel, getSession } from '@jbrowse/core/util'
+import { addDisposer, getSnapshot, types } from '@jbrowse/mobx-state-tree'
 import { autorun } from 'mobx'
 
 import { FilterFeatures } from '../../components/FilterFeatures'
-import type { ApolloSessionModel, HoveredFeature } from '../../session'
-import { getRole, isReadOnly } from '../../util'
+import type { ApolloSessionModel } from '../../session'
+import { apolloDisplayBaseFactory } from '../../shared/apolloDisplayBaseFactory'
 import { EditZoomThresholdDialog } from '../../util/displayUtils'
-
-const minDisplayHeight = 20
 
 export function baseModelFactory(
   _pluginManager: PluginManager,
   configSchema: AnyConfigurationSchemaType,
 ) {
-  return BaseDisplay.named('BaseLinearApolloDisplay')
-    .props({
-      type: types.literal('LinearApolloDisplay'),
-      configuration: ConfigurationReference(configSchema),
-      graphical: true,
-      table: false,
-      showCheckResults: true,
-      zoomThreshold: 200,
-      heightPreConfig: types.maybe(
-        types.refinement(
-          'displayHeight',
-          types.number,
-          (n) => n >= minDisplayHeight,
-        ),
-      ),
-      filteredFeatureTypes: types.array(types.string),
-      loadingState: false,
-    })
-    .views((self) => {
-      const { configuration, renderProps: superRenderProps } = self
-      return {
-        renderProps() {
-          return {
-            ...superRenderProps(),
-            ...getParentRenderProps(self),
-            config: configuration.renderer,
-          }
-        },
-      }
-    })
-    .volatile(() => ({
-      scrollTop: 0,
-    }))
+  return types
+    .compose(
+      'BaseLinearApolloDisplay',
+      apolloDisplayBaseFactory(configSchema),
+      types.model({
+        type: types.literal('LinearApolloDisplay'),
+        loadingState: false,
+      }),
+    )
     .views((self) => ({
-      get lgv() {
-        return getContainingView(self) as unknown as LinearGenomeViewModel
-      },
       get height() {
         if (self.heightPreConfig) {
           return self.heightPreConfig
@@ -86,101 +43,10 @@ export function baseModelFactory(
       get loading() {
         return self.loadingState
       },
-      get zoomThresholdSetting() {
-        return self.zoomThreshold ?? getConf(self, 'zoomThreshold')
-      },
-    }))
-    .views((self) => ({
-      get rendererTypeName() {
-        return self.configuration.renderer.type
-      },
-      get session() {
-        return getSession(self) as unknown as ApolloSessionModel
-      },
-      get regions() {
-        const regions = self.lgv.dynamicBlocks.contentBlocks.map(
-          ({ assemblyName, end, refName, start }) => ({
-            assemblyName,
-            refName,
-            start: Math.round(start),
-            end: Math.round(end),
-          }),
-        )
-        return regions
-      },
-      regionCannotBeRendered(/* region */) {
-        if (self.lgv && self.lgv.bpPerPx >= self.zoomThreshold) {
-          return 'Zoom in to see annotations'
-        }
-        return
-      },
-    }))
-    .views((self) => ({
-      get role() {
-        const session = self.session as unknown as ApolloSessionModel
-        return getRole(session)
-      },
-      get readOnly() {
-        return isReadOnly(self.session as unknown as ApolloSessionModel)
-      },
-      get featureService() {
-        return (self.session as unknown as ApolloSessionModel).apolloDataStore
-          .featureService
-      },
-      getAssemblyId(assemblyName: string) {
-        const { assemblyManager } =
-          self.session as unknown as AbstractSessionModel
-        const assembly = assemblyManager.get(assemblyName)
-        if (!assembly) {
-          throw new Error(`Could not find assembly named ${assemblyName}`)
-        }
-        return assembly.name
-      },
-      get selectedFeature(): AnnotationFeature | undefined {
-        return (self.session as unknown as ApolloSessionModel)
-          .apolloSelectedFeature
-      },
-      get hoveredFeature(): HoveredFeature | undefined {
-        return (self.session as unknown as ApolloSessionModel)
-          .apolloHoveredFeature
-      },
     }))
     .actions((self) => ({
-      setScrollTop(scrollTop: number) {
-        self.scrollTop = scrollTop
-      },
-      setHeight(displayHeight: number) {
-        self.heightPreConfig = Math.max(displayHeight, minDisplayHeight)
-        return self.height
-      },
-      resizeHeight(distance: number) {
-        const oldHeight = self.height
-        const newHeight = this.setHeight(self.height + distance)
-        return newHeight - oldHeight
-      },
-      showGraphicalOnly() {
-        self.graphical = true
-        self.table = false
-      },
-      showTableOnly() {
-        self.graphical = false
-        self.table = true
-      },
-      showGraphicalAndTable() {
-        self.graphical = true
-        self.table = true
-      },
-      toggleShowCheckResults() {
-        self.showCheckResults = !self.showCheckResults
-      },
-      updateFilteredFeatureTypes(types: string[]) {
-        self.filteredFeatureTypes = cast(types)
-      },
       setLoading(loading: boolean) {
         self.loadingState = loading
-      },
-      setZoomThresholdSetting({ zoomThreshold }: { zoomThreshold: number }) {
-        self.zoomThreshold = zoomThreshold
       },
     }))
     .views((self) => {
@@ -263,42 +129,6 @@ export function baseModelFactory(
       }
     })
     .actions((self) => ({
-      setSelectedFeature(feature?: AnnotationFeature) {
-        ;(
-          self.session as unknown as ApolloSessionModel
-        ).apolloSetSelectedFeature(feature)
-      },
-      setHoveredFeature(hoveredFeature?: HoveredFeature) {
-        ;(
-          self.session as unknown as ApolloSessionModel
-        ).apolloSetHoveredFeature(hoveredFeature)
-      },
-      showFeatureDetailsWidget(
-        feature: AnnotationFeature,
-        customWidgetNameAndId?: [string, string],
-      ) {
-        const [region] = self.regions
-        const { assemblyName, refName } = region
-        const assembly = self.getAssemblyId(assemblyName)
-        if (!assembly) {
-          return
-        }
-        const { session } = self
-        const [widgetName, widgetId] = customWidgetNameAndId ?? [
-          'ApolloFeatureDetailsWidget',
-          'apolloFeatureDetailsWidget',
-        ]
-        const apolloFeatureWidget = (
-          session as unknown as SessionWithWidgets
-        ).addWidget(widgetName, widgetId, {
-          feature,
-          assembly,
-          refName,
-        })
-        ;(session as unknown as SessionWithWidgets).showWidget(
-          apolloFeatureWidget,
-        )
-      },
       afterAttach() {
         addDisposer(
           self,

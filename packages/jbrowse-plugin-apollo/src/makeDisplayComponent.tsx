@@ -13,6 +13,7 @@ import type { LinearApolloDisplay as LinearApolloDisplayI } from './LinearApollo
 import { LinearApolloSixFrameDisplay } from './LinearApolloSixFrameDisplay/components'
 import type { LinearApolloSixFrameDisplay as LinearApolloSixFrameDisplayI } from './LinearApolloSixFrameDisplay/stateModel'
 import { TabularEditorPane } from './TabularEditor'
+import type { DisplayStateModel } from './TabularEditor/types'
 import type { ApolloSessionModel } from './session'
 
 const accordionControlHeight = 12
@@ -60,7 +61,7 @@ const useStyles = makeStyles()((theme) => ({
 }))
 
 function scrollSelectedFeatureIntoView(
-  model: LinearApolloDisplayI | LinearApolloSixFrameDisplayI,
+  model: DisplayStateModel,
   scrollContainerRef: React.RefObject<HTMLDivElement>,
 ) {
   const { apolloRowHeight, selectedFeature } = model
@@ -152,11 +153,12 @@ const AccordionControl = observer(function AccordionControl({
   )
 })
 
-export const LinearApolloDisplayComponent = observer(function DisplayComponent({
+const ApolloDisplayLayout = observer(function ApolloDisplayLayout({
   model,
-  ...other
+  renderCanvas,
 }: {
-  model: LinearApolloDisplayI
+  model: DisplayStateModel
+  renderCanvas: () => React.ReactNode
 }) {
   const session = getSession(model) as unknown as ApolloSessionModel
   const { ontologyManager } = session.apolloDataStore
@@ -209,7 +211,7 @@ export const LinearApolloDisplayComponent = observer(function DisplayComponent({
           ref={canvasScrollContainerRef}
           style={{ height: featureAreaHeight }}
         >
-          <LinearApolloDisplay model={model} {...other} />
+          {renderCanvas()}
         </div>
         <AccordionControl
           title="Table"
@@ -231,7 +233,7 @@ export const LinearApolloDisplayComponent = observer(function DisplayComponent({
         ref={canvasScrollContainerRef}
         style={{ height: overallHeight }}
       >
-        <LinearApolloDisplay model={model} {...other} />
+        {renderCanvas()}
       </div>
     )
   }
@@ -243,96 +245,36 @@ export const LinearApolloDisplayComponent = observer(function DisplayComponent({
   )
 })
 
+export const LinearApolloDisplayComponent = observer(
+  function LinearApolloDisplayComponent({
+    model,
+    ...other
+  }: {
+    model: LinearApolloDisplayI
+  }) {
+    return (
+      <ApolloDisplayLayout
+        model={model}
+        renderCanvas={() => <LinearApolloDisplay model={model} {...other} />}
+      />
+    )
+  },
+)
+
 export const LinearApolloSixFrameDisplayComponent = observer(
-  function DisplayComponent({
+  function LinearApolloSixFrameDisplayComponent({
     model,
     ...other
   }: {
     model: LinearApolloSixFrameDisplayI
   }) {
-    const session = getSession(model) as unknown as ApolloSessionModel
-    const { ontologyManager } = session.apolloDataStore
-    const { featureTypeOntology } = ontologyManager
-    const ontologyAvailable = featureTypeOntology !== undefined
-
-    const { classes } = useStyles()
-
-    const {
-      detailsHeight,
-      graphical,
-      height: overallHeight,
-      isShown,
-      selectedFeature,
-      table,
-      tabularEditor,
-      toggleShown,
-    } = model
-
-    const canvasScrollContainerRef = useRef<HTMLDivElement>(null)
-    useEffect(() => {
-      scrollSelectedFeatureIntoView(model, canvasScrollContainerRef)
-    }, [model, selectedFeature])
-
-    const onDetailsResize = (delta: number) => {
-      model.setDetailsHeight(detailsHeight - delta)
-    }
-
-    if (!ontologyAvailable) {
-      return (
-        <div className={classes.alertContainer}>
-          <Alert severity="error">Could not load feature type ontology.</Alert>
-        </div>
-      )
-    }
-
-    if (graphical && table) {
-      const tabularHeight = tabularEditor.isShown ? detailsHeight : 0
-      const featureAreaHeight = isShown
-        ? overallHeight - detailsHeight - accordionControlHeight * 2
-        : 0
-      return (
-        <div style={{ height: overallHeight }}>
-          <AccordionControl
-            open={isShown}
-            title="Graphical"
-            onClick={toggleShown}
-          />
-          <div
-            className={classes.shading}
-            ref={canvasScrollContainerRef}
-            style={{ height: featureAreaHeight }}
-          >
-            <LinearApolloSixFrameDisplay model={model} {...other} />
-          </div>
-          <AccordionControl
-            title="Table"
-            open={tabularEditor.isShown}
-            onClick={tabularEditor.togglePane}
-            onResize={onDetailsResize}
-          />
-          <div className={classes.details} style={{ height: tabularHeight }}>
-            <TabularEditorPane model={model} />
-          </div>
-        </div>
-      )
-    }
-
-    if (graphical) {
-      return (
-        <div
-          className={classes.shading}
-          ref={canvasScrollContainerRef}
-          style={{ height: overallHeight }}
-        >
-          <LinearApolloSixFrameDisplay model={model} {...other} />
-        </div>
-      )
-    }
-
     return (
-      <div className={classes.details} style={{ height: overallHeight }}>
-        <TabularEditorPane model={model} />
-      </div>
+      <ApolloDisplayLayout
+        model={model}
+        renderCanvas={() => (
+          <LinearApolloSixFrameDisplay model={model} {...other} />
+        )}
+      />
     )
   },
 )
