@@ -127,7 +127,9 @@ function LoginSection() {
   const currentUrl = globalThis.location.href
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [rootPassword, setRootPassword] = useState('')
   const [loginError, setLoginError] = useState('')
+  const [showPasswordForm, setShowPasswordForm] = useState(false)
 
   async function handlePasswordLogin() {
     setLoginError('')
@@ -144,9 +146,24 @@ function LoginSection() {
     }
   }
 
+  async function handleRootLogin() {
+    setLoginError('')
+    const response = await fetch('/auth/root', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ password: rootPassword }),
+    })
+    if (response.ok) {
+      globalThis.location.reload()
+    } else {
+      setLoginError('Invalid password')
+    }
+  }
+
   const hasOidc = oidc.length > 0
-  const hasRoot = rootLogin
-  const hasAnyMethod = hasOidc || passwordLogin || hasRoot || setupActive
+  const hasAnyMethod = hasOidc || passwordLogin || rootLogin || setupActive
+  const rootOnly = rootLogin && !hasOidc && !passwordLogin
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -157,58 +174,111 @@ function LoginSection() {
         </Alert>
       ) : null}
       <Typography variant="h6">Sign in</Typography>
-      {oidc.map((provider) => (
-        <Button
-          key={provider.name}
-          variant="contained"
-          fullWidth
-          href={`/auth/oidc/${provider.name}?redirect_uri=${encodeURIComponent(currentUrl)}`}
-        >
-          Sign in with {provider.displayName}
-        </Button>
-      ))}
-      {passwordLogin ? (
+
+      {rootOnly ? (
         <>
-          {hasOidc ? <Divider>or</Divider> : null}
+          <Typography variant="body2" color="text.secondary">
+            Enter the root password to sign in as admin.
+          </Typography>
           {loginError ? <Alert severity="error">{loginError}</Alert> : null}
           <TextField
-            label="Email"
-            type="email"
-            size="small"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value)
-              setLoginError('')
-            }}
-          />
-          <TextField
-            label="Password"
+            label="Root password"
             type="password"
             size="small"
-            value={password}
+            value={rootPassword}
             onChange={(e) => {
-              setPassword(e.target.value)
+              setRootPassword(e.target.value)
               setLoginError('')
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
-                handlePasswordLogin()
+                void handleRootLogin()
               }
             }}
           />
-          <Button variant="contained" onClick={handlePasswordLogin}>
+          <Button variant="contained" onClick={() => void handleRootLogin()}>
             Sign in
           </Button>
         </>
-      ) : null}
-      {hasRoot ? (
+      ) : (
         <>
-          <Divider />
-          <Button variant="outlined" fullWidth href="/admin/login/">
-            Admin login
-          </Button>
+          {oidc.map((provider) => (
+            <Button
+              key={provider.name}
+              variant="contained"
+              fullWidth
+              href={`/auth/oidc/${provider.name}?redirect_uri=${encodeURIComponent(currentUrl)}`}
+            >
+              Sign in with {provider.displayName}
+            </Button>
+          ))}
+
+          {passwordLogin ? (
+            showPasswordForm ? (
+              <>
+                {hasOidc ? <Divider>or</Divider> : null}
+                {loginError ? (
+                  <Alert severity="error">{loginError}</Alert>
+                ) : null}
+                <TextField
+                  label="Email"
+                  type="email"
+                  size="small"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    setLoginError('')
+                  }}
+                />
+                <TextField
+                  label="Password"
+                  type="password"
+                  size="small"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    setLoginError('')
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      void handlePasswordLogin()
+                    }
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  onClick={() => void handlePasswordLogin()}
+                >
+                  Sign in
+                </Button>
+              </>
+            ) : (
+              <>
+                {hasOidc ? <Divider>or</Divider> : null}
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  onClick={() => {
+                    setShowPasswordForm(true)
+                  }}
+                >
+                  Sign in with password
+                </Button>
+              </>
+            )
+          ) : null}
+
+          {rootLogin ? (
+            <>
+              <Divider />
+              <Button variant="text" size="small" href="/admin/login/">
+                Admin login
+              </Button>
+            </>
+          ) : null}
         </>
-      ) : null}
+      )}
+
       {!hasAnyMethod ? (
         <Typography variant="body2" color="text.secondary">
           No login providers configured. Contact your administrator.

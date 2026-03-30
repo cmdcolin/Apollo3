@@ -16,7 +16,7 @@ function AdminLoginPage() {
 
   async function handleLogin() {
     setError('')
-    const response = await fetch('/auth/root-login', {
+    const response = await fetch('/auth/root', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
