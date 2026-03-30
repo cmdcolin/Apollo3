@@ -6,6 +6,7 @@ import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import CssBaseline from '@mui/material/CssBaseline'
 import ListItemText from '@mui/material/ListItemText'
+import ListSubheader from '@mui/material/ListSubheader'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import Toolbar from '@mui/material/Toolbar'
@@ -83,7 +84,10 @@ type Page =
   | 'organisms'
   | 'assemblies'
   | 'add-assembly'
-  | 'sequence-search'
+  | 'seq-local-blast'
+  | 'seq-blat'
+  | 'seq-miniprot'
+  | 'seq-ispcr'
   | 'changes'
   | 'users'
   | 'approve-users'
@@ -93,19 +97,48 @@ interface NavMenuItem {
   label: string
   href: string
   value: Page
+  indent?: boolean
 }
 
-const fileMenuItems: NavMenuItem[] = [
+interface NavMenuSubheader {
+  type: 'subheader'
+  label: string
+  href: string
+}
+
+type NavEntry = NavMenuItem | NavMenuSubheader
+
+const fileMenuItems: NavEntry[] = [
   { label: 'Organisms', href: '/ui/organisms/', value: 'organisms' },
   { label: 'Assemblies', href: '/ui/assemblies/', value: 'assemblies' },
   { label: 'Recent Changes', href: '/ui/changes/', value: 'changes' },
 ]
 
-const toolsMenuItems: NavMenuItem[] = [
+const toolsMenuItems: NavEntry[] = [
+  { type: 'subheader', label: 'Sequence Search', href: '/ui/sequence-search/' },
   {
-    label: 'Sequence Search',
-    href: '/ui/sequence-search/',
-    value: 'sequence-search',
+    label: 'Local BLAST',
+    href: '/ui/sequence-search/local-blast/',
+    value: 'seq-local-blast',
+    indent: true,
+  },
+  {
+    label: 'BLAT',
+    href: '/ui/sequence-search/blat/',
+    value: 'seq-blat',
+    indent: true,
+  },
+  {
+    label: 'miniprot',
+    href: '/ui/sequence-search/miniprot/',
+    value: 'seq-miniprot',
+    indent: true,
+  },
+  {
+    label: 'isPCR',
+    href: '/ui/sequence-search/ispcr/',
+    value: 'seq-ispcr',
+    indent: true,
   },
 ]
 
@@ -132,7 +165,7 @@ function NavMenu({
 }: {
   badgeCounts?: Partial<Record<Page, number>>
   current?: Page
-  items: NavMenuItem[]
+  items: NavEntry[]
   label: string
 }) {
   const [open, setOpen] = useState(false)
@@ -168,6 +201,18 @@ function NavMenu({
         }}
       >
         {items.map((item) => {
+          if ('type' in item) {
+            return (
+              <ListSubheader
+                key={item.label}
+                component="a"
+                href={item.href}
+                sx={{ lineHeight: '36px', cursor: 'pointer' }}
+              >
+                {item.label}
+              </ListSubheader>
+            )
+          }
           const count = badgeCounts?.[item.value] ?? 0
           return (
             <MenuItem
@@ -175,6 +220,7 @@ function NavMenu({
               component="a"
               href={item.href}
               selected={item.value === current}
+              sx={item.indent ? { pl: 4 } : undefined}
             >
               <ListItemText>{item.label}</ListItemText>
               {count > 0 ? (
