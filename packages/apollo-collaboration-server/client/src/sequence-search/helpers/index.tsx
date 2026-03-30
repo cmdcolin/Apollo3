@@ -74,7 +74,7 @@ export function buildJBrowseUrl(
     sessionTracks,
     tracks: trackId,
   })
-  return `/?${params.toString()}`
+  return `/jbrowse/?${params.toString()}`
 }
 
 /** Navigate to a single location in JBrowse with assembly context. */
@@ -85,7 +85,7 @@ export function singleLocUrl(
   assemblyName: string,
 ) {
   const loc = `${refName}:${start}..${end}`
-  return `/?${new URLSearchParams({ assembly: assemblyName, loc }).toString()}`
+  return `/jbrowse/?${new URLSearchParams({ assembly: assemblyName, loc }).toString()}`
 }
 
 // ── React components ───────────────────────────────────────────────────

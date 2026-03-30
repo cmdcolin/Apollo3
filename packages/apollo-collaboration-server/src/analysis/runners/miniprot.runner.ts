@@ -48,16 +48,25 @@ export class MiniprotRunner implements AnalysisRunner {
       `query-${Date.now()}-${Math.random().toString(36).slice(2)}.faa`,
     )
     await writeFile(tmpQuery, query)
+    this.logger.log(
+      `Query file: ${tmpQuery} (${query.length} bytes, first line: ${query.split('\n')[0]})`,
+    )
 
     try {
-      const { stdout } = await runCommand(
-        'miniprot',
-        ['--gff', analysisDb.dbPath, tmpQuery],
-        context.signal,
-      )
+      const args = ['--gff', analysisDb.dbPath, tmpQuery]
+      this.logger.log(`Running: miniprot ${args.join(' ')}`)
+      const { stdout, stderr } = await runCommand('miniprot', args, context.signal)
+
+      if (stderr) {
+        this.logger.log(`miniprot stderr:\n${stderr}`)
+      }
+      this.logger.log(`miniprot stdout length: ${stdout.length} bytes`)
 
       const alignments = parseGff3(stdout)
       const geneModels = groupIntoGeneModels(alignments)
+      this.logger.log(
+        `Parsed ${alignments.length} alignments → ${geneModels.length} gene models`,
+      )
       return { alignments, geneModels, gff3: stdout }
     } finally {
       await rm(tmpQuery, { force: true })
