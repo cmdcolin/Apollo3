@@ -3,7 +3,7 @@ const jsonHeaders = { Accept: 'application/json' }
 export async function fetchJson<T>(url: string): Promise<T> {
   const res = await fetch(url, { headers: jsonHeaders })
   if (res.status === 401) {
-    globalThis.location.href = '/'
+    globalThis.location.href = '/ui/signin/'
     throw new Error('Not authenticated')
   }
   if (!res.ok) {

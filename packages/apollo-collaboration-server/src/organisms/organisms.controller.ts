@@ -9,8 +9,10 @@ import {
   Patch,
   Post,
   Query,
+  Req,
 } from '@nestjs/common'
 
+import type { RequestWithUser } from '../authentication/request-with-user.js'
 import { Role } from '../authentication/role.enum.js'
 import { Public, Roles } from '../authentication/roles.guard.js'
 
@@ -33,12 +35,6 @@ export class OrganismsController {
     return { count }
   }
 
-  @Get('public')
-  @Public()
-  findPublic() {
-    return this.organismsService.findPublic()
-  }
-
   @Post()
   @Roles(Role.Admin)
   create(@Body() dto: CreateOrganismDto) {
@@ -46,16 +42,22 @@ export class OrganismsController {
   }
 
   @Get()
+  @Public()
   findAll(
+    @Req() req: RequestWithUser,
     @Query('offset') offsetStr?: string,
     @Query('limit') limitStr?: string,
   ) {
-    const offset = offsetStr ? Number(offsetStr) : undefined
-    const limit = limitStr ? Number(limitStr) : undefined
-    return this.organismsService.findAll({ offset, limit })
+    if (req.user) {
+      const offset = offsetStr ? Number(offsetStr) : undefined
+      const limit = limitStr ? Number(limitStr) : undefined
+      return this.organismsService.findAll({ offset, limit })
+    }
+    return this.organismsService.findPublic()
   }
 
   @Get(':id')
+  @Public()
   findOne(@Param('id') id: string) {
     return this.organismsService.findOne(id)
   }

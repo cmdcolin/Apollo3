@@ -5,30 +5,12 @@ import Container from '@mui/material/Container'
 import Link from '@mui/material/Link'
 import Typography from '@mui/material/Typography'
 import { DataGrid, type GridColDef } from '@mui/x-data-grid'
-import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
+import useSWR from 'swr'
 
 import { Nav } from './Nav.js'
 import { fetchJson } from './fetchUtil.js'
 import { type Organism, organismLabel } from './organism-utils.js'
-
-function useIsAuthenticated() {
-  const [authenticated, setAuthenticated] = useState<boolean | undefined>(
-    undefined,
-  )
-
-  useEffect(() => {
-    fetch('/users/me', { headers: { Accept: 'application/json' } })
-      .then((r) => {
-        setAuthenticated(r.ok)
-      })
-      .catch(() => {
-        setAuthenticated(false)
-      })
-  }, [])
-
-  return authenticated
-}
 
 const columns: GridColDef<Organism>[] = [
   {
@@ -51,53 +33,25 @@ const columns: GridColDef<Organism>[] = [
 ]
 
 function OrganismsPage() {
-  const authenticated = useIsAuthenticated()
-  const [organisms, setOrganisms] = useState<Organism[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string>()
-  const isGuest = authenticated === false
-
-  useEffect(() => {
-    if (authenticated === undefined) {
-      return
-    }
-    const endpoint = authenticated ? '/organisms' : '/organisms/public'
-    setLoading(true)
-    setError(undefined)
-    fetchJson<Organism[]>(endpoint)
-      .then((items) => {
-        setOrganisms(items)
-      })
-      .catch((error_: unknown) => {
-        setError(error_ instanceof Error ? error_.message : String(error_))
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [authenticated])
+  const { data: organisms, error, isLoading } =
+    useSWR<Organism[], unknown>('/organisms', fetchJson)
 
   return (
     <Nav current="organisms">
       <Container>
         <Typography variant="h4" gutterBottom>
-          {isGuest ? 'Public Organisms' : 'Organisms'}
+          Organisms
         </Typography>
-        {isGuest ? (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Showing organisms with publicly accessible assemblies.{' '}
-            <Link href="/">Sign in</Link> to see all organisms.
-          </Alert>
-        ) : null}
         {error ? (
           <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
+            {error instanceof Error ? error.message : 'Unknown error'}
           </Alert>
         ) : null}
-        {loading || authenticated === undefined ? (
+        {isLoading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
             <CircularProgress />
           </Box>
-        ) : (
+        ) : organisms ? (
           <Box sx={{ height: 600 }}>
             <DataGrid
               rows={organisms.map((o) => ({ ...o, id: o._id }))}
@@ -109,7 +63,7 @@ function OrganismsPage() {
               }}
             />
           </Box>
-        )}
+        ) : null}
       </Container>
     </Nav>
   )

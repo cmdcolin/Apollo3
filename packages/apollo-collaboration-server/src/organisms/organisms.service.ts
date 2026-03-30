@@ -30,12 +30,16 @@ export class OrganismsService {
   async findPublic() {
     const publicAssemblies = await this.db.assembly.findPublic()
     const uniqueOrganismIds = [
-      ...new Set(publicAssemblies.map((a) => a.organism).filter(Boolean)),
+      ...new Set(
+        publicAssemblies
+          .map((a) => a.organism)
+          .filter((id): id is string => Boolean(id)),
+      ),
     ]
     const organisms = await Promise.all(
-      uniqueOrganismIds.map((id) => this.db.organism.findById(id!)),
+      uniqueOrganismIds.map((id) => this.db.organism.findById(id)),
     )
-    return organisms.filter(Boolean)
+    return organisms.filter((o): o is NonNullable<typeof o> => Boolean(o))
   }
 
   async count() {

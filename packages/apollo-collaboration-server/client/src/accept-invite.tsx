@@ -49,7 +49,7 @@ function AcceptInvitePage() {
     if (response.ok) {
       setSuccess(true)
       setTimeout(() => {
-        globalThis.location.href = '/'
+        globalThis.location.href = '/ui/signin/'
       }, 1500)
     } else {
       const data = (await response.json()) as { message?: string }

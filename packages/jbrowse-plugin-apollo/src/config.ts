@@ -15,11 +15,6 @@ const ApolloPluginConfigurationSchema = ConfigurationSchema('ApolloPlugin', {
     type: 'boolean',
     defaultValue: false,
   },
-  hasPublicData: {
-    description: 'Whether the server has publicly accessible assemblies',
-    type: 'boolean',
-    defaultValue: false,
-  },
   baseURL: {
     description: 'Location of Apollo collaboration server',
     type: 'string',

@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Inject,
   Logger,
@@ -9,8 +10,10 @@ import {
   Param,
   Patch,
   Post,
+  Req,
 } from '@nestjs/common'
 
+import type { RequestWithUser } from '../authentication/request-with-user.js'
 import { Role } from '../authentication/role.enum.js'
 import { Public, Roles } from '../authentication/roles.guard.js'
 
@@ -33,25 +36,36 @@ export class AssembliesController {
     return this.assembliesService.create(body)
   }
 
-  @Get('public')
+  @Get()
   @Public()
-  findPublic() {
+  findAll(@Req() req: RequestWithUser) {
+    if (req.user) {
+      return this.assembliesService.findAll()
+    }
     return this.assembliesService.findPublic()
   }
 
-  @Get()
-  findAll() {
-    return this.assembliesService.findAll()
-  }
-
   @Get('by-name/:name')
-  findOneByName(@Param('name') name: string) {
-    return this.assembliesService.findOneByName(name)
+  @Public()
+  async findOneByName(
+    @Param('name') name: string,
+    @Req() req: RequestWithUser,
+  ) {
+    const assembly = await this.assembliesService.findOneByName(name)
+    if (!req.user && assembly.visibility !== 'public') {
+      throw new ForbiddenException()
+    }
+    return assembly
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.assembliesService.findOne(id)
+  @Public()
+  async findOne(@Param('id') id: string, @Req() req: RequestWithUser) {
+    const assembly = await this.assembliesService.findOne(id)
+    if (!req.user && assembly.visibility !== 'public') {
+      throw new ForbiddenException()
+    }
+    return assembly
   }
 
   @Patch(':id')

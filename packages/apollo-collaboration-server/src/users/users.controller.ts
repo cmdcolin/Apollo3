@@ -17,7 +17,7 @@ import {
 
 import type { RequestWithUser } from '../authentication/request-with-user.js'
 import { Role } from '../authentication/role.enum.js'
-import { Authenticated, Roles } from '../authentication/roles.guard.js'
+import { Authenticated, Public, Roles } from '../authentication/roles.guard.js'
 
 import { ActiveUsersService } from './active-users.service.js'
 import { UsersService } from './users.service.js'
@@ -32,10 +32,13 @@ export class UsersController {
   ) {}
   private readonly logger = new Logger(UsersController.name)
 
-  @Authenticated()
+  @Public()
   @Get('me')
   async getMe(@Req() req: RequestWithUser) {
-    const user = req.user?.id
+    if (!req.user) {
+      return null
+    }
+    const user = req.user.id
       ? await this.usersService.findById(req.user.id)
       : undefined
     const dbRole = user?.role ?? req.user?.role

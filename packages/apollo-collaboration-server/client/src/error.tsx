@@ -42,7 +42,7 @@ function ErrorPage() {
             {message}
           </Typography>
           {status === '401' ? (
-            <Button variant="contained" href="/">
+            <Button variant="contained" href="/ui/signin/">
               Sign in
             </Button>
           ) : (

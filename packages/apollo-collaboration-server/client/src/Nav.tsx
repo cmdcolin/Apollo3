@@ -318,7 +318,7 @@ function NavBar({ current, user }: { current?: Page; user?: UserInfo }) {
             </Button>
           </Box>
         ) : (
-          <Button color="inherit" size="small" href="/">
+          <Button color="inherit" size="small" href="/ui/signin/">
             Sign in
           </Button>
         )}

@@ -12,7 +12,6 @@ import useSWR from 'swr'
 
 import { Nav } from './Nav.js'
 import { fetchJson } from './fetchUtil.js'
-import { type Organism, organismLabel } from './organism-utils.js'
 
 interface Assembly {
   _id: string
@@ -20,11 +19,12 @@ interface Assembly {
   displayName: string
   description?: string
   organism?: string
+  organismDisplayName?: string
+  organismScientificName?: string
   visibility?: 'public' | 'private'
 }
 
 interface User {
-  _id: string
   role: string
 }
 
@@ -50,11 +50,7 @@ function AssemblyDetailPage() {
     encodedName ? `/assemblies/by-name/${encodedName}` : null,
     fetchJson,
   )
-  const { data: currentUser } = useSWR<User>('/users/me', fetchJson)
-  const { data: organism } = useSWR<Organism>(
-    assembly?.organism ? `/organisms/${assembly.organism}` : null,
-    fetchJson,
-  )
+  const { data: currentUser } = useSWR<User | null>('/users/me', fetchJson)
 
   if (!assemblyName) {
     return (
@@ -116,11 +112,11 @@ function AssemblyDetailPage() {
               <strong>Description:</strong> {assembly.description}
             </Typography>
           ) : null}
-          {organism ? (
+          {assembly.organism ? (
             <Typography variant="body1">
               <strong>Organism:</strong>{' '}
               <Link href={`/ui/organisms/${assembly.organism}`}>
-                {organismLabel(organism)}
+                {assembly.organismDisplayName ?? assembly.organism}
               </Link>
             </Typography>
           ) : null}
@@ -143,27 +139,31 @@ function AssemblyDetailPage() {
           >
             Open in JBrowse
           </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            href={`/ui/sequence-search/?assembly=${encodeURIComponent(assembly.name)}`}
-          >
-            Sequence Search
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            href={`/ui/assembly-checks/${assembly.name}`}
-          >
-            Checks
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            href={`/ui/assembly-tracks/${assembly.name}`}
-          >
-            Tracks
-          </Button>
+          {currentUser ? (
+            <>
+              <Button
+                variant="outlined"
+                size="small"
+                href={`/ui/sequence-search/?assembly=${encodeURIComponent(assembly.name)}`}
+              >
+                Sequence Search
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                href={`/ui/assembly-checks/${assembly.name}`}
+              >
+                Checks
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                href={`/ui/assembly-tracks/${assembly.name}`}
+              >
+                Tracks
+              </Button>
+            </>
+          ) : null}
           {currentUser?.role === 'admin' ? (
             <Button
               variant="outlined"

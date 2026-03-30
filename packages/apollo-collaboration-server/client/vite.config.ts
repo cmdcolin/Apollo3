@@ -143,6 +143,7 @@ export default defineConfig({
           __dirname,
           'ui/edit-organism/index.html',
         ),
+        'ui/signin/index': path.resolve(__dirname, 'ui/signin/index.html'),
         'error/index': path.resolve(__dirname, 'error/index.html'),
       },
     },

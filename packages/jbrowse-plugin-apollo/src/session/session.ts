@@ -20,8 +20,6 @@ import type {
 import {
   type Instance,
   type SnapshotOut,
-  addDisposer,
-  applySnapshot,
   getRoot,
   getSnapshot,
   types,
@@ -37,7 +35,6 @@ import RedoIcon from '@mui/icons-material/Redo'
 import SaveIcon from '@mui/icons-material/Save'
 import UndoIcon from '@mui/icons-material/Undo'
 import VisibilityIcon from '@mui/icons-material/Visibility'
-import { autorun } from 'mobx'
 import { type Socket, io } from 'socket.io-client'
 
 import { ApolloJobModel } from '../ApolloJobModel'
@@ -48,7 +45,6 @@ import {
   OpenLocalFile,
   ViewCheckResults,
 } from '../components'
-import { LoginDialog } from '../components/LoginDialog'
 import type ApolloPluginConfigurationSchema from '../config'
 import type { ApolloRootModel } from '../types'
 import {
@@ -224,121 +220,18 @@ export function extendSession(
         self.addSocketListeners()
       },
     }))
-    .volatile((self) => ({
-      previousSnapshot: getSnapshot(self),
-    }))
     .actions((self) => ({
       afterCreate() {
-        applySnapshot(self, { name: self.name, id: self.id })
-        // @ts-expect-error type is missing on ApolloRootModel
-        const { jbrowse, reloadPluginManagerCallback } =
-          getRoot<ApolloRootModel>(self)
-        addDisposer(
-          self,
-          autorun(
-            async (reaction) => {
-              if (inWebWorker) {
-                return
-              }
-              const pluginConfiguration =
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-                jbrowse.configuration.ApolloPlugin as Instance<
-                  typeof ApolloPluginConfigurationSchema
-                >
-              const hasRole = readConfObject(
-                pluginConfiguration,
-                'hasRole',
-              ) as boolean
-              if (hasRole) {
-                // @ts-expect-error not sure why snapshot type is wrong for snapshot
-                applySnapshot(self, self.previousSnapshot)
-                // Initialize WebSocket after config is loaded
-                self.initializeApolloConnection()
-                reaction.dispose()
-                return
-              }
-
-              const { signal } = self.abortController
-              const baseURL = readConfObject(
-                pluginConfiguration,
-                'baseURL',
-              ) as string
-              if (!baseURL) {
-                return
-              }
-
-              const uri = new URL('jbrowse/config.json', baseURL).href
-              let response: Response
-              try {
-                response = await fetch(uri, { signal })
-              } catch (error) {
-                if (!self.abortController.signal.aborted) {
-                  console.error(error)
-                }
-                return
-              }
-              if (!response.ok) {
-                const errorMessage = await createFetchErrorMessage(
-                  response,
-                  'Failed to fetch assemblies',
-                )
-                console.error(errorMessage)
-                return
-              }
-              let jbrowseConfig
-              try {
-                jbrowseConfig = await response.json()
-              } catch (error) {
-                console.error(error)
-                return
-              }
-
-              // Check if the server config includes a role (user is authenticated)
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-              const serverHasRole = jbrowseConfig?.configuration?.ApolloPlugin
-                ?.hasRole as boolean | undefined
-              if (!serverHasRole) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-                const hasPublicData = jbrowseConfig?.configuration?.ApolloPlugin
-                  ?.hasPublicData as boolean | undefined
-                if (!hasPublicData) {
-                  // No public data available — show login dialog
-                  ;(self as unknown as AbstractSessionModel).queueDialog(
-                    (doneCallback) => [
-                      LoginDialog,
-                      {
-                        session: self as unknown as ApolloSessionModel,
-                        handleClose: () => {
-                          doneCallback()
-                        },
-                      },
-                    ],
-                  )
-                  reaction.dispose()
-                  return
-                }
-                // Public data available — load config and allow guest browsing
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-                reloadPluginManagerCallback(jbrowseConfig, self.previousSnapshot)
-                reaction.dispose()
-                return
-              }
-
-              // Extract userSessionId before reloading config
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-              const userSessionId = jbrowseConfig?.configuration?.ApolloPlugin
-                ?.userSessionId as string | undefined
-              if (userSessionId) {
-                self.setUserSessionId(userSessionId)
-              }
-
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-              reloadPluginManagerCallback(jbrowseConfig, self.previousSnapshot)
-              reaction.dispose()
-            },
-            { name: 'ApolloSessionLoadConfig' },
-          ),
-        )
+        if (!inWebWorker) {
+          const pluginConfiguration = self.getPluginConfiguration()
+          const hasRole = readConfObject(
+            pluginConfiguration,
+            'hasRole',
+          ) as boolean
+          if (hasRole) {
+            self.initializeApolloConnection()
+          }
+        }
       },
       beforeDestroy() {
         self.abortController.abort(
@@ -365,13 +258,6 @@ export function extendSession(
           }
           if (!role) {
             const pluginConfiguration = self.getPluginConfiguration()
-            const hasPublicData = readConfObject(
-              pluginConfiguration,
-              'hasPublicData',
-            ) as boolean
-            if (!hasPublicData) {
-              return superMenus()
-            }
             const baseURL = readConfObject(
               pluginConfiguration,
               'baseURL',
@@ -385,7 +271,14 @@ export function extendSession(
                     label: 'Sign in',
                     icon: LoginIcon,
                     onClick: () => {
-                      globalThis.location.href = new URL('/', baseURL).href
+                      sessionStorage.setItem(
+                        'apollo-return-url',
+                        globalThis.location.href,
+                      )
+                      globalThis.location.href = new URL(
+                        '/ui/signin/',
+                        baseURL,
+                      ).href
                     },
                   },
                 ],
