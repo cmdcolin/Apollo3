@@ -2,18 +2,19 @@
 # Dev start: build everything, set up JBrowse, seed demo data, start server.
 #
 # Usage:
-#   bash scripts/dev-start.sh [--persist] [--fresh]
+#   bash scripts/dev-start.sh [--memory] [--fresh]
 #
-#   (default) Use a fresh in-memory SQLite database, seeded with volvox data
-#   --persist Use a persistent apollo-dev.sqlite file (copied from demo.sqlite if absent)
+#   (default) Use a persistent apollo-dev.sqlite file (copied from demo.sqlite if absent)
+#   --memory  Use a fresh in-memory SQLite database, seeded with volvox data on each start
 #   --fresh   Delete existing persistent database and re-seed from demo data
 set -euo pipefail
 export COREPACK_ENABLE_AUTO_INSTALL=0
 
-PERSIST=false
+PERSIST=true
 FRESH=false
 for arg in "$@"; do
   case "$arg" in
+    --memory)  PERSIST=false ;;
     --persist) PERSIST=true ;;
     --fresh)   FRESH=true ;;
     *) echo "Unknown option: $arg"; exit 1 ;;
@@ -61,14 +62,19 @@ cp "$PLUGIN_DIR/dist/jbrowse-plugin-apollo.umd.development.js" "$JBROWSE_DIR/apo
 cp "$PLUGIN_DIR/test_data/so-v3.1.json" "$JBROWSE_DIR/so-v3.1.json"
 
 # Database setup
+NEED_SEED=false
 if [ "$PERSIST" = true ]; then
   if [ "$FRESH" = true ]; then
     echo '[start] Deleting existing database for fresh start...'
     rm -f apollo-dev.sqlite
   fi
   if [ ! -f apollo-dev.sqlite ]; then
-    echo '[start] Seeding demo database...'
-    cp "$REPO_ROOT/demo-data/demo.sqlite" apollo-dev.sqlite 2>/dev/null || true
+    if cp "$REPO_ROOT/demo-data/demo.sqlite" apollo-dev.sqlite 2>/dev/null; then
+      echo '[start] Copied demo database.'
+    else
+      echo '[start] No demo database found, will seed volvox after server starts.'
+      NEED_SEED=true
+    fi
   fi
 else
   echo '[start] Using in-memory SQLite database (fresh on every start)'
@@ -78,6 +84,7 @@ else
   export SESSION_SECRET
   JWT_SECRET="$(head -c 32 /dev/urandom | base64)"
   export JWT_SECRET
+  NEED_SEED=true
 fi
 
 # Auto-detect Tiberius if installed at common location
@@ -109,8 +116,8 @@ NODE_PID=$!
 cleanup() { kill "$NODE_PID" 2>/dev/null || true; rm -f "$SERVER_LOG"; }
 trap cleanup EXIT INT TERM
 
-# Seed volvox data into in-memory DB after server is ready
-if [ "$PERSIST" = false ]; then
+# Seed volvox data after server is ready (memory mode, or persist mode with no demo.sqlite)
+if [ "$NEED_SEED" = true ]; then
   # Wait for our server's SETUP_TOKEN to appear in the log — this proves *our*
   # new process is up, not a stale server that might be on the same port.
   max_wait=60 waited=0

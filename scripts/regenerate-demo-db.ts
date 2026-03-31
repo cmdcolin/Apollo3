@@ -32,30 +32,50 @@ function log(msg: string) {
   console.debug(msg)
 }
 
-async function waitForServer(maxWait = 60) {
+const REGEN_EMAIL = 'admin@apollo-regen.example'
+const REGEN_PASSWORD = 'regenpass1'
+
+async function waitForSetupToken(maxWait = 60) {
   let waited = 0
   while (waited < maxWait) {
-    try {
-      const res = await fetch(`${API_BASE}/health`)
-      if (res.ok) {
-        return
-      }
-    } catch {
-      // server not ready yet
+    const content = fs.readFileSync(LOG_FILE, 'utf8')
+    const match = /SETUP_TOKEN=(.+)/.exec(content)
+    if (match) {
+      return match[1].trim()
     }
     await new Promise((r) => setTimeout(r, 2000))
     waited += 2
   }
-  throw new Error(`Server did not start within ${maxWait}s`)
+  throw new Error(`Server did not become ready within ${maxWait}s`)
 }
 
 async function getToken() {
-  const res = await fetch(`${API_BASE}/auth/root`, {
+  const setupToken = await waitForSetupToken()
+  log(`Server ready, running setup flow...`)
+  await fetch(`${API_BASE}/auth/setup?token=${setupToken}`)
+  const setupRes = await fetch(`${API_BASE}/auth/setup-account`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password: 'pass' }),
+    body: JSON.stringify({
+      email: REGEN_EMAIL,
+      username: 'admin',
+      password: REGEN_PASSWORD,
+    }),
   })
-  const data = (await res.json()) as { token: string }
+  if (!setupRes.ok) {
+    throw new Error(
+      `Setup account failed: ${setupRes.status} ${await setupRes.text()}`,
+    )
+  }
+  const loginRes = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: REGEN_EMAIL, password: REGEN_PASSWORD }),
+  })
+  if (!loginRes.ok) {
+    throw new Error(`Login failed: ${loginRes.status} ${await loginRes.text()}`)
+  }
+  const data = (await loginRes.json()) as { token: string }
   return data.token
 }
 
@@ -119,8 +139,6 @@ async function main() {
       PORT: String(PORT),
       URL: API_BASE,
       DB_CONNECTION_URL: 'apollo-regen.sqlite',
-      ALLOW_ROOT_USER: 'true',
-      ROOT_USER_PASSWORD: 'pass',
       DEFAULT_NEW_USER_ROLE: 'none',
       LOG_LEVELS: 'error,warn',
       NODE_ENV: 'development',
@@ -155,11 +173,8 @@ async function main() {
   })
 
   try {
-    await waitForServer()
-    log(`Server ready on port ${PORT}`)
-
     const token = await getToken()
-    log('Authenticated as root.')
+    log('Authenticated.')
 
     // Create organism first so assembly can reference it at creation time
     log('Creating Volvox carteri organism...')

@@ -133,6 +133,21 @@ export class AuthenticationService {
     }
   }
 
+  private signToken(user: {
+    username: string
+    email: string
+    role: Role
+    _id: string
+  }) {
+    const payload: JWTPayload = {
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      id: user._id,
+    }
+    return { token: this.jwtService.sign(payload) }
+  }
+
   async setupAccount(email: string, username: string, password: string) {
     if (!this.setupActive) {
       throw new BadRequestException('Setup mode is not active')
@@ -151,14 +166,7 @@ export class AuthenticationService {
     })
     this.consumeSetup()
     this.logger.log(`Setup complete: ${email} promoted to admin`)
-    const payload: JWTPayload = {
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      id: user._id,
-    }
-    const returnToken = this.jwtService.sign(payload)
-    return { token: returnToken }
+    return this.signToken(user)
   }
 
   async passwordLogin(email: string, password: string) {
@@ -170,14 +178,7 @@ export class AuthenticationService {
     if (!valid) {
       throw new UnauthorizedException('Invalid email or password')
     }
-    const payload: JWTPayload = {
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      id: user._id,
-    }
-    const returnToken = this.jwtService.sign(payload)
-    return { token: returnToken }
+    return this.signToken(user)
   }
 
   async acceptInvite(token: string, password: string) {
@@ -201,14 +202,7 @@ export class AuthenticationService {
     const passwordHash = await bcrypt.hash(password, 10)
     await this.usersService.setPassword(user._id, passwordHash)
     await this.usersService.clearInviteToken(user._id)
-    const payload: JWTPayload = {
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      id: user._id,
-    }
-    const returnToken = this.jwtService.sign(payload)
-    return { token: returnToken }
+    return this.signToken(user)
   }
 
   async logIn(name: string, email: string) {
@@ -235,14 +229,6 @@ export class AuthenticationService {
       this.logger.log(`Setup complete: ${email} promoted to admin`)
     }
     this.logger.debug(`User logged in: ${user.email} (role: ${user.role})`)
-
-    const payload: JWTPayload = {
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      id: user._id,
-    }
-    const returnToken = this.jwtService.sign(payload)
-    return { token: returnToken }
+    return this.signToken(user)
   }
 }
