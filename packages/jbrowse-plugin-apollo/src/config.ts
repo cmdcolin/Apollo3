@@ -40,6 +40,11 @@ const ApolloPluginConfigurationSchema = ConfigurationSchema('ApolloPlugin', {
     type: 'string',
     defaultValue: '',
   },
+  userSessionId: {
+    description: 'User session ID for WebSocket deduplication',
+    type: 'string',
+    defaultValue: '',
+  },
   geneBackgroundColor: {
     description: 'Color for feature background',
     type: 'string',

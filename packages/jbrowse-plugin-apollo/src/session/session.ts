@@ -216,6 +216,14 @@ export function extendSession(
           }
           return
         }
+        const pluginConfiguration = self.getPluginConfiguration()
+        const sessionId = readConfObject(
+          pluginConfiguration,
+          'userSessionId',
+        ) as string
+        if (sessionId) {
+          self.setUserSessionId(sessionId)
+        }
         self.updateLastChangeSequenceNumber()
         self.addSocketListeners()
       },
