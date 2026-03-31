@@ -4,7 +4,6 @@ import { FeatureHistoryEntity } from '../entities/FeatureHistoryEntity.js'
 import { createTestORM } from '../test-utils.js'
 import { MikroOrmAssemblyRepository } from '../repositories/MikroOrmAssemblyRepository.js'
 import { MikroOrmFeatureRepository } from '../repositories/MikroOrmFeatureRepository.js'
-import { MikroOrmRefSeqRepository } from '../repositories/MikroOrmRefSeqRepository.js'
 
 let orm: MikroORM
 
@@ -20,16 +19,9 @@ beforeEach(async () => {
   await orm.schema.refresh()
 })
 
-async function setupAssemblyAndRefSeq(em = orm.em.fork()) {
+async function setupAssembly(em = orm.em.fork()) {
   const assemblyRepo = new MikroOrmAssemblyRepository(em)
-  const refSeqRepo = new MikroOrmRefSeqRepository(em)
   await assemblyRepo.create({ _id: 'asm-1', name: 'test-assembly' })
-  await refSeqRepo.create({
-    _id: 'rs-1',
-    name: 'chr1',
-    assembly: 'asm-1',
-    length: 10_000,
-  })
   return em
 }
 
@@ -43,11 +35,12 @@ async function getHistoryRecords(em = orm.em.fork()) {
 
 describe('FeatureHistorySubscriber', () => {
   it('records history on feature create', async () => {
-    const em = await setupAssemblyAndRefSeq()
+    const em = await setupAssembly()
     const featureRepo = new MikroOrmFeatureRepository(em)
 
     await featureRepo.create({
       _id: 'feat-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -67,11 +60,12 @@ describe('FeatureHistorySubscriber', () => {
   })
 
   it('records history on feature update with previous values', async () => {
-    const em = await setupAssemblyAndRefSeq()
+    const em = await setupAssembly()
     const featureRepo = new MikroOrmFeatureRepository(em)
 
     await featureRepo.create({
       _id: 'feat-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -95,11 +89,12 @@ describe('FeatureHistorySubscriber', () => {
   })
 
   it('records history on feature delete', async () => {
-    const em = await setupAssemblyAndRefSeq()
+    const em = await setupAssembly()
     const featureRepo = new MikroOrmFeatureRepository(em)
 
     await featureRepo.create({
       _id: 'feat-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -120,11 +115,12 @@ describe('FeatureHistorySubscriber', () => {
   })
 
   it('records multiple updates preserving history', async () => {
-    const em = await setupAssemblyAndRefSeq()
+    const em = await setupAssembly()
     const featureRepo = new MikroOrmFeatureRepository(em)
 
     await featureRepo.create({
       _id: 'feat-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -151,11 +147,12 @@ describe('FeatureHistorySubscriber', () => {
   })
 
   it('records history for descendants when deleteDescendants is called', async () => {
-    const em = await setupAssemblyAndRefSeq()
+    const em = await setupAssembly()
     const featureRepo = new MikroOrmFeatureRepository(em)
 
     await featureRepo.create({
       _id: 'gene-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -163,6 +160,7 @@ describe('FeatureHistorySubscriber', () => {
     })
     await featureRepo.create({
       _id: 'mrna-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       parentId: 'gene-1',
       type: 'mRNA',
@@ -171,6 +169,7 @@ describe('FeatureHistorySubscriber', () => {
     })
     await featureRepo.create({
       _id: 'exon-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       parentId: 'mrna-1',
       type: 'exon',
@@ -179,6 +178,7 @@ describe('FeatureHistorySubscriber', () => {
     })
     await featureRepo.create({
       _id: 'exon-2',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       parentId: 'mrna-1',
       type: 'exon',

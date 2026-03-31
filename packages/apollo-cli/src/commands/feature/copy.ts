@@ -5,18 +5,16 @@ import { type Response, fetch } from 'undici'
 
 import { BaseCommand } from '../../baseCommand.js'
 import {
+  convertAssemblyNameToId,
   createFetchErrorMessage,
-  getAssemblyFromRefseq,
   getFeatureById,
-  getRefseqId,
 } from '../../utils.js'
 
 export default class Copy extends BaseCommand<typeof Copy> {
   static summary = 'Copy a feature to another location'
   static description =
     'The feature may be copied to the same or to a different assembly. \
-The destination reference sequence may be selected by name only if unique in \
-the database or by name and assembly or by identifier.'
+The destination reference sequence is selected by name.'
 
   static examples = [
     {
@@ -34,7 +32,7 @@ the database or by name and assembly or by identifier.'
     }),
     refseq: Flags.string({
       char: 'r',
-      description: 'Name or ID of target reference sequence',
+      description: 'Name of target reference sequence',
       required: true,
     }),
     start: Flags.integer({
@@ -44,9 +42,8 @@ the database or by name and assembly or by identifier.'
     }),
     assembly: Flags.string({
       char: 'a',
-      description:
-        'Name or ID of target assembly. Not required if refseq is unique in the database',
-      required: false,
+      description: 'Name or ID of target assembly',
+      required: true,
     }),
   }
 
@@ -73,31 +70,25 @@ the database or by name and assembly or by identifier.'
     }
     const feature: AnnotationFeatureSnapshot =
       (await res.json()) as AnnotationFeatureSnapshot
-    let refseqIds: string[] = []
-    refseqIds = await getRefseqId(
+
+    const assemblyIds = await convertAssemblyNameToId(
       access.address,
       access.accessToken,
-      flags.refseq,
-      flags.assembly,
+      [flags.assembly],
     )
-    if (refseqIds.length === 0) {
-      this.error('No reference sequence found')
+    if (assemblyIds.length === 0) {
+      this.error(`Assembly "${flags.assembly}" not found`)
     }
-    const [refseq] = refseqIds
-    const assembly = await getAssemblyFromRefseq(
-      access.address,
-      access.accessToken,
-      refseq,
-    )
+    const [assemblyId] = assemblyIds
 
     const newId = new ObjectId().toHexString()
     const rescopy = await this.copyFeature(
       access.address,
       access.accessToken,
       feature,
-      refseq,
+      flags.refseq,
       flags.start,
-      assembly,
+      assemblyId,
       newId,
     )
     if (!rescopy.ok) {
@@ -115,7 +106,7 @@ the database or by name and assembly or by identifier.'
     feature: AnnotationFeatureSnapshot,
     refseq: string,
     min: number,
-    assembly: string,
+    assemblyId: string,
     newId: string,
   ): Promise<Response> {
     const featureLen = feature.max - feature.min
@@ -132,7 +123,7 @@ the database or by name and assembly or by identifier.'
     const url = new URL(`${address}/features`)
     const auth = {
       method: 'POST',
-      body: JSON.stringify({ addedFeature, assemblyId: assembly }),
+      body: JSON.stringify({ addedFeature, assemblyId }),
       headers: {
         authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',

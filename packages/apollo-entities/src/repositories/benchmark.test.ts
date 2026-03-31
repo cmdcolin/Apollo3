@@ -11,11 +11,9 @@ import { ExportEntity } from '../entities/ExportEntity.js'
 import { FeatureEntity } from '../entities/FeatureEntity.js'
 import { FileEntity } from '../entities/FileEntity.js'
 import { OrganismEntity } from '../entities/OrganismEntity.js'
-import { RefSeqEntity } from '../entities/RefSeqEntity.js'
 import { UserEntity } from '../entities/UserEntity.js'
 import { MikroOrmAssemblyRepository } from './MikroOrmAssemblyRepository.js'
 import { MikroOrmFeatureRepository } from './MikroOrmFeatureRepository.js'
-import { MikroOrmRefSeqRepository } from './MikroOrmRefSeqRepository.js'
 
 const allEntities = [
   AssemblyEntity,
@@ -26,7 +24,6 @@ const allEntities = [
   FeatureEntity,
   FileEntity,
   OrganismEntity,
-  RefSeqEntity,
   UserEntity,
 ]
 
@@ -56,11 +53,12 @@ afterAll(async () => {
   }
 })
 
-function generateFeatures(count: number, refSeqId: string, prefix: string) {
+function generateFeatures(count: number, refSeqId: string, prefix: string, assembly: string) {
   const features = []
   for (let i = 0; i < count; i++) {
     features.push({
       _id: `${prefix}-feat-${i}`,
+      assembly,
       refSeq: refSeqId,
       type: i % 3 === 0 ? 'gene' : i % 3 === 1 ? 'mRNA' : 'exon',
       min: i * 100,
@@ -82,7 +80,6 @@ async function simulateImport(
   featuresPerRefSeq: number,
 ) {
   const asmRepo = new MikroOrmAssemblyRepository(em)
-  const rsRepo = new MikroOrmRefSeqRepository(em)
   const featRepo = new MikroOrmFeatureRepository(em)
 
   await asmRepo.create({
@@ -91,20 +88,13 @@ async function simulateImport(
   })
 
   for (let r = 0; r < refSeqCount; r++) {
-    const rsId = `${prefix}-rs-${r}`
-    await rsRepo.create({
-      _id: rsId,
-      assembly: `${prefix}-asm`,
-      name: `chr${r}`,
-      length: 0,
-      status: -1,
-      user: 'u',
-    })
+    const rsName = `chr${r}`
 
     const features = generateFeatures(
       featuresPerRefSeq,
-      rsId,
+      rsName,
       `${prefix}-r${r}`,
+      `${prefix}-asm`,
     )
     for (let i = 0; i < features.length; i += 500) {
       await featRepo.createMany(features.slice(i, i + 500))

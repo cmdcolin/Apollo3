@@ -110,16 +110,9 @@ void describe('Test CLI', () => {
       `${apollo} assembly add-from-gff ${P} test_data/tiny.fasta.gff3 -a vv2 -f`,
     )
 
-    let p = new Shell(`${apollo} feature get ${P} -a vv1`)
-    assert.ok(p.stdout.includes('ctgA'))
-    assert.ok(p.stdout.includes('SomeContig'))
-
-    p = new Shell(`${apollo} feature get ${P} -r ctgA`, false)
-    assert.ok(p.returncode != 0)
-    assert.ok(p.stderr.includes('found in more than one assembly'))
-
-    p = new Shell(`${apollo} feature get ${P} -a vv1 -r ctgA`)
+    let p = new Shell(`${apollo} feature get ${P} -a vv1 -r ctgA`)
     let out = JSON.parse(p.stdout)
+    assert.ok(out.length > 0)
     assert.ok(Object.keys(out.at(0)).length > 2)
 
     p = new Shell(`${apollo} feature get ${P} -a vv1 -r ctgA -s 40 -e 41`)
@@ -130,7 +123,7 @@ void describe('Test CLI', () => {
     out = JSON.parse(p.stdout)
     assert.deepStrictEqual(out, [])
 
-    p = new Shell(`${apollo} feature get ${P} -r FOOBAR`)
+    p = new Shell(`${apollo} feature get ${P} -a vv1 -r FOOBAR`)
     out = JSON.parse(p.stdout)
     assert.deepStrictEqual(out, [])
 
@@ -274,18 +267,12 @@ void describe('Test CLI', () => {
     const out = JSON.parse(p.stdout)
     assert.ok(out.sequenceSource.fa)
 
-    // Get id of assembly named vv1 and check there are no features
+    // Check there are no features (loaded with --omit-features)
     p = new Shell(`${apollo} assembly get ${P} -a vv1`)
     assert.ok(p.stdout.includes('vv1'))
     assert.ok(p.stdout.includes('vv2') == false)
-    const asm_id = JSON.parse(p.stdout).at(0)._id
 
-    p = new Shell(`${apollo} refseq get ${P}`)
-    const refseq = JSON.parse(p.stdout.trim())
-    const vv1ref = refseq.filter((x: any) => x.assembly === asm_id)
-    const refseq_id = vv1ref.find((x: any) => x.name === 'ctgA')._id
-
-    p = new Shell(`${apollo} feature get ${P} -r ${refseq_id}`)
+    p = new Shell(`${apollo} feature get ${P} -a vv1 -r ctgA`)
     const ff = JSON.parse(p.stdout)
     assert.deepStrictEqual(ff, [])
 
@@ -334,7 +321,7 @@ void describe('Test CLI', () => {
 
   void globalThis.itName('Checks are triggered and resolved', () => {
     new Shell(`${apollo} assembly add-from-gff ${P} test_data/checks.gff -f`)
-    let p = new Shell(`${apollo} feature get ${P} -a checks.gff`)
+    let p = new Shell(`${apollo} feature get ${P} -a checks.gff -r chr1`)
     const out = JSON.parse(p.stdout)
 
     p = new Shell(`${apollo} feature check ${P} -a checks.gff`)
@@ -371,7 +358,7 @@ void describe('Test CLI', () => {
 
   void globalThis.itName('FIXME: Checks stay after invalid operation', () => {
     new Shell(`${apollo} assembly add-from-gff ${P} test_data/checks.gff -f`)
-    let p = new Shell(`${apollo} feature get ${P} -a checks.gff`)
+    let p = new Shell(`${apollo} feature get ${P} -a checks.gff -r chr1`)
     const out = JSON.parse(p.stdout)
 
     p = new Shell(`${apollo} feature check ${P} -a checks.gff`)
@@ -522,18 +509,8 @@ void describe('Test CLI', () => {
       `${apollo} assembly add-from-gff ${P} test_data/tiny.fasta.gff3 -a vv1 -f`,
     )
 
-    // Get id of assembly named vv1
-    let p = new Shell(`${apollo} assembly get ${P} -a vv1`)
-    const asm_id = JSON.parse(p.stdout).at(0)._id
-
-    // Get refseqs in assembly vv1
-    p = new Shell(
-      `${apollo} refseq get ${P} | jq '.[] | select(.assembly == "${asm_id}" and .name == "ctgA") | ._id'`,
-    )
-    const refseq = p.stdout.trim()
-
     // Get feature in vv1
-    p = new Shell(`${apollo} feature get ${P} -r ${refseq}`)
+    let p = new Shell(`${apollo} feature get ${P} -a vv1 -r ctgA`)
     const features = JSON.parse(p.stdout)
     assert.ok(features.length > 2)
 
@@ -546,7 +523,7 @@ void describe('Test CLI', () => {
     p = new Shell(`${apollo} feature edit-type ${P} -i ${contig_id} -t region`)
 
     p = new Shell(
-      `${apollo} feature get ${P} -r ${refseq} | jq '.[] | select(._id == "${contig_id}")'`,
+      `${apollo} feature get ${P} -a vv1 -r ctgA | jq '.[] | select(._id == "${contig_id}")'`,
     )
     contig = JSON.parse(p.stdout)
     assert.deepStrictEqual(contig.type, 'region')
@@ -561,18 +538,8 @@ void describe('Test CLI', () => {
       `${apollo} assembly add-from-gff ${P} test_data/tiny.fasta.gff3 -a vv1 -f`,
     )
 
-    // Get id of assembly named vv1
-    let p = new Shell(`${apollo} assembly get ${P} -a vv1`)
-    const asm_id = JSON.parse(p.stdout).at(0)._id
-
-    // Get refseqs in assembly vv1
-    p = new Shell(
-      `${apollo} refseq get ${P} | jq '.[] | select(.assembly == "${asm_id}" and .name == "ctgA") | ._id'`,
-    )
-    const refseq = p.stdout.trim()
-
     // Get feature in vv1
-    p = new Shell(`${apollo} feature get ${P} -r ${refseq}`)
+    let p = new Shell(`${apollo} feature get ${P} -a vv1 -r ctgA`)
     const features = JSON.parse(p.stdout)
     assert.ok(features.length > 2)
 
@@ -586,7 +553,7 @@ void describe('Test CLI', () => {
     new Shell(`${apollo} feature edit-coords ${P} -i ${contig_id} -s 20 -e 100`)
 
     p = new Shell(
-      `${apollo} feature get ${P} -r ${refseq} | jq '.[] | select(._id == "${contig_id}")'`,
+      `${apollo} feature get ${P} -a vv1 -r ctgA | jq '.[] | select(._id == "${contig_id}")'`,
     )
     contig = JSON.parse(p.stdout)
     assert.strictEqual(contig.min, 20 - 1)
@@ -596,7 +563,7 @@ void describe('Test CLI', () => {
       `${apollo} feature edit-coords ${P} -i ${contig_id} -s 1 -e 1`,
     )
     p = new Shell(
-      `${apollo} feature get ${P} -r ${refseq} | jq '.[] | select(._id == "${contig_id}")'`,
+      `${apollo} feature get ${P} -a vv1 -r ctgA | jq '.[] | select(._id == "${contig_id}")'`,
     )
     contig = JSON.parse(p.stdout)
     assert.strictEqual(contig.min, 0)
@@ -641,18 +608,9 @@ void describe('Test CLI', () => {
       `${apollo} assembly add-from-gff ${P} test_data/tiny.fasta.gff3 -a vv1 -f`,
     )
 
-    // Get id of assembly named vv1
-    let p = new Shell(`${apollo} assembly get ${P} -a vv1`)
-    const asm_id = JSON.parse(p.stdout).at(0)._id
-
-    p = new Shell(
-      `${apollo} refseq get ${P} | jq '.[] | select(.assembly == "${asm_id}" and .name == "ctgA") | ._id'`,
-    )
-    const refseq = p.stdout.trim()
-
     // Get feature in vv1
-    p = new Shell(
-      `${apollo} feature get ${P} -r ${refseq} | jq '.[] | select(.type == "contig") | ._id'`,
+    let p = new Shell(
+      `${apollo} feature get ${P} -a vv1 -r ctgA | jq '.[] | select(.type == "contig") | ._id'`,
     )
     const fid = p.stdout.trim()
 
@@ -940,29 +898,29 @@ EOF`,
     )
     let out = JSON.parse(p.stdout)
     const assemblyId = out._id
-    p = new Shell(`${apollo} feature get ${P} -a tiny`)
+    p = new Shell(`${apollo} feature get ${P} -a tiny -r ctgA`)
     assert.deepStrictEqual(p.stdout.trim(), '[]')
     // Can add a feature using flags
     p = new Shell(
       `${apollo} feature add ${P} -a tiny -r ctgA -s 1 -e 10 -t remark`,
     )
     out = JSON.parse(p.stdout)
-    p = new Shell(`${apollo} feature get ${P} -a tiny`)
+    p = new Shell(`${apollo} feature get ${P} -a tiny -r ctgA`)
     out = JSON.parse(p.stdout)
     assert.strictEqual(out.length, 1)
     const refSeqId = out[0].refSeq
-    // Can add a feature using assembly and refSeq ids
+    // Can add a feature using assembly id and refSeq name
     p = new Shell(
       `${apollo} feature add ${P} -a ${assemblyId} -r ${refSeqId} -s 11 -e 20 -t remark`,
     )
-    p = new Shell(`${apollo} feature get ${P} -a ${assemblyId}`)
+    p = new Shell(`${apollo} feature get ${P} -a ${assemblyId} -r ctgA`)
     out = JSON.parse(p.stdout)
     assert.strictEqual(out.length, 2)
     // Can add a feature using JSON arg
     p = new Shell(
       `${apollo} feature add ${P} '{"assembly":"${assemblyId}","refSeq":"${refSeqId}","min":21,"max":30,"type":"remark"}'`,
     )
-    p = new Shell(`${apollo} feature get ${P} -a ${assemblyId}`)
+    p = new Shell(`${apollo} feature get ${P} -a ${assemblyId} -r ctgA`)
     out = JSON.parse(p.stdout)
     assert.strictEqual(out.length, 3)
     // Can add a feature using JSON from stdin
@@ -977,7 +935,7 @@ EOF`,
 }
 EOF`,
     )
-    p = new Shell(`${apollo} feature get ${P} -a ${assemblyId}`)
+    p = new Shell(`${apollo} feature get ${P} -a ${assemblyId} -r ctgA`)
     out = JSON.parse(p.stdout)
     assert.strictEqual(out.length, 4)
     // Can add a feature using JSON from a file
@@ -989,14 +947,14 @@ EOF`,
       `${apollo} feature add ${P} --feature-json-file test_data/tmp.json`,
     )
     fs.unlinkSync('test_data/tmp.json')
-    p = new Shell(`${apollo} feature get ${P} -a ${assemblyId}`)
+    p = new Shell(`${apollo} feature get ${P} -a ${assemblyId} -r ctgA`)
     out = JSON.parse(p.stdout)
     assert.strictEqual(out.length, 5)
     // Can add multiple features using JSON
     p = new Shell(
       `${apollo} feature add ${P} '[{"assembly":"${assemblyId}","refSeq":"${refSeqId}","min":51,"max":60,"type":"remark"},{"assembly":"${assemblyId}","refSeq":"${refSeqId}","min":61,"max":70,"type":"remark"}]'`,
     )
-    p = new Shell(`${apollo} feature get ${P} -a ${assemblyId}`)
+    p = new Shell(`${apollo} feature get ${P} -a ${assemblyId} -r ctgA`)
     out = JSON.parse(p.stdout)
     assert.strictEqual(out.length, 7)
     // Can add a feature with children from JSON
@@ -1120,13 +1078,7 @@ EOF`,
     assert.strictEqual(out.min, 0)
     assert.strictEqual(out.max, 50)
 
-    // RefSeq id does not need assembly
-    p = new Shell(`${apollo} refseq get ${P} -a dest2`)
-    const destRefSeq = JSON.parse(p.stdout).find(
-      (x: any) => x.name === 'ctgA',
-    )._id
-
-    p = new Shell(`${apollo} feature copy ${P} -i ${fid} -r ${destRefSeq} -s 2`)
+    p = new Shell(`${apollo} feature copy ${P} -i ${fid} -r ctgA -a dest2 -s 2`)
     p = new Shell(`${apollo} feature search ${P} -a dest2 -t contig`)
     out = JSON.parse(p.stdout).at(0)
     assert.strictEqual(out.min, 1)
@@ -1152,10 +1104,10 @@ EOF`,
     assert.ok(p.returncode != 0)
     assert.ok(p.stderr.includes('No reference'))
 
-    // Ambiguous refseq
+    // Missing assembly flag
     p = new Shell(`${apollo} feature copy ${P} -i ${fid} -r ctgA -s 1`, false)
     assert.ok(p.returncode != 0)
-    assert.ok(p.stderr.includes('more than one'))
+    assert.ok(p.stderr.includes('Missing required flag'))
   })
 
   void globalThis.itName('Get changes', () => {
@@ -1237,7 +1189,7 @@ EOF`,
     new Shell(
       `${apollo} assembly add-from-gff ${P} test_data/tiny.fasta.gff3 -a v1 -f`,
     )
-    let p = new Shell(`${apollo} feature get ${P} -a v1`)
+    let p = new Shell(`${apollo} feature get ${P} -a v1 -r ctgA`)
     const ff = JSON.parse(p.stdout)
 
     const x1 = ff.at(0)._id
@@ -1459,53 +1411,6 @@ EOF`,
     const p = new Shell(`${apollo} user get --profile foo`, false)
     assert.strictEqual(1, p.returncode)
     assert.ok(p.stderr.includes('Profile "foo" does not exist'))
-  })
-
-  void globalThis.itName('Refname alias configuration', () => {
-    new Shell(
-      `${apollo} assembly add-from-gff ${P} test_data/tiny.fasta.gff3 -a asm1 -f`,
-    )
-
-    let p = new Shell(`${apollo} assembly get ${P} -a asm1`)
-    assert.ok(p.stdout.includes('asm1'))
-    assert.ok(p.stdout.includes('asm2') == false)
-    const asm_id = JSON.parse(p.stdout)[0]._id
-
-    p = new Shell(
-      `${apollo} refseq add-alias ${P} test_data/alias.txt -a asm2`,
-      false,
-    )
-    assert.ok(p.stderr.includes('Assembly asm2 not found'))
-
-    p = new Shell(
-      `${apollo} refseq add-alias ${P} test_data/alias.txt -a asm1`,
-      false,
-    )
-    assert.ok(
-      p.stdout.includes(
-        'Reference name aliases added successfully to assembly asm1',
-      ),
-    )
-
-    p = new Shell(`${apollo} refseq get ${P}`)
-    const refseq = JSON.parse(p.stdout.trim())
-    const vv1ref = refseq.filter((x: any) => x.assembly === asm_id)
-    const refname_aliases: Record<string, string[]> = {}
-    for (const x of vv1ref) {
-      refname_aliases[x.name] = x.aliases
-    }
-    assert.deepStrictEqual(
-      JSON.stringify(refname_aliases.ctgA.sort()),
-      JSON.stringify(['ctga', 'CTGA'].sort()),
-    )
-    assert.deepStrictEqual(
-      JSON.stringify(refname_aliases.ctgB.sort()),
-      JSON.stringify(['ctgb', 'CTGB'].sort()),
-    )
-    assert.deepStrictEqual(
-      JSON.stringify(refname_aliases.ctgC.sort()),
-      JSON.stringify(['ctgc', 'CTGC'].sort()),
-    )
   })
 
   // Works locally but fails on github
@@ -1883,7 +1788,7 @@ EOF`,
       `${apollo} assembly check ${P} -a checkSplice.fasta.gff3 -c TranscriptCheck`,
     )
 
-    let p = new Shell(`${apollo} feature get ${P} -a checkSplice.fasta.gff3`)
+    let p = new Shell(`${apollo} feature get ${P} -a checkSplice.fasta.gff3 -r ctgA`)
     const features = JSON.parse(p.stdout)
 
     const okMrnaId = []

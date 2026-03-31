@@ -216,16 +216,6 @@ export async function addAssemblyFromGff(
 
   const assemblyId = await addAssemblyViaApi(assemblyName, gffPath)
 
-  const refSeqsRes = await fetch(
-    `${API_BASE}/refSeqs?assembly=${encodeURIComponent(assemblyName)}`,
-    { headers },
-  )
-  const refSeqs = (await refSeqsRes.json()) as { _id: string; name: string }[]
-  console.log(
-    `[api] Assembly ${assemblyName}: ${refSeqs.length} refSeqs found`,
-  )
-  const refSeqIdMap = new Map(refSeqs.map((rs) => [rs.name, rs._id]))
-
   const gff3Text = gffPath.endsWith('.gz')
     ? gunzipSync(readFileSync(gffPath)).toString('utf8')
     : readFileSync(gffPath, 'utf8')
@@ -240,11 +230,7 @@ export async function addAssemblyFromGff(
     if (!line.seq_id || !line.type) {
       continue
     }
-    const refSeqId = refSeqIdMap.get(line.seq_id)
-    if (!refSeqId) {
-      continue
-    }
-    const snapshot = gff3LineToSnapshot(line, refSeqId)
+    const snapshot = gff3LineToSnapshot(line, line.seq_id)
     const featRes = await fetch(`${API_BASE}/features`, {
       method: 'POST',
       headers,

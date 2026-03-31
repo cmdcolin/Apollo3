@@ -3,6 +3,7 @@ export interface CheckResultRow {
   name: string
   cause?: string
   featureId: string
+  assembly: string
   refSeq: string
   start: number
   end: number
@@ -12,17 +13,18 @@ export interface CheckResultRow {
 
 export interface CheckResultRepository {
   findByRange(
-    refSeqId: string,
+    assemblyId: string,
+    refSeq: string,
     start: number,
     end: number,
   ): Promise<CheckResultRow[]>
-  findByRefSeqIds(refSeqIds: string[]): Promise<CheckResultRow[]>
+  findByAssembly(assemblyId: string): Promise<CheckResultRow[]>
   findByFeatureId(featureId: string): Promise<CheckResultRow[]>
   findByFeatureIds(featureIds: string[]): Promise<CheckResultRow[]>
   create(row: CheckResultRow): Promise<CheckResultRow>
   createMany(rows: CheckResultRow[]): Promise<CheckResultRow[]>
   deleteByIds(ids: string[]): Promise<number>
-  deleteByRefSeq(refSeqId: string): Promise<number>
+  deleteByAssembly(assemblyId: string): Promise<number>
   deleteByFeatureIdsAndName(
     featureIds: string[],
     checkName: string,

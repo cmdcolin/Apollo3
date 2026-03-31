@@ -12,8 +12,11 @@ function toRow(entity: InferEntity<typeof CheckResultEntity>): CheckResultRow {
     name: entity.name,
     cause: entity.cause ?? undefined,
     featureId: entity.featureId,
-    refSeq:
-      typeof entity.refSeq === 'string' ? entity.refSeq : entity.refSeq._id,
+    assembly:
+      typeof entity.assembly === 'string'
+        ? entity.assembly
+        : entity.assembly._id,
+    refSeq: entity.refSeq,
     start: entity.start,
     end: entity.end,
     ignored: entity.ignored,
@@ -24,11 +27,17 @@ function toRow(entity: InferEntity<typeof CheckResultEntity>): CheckResultRow {
 export class MikroOrmCheckResultRepository implements CheckResultRepository {
   constructor(private readonly em: EntityManager) {}
 
-  async findByRange(refSeqId: string, start: number, end: number) {
+  async findByRange(
+    assemblyId: string,
+    refSeq: string,
+    start: number,
+    end: number,
+  ) {
     const entities = await this.em.find(
       CheckResultEntity,
       {
-        refSeq: refSeqId,
+        assembly: assemblyId,
+        refSeq,
         start: { $lte: end },
         end: { $gte: start },
       },
@@ -43,6 +52,7 @@ export class MikroOrmCheckResultRepository implements CheckResultRepository {
       name: row.name,
       cause: row.cause,
       featureId: row.featureId,
+      assembly: row.assembly,
       refSeq: row.refSeq,
       start: row.start,
       end: row.end,
@@ -63,6 +73,7 @@ export class MikroOrmCheckResultRepository implements CheckResultRepository {
       name: row.name,
       cause: row.cause ?? null,
       featureId: row.featureId,
+      assembly: row.assembly,
       refSeq: row.refSeq,
       start: row.start,
       end: row.end,
@@ -90,9 +101,12 @@ export class MikroOrmCheckResultRepository implements CheckResultRepository {
     return entities.map((x) => toRow(x))
   }
 
-  async findByRefSeqIds(refSeqIds: string[]) {
-    const filter = refSeqIds.length > 0 ? { refSeq: { $in: refSeqIds } } : {}
-    const entities = await this.em.find(CheckResultEntity, filter, {})
+  async findByAssembly(assemblyId: string) {
+    const entities = await this.em.find(
+      CheckResultEntity,
+      { assembly: assemblyId },
+      {},
+    )
     return entities.map((x) => toRow(x))
   }
 
@@ -100,8 +114,8 @@ export class MikroOrmCheckResultRepository implements CheckResultRepository {
     return this.em.nativeDelete(CheckResultEntity, { _id: { $in: ids } })
   }
 
-  async deleteByRefSeq(refSeqId: string) {
-    return this.em.nativeDelete(CheckResultEntity, { refSeq: refSeqId })
+  async deleteByAssembly(assemblyId: string) {
+    return this.em.nativeDelete(CheckResultEntity, { assembly: assemblyId })
   }
 
   async deleteByFeatureIdsAndName(featureIds: string[], checkName: string) {

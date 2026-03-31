@@ -107,56 +107,6 @@ export async function getAssembly(
   throw new Error(`Assembly "${assemblyNameOrId}" not found`)
 }
 
-export async function getRefseqId(
-  address: string,
-  accessToken: string,
-  refseqNameOrId?: string,
-  inAssemblyNameOrId?: string,
-): Promise<string[]> {
-  if (refseqNameOrId === undefined && inAssemblyNameOrId === undefined) {
-    throw new Error('Please provide refseq and/or assembly')
-  }
-  inAssemblyNameOrId ??= ''
-  let assemblyId: string[] = []
-  if (inAssemblyNameOrId !== '') {
-    assemblyId = await convertAssemblyNameToId(address, accessToken, [
-      inAssemblyNameOrId,
-    ])
-    if (assemblyId.length !== 1) {
-      throw new Error(
-        `Assembly name or assembly id returned ${assemblyId.length} assemblies instead of just one`,
-      )
-    }
-  }
-  const res: Response = await queryApollo(address, accessToken, 'refSeqs')
-  const refSeqs = (await res.json()) as object[]
-  const refseqIds: string[] | PromiseLike<string[]> = []
-  const nAssemblies = new Set<string>()
-  for (const x of refSeqs) {
-    const aid = x['assembly' as keyof typeof x]
-    const rid = x['_id' as keyof typeof x]
-    const rname = x['name' as keyof typeof x]
-    if (
-      refseqNameOrId === rid ||
-      refseqNameOrId === rname ||
-      refseqNameOrId === undefined
-    ) {
-      if (inAssemblyNameOrId === '' || assemblyId.includes(aid)) {
-        refseqIds.push(rid)
-        nAssemblies.add(aid)
-      } else {
-        //
-      }
-    }
-    if (nAssemblies.size > 1) {
-      throw new Error(
-        `Sequence name "${refseqNameOrId}" found in more than one assembly`,
-      )
-    }
-  }
-  return refseqIds
-}
-
 async function checkNameToIdDict(
   address: string,
   accessToken: string,
@@ -241,20 +191,6 @@ export async function getFeatureById(
   }
   const response = await fetch(url, auth)
   return response
-}
-
-export async function getAssemblyFromRefseq(
-  address: string,
-  accessToken: string,
-  refSeq: string,
-): Promise<string> {
-  const refSeqs: Response = await queryApollo(address, accessToken, 'refSeqs')
-  const refJson = filterJsonList(
-    (await refSeqs.json()) as object[],
-    [refSeq],
-    '_id',
-  )
-  return refJson[0]['assembly' as keyof (typeof refJson)[0]]
 }
 
 export async function queryApollo(

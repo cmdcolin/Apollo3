@@ -37,29 +37,28 @@ To add multiple features, features with more details, or features with children,
     {
       description: 'Add a single feature from inline JSON',
       command:
-        '<%= config.bin %> <%= command.id %> \'{"assembly":"<assemblyNameOrId>","refseq":"<refSeqNameOrId>","min":1,"max":100,"type":"<featureType>"}\'',
+        '<%= config.bin %> <%= command.id %> \'{"assembly":"<assemblyName>","refSeq":"<refSeqName>","min":1,"max":100,"type":"<featureType>"}\'',
     },
     {
       description: 'Add mutilple features from stdin JSON',
       command:
-        'echo \'[{"assembly":"<assemblyNameOrId>","refseq":"<refSeqNameOrId>","min":1,"max":100,"type":"<featureType>"},{"assembly":"<assemblyNameOrId>","refseq":"<refSeqNameOrId>","min":101,"max":200,"type":"<featureType>"}]\' | <%= config.bin %> <%= command.id %>',
+        'echo \'[{"assembly":"<assemblyName>","refSeq":"<refSeqName>","min":1,"max":100,"type":"<featureType>"},{"assembly":"<assemblyName>","refSeq":"<refSeqName>","min":101,"max":200,"type":"<featureType>"}]\' | <%= config.bin %> <%= command.id %>',
     },
     {
       description: 'Add a feature with children from inline JSON',
       command:
-        '<%= config.bin %> <%= command.id %> \'{"assembly":"<assemblyNameOrId>","refseq":"<refSeqNameOrId>","min":1,"max":100,"type":"<featureType>","children":[{"min":1,"max":50,"type":"<featureType>"}]}\'',
+        '<%= config.bin %> <%= command.id %> \'{"assembly":"<assemblyName>","refSeq":"<refSeqName>","min":1,"max":100,"type":"<featureType>","children":[{"min":1,"max":50,"type":"<featureType>"}]}\'',
     },
   ]
 
   static flags = {
     assembly: Flags.string({
       char: 'a',
-      description:
-        'Name or ID of target assembly. Not required if refseq is unique in the database',
+      description: 'Name or ID of target assembly',
     }),
     refSeq: Flags.string({
       char: 'r',
-      description: 'Name or ID of target reference sequence',
+      description: 'Name of target reference sequence',
       dependsOn: ['min', 'max', 'type'],
       exclusive: ['feature-json-file'],
     }),
@@ -135,6 +134,9 @@ To add multiple features, features with more details, or features with children,
     ) {
       this.error('Must provide all of: --refSeq, --min, --max, and --type')
     }
+    if (!assembly) {
+      this.error('--assembly is required when adding a feature via flags')
+    }
     await this.addFeatureFromFlags(refSeq, min, max, type, assembly)
   }
 
@@ -154,40 +156,36 @@ To add multiple features, features with more details, or features with children,
       if (!firstFeature) {
         throw new Error('Feature array is empty')
       }
-      const { assembly, refSeq } = firstFeature
+      const { assembly } = firstFeature
+      if (!assembly) {
+        throw new Error('Feature JSON must include "assembly"')
+      }
       if (!featureJSON.every((feature) => feature.assembly === assembly)) {
         throw new Error(
           'Cannot add features to multiple assemblies at the same time',
         )
       }
-      const [assemblyId] = await this.getAssemblyAndRefSeqIds(refSeq, assembly)
+      const assemblyDocument = await this.getAssembly(assembly)
       for (const singleFeatureJSON of featureJSON) {
         const ids: string[] = []
-        const { assembly: _assembly, refSeq: featureRefSeq, ...rest } = singleFeatureJSON
-        const refSeqDocument = await this.getRefSeq(featureRefSeq)
-        const addedFeature = this.makeFeatureSnapshot(
-          { assembly: assemblyId, refSeq: refSeqDocument._id, ...rest },
-          ids,
-        )
-        await this.submitFeature(addedFeature, assemblyId)
+        const { assembly: _assembly, ...rest } = singleFeatureJSON
+        const addedFeature = this.makeFeatureSnapshot(rest, ids)
+        await this.submitFeature(addedFeature, assemblyDocument._id)
       }
       return
     }
-    const { assembly, refSeq, ...rest } = featureJSON
-    const [assemblyId, refSeqId] = await this.getAssemblyAndRefSeqIds(
-      refSeq,
-      assembly,
-    )
+    const { assembly, ...rest } = featureJSON
+    if (!assembly) {
+      throw new Error('Feature JSON must include "assembly"')
+    }
+    const assemblyDocument = await this.getAssembly(assembly)
     const ids: string[] = []
-    const addedFeature = this.makeFeatureSnapshot(
-      { assembly: assemblyId, refSeq: refSeqId, ...rest },
-      ids,
-    )
-    return this.submitFeature(addedFeature, assemblyId)
+    const addedFeature = this.makeFeatureSnapshot(rest, ids)
+    return this.submitFeature(addedFeature, assemblyDocument._id)
   }
 
   makeFeatureSnapshot(
-    details: FeatureJSON,
+    details: BaseFeatureJSON & { refSeq?: string },
     ids: string[],
   ): AnnotationFeatureSnapshot {
     const { children, ...rest } = details
@@ -197,7 +195,10 @@ To add multiple features, features with more details, or features with children,
       childrenDetails = {}
       const { refSeq } = rest
       for (const child of children) {
-        const childDetails = this.makeFeatureSnapshot({ refSeq, ...child }, ids)
+        const childDetails = this.makeFeatureSnapshot(
+          { refSeq, ...child },
+          ids,
+        )
         childrenDetails[childDetails._id] = childDetails
       }
     }
@@ -211,53 +212,19 @@ To add multiple features, features with more details, or features with children,
   }
 
   async addFeatureFromFlags(
-    refSeqNameOrId: string,
+    refSeqName: string,
     min: number,
     max: number,
     type: string,
-    assemblyNameOrId?: string,
+    assemblyNameOrId: string,
   ) {
-    const [assemblyId, refSeqId] = await this.getAssemblyAndRefSeqIds(
-      refSeqNameOrId,
-      assemblyNameOrId,
-    )
+    const assemblyDocument = await this.getAssembly(assemblyNameOrId)
     const ids: string[] = []
     const addedFeature = this.makeFeatureSnapshot(
-      { refSeq: refSeqId, min: min - 1, max, type },
+      { refSeq: refSeqName, min: min - 1, max, type },
       ids,
     )
-    return this.submitFeature(addedFeature, assemblyId)
-  }
-
-  async getAssemblyAndRefSeqIds(
-    refSeqNameOrId: string,
-    assemblyNameOrId?: string,
-  ): Promise<[string, string]> {
-    const refSeqIsObjectId = ObjectId.isValid(refSeqNameOrId)
-    const assemblyIsObjectId = assemblyNameOrId
-      ? ObjectId.isValid(assemblyNameOrId)
-      : false
-    if (assemblyNameOrId && assemblyIsObjectId && refSeqIsObjectId) {
-      return [assemblyNameOrId, refSeqNameOrId]
-    }
-    if (refSeqIsObjectId) {
-      if (assemblyNameOrId) {
-        this.warn('Ignoring provided --assembly because it is not an ID')
-      }
-      const refSeqDocument = await this.getRefSeq(refSeqNameOrId)
-      return [refSeqDocument.assembly, refSeqNameOrId]
-    }
-    if (!assemblyNameOrId) {
-      this.error(
-        `If provided refSeq (${refSeqNameOrId}) is not an ID, assembly must also be provided`,
-      )
-    }
-    const assemblyDocument = await this.getAssembly(assemblyNameOrId)
-    const refSeqDocument = await this.getRefSeq(
-      refSeqNameOrId,
-      assemblyDocument._id,
-    )
-    return [assemblyDocument._id, refSeqDocument._id]
+    return this.submitFeature(addedFeature, assemblyDocument._id)
   }
 
   async getAssembly(
@@ -302,62 +269,10 @@ To add multiple features, features with more details, or features with children,
     throw new Error(`Could not find assembly: "${assemblyNameOrId}"`)
   }
 
-  async getRefSeq(
-    refSeqNameOrId: string,
-    assemblyId?: string,
-  ): Promise<{
-    _id: string
-    name: string
-    assembly: string
-    aliases?: string[]
-  }> {
-    if (ObjectId.isValid(refSeqNameOrId)) {
-      const response = await this.fetch(`refSeqs/${refSeqNameOrId}`)
-      if (!response.ok) {
-        const errorMessage = await createFetchErrorMessage(
-          response,
-          `Could not find refSeq: "${refSeqNameOrId}"`,
-        )
-        this.error(errorMessage)
-      }
-      return response.json() as Promise<{
-        _id: string
-        name: string
-        assembly: string
-        aliases?: string[]
-      }>
-    }
-    let endpoint = 'refSeqs'
-    if (assemblyId) {
-      const searchParams = new URLSearchParams({ assembly: assemblyId })
-      endpoint = `${endpoint}?${searchParams.toString()}`
-    }
-    const response = await this.fetch(endpoint)
-    if (!response.ok) {
-      const errorMessage = await createFetchErrorMessage(
-        response,
-        `Could not find refSeq: "${refSeqNameOrId}"`,
-      )
-      this.error(errorMessage)
-    }
-    const refSeqs = (await response.json()) as {
-      _id: string
-      name: string
-      assembly: string
-      aliases?: string[]
-    }[]
-    for (const refSeq of refSeqs) {
-      if (
-        refSeq.name === refSeqNameOrId ||
-        refSeq.aliases?.includes(refSeqNameOrId)
-      ) {
-        return refSeq
-      }
-    }
-    throw new Error(`Could not find refSeq: "${refSeqNameOrId}"`)
-  }
-
-  async submitFeature(addedFeature: AnnotationFeatureSnapshot, assemblyId: string) {
+  async submitFeature(
+    addedFeature: AnnotationFeatureSnapshot,
+    assemblyId: string,
+  ) {
     const options = {
       method: 'POST',
       body: JSON.stringify({ addedFeature, assemblyId }),

@@ -136,23 +136,6 @@ refSeqs are derived from the GFF3 seq_ids and coordinates.`
     const assembly = (await asmRes.json()) as { _id: string; name: string }
     this.logToStderr(`Assembly "${assembly.name}" created (${assembly._id})`)
 
-    const refSeqsUrl = new URL(
-      `${access.address}/refSeqs?assembly=${assembly._id}`,
-    )
-    const refSeqsRes = await fetch(refSeqsUrl, {
-      headers: { Authorization: `Bearer ${access.accessToken}` },
-      dispatcher: new Agent({ headersTimeout: 60 * 60 * 1000 }),
-    })
-    if (!refSeqsRes.ok) {
-      const errorMessage = await createFetchErrorMessage(
-        refSeqsRes,
-        'refSeqs fetch failed',
-      )
-      this.error(errorMessage)
-    }
-    const refSeqs = (await refSeqsRes.json()) as { _id: string; name: string }[]
-    const refSeqIdMap = new Map(refSeqs.map((rs) => [rs.name, rs._id]))
-
     const snapshots: FeatureSnapshot[] = []
     for (const featureGroup of parsedFeatures) {
       if (!Array.isArray(featureGroup) || featureGroup.length === 0) {
@@ -162,11 +145,7 @@ refSeqs are derived from the GFF3 seq_ids and coordinates.`
       if (!line.seq_id || !line.type) {
         continue
       }
-      const refSeqId = refSeqIdMap.get(line.seq_id)
-      if (!refSeqId) {
-        continue
-      }
-      snapshots.push(gff3LineToSnapshot(line, refSeqId))
+      snapshots.push(gff3LineToSnapshot(line, line.seq_id))
     }
 
     if (snapshots.length === 0) {

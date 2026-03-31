@@ -13,7 +13,8 @@ import {
 interface RawFeatureRow {
   _id: string
   parent__id: string | null
-  ref_seq__id: string
+  assembly__id: string
+  ref_seq: string
   type: string
   min: number
   max: number
@@ -29,7 +30,8 @@ function rawToRow(raw: RawFeatureRow): FeatureRow {
   return {
     _id: raw._id,
     parentId: raw.parent__id ?? undefined,
-    refSeq: raw.ref_seq__id,
+    assembly: raw.assembly__id,
+    refSeq: raw.ref_seq,
     type: raw.type,
     min: raw.min,
     max: raw.max,
@@ -107,17 +109,12 @@ export class MikroOrmFeatureRepository extends BaseFeatureRepository {
 
   // Raw SQL required: LIKE on computed expression (type || attributes) and
   // recursive CTE to walk from matching features up to their root parents
-  async searchText(refSeqIds: string[], query: string) {
-    if (refSeqIds.length === 0) {
-      return []
-    }
+  async searchText(assemblyId: string, query: string) {
     const queryTokens = tokenize(query).filter((t) => !STOP_WORDS.has(t))
     if (queryTokens.length === 0) {
       return []
     }
 
-    // Use SQL LIKE to pre-filter candidates, then precise phrase matching in JS
-    const refSeqPh = placeholders(refSeqIds.length)
     const likeConditions = queryTokens.map(
       () =>
         `(LOWER(type) || ' ' || COALESCE(LOWER(CAST(attributes AS TEXT)), '')) LIKE ?`,
@@ -126,9 +123,9 @@ export class MikroOrmFeatureRepository extends BaseFeatureRepository {
 
     const candidateRows = (await this.sql(
       `SELECT * FROM feature
-       WHERE ref_seq__id IN (${refSeqPh})
+       WHERE assembly__id = ?
        AND ${likeConditions.join(' AND ')}`,
-      [...refSeqIds, ...likeParams],
+      [assemblyId, ...likeParams],
     )) as RawFeatureRow[]
 
     // Precise phrase matching on the small candidate set
@@ -159,7 +156,7 @@ export class MikroOrmFeatureRepository extends BaseFeatureRepository {
 
   // Raw SQL required: LIKE on JSON attributes column for substring matching,
   // then recursive CTE to walk from matches up to root parents
-  async findByIndexedId(id: string, refSeqIds?: string[]) {
+  async findByIndexedId(id: string, assemblyId?: string) {
     const escapedId = id
       .replaceAll('%', String.raw`\%`)
       .replaceAll('_', String.raw`\_`)
@@ -167,11 +164,9 @@ export class MikroOrmFeatureRepository extends BaseFeatureRepository {
 
     let matchSql = `SELECT _id FROM feature WHERE CAST(attributes AS TEXT) LIKE ?`
     const params: unknown[] = [likePattern]
-    if (refSeqIds && refSeqIds.length > 0) {
-      matchSql += ` AND ref_seq__id IN (${placeholders(refSeqIds.length)})`
-      for (const rsId of refSeqIds) {
-        params.push(rsId)
-      }
+    if (assemblyId) {
+      matchSql += ` AND assembly__id = ?`
+      params.push(assemblyId)
     }
 
     const matchRows = (await this.sql(matchSql, params)) as { _id: string }[]

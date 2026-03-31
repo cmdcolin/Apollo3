@@ -1,6 +1,6 @@
 import { defineEntity, p } from '@mikro-orm/core'
 
-import { RefSeqEntity } from './RefSeqEntity.js'
+import { AssemblyEntity } from './AssemblyEntity.js'
 
 export const FeatureEntity = defineEntity({
   name: 'FeatureEntity',
@@ -8,7 +8,8 @@ export const FeatureEntity = defineEntity({
   properties: {
     _id: p.string().primary(),
     parent: () => p.manyToOne(FeatureEntity).nullable().deleteRule('cascade'),
-    refSeq: () => p.manyToOne(RefSeqEntity).deleteRule('cascade'),
+    assembly: () => p.manyToOne(AssemblyEntity).deleteRule('cascade'),
+    refSeq: p.string(),
     type: p.string(),
     min: p.integer(),
     max: p.integer(),
@@ -23,7 +24,8 @@ export const FeatureEntity = defineEntity({
       .onUpdate(() => new Date()),
   },
   indexes: [
-    { properties: ['refSeq', 'min', 'max'] },
+    { properties: ['assembly', 'refSeq', 'min', 'max'] },
+    { properties: ['refSeq'] },
     { properties: ['parent'] },
   ],
 })

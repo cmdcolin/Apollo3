@@ -10,7 +10,6 @@ import type { MikroORM } from '@mikro-orm/core'
 
 import { createTestORM } from '../test-utils.js'
 import { MikroOrmAssemblyRepository } from './MikroOrmAssemblyRepository.js'
-import { MikroOrmRefSeqRepository } from './MikroOrmRefSeqRepository.js'
 import { MongoFeatureRepository } from './MongoFeatureRepository.js'
 
 let orm: MikroORM
@@ -28,32 +27,21 @@ beforeEach(async () => {
 })
 
 describe('MongoFeatureRepository', () => {
-  async function setupRefSeq(em: ReturnType<typeof orm.em.fork>) {
+  async function setupAssembly(em: ReturnType<typeof orm.em.fork>) {
     await new MikroOrmAssemblyRepository(em).create({
       _id: 'asm-1',
       name: 'volvox',
-    })
-    await new MikroOrmRefSeqRepository(em).create({
-      _id: 'rs-1',
-      assembly: 'asm-1',
-      name: 'ctgA',
-      length: 50000,
-    })
-    await new MikroOrmRefSeqRepository(em).create({
-      _id: 'rs-2',
-      assembly: 'asm-1',
-      name: 'ctgB',
-      length: 30000,
     })
   }
 
   it('should create and find a feature', async () => {
     const em = orm.em.fork()
-    await setupRefSeq(em)
+    await setupAssembly(em)
     const repo = new MongoFeatureRepository(em)
 
     const created = await repo.create({
       _id: 'feat-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -72,7 +60,7 @@ describe('MongoFeatureRepository', () => {
 
   it('should return undefined for a missing feature', async () => {
     const em = orm.em.fork()
-    await setupRefSeq(em)
+    await setupAssembly(em)
     const repo = new MongoFeatureRepository(em)
 
     expect(await repo.findById('no-such-id')).toBeUndefined()
@@ -80,11 +68,12 @@ describe('MongoFeatureRepository', () => {
 
   it('findDescendants returns all children and grandchildren', async () => {
     const em = orm.em.fork()
-    await setupRefSeq(em)
+    await setupAssembly(em)
     const repo = new MongoFeatureRepository(em)
 
     await repo.create({
       _id: 'gene-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -92,6 +81,7 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'mrna-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'mRNA',
       min: 100,
@@ -100,6 +90,7 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'exon-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'exon',
       min: 100,
@@ -108,6 +99,7 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'exon-2',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'exon',
       min: 300,
@@ -117,6 +109,7 @@ describe('MongoFeatureRepository', () => {
     // Sibling gene — should NOT appear in descendants of gene-1
     await repo.create({
       _id: 'gene-2',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 600,
@@ -135,11 +128,12 @@ describe('MongoFeatureRepository', () => {
 
   it('findDescendants returns empty array for a leaf feature', async () => {
     const em = orm.em.fork()
-    await setupRefSeq(em)
+    await setupAssembly(em)
     const repo = new MongoFeatureRepository(em)
 
     await repo.create({
       _id: 'gene-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -151,11 +145,12 @@ describe('MongoFeatureRepository', () => {
 
   it('findDescendantsOfMany returns descendants for multiple roots', async () => {
     const em = orm.em.fork()
-    await setupRefSeq(em)
+    await setupAssembly(em)
     const repo = new MongoFeatureRepository(em)
 
     await repo.create({
       _id: 'gene-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -163,6 +158,7 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'mrna-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'mRNA',
       min: 100,
@@ -171,6 +167,7 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'gene-2',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 600,
@@ -178,6 +175,7 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'mrna-2',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'mRNA',
       min: 600,
@@ -194,7 +192,7 @@ describe('MongoFeatureRepository', () => {
 
   it('findDescendantsOfMany returns empty for empty input', async () => {
     const em = orm.em.fork()
-    await setupRefSeq(em)
+    await setupAssembly(em)
     const repo = new MongoFeatureRepository(em)
 
     expect(await repo.findDescendantsOfMany([])).toHaveLength(0)
@@ -202,11 +200,12 @@ describe('MongoFeatureRepository', () => {
 
   it('deleteDescendants removes all children without touching the root', async () => {
     const em = orm.em.fork()
-    await setupRefSeq(em)
+    await setupAssembly(em)
     const repo = new MongoFeatureRepository(em)
 
     await repo.create({
       _id: 'gene-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -214,6 +213,7 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'mrna-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'mRNA',
       min: 100,
@@ -222,6 +222,7 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'exon-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'exon',
       min: 100,
@@ -241,11 +242,12 @@ describe('MongoFeatureRepository', () => {
 
   it('deleteDescendants returns 0 for a leaf feature', async () => {
     const em = orm.em.fork()
-    await setupRefSeq(em)
+    await setupAssembly(em)
     const repo = new MongoFeatureRepository(em)
 
     await repo.create({
       _id: 'gene-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -258,11 +260,12 @@ describe('MongoFeatureRepository', () => {
 
   it('findRootParent returns the root for a deeply nested feature', async () => {
     const em = orm.em.fork()
-    await setupRefSeq(em)
+    await setupAssembly(em)
     const repo = new MongoFeatureRepository(em)
 
     await repo.create({
       _id: 'gene-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -270,6 +273,7 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'mrna-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'mRNA',
       min: 100,
@@ -278,6 +282,7 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'exon-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'exon',
       min: 100,
@@ -292,11 +297,12 @@ describe('MongoFeatureRepository', () => {
 
   it('findRootParent returns the feature itself when it has no parent', async () => {
     const em = orm.em.fork()
-    await setupRefSeq(em)
+    await setupAssembly(em)
     const repo = new MongoFeatureRepository(em)
 
     await repo.create({
       _id: 'gene-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -310,11 +316,12 @@ describe('MongoFeatureRepository', () => {
 
   it('findRootParentsOfMany resolves roots for multiple features', async () => {
     const em = orm.em.fork()
-    await setupRefSeq(em)
+    await setupAssembly(em)
     const repo = new MongoFeatureRepository(em)
 
     await repo.create({
       _id: 'gene-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -322,6 +329,7 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'mrna-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'mRNA',
       min: 100,
@@ -330,6 +338,7 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'exon-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'exon',
       min: 100,
@@ -339,6 +348,7 @@ describe('MongoFeatureRepository', () => {
 
     await repo.create({
       _id: 'gene-2',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 600,
@@ -346,6 +356,7 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'mrna-2',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'mRNA',
       min: 600,
@@ -363,7 +374,7 @@ describe('MongoFeatureRepository', () => {
 
   it('findRootParentsOfMany returns empty for empty input', async () => {
     const em = orm.em.fork()
-    await setupRefSeq(em)
+    await setupAssembly(em)
     const repo = new MongoFeatureRepository(em)
 
     expect(await repo.findRootParentsOfMany([])).toHaveLength(0)
@@ -371,11 +382,12 @@ describe('MongoFeatureRepository', () => {
 
   it('findRootParentsOfMany deduplicates when features share a root', async () => {
     const em = orm.em.fork()
-    await setupRefSeq(em)
+    await setupAssembly(em)
     const repo = new MongoFeatureRepository(em)
 
     await repo.create({
       _id: 'gene-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -383,6 +395,7 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'mrna-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'mRNA',
       min: 100,
@@ -391,6 +404,7 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'exon-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'exon',
       min: 100,
@@ -399,6 +413,7 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'exon-2',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'exon',
       min: 350,
@@ -414,11 +429,12 @@ describe('MongoFeatureRepository', () => {
 
   it('searchText returns root features matching type', async () => {
     const em = orm.em.fork()
-    await setupRefSeq(em)
+    await setupAssembly(em)
     const repo = new MongoFeatureRepository(em)
 
     await repo.create({
       _id: 'gene-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -426,6 +442,7 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'mrna-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'mRNA',
       min: 100,
@@ -433,25 +450,27 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'exon-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'exon',
       min: 100,
       max: 300,
     })
 
-    expect(await repo.searchText(['rs-1'], 'gene')).toHaveLength(1)
-    expect(await repo.searchText(['rs-1'], 'mRNA')).toHaveLength(1)
-    expect(await repo.searchText(['rs-1'], 'exon')).toHaveLength(1)
-    expect(await repo.searchText(['rs-1'], 'nonexistent')).toHaveLength(0)
+    expect(await repo.searchText('asm-1', 'gene')).toHaveLength(1)
+    expect(await repo.searchText('asm-1', 'mRNA')).toHaveLength(1)
+    expect(await repo.searchText('asm-1', 'exon')).toHaveLength(1)
+    expect(await repo.searchText('asm-1', 'nonexistent')).toHaveLength(0)
   })
 
   it('searchText finds child attributes and returns root', async () => {
     const em = orm.em.fork()
-    await setupRefSeq(em)
+    await setupAssembly(em)
     const repo = new MongoFeatureRepository(em)
 
     await repo.create({
       _id: 'gene-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -460,6 +479,7 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'mrna-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'mRNA',
       min: 100,
@@ -469,6 +489,7 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'cds-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'CDS',
       min: 100,
@@ -478,18 +499,19 @@ describe('MongoFeatureRepository', () => {
     })
 
     // Searching child attribute value returns root
-    const results = await repo.searchText(['rs-1'], 'special')
+    const results = await repo.searchText('asm-1', 'special')
     expect(results).toHaveLength(1)
     expect(results[0]._id).toBe('gene-1')
   })
 
-  it('searchText only returns features in the requested refSeqs', async () => {
+  it('searchText returns all matching features in the assembly', async () => {
     const em = orm.em.fork()
-    await setupRefSeq(em)
+    await setupAssembly(em)
     const repo = new MongoFeatureRepository(em)
 
     await repo.create({
       _id: 'f1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -497,40 +519,25 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'f2',
+      assembly: 'asm-1',
       refSeq: 'rs-2',
       type: 'gene',
       min: 100,
       max: 500,
     })
 
-    expect(await repo.searchText(['rs-1'], 'gene')).toHaveLength(1)
-    expect(await repo.searchText(['rs-2'], 'gene')).toHaveLength(1)
-    expect(await repo.searchText(['rs-1', 'rs-2'], 'gene')).toHaveLength(2)
-  })
-
-  it('searchText returns empty for empty refSeqIds', async () => {
-    const em = orm.em.fork()
-    await setupRefSeq(em)
-    const repo = new MongoFeatureRepository(em)
-
-    await repo.create({
-      _id: 'gene-1',
-      refSeq: 'rs-1',
-      type: 'gene',
-      min: 100,
-      max: 500,
-    })
-
-    expect(await repo.searchText([], 'gene')).toHaveLength(0)
+    expect(await repo.searchText('asm-1', 'gene')).toHaveLength(2)
+    expect(await repo.searchText('asm-nonexistent', 'gene')).toHaveLength(0)
   })
 
   it('searchText ignores stop words', async () => {
     const em = orm.em.fork()
-    await setupRefSeq(em)
+    await setupAssembly(em)
     const repo = new MongoFeatureRepository(em)
 
     await repo.create({
       _id: 'gene-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -538,17 +545,18 @@ describe('MongoFeatureRepository', () => {
     })
 
     // "the" is a stop word — tokenize filters it, so query becomes empty → no results
-    expect(await repo.searchText(['rs-1'], 'the')).toHaveLength(0)
-    expect(await repo.searchText(['rs-1'], 'in')).toHaveLength(0)
+    expect(await repo.searchText('asm-1', 'the')).toHaveLength(0)
+    expect(await repo.searchText('asm-1', 'in')).toHaveLength(0)
   })
 
   it('findByIndexedId finds features by attribute value and returns root', async () => {
     const em = orm.em.fork()
-    await setupRefSeq(em)
+    await setupAssembly(em)
     const repo = new MongoFeatureRepository(em)
 
     await repo.create({
       _id: 'gene-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -557,6 +565,7 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'mrna-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'mRNA',
       min: 100,
@@ -566,6 +575,7 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'cds-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'CDS',
       min: 100,
@@ -575,23 +585,24 @@ describe('MongoFeatureRepository', () => {
     })
 
     // Child attribute ID returns root
-    const childResult = await repo.findByIndexedId('cds-1-id', ['rs-1'])
+    const childResult = await repo.findByIndexedId('cds-1-id', 'asm-1')
     expect(childResult).toHaveLength(1)
     expect(childResult[0]._id).toBe('gene-1')
 
     // Root ID also returns root
-    const rootResult = await repo.findByIndexedId('gene-1-id', ['rs-1'])
+    const rootResult = await repo.findByIndexedId('gene-1-id', 'asm-1')
     expect(rootResult).toHaveLength(1)
     expect(rootResult[0]._id).toBe('gene-1')
   })
 
   it('findByIndexedId returns empty for non-existent id', async () => {
     const em = orm.em.fork()
-    await setupRefSeq(em)
+    await setupAssembly(em)
     const repo = new MongoFeatureRepository(em)
 
     await repo.create({
       _id: 'gene-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -599,16 +610,17 @@ describe('MongoFeatureRepository', () => {
       attributes: { ID: ['gene-1-id'] },
     })
 
-    expect(await repo.findByIndexedId('nonexistent', ['rs-1'])).toHaveLength(0)
+    expect(await repo.findByIndexedId('nonexistent', 'asm-1')).toHaveLength(0)
   })
 
-  it('findByIndexedId without refSeqIds searches all features', async () => {
+  it('findByIndexedId without assemblyId searches all features', async () => {
     const em = orm.em.fork()
-    await setupRefSeq(em)
+    await setupAssembly(em)
     const repo = new MongoFeatureRepository(em)
 
     await repo.create({
       _id: 'gene-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -617,6 +629,7 @@ describe('MongoFeatureRepository', () => {
     })
     await repo.create({
       _id: 'gene-2',
+      assembly: 'asm-1',
       refSeq: 'rs-2',
       type: 'gene',
       min: 100,
@@ -624,7 +637,7 @@ describe('MongoFeatureRepository', () => {
       attributes: { ID: ['gene-2-id'] },
     })
 
-    // No refSeqIds → searches all
+    // No assemblyId → searches all
     const result = await repo.findByIndexedId('gene-2-id')
     expect(result).toHaveLength(1)
     expect(result[0]._id).toBe('gene-2')

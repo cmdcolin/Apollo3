@@ -183,6 +183,7 @@ interface FlatFeature {
   _id: string
   parentId: string | undefined
   refSeq: string
+  assembly: string
   type: string
   min: number
   max: number
@@ -198,6 +199,7 @@ interface FlatFeature {
 function flattenFeature(
   doc: MongoFeatureDoc,
   refSeq: string,
+  assembly: string,
   parentId: string | undefined,
   createdAt: Date | undefined,
   updatedAt: Date | undefined,
@@ -209,6 +211,7 @@ function flattenFeature(
     _id: id,
     parentId,
     refSeq,
+    assembly,
     type: doc.type,
     min: doc.min,
     max: doc.max,
@@ -246,6 +249,7 @@ function flattenFeature(
       const childFeatures = flattenFeature(
         child,
         refSeq,
+        assembly,
         id,
         createdAt,
         updatedAt,
@@ -374,27 +378,20 @@ async function migrate() {
   em.clear()
   console.log(`  ${assemblies.length} assemblies migrated`)
 
-  // --- RefSeqs ---
-  console.log('Migrating refSeqs...')
+  // --- RefSeqs (read for name mapping only, no table created) ---
+  console.log('Reading refSeqs for name mapping...')
   const refSeqs = await mongoDb
     .collection<MongoRefSeqDoc>('refseqs')
     .find()
     .toArray()
+  const refSeqIdToName = new Map<string, string>()
+  const refSeqIdToAssembly = new Map<string, string>()
   for (const r of refSeqs) {
-    em.create('RefSeqEntity', {
-      _id: objectIdToString(r._id),
-      assembly: objectIdToString(r.assembly),
-      name: r.name,
-      description: r.description,
-      aliases: r.aliases,
-      length: r.length,
-      status: r.status,
-      user: r.user,
-    })
+    const id = objectIdToString(r._id)
+    refSeqIdToName.set(id, r.name)
+    refSeqIdToAssembly.set(id, objectIdToString(r.assembly))
   }
-  await em.flush()
-  em.clear()
-  console.log(`  ${refSeqs.length} refSeqs migrated`)
+  console.log(`  ${refSeqs.length} refSeqs read for mapping`)
 
   // RefSeqChunk storage has been removed. Assemblies that used chunked
   // sequence storage will need their FASTA re-imported after migration.
@@ -415,10 +412,16 @@ async function migrate() {
   let flatFeatures: FlatFeature[] = []
 
   for await (const doc of featuresCursor) {
-    const refSeq = objectIdToString(doc.refSeq)
+    const refSeqId = objectIdToString(doc.refSeq)
+    const refSeq = refSeqIdToName.get(refSeqId) ?? refSeqId
+    const assembly = refSeqIdToAssembly.get(refSeqId) ?? ''
+    if (!refSeqIdToName.has(refSeqId)) {
+      console.warn(`  Warning: refSeq ${refSeqId} not found in mapping`)
+    }
     const flattened = flattenFeature(
       doc,
       refSeq,
+      assembly,
       undefined,
       doc.createdAt,
       doc.updatedAt,
@@ -433,6 +436,7 @@ async function migrate() {
           _id: f._id,
           parent: f.parentId ?? null,
           refSeq: f.refSeq,
+          assembly: f.assembly,
           type: f.type,
           min: f.min,
           max: f.max,
@@ -458,6 +462,7 @@ async function migrate() {
         _id: f._id,
         parent: f.parentId ?? null,
         refSeq: f.refSeq,
+        assembly: f.assembly,
         type: f.type,
         min: f.min,
         max: f.max,
@@ -483,12 +488,16 @@ async function migrate() {
     .find()
     .toArray()
   for (const cr of checkResults) {
+    const crRefSeqId = objectIdToString(cr.refSeq)
+    const crRefSeqName = refSeqIdToName.get(crRefSeqId) ?? crRefSeqId
+    const crAssembly = refSeqIdToAssembly.get(crRefSeqId) ?? ''
     em.create('CheckResultEntity', {
       _id: objectIdToString(cr._id),
       name: cr.name ?? '',
       cause: cr.cause,
       ids: objectIdArrayToStrings(cr.ids ?? []),
-      refSeq: objectIdToString(cr.refSeq),
+      refSeq: crRefSeqName,
+      assembly: crAssembly,
       start: cr.start,
       end: cr.end,
       ignored: cr.ignored ?? false,
@@ -610,7 +619,7 @@ async function migrate() {
   console.log(`  Users: ${users.length}`)
   console.log(`  Checks: ${checks.length}`)
   console.log(`  Assemblies: ${assemblies.length}`)
-  console.log(`  RefSeqs: ${refSeqs.length}`)
+  console.log(`  RefSeqs: ${refSeqs.length} (used for name mapping only, no table created)`)
   console.log(`  RefSeqChunks: ${chunkCount} (skipped, storage removed)`)
   console.log(`  Features: ${featureCount}`)
   console.log(`  CheckResults: ${checkResults.length}`)

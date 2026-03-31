@@ -1,6 +1,7 @@
 export interface FeatureRow {
   _id: string
   parentId?: string
+  assembly: string
   refSeq: string
   type: string
   min: number
@@ -18,20 +19,27 @@ export interface FeatureRepository {
   findByIds(ids: string[]): Promise<FeatureRow[]>
   findAll(): Promise<FeatureRow[]>
   countAll(): Promise<number>
-  countByRange(refSeqId: string, start: number, end: number): Promise<number>
-  countByRangeMultiple(
-    refSeqIds: string[],
+  countByRange(
+    assemblyId: string,
+    refSeq: string,
+    start: number,
+    end: number,
+  ): Promise<number>
+  countByAssembly(
+    assemblyId: string,
     start: number,
     end: number,
   ): Promise<number>
   findRootParentsOfMany(ids: string[]): Promise<FeatureRow[]>
   findByRange(
-    refSeqId: string,
+    assemblyId: string,
+    refSeq: string,
     start: number,
     end: number,
   ): Promise<FeatureRow[]>
   findRootsByRange(
-    refSeqId: string,
+    assemblyId: string,
+    refSeq: string,
     start: number,
     end: number,
   ): Promise<FeatureRow[]>
@@ -46,8 +54,8 @@ export interface FeatureRepository {
   ): Promise<FeatureRow | undefined>
   deleteById(id: string): Promise<boolean>
   deleteDescendants(id: string): Promise<number>
-  deleteByRefSeqs(refSeqIds: string[]): Promise<number>
-  searchText(refSeqIds: string[], query: string): Promise<FeatureRow[]>
-  findByIndexedId(id: string, refSeqIds?: string[]): Promise<FeatureRow[]>
+  deleteByAssembly(assemblyId: string): Promise<number>
+  searchText(assemblyId: string, query: string): Promise<FeatureRow[]>
+  findByIndexedId(id: string, assemblyId?: string): Promise<FeatureRow[]>
   findRootParent(id: string): Promise<FeatureRow | undefined>
 }

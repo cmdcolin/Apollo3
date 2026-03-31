@@ -66,7 +66,6 @@ export default defineConfig({
       },
       '/organisms': BACKEND,
       '/permissions': BACKEND,
-      '/refSeqs': BACKEND,
       '/sequence': BACKEND,
       '/socket.io': { target: BACKEND, ws: true },
       '/tracks': BACKEND,

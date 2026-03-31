@@ -2,7 +2,7 @@ import { Flags } from '@oclif/core'
 import { type Response, fetch } from 'undici'
 
 import { BaseCommand } from '../../baseCommand.js'
-import { createFetchErrorMessage, getRefseqId } from '../../utils.js'
+import { createFetchErrorMessage } from '../../utils.js'
 
 export default class Get extends BaseCommand<typeof Get> {
   static description =
@@ -14,8 +14,7 @@ export default class Get extends BaseCommand<typeof Get> {
       command: '<%= config.bin %> <%= command.id %> -a myAssembly',
     },
     {
-      description:
-        'Get features intersecting chr1:1..1000. You can omit the assembly name if there are no other reference sequences named chr1:',
+      description: 'Get features intersecting chr1:1..1000:',
       command:
         '<%= config.bin %> <%= command.id %> -a myAssembly -r chr1 -s 1 -e 1000',
     },
@@ -24,11 +23,12 @@ export default class Get extends BaseCommand<typeof Get> {
   static flags = {
     assembly: Flags.string({
       char: 'a',
-      description: 'Find input reference sequence in this assembly',
+      description: 'Assembly name',
+      required: true,
     }),
     refseq: Flags.string({
       char: 'r',
-      description: 'Reference sequence. If unset, query all sequences',
+      description: 'Reference sequence name. If unset, query all sequences',
     }),
     start: Flags.integer({
       char: 's',
@@ -51,39 +51,39 @@ export default class Get extends BaseCommand<typeof Get> {
 
     const access = await this.getAccess()
 
-    const refseqIds: string[] = await getRefseqId(
-      access.address,
-      access.accessToken,
-      flags.refseq,
-      flags.assembly,
-    )
-
-    const results: object[] = []
-    for (const refseq of refseqIds) {
+    if (flags.refseq) {
       const features: Response = await this.getFeatures(
         access.address,
         access.accessToken,
-        refseq,
+        flags.assembly,
+        flags.refseq,
         flags.start,
         endCoord,
       )
       const json = (await features.json()) as object[]
+      const results: object[] = []
       for (const x of json[0] as object[]) {
         results.push(x)
       }
+      this.log(JSON.stringify(results, null, 2))
+    } else {
+      this.error(
+        'A reference sequence name (--refseq) is required to fetch features',
+      )
     }
-    this.log(JSON.stringify(results, null, 2))
   }
 
   private async getFeatures(
     address: string,
     token: string,
+    assembly: string,
     refSeq: string,
     start: number,
     end: number,
   ): Promise<Response> {
     const url = new URL(`${address}/features/getFeatures`)
     const searchParams = new URLSearchParams({
+      assembly,
       refSeq,
       start: start.toString(),
       end: end.toString(),

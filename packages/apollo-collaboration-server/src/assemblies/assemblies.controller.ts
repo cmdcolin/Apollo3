@@ -47,6 +47,13 @@ export class AssembliesController {
     return this.assembliesService.findOneByNameForUser(name, req.user)
   }
 
+  @Get(':id/sequences')
+  @Public()
+  async findSequences(@Param('id') id: string, @Req() req: RequestWithUser) {
+    await this.assembliesService.findOneForUser(id, req.user)
+    return this.assembliesService.getSequences(id)
+  }
+
   @Get(':id')
   @Public()
   findOne(@Param('id') id: string, @Req() req: RequestWithUser) {

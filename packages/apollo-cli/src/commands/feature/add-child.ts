@@ -10,7 +10,6 @@ import {
   createFetchErrorMessage,
   getFeatureById,
   idReader,
-  queryApollo,
 } from '../../utils.js'
 
 export default class Get extends BaseCommand<typeof Get> {
@@ -115,15 +114,11 @@ to retrive the parent ID of interest and to populate the child feature with attr
         `Error: Child feature coordinates (${min + 1}-${max}) cannot extend beyond parent coordinates (${pMin + 1}-${pMax})`,
       )
     }
-    const res = await queryApollo(address, accessToken, 'refSeqs')
-    const refSeqs = (await res.json()) as object[]
     const { refSeq, _id } = parentFeature
-    let assemblyId = ''
-    for (const x of refSeqs) {
-      if (x['_id' as keyof typeof x] === refSeq) {
-        assemblyId = x['assembly' as keyof typeof x]
-        break
-      }
+    const featureRecord = parentFeature as unknown as Record<string, unknown>
+    const assemblyId = featureRecord.assembly
+    if (typeof assemblyId !== 'string' || !assemblyId) {
+      this.error('Parent feature does not have an assembly field')
     }
     const addedFeature: AnnotationFeatureSnapshot = {
       _id: new ObjectId().toHexString(),

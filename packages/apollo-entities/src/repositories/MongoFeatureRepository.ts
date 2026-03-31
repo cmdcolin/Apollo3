@@ -75,11 +75,8 @@ export class MongoFeatureRepository extends BaseFeatureRepository {
     return allEntities.length
   }
 
-  // Text search: load features for the given refSeqs and filter in JS
-  async searchText(refSeqIds: string[], query: string) {
-    if (refSeqIds.length === 0) {
-      return []
-    }
+  // Text search: load features for the given assembly and filter in JS
+  async searchText(assemblyId: string, query: string) {
     const queryTokens = tokenize(query).filter((t) => !STOP_WORDS.has(t))
     if (queryTokens.length === 0) {
       return []
@@ -88,7 +85,7 @@ export class MongoFeatureRepository extends BaseFeatureRepository {
     const entities = await this.em.find(
       FeatureEntity,
       {
-        refSeq: { $in: refSeqIds },
+        assembly: assemblyId,
       },
       {},
     )
@@ -131,10 +128,10 @@ export class MongoFeatureRepository extends BaseFeatureRepository {
   }
 
   // Search for features by indexed ID in attributes, then walk up to root parents
-  async findByIndexedId(id: string, refSeqIds?: string[]) {
+  async findByIndexedId(id: string, assemblyId?: string) {
     const filter: Record<string, unknown> = {}
-    if (refSeqIds && refSeqIds.length > 0) {
-      filter.refSeq = { $in: refSeqIds }
+    if (assemblyId) {
+      filter.assembly = assemblyId
     }
 
     const entities = await this.em.find(FeatureEntity, filter, {})

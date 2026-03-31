@@ -80,8 +80,11 @@ export function entityToRow(
   return {
     _id: entity._id,
     parentId: entity.parent?._id ?? undefined,
-    refSeq:
-      typeof entity.refSeq === 'string' ? entity.refSeq : entity.refSeq._id,
+    assembly:
+      typeof entity.assembly === 'string'
+        ? entity.assembly
+        : entity.assembly._id,
+    refSeq: entity.refSeq,
     type: entity.type,
     min: entity.min,
     max: entity.max,
@@ -112,20 +115,23 @@ export abstract class BaseFeatureRepository implements FeatureRepository {
     return this.em.count(FeatureEntity)
   }
 
-  async countByRange(refSeqId: string, start: number, end: number) {
+  async countByRange(
+    assemblyId: string,
+    refSeq: string,
+    start: number,
+    end: number,
+  ) {
     return this.em.count(FeatureEntity, {
-      refSeq: refSeqId,
+      assembly: assemblyId,
+      refSeq,
       min: { $lte: end },
       max: { $gte: start },
     })
   }
 
-  async countByRangeMultiple(refSeqIds: string[], start: number, end: number) {
-    if (refSeqIds.length === 0) {
-      return 0
-    }
+  async countByAssembly(assemblyId: string, start: number, end: number) {
     return this.em.count(FeatureEntity, {
-      refSeq: { $in: refSeqIds },
+      assembly: assemblyId,
       min: { $lte: end },
       max: { $gte: start },
     })
@@ -151,11 +157,17 @@ export abstract class BaseFeatureRepository implements FeatureRepository {
     return entities.map((e) => entityToRow(e))
   }
 
-  async findByRange(refSeqId: string, start: number, end: number) {
+  async findByRange(
+    assemblyId: string,
+    refSeq: string,
+    start: number,
+    end: number,
+  ) {
     const entities = await this.em.find(
       FeatureEntity,
       {
-        refSeq: refSeqId,
+        assembly: assemblyId,
+        refSeq,
         min: { $lte: end },
         max: { $gte: start },
       },
@@ -164,11 +176,17 @@ export abstract class BaseFeatureRepository implements FeatureRepository {
     return entities.map((e) => entityToRow(e))
   }
 
-  async findRootsByRange(refSeqId: string, start: number, end: number) {
+  async findRootsByRange(
+    assemblyId: string,
+    refSeq: string,
+    start: number,
+    end: number,
+  ) {
     const entities = await this.em.find(
       FeatureEntity,
       {
-        refSeq: refSeqId,
+        assembly: assemblyId,
+        refSeq,
         parent: null,
         min: { $lte: end },
         max: { $gte: start },
@@ -187,6 +205,7 @@ export abstract class BaseFeatureRepository implements FeatureRepository {
     const entity = this.em.create(FeatureEntity, {
       _id: row._id,
       parent: row.parentId ?? undefined,
+      assembly: row.assembly,
       refSeq: row.refSeq,
       type: row.type,
       min: row.min,
@@ -211,6 +230,7 @@ export abstract class BaseFeatureRepository implements FeatureRepository {
     const data = rows.map((row) => ({
       _id: row._id,
       parent: row.parentId ?? null,
+      assembly: row.assembly,
       refSeq: row.refSeq,
       type: row.type,
       min: row.min,
@@ -253,19 +273,19 @@ export abstract class BaseFeatureRepository implements FeatureRepository {
     return true
   }
 
-  async deleteByRefSeqs(refSeqIds: string[]) {
+  async deleteByAssembly(assemblyId: string) {
     return this.em.nativeDelete(FeatureEntity, {
-      refSeq: { $in: refSeqIds },
+      assembly: assemblyId,
     })
   }
 
   abstract findDescendants(rootId: string): Promise<FeatureRow[]>
   abstract findDescendantsOfMany(rootIds: string[]): Promise<FeatureRow[]>
   abstract deleteDescendants(id: string): Promise<number>
-  abstract searchText(refSeqIds: string[], query: string): Promise<FeatureRow[]>
+  abstract searchText(assemblyId: string, query: string): Promise<FeatureRow[]>
   abstract findByIndexedId(
     id: string,
-    refSeqIds?: string[],
+    assemblyId?: string,
   ): Promise<FeatureRow[]>
   abstract findRootParent(id: string): Promise<FeatureRow | undefined>
   abstract findRootParentsOfMany(ids: string[]): Promise<FeatureRow[]>

@@ -1,6 +1,6 @@
 import { defineEntity, p } from '@mikro-orm/core'
 
-import { RefSeqEntity } from './RefSeqEntity.js'
+import { AssemblyEntity } from './AssemblyEntity.js'
 
 export const CheckResultEntity = defineEntity({
   name: 'CheckResultEntity',
@@ -10,15 +10,16 @@ export const CheckResultEntity = defineEntity({
     name: p.string(),
     cause: p.string().nullable(),
     featureId: p.string(),
-    refSeq: () => p.manyToOne(RefSeqEntity).deleteRule('cascade'),
+    assembly: () => p.manyToOne(AssemblyEntity).deleteRule('cascade'),
+    refSeq: p.string(),
     start: p.integer(),
     end: p.integer(),
     ignored: p.boolean().default(false),
     message: p.string().nullable(),
   },
   indexes: [
-    { properties: ['refSeq', 'start'] },
-    { properties: ['refSeq', 'end'] },
+    { properties: ['assembly', 'refSeq', 'start'] },
+    { properties: ['assembly', 'refSeq', 'end'] },
     { properties: ['name'] },
     { properties: ['featureId'] },
   ],

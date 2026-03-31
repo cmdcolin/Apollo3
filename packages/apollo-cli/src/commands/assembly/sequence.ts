@@ -1,32 +1,25 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-
-import type { ApolloRefSeqSnapshot } from '@apollo-annotation/mst'
 import { Flags } from '@oclif/core'
 import { Agent, type RequestInit, type Response, fetch } from 'undici'
 
 import { BaseCommand } from '../../baseCommand.js'
-import {
-  createFetchErrorMessage,
-  getRefseqId,
-  idReader,
-  queryApollo,
-} from '../../utils.js'
+import { createFetchErrorMessage } from '../../utils.js'
 
 async function getSequence(
   address: string,
   accessToken: string,
+  assembly: string,
   refSeq: string,
   start: number,
   end: number,
 ): Promise<Response> {
   const url = new URL(`${address}/sequence`)
   const searchParams = new URLSearchParams({
+    assembly,
     refSeq,
     start: start.toString(),
     end: end.toString(),
   })
   url.search = searchParams.toString()
-  const uri = url.toString()
 
   const auth: RequestInit = {
     headers: {
@@ -34,7 +27,7 @@ async function getSequence(
     },
     dispatcher: new Agent({ headersTimeout: 60 * 60 * 1000 }),
   }
-  const response = await fetch(uri, auth)
+  const response = await fetch(url.toString(), auth)
   if (!response.ok) {
     const errorMessage = await createFetchErrorMessage(
       response,
@@ -65,11 +58,13 @@ export default class ApolloCmd extends BaseCommand<typeof ApolloCmd> {
   static flags = {
     assembly: Flags.string({
       char: 'a',
-      description: 'Find input reference sequence in this assembly',
+      description: 'Assembly name',
+      required: true,
     }),
     refseq: Flags.string({
       char: 'r',
-      description: 'Reference sequence. If unset, get all sequences',
+      description: 'Reference sequence name',
+      required: true,
     }),
     start: Flags.integer({
       char: 's',
@@ -92,50 +87,19 @@ export default class ApolloCmd extends BaseCommand<typeof ApolloCmd> {
 
     const access = await this.getAccess()
 
-    let assembly = undefined
-    if (flags.assembly !== undefined) {
-      ;[assembly] = await idReader([flags.assembly])
-    }
-
-    let refseqIds: string[] = []
-    refseqIds = await getRefseqId(
+    const res = await getSequence(
       access.address,
       access.accessToken,
+      flags.assembly,
       flags.refseq,
-      assembly,
+      flags.start - 1,
+      endCoord,
     )
-    if (refseqIds.length === 0) {
-      this.error('No reference sequence found')
-    }
 
-    const refs: Response = await queryApollo(
-      access.address,
-      access.accessToken,
-      'refSeqs',
-    )
-    const refSeqs = (await refs.json()) as ApolloRefSeqSnapshot[]
-    for (const rid of refseqIds) {
-      const res = await getSequence(
-        access.address,
-        access.accessToken,
-        rid,
-        flags.start - 1,
-        endCoord,
-      )
-
-      const seqObj = await res.body?.getReader().read()
-      const seq: string = new TextDecoder().decode(seqObj?.value)
-      let header = ''
-      for (const x of refSeqs) {
-        if (x._id === rid) {
-          const rname = x.name
-          header = `>${rname}:${flags.start}..${flags.start + seq.length - 1}`
-          break
-        }
-      }
-      this.log(header)
-      this.log(splitStringIntoChunks(seq, 80).join('\n'))
-    }
+    const seq = await res.text()
+    const header = `>${flags.refseq}:${flags.start}..${flags.start + seq.length - 1}`
+    this.log(header)
+    this.log(splitStringIntoChunks(seq, 80).join('\n'))
   }
 }
 

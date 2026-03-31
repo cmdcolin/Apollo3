@@ -8,7 +8,6 @@ import { LocalFile, RemoteFile } from 'generic-filehandle2'
 import { ChecksService } from '../checks/checks.service.js'
 import { FeaturesService } from '../features/features.service.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
-import { RefSeqsService } from '../refSeqs/refSeqs.service.js'
 
 import type { CreateAssemblyDto } from './dto/create-assembly.dto.js'
 import type { UpdateAssemblyDto } from './dto/update-assembly.dto.js'
@@ -54,7 +53,7 @@ async function readSequencesFromTwobit(twobitPath: string) {
   return sequences
 }
 
-async function readSequencesFromSource(source: SequenceSource) {
+export async function readSequencesFromSource(source: SequenceSource) {
   if (source.type === 'twobit') {
     return readSequencesFromTwobit(source.twobit)
   }
@@ -66,7 +65,6 @@ export class AssembliesService {
   constructor(
     @Inject(ChecksService) private readonly checksService: ChecksService,
     @Inject(FeaturesService) private readonly featuresService: FeaturesService,
-    @Inject(RefSeqsService) private readonly refSeqsService: RefSeqsService,
     @Inject(DatabaseService) private readonly db: DatabaseService,
   ) {}
 
@@ -76,7 +74,7 @@ export class AssembliesService {
     const defaultChecks = await this.db.checkConfig.findDefaults()
     const defaultCheckIds = defaultChecks.map((c) => c._id)
     const newAssemblyId = assemblyId()
-    const assembly = await this.db.assembly.create({
+    return this.db.assembly.create({
       _id: newAssemblyId,
       name: createAssemblyDto.name,
       displayName: createAssemblyDto.displayName,
@@ -87,21 +85,6 @@ export class AssembliesService {
       sequenceSource: createAssemblyDto.sequenceSource,
       visibility: createAssemblyDto.visibility,
     })
-
-    if (createAssemblyDto.sequenceSource) {
-      const sequences = await readSequencesFromSource(
-        createAssemblyDto.sequenceSource,
-      )
-      for (const { length, name } of sequences) {
-        await this.refSeqsService.create({
-          assembly: newAssemblyId,
-          name,
-          length: String(length),
-        })
-      }
-    }
-
-    return assembly
   }
 
   async updateChecks(_id: string, checks: string[]) {
@@ -113,15 +96,19 @@ export class AssembliesService {
       .map((x) => x._id)
     await this.checksService.deleteChecks(obsoleteCheckIds)
 
-    const refSeqs = await this.refSeqsService.findAll({ assembly: _id })
-    for (const refSeq of refSeqs) {
-      const roots = await this.db.feature.findRootsByRange(
-        refSeq._id,
-        0,
-        refSeq.length,
-      )
-      for (const root of roots) {
-        await this.featuresService.checkFeature(root._id, false)
+    const assembly = await this.db.assembly.findById(_id)
+    if (assembly?.sequenceSource) {
+      const sequences = await readSequencesFromSource(assembly.sequenceSource)
+      for (const { length, name } of sequences) {
+        const roots = await this.db.feature.findRootsByRange(
+          _id,
+          name,
+          0,
+          length,
+        )
+        for (const root of roots) {
+          await this.featuresService.checkFeature(root._id)
+        }
       }
     }
   }
@@ -181,6 +168,19 @@ export class AssembliesService {
 
   async update(id: string, updateAssemblyDto: UpdateAssemblyDto) {
     return this.db.assembly.updateById(id, updateAssemblyDto)
+  }
+
+  async getSequences(id: string) {
+    const assembly = await this.db.assembly.findById(id)
+    if (!assembly) {
+      throw new NotFoundException(`Assembly with id "${id}" not found`)
+    }
+    if (!assembly.sequenceSource) {
+      throw new NotFoundException(
+        `Assembly with id "${id}" has no sequence source`,
+      )
+    }
+    return readSequencesFromSource(assembly.sequenceSource)
   }
 
   async remove(id: string) {

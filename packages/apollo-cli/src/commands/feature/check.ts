@@ -1,7 +1,4 @@
-import type {
-  ApolloAssemblySnapshot,
-  CheckResultSnapshot,
-} from '@apollo-annotation/mst'
+import type { CheckResultSnapshot } from '@apollo-annotation/mst'
 import { Flags } from '@oclif/core'
 import { fetch } from 'undici'
 
@@ -10,7 +7,6 @@ import {
   convertAssemblyNameToId,
   createFetchErrorMessage,
   idReader,
-  queryApollo,
 } from '../../utils.js'
 
 export default class Check extends BaseCommand<typeof Check> {
@@ -52,24 +48,23 @@ Use `apollo assembly check` for managing which checks should be applied to an as
       keepFeatures = new Set(await idReader(flags['feature-id']))
     }
 
-    const keepAsmId: string[] = await keepAssemblies(
-      access.address,
-      access.accessToken,
-      flags.assembly,
-    )
-
-    const res = await queryApollo(access.address, access.accessToken, 'refseqs')
-    const refseq = (await res.json()) as object[]
-    const refseqId = new Set<string>()
-    for (const x of refseq) {
-      if (keepAsmId.includes(x['assembly' as keyof typeof x])) {
-        refseqId.add(x['_id' as keyof typeof x])
+    let assemblyId: string | undefined
+    if (flags.assembly !== undefined) {
+      const ids = await idReader([flags.assembly])
+      const assemblyIds = await convertAssemblyNameToId(
+        access.address,
+        access.accessToken,
+        ids,
+      )
+      if (assemblyIds.length > 0) {
+        ;[assemblyId] = assemblyIds
       }
     }
 
     const checks: CheckResultSnapshot[] = await getChecks(
       access.address,
       access.accessToken,
+      assemblyId,
     )
     const results: CheckResultSnapshot[] = []
     for (const chk of checks) {
@@ -82,7 +77,7 @@ Use `apollo assembly check` for managing which checks should be applied to an as
       ) {
         keep = true
       }
-      if (keep && refseqId.has(chk.refSeq)) {
+      if (keep) {
         results.push(chk)
       }
     }
@@ -91,30 +86,15 @@ Use `apollo assembly check` for managing which checks should be applied to an as
   }
 }
 
-async function keepAssemblies(
-  address: string,
-  accessToken: string,
-  assembly: string | undefined,
-): Promise<string[]> {
-  let keepAssembly: string[] = []
-  if (assembly === undefined) {
-    const res = await queryApollo(address, accessToken, 'assemblies')
-    const asm = (await res.json()) as ApolloAssemblySnapshot[]
-    for (const x of asm) {
-      keepAssembly.push(x._id)
-    }
-  } else {
-    const ids = await idReader([assembly])
-    keepAssembly = await convertAssemblyNameToId(address, accessToken, ids)
-  }
-  return keepAssembly
-}
-
 async function getChecks(
   address: string,
   token: string,
+  assembly?: string,
 ): Promise<CheckResultSnapshot[]> {
   const url = new URL(`${address}/checks`)
+  if (assembly) {
+    url.searchParams.set('assembly', assembly)
+  }
   const auth = {
     headers: {
       authorization: `Bearer ${token}`,

@@ -2,7 +2,6 @@ import type { MikroORM } from '@mikro-orm/core'
 import {
   MikroOrmAssemblyRepository,
   MikroOrmFeatureRepository,
-  MikroOrmRefSeqRepository,
   createTestORM,
 } from '@apollo-annotation/entities'
 import type { DecodedJWT } from '@apollo-annotation/shared'
@@ -34,14 +33,7 @@ const mockMessagesGateway = {
 async function setupFixture() {
   const em = orm.em.fork()
   const assemblyRepo = new MikroOrmAssemblyRepository(em)
-  const refSeqRepo = new MikroOrmRefSeqRepository(em)
   await assemblyRepo.create({ _id: 'asm-1', name: 'test-assembly' })
-  await refSeqRepo.create({
-    _id: 'rs-1',
-    name: 'chr1',
-    assembly: 'asm-1',
-    length: 100_000,
-  })
 }
 
 function makeService() {
@@ -71,6 +63,7 @@ describe('FeaturesService.addFeature', () => {
     // Create parent gene with narrow bounds
     await featureRepo.create({
       _id: 'gene-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -106,6 +99,7 @@ describe('FeaturesService.addFeature', () => {
     // Gene already has an outer exon defining its bounds
     await featureRepo.create({
       _id: 'gene-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -113,6 +107,7 @@ describe('FeaturesService.addFeature', () => {
     })
     await featureRepo.create({
       _id: 'exon-outer',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       parentId: 'gene-1',
       type: 'exon',
@@ -153,6 +148,7 @@ describe('FeaturesService.undoChange', () => {
     // Gene with two exons defining its full extent
     await featureRepo.create({
       _id: 'gene-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -160,6 +156,7 @@ describe('FeaturesService.undoChange', () => {
     })
     await featureRepo.create({
       _id: 'exon-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       parentId: 'gene-1',
       type: 'exon',
@@ -168,6 +165,7 @@ describe('FeaturesService.undoChange', () => {
     })
     await featureRepo.create({
       _id: 'exon-2',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       parentId: 'gene-1',
       type: 'exon',
@@ -201,6 +199,7 @@ describe('FeaturesService.mergeTranscripts', () => {
     //              transcript2 [exon3(150-400)] overlaps both
     await featureRepo.create({
       _id: 'gene-1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       type: 'gene',
       min: 100,
@@ -208,6 +207,7 @@ describe('FeaturesService.mergeTranscripts', () => {
     })
     await featureRepo.create({
       _id: 'tx1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       parentId: 'gene-1',
       type: 'mRNA',
@@ -216,6 +216,7 @@ describe('FeaturesService.mergeTranscripts', () => {
     })
     await featureRepo.create({
       _id: 'exon1',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       parentId: 'tx1',
       type: 'exon',
@@ -224,6 +225,7 @@ describe('FeaturesService.mergeTranscripts', () => {
     })
     await featureRepo.create({
       _id: 'exon2',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       parentId: 'tx1',
       type: 'exon',
@@ -232,6 +234,7 @@ describe('FeaturesService.mergeTranscripts', () => {
     })
     await featureRepo.create({
       _id: 'tx2',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       parentId: 'gene-1',
       type: 'mRNA',
@@ -240,6 +243,7 @@ describe('FeaturesService.mergeTranscripts', () => {
     })
     await featureRepo.create({
       _id: 'exon3',
+      assembly: 'asm-1',
       refSeq: 'rs-1',
       parentId: 'tx2',
       type: 'exon',
