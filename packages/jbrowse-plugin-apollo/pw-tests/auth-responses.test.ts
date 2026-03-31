@@ -151,6 +151,60 @@ test.describe('Setup → login → authenticated /users/me', () => {
   })
 })
 
+test.describe('Sliding window interceptor does not clobber login cookie', () => {
+  test.beforeAll(async () => {
+    await resetDatabase()
+  })
+
+  test('login with stale cookie returns fresh token, not the stale one', async () => {
+    // Create an admin to login with
+    const setupRes = await fetch(`${API_BASE}/auth/setup-active`, {
+      headers: jsonHeaders,
+    })
+    const { active } = (await setupRes.json()) as { active: boolean }
+    if (!active) {
+      return
+    }
+
+    const email = 'slidingtest@example.com'
+    const password = 'testpass1'
+    await fetch(`${API_BASE}/auth/setup-account`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, username: 'slidingtest', password }),
+    })
+
+    // Simulate a stale cookie by sending a bogus token with the login request
+    const staleToken = 'stale.token.from.previous.server'
+    const loginRes = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `apollo-token=${staleToken}`,
+      },
+      body: JSON.stringify({ email, password }),
+    })
+    expect(loginRes.status).toBe(201)
+
+    // The response Set-Cookie should contain the fresh token, NOT the stale one
+    const setCookie = loginRes.headers.get('set-cookie') ?? ''
+    expect(setCookie).toContain('apollo-token=')
+    expect(setCookie).not.toContain(staleToken)
+
+    // Extract the fresh token and verify it works
+    const tokenMatch = /apollo-token=([^;]+)/.exec(setCookie)
+    expect(tokenMatch).not.toBeNull()
+    const freshToken = tokenMatch![1]
+
+    const meRes = await fetch(`${API_BASE}/users/me`, {
+      headers: { ...jsonHeaders, Authorization: `Bearer ${freshToken}` },
+    })
+    expect(meRes.status).toBe(200)
+    const me = (await meRes.json()) as Record<string, unknown>
+    expect(me.email).toBe(email)
+  })
+})
+
 test.describe('Server log check', () => {
   test('no ERR_HTTP_HEADERS_SENT in server log', () => {
     let log: string
