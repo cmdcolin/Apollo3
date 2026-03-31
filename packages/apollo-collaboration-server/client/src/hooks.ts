@@ -2,14 +2,19 @@ import { createContext, useContext } from 'react'
 
 import useSWR from 'swr'
 
-import { fetchJson } from './fetchUtil.js'
-
 export interface CurrentUser {
   username: string
   email: string
   role: string
   pendingApproval?: boolean
   needsRelogin?: boolean
+}
+
+export interface DashboardData {
+  adminEmail?: string
+  activeUsers?: number
+  totalUsers?: number
+  pendingCount?: number
 }
 
 const jsonHeaders = { Accept: 'application/json' }
@@ -32,19 +37,4 @@ export const AuthProvider = AuthContext.Provider
 
 export function useAuth() {
   return useContext(AuthContext)
-}
-
-export interface DashboardData {
-  adminEmail?: string
-  activeUsers?: number
-  totalUsers?: number
-  pendingCount?: number
-}
-
-export function useDashboard(isAuthenticated: boolean) {
-  const { data, error } = useSWR<DashboardData>(
-    isAuthenticated ? '/users/dashboard' : null,
-    fetchJson,
-  )
-  return { data: data ?? {}, error }
 }

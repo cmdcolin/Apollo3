@@ -71,16 +71,6 @@ interface LoginTypes {
   passwordLogin?: boolean
 }
 
-function useLoginTypes() {
-  const { data, error, isLoading } = useSWR<LoginTypes>('/auth/types', fetchJson)
-  return { oidc: data?.oidc ?? [], passwordLogin: data?.passwordLogin, loaded: !isLoading, error }
-}
-
-function useSetupActive() {
-  const { data } = useSWR<{ active: boolean }>('/auth/setup-active', fetchJson)
-  return data?.active ?? false
-}
-
 async function parseErrorMessage(response: Response) {
   const text = await response.text()
   try {
@@ -262,8 +252,11 @@ function SetupSection({ oidc }: { oidc: OidcProviderInfo[] }) {
 }
 
 function LoginSection() {
-  const { oidc, passwordLogin, loaded, error: typesError } = useLoginTypes()
-  const setupActive = useSetupActive()
+  const { data: loginTypes, error: typesError, isLoading } = useSWR<LoginTypes>('/auth/types', fetchJson)
+  const { data: setupData } = useSWR<{ active: boolean }>('/auth/setup-active', fetchJson)
+  const oidc = loginTypes?.oidc ?? []
+  const passwordLogin = loginTypes?.passwordLogin
+  const setupActive = setupData?.active ?? false
   const currentUrl = globalThis.location.href
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -285,7 +278,7 @@ function LoginSection() {
     }
   }
 
-  if (!loaded) {
+  if (isLoading) {
     return (
       <Box sx={{ textAlign: 'center', py: 3 }}>
         <CircularProgress />

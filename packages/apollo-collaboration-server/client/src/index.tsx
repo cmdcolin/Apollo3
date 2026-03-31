@@ -12,7 +12,10 @@ import Typography from '@mui/material/Typography'
 import { createRoot } from 'react-dom/client'
 
 import { Nav } from './Nav.js'
-import { type CurrentUser, useAuth, useDashboard } from './hooks.js'
+import useSWR from 'swr'
+
+import { fetchJson } from './fetchUtil.js'
+import { type CurrentUser, type DashboardData, useAuth } from './hooks.js'
 
 function PendingApproval({ user, adminEmail }: { user: CurrentUser; adminEmail?: string }) {
   return (
@@ -35,7 +38,7 @@ function PendingApproval({ user, adminEmail }: { user: CurrentUser; adminEmail?:
 }
 
 function LoggedInContent({ user }: { user: CurrentUser }) {
-  const { data: dashboard } = useDashboard(true)
+  const { data: dashboard = {} } = useSWR<DashboardData>('/users/dashboard', fetchJson)
 
   return (
     <Box>
@@ -79,7 +82,7 @@ function LoggedInContent({ user }: { user: CurrentUser }) {
 
 function IndexContent() {
   const user = useAuth()
-  const { data: dashboard } = useDashboard(!!user)
+  const { data: dashboard = {} } = useSWR<DashboardData>(user ? '/users/dashboard' : null, fetchJson)
 
   const isPendingApproval = user?.pendingApproval === true
   const isReadOnly = user?.role === 'readOnly' && !isPendingApproval

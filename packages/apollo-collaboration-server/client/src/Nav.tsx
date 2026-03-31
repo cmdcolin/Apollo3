@@ -17,12 +17,14 @@ import { ThemeProvider } from '@mui/material/styles'
 import { useRef, useState } from 'react'
 
 import Alert from '@mui/material/Alert'
+import useSWR from 'swr'
 
+import { fetchJson } from './fetchUtil.js'
 import {
   AuthProvider,
   type CurrentUser,
+  type DashboardData,
   useCurrentUser,
-  useDashboard,
 } from './hooks.js'
 import logoUrl from './apollo_logo.svg'
 
@@ -203,7 +205,7 @@ function NavMenu({
 }
 
 function NavBar({ current, user }: { current?: Page; user?: CurrentUser }) {
-  const { data: dashboard } = useDashboard(!!user)
+  const { data: dashboard = {} } = useSWR<DashboardData>(user ? '/users/dashboard' : null, fetchJson)
   const pendingCount = dashboard.pendingCount ?? 0
 
   return (
