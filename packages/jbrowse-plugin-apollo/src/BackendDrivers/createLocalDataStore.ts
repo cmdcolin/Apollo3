@@ -12,7 +12,6 @@ export function createLocalDataStore(em: EntityManager): ServerDataStore {
     MikroOrmCheckRepository,
     MikroOrmCheckResultRepository,
     MikroOrmFeatureRepository,
-    MikroOrmRefSeqRepository,
     MikroOrmUserRepository,
   } = electronRequire(
     '@apollo-annotation/entities',
@@ -22,7 +21,6 @@ export function createLocalDataStore(em: EntityManager): ServerDataStore {
     typeName: 'Server',
     featureRepository: new MikroOrmFeatureRepository(em),
     assemblyRepository: new MikroOrmAssemblyRepository(em),
-    refSeqRepository: new MikroOrmRefSeqRepository(em),
     checkRepository: new MikroOrmCheckRepository(em),
     checkResultRepository: new MikroOrmCheckResultRepository(em),
     userRepository: new MikroOrmUserRepository(em),

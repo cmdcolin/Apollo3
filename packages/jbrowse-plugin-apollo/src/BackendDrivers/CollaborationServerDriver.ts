@@ -5,7 +5,6 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import type {
   AnnotationFeatureSnapshot,
-  ApolloRefSeqI,
   CheckResultSnapshot,
 } from '@apollo-annotation/mst'
 import { getConf } from '@jbrowse/core/configuration'
@@ -16,27 +15,8 @@ import { createFetchErrorMessage, getBaseURL } from '../util'
 
 import { BackendDriver, type RefNameAliases } from './BackendDriver'
 
-export interface ApolloRefSeqResponse {
-  _id: string
-  name: string
-  description?: string
-  aliases: string[]
-  length: string
-  assembly: string
-}
-
-interface RefSeq {
-  refName: string
-  id: string
-  aliases: string[]
-}
-
-type RefSeqMap = Map<string, RefSeq>
-
 export class CollaborationServerDriver extends BackendDriver {
   private inFlight = new Map<string, Promise<string>>()
-
-  private refSeqMaps = new Map<string, RefSeqMap>()
 
   private getBaseURL() {
     const session = getSession(
@@ -66,33 +46,13 @@ export class CollaborationServerDriver extends BackendDriver {
     return response.json() as Promise<AnnotationFeatureSnapshot[]>
   }
 
-  private async resolveRefSeq(region: Region) {
-    const { assemblyName, refName, start, end } = region
-    const { assemblyManager } = getSession(this.clientStore)
-    const assembly = assemblyManager.get(assemblyName)
-    if (!assembly) {
-      throw new Error(`Could not find assembly with name "${assemblyName}"`)
-    }
-    const refSeqMap = await this.getRefSeqMapping(assemblyName)
-    const refSeqEntry = refSeqMap.get(refName)
-    if (!refSeqEntry) {
-      throw new Error(`Could not find refSeq "${refName}"`)
-    }
-    return {
-      refSeq: refSeqEntry.id,
-      start,
-      end,
-      assemblyName,
-      refName,
-    }
-  }
-
   async getFeatures(region: Region) {
-    const { refSeq, start, end } = await this.resolveRefSeq(region)
+    const { assemblyName, end, refName, start } = region
     const baseURL = this.getBaseURL()
     const url = new URL('features/getFeatures', baseURL)
     url.search = new URLSearchParams({
-      refSeq,
+      assembly: assemblyName,
+      refSeq: refName,
       start: String(start),
       end: String(end),
     }).toString()
@@ -110,11 +70,12 @@ export class CollaborationServerDriver extends BackendDriver {
   }
 
   async getCheckResults(region: Region) {
-    const { refSeq, start, end } = await this.resolveRefSeq(region)
+    const { assemblyName, end, refName, start } = region
     const baseURL = this.getBaseURL()
     const url = new URL('checks/range', baseURL)
     url.search = new URLSearchParams({
-      refSeq,
+      assembly: assemblyName,
+      refSeq: refName,
       start: String(start),
       end: String(end),
     }).toString()
@@ -127,37 +88,27 @@ export class CollaborationServerDriver extends BackendDriver {
   }
 
   async getSequence(region: Region): Promise<{ seq: string; refSeq: string }> {
-    const inFlightKey = `${region.refName}:${region.start}-${region.end}`
-    const inFlightPromise = this.inFlight.get(inFlightKey)
     const { assemblyName, end, refName, start } = region
-    const { assemblyManager } = getSession(this.clientStore)
-    const assembly = assemblyManager.get(assemblyName)
-    if (!assembly) {
-      throw new Error(`Could not find assembly with name "${assemblyName}"`)
-    }
-    const refSeqMap = await this.getRefSeqMapping(assemblyName)
-    const refSeqEntry = refSeqMap.get(refName)
-    if (!refSeqEntry) {
-      throw new Error(`Could not find refSeq "${refName}"`)
-    }
-    const refSeq = refSeqEntry.id
+    const inFlightKey = `${refName}:${start}-${end}`
+    const inFlightPromise = this.inFlight.get(inFlightKey)
     if (inFlightPromise) {
       const seq = await inFlightPromise
-      return { seq, refSeq }
+      return { seq, refSeq: refName }
     }
     let apolloAssembly = this.clientStore.assemblies.get(assemblyName)
     apolloAssembly ??= this.clientStore.addAssembly(assemblyName)
-    let apolloRefSeq = apolloAssembly.refSeqs.get(refSeq)
-    apolloRefSeq ??= apolloAssembly.addRefSeq(refSeq, refName)
+    let apolloRefSeq = apolloAssembly.refSeqs.get(refName)
+    apolloRefSeq ??= apolloAssembly.addRefSeq(refName)
     const clientStoreSequence = apolloRefSeq.getSequence(start, end)
     if (clientStoreSequence.length === end - start) {
-      return { seq: clientStoreSequence, refSeq }
+      return { seq: clientStoreSequence, refSeq: refName }
     }
     const baseURL = this.getBaseURL()
 
     const url = new URL('sequence', baseURL)
     const searchParams = new URLSearchParams({
-      refSeq,
+      assembly: assemblyName,
+      refSeq: refName,
       start: String(start),
       end: String(end),
     })
@@ -169,12 +120,12 @@ export class CollaborationServerDriver extends BackendDriver {
     const seq = await seqPromise
 
     this.inFlight.delete(inFlightKey)
-    return { seq, refSeq }
+    return { seq, refSeq: refName }
   }
 
   private async getSeqFromServer(
     uri: string,
-    apolloRefSeq: ApolloRefSeqI,
+    apolloRefSeq: { addSequence(seq: { sequence: string; start: number; stop: number }): void },
     start: number,
     stop: number,
   ) {
@@ -197,119 +148,18 @@ export class CollaborationServerDriver extends BackendDriver {
     return seq
   }
 
-  async getRefSeqMapping(assemblyName: string): Promise<RefSeqMap> {
-    const cachedRefSeqMap = this.refSeqMaps.get(assemblyName)
-    if (cachedRefSeqMap) {
-      return cachedRefSeqMap
-    }
-    const { assemblyManager } = getSession(this.clientStore)
-    const assembly = assemblyManager.get(assemblyName)
-    if (!assembly) {
-      throw new Error(`Could not find assembly with name "${assemblyName}"`)
-    }
-    const baseURL = this.getBaseURL()
-    const url = new URL('refSeqs', baseURL)
-    const searchParams = new URLSearchParams({ assembly: assemblyName })
-    url.search = searchParams.toString()
-    const uri = url.toString()
-
-    const response = await fetch(uri)
-    if (!response.ok) {
-      let errorMessage
-      try {
-        errorMessage = await response.text()
-      } catch {
-        errorMessage = ''
-      }
-      throw new Error(
-        `getRefNameAliases failed: ${response.status} (${response.statusText})${
-          errorMessage ? ` (${errorMessage})` : ''
-        }`,
-      )
-    }
-    const refSeqs = (await response.json()) as ApolloRefSeqResponse[]
-    const refSeqMap = new Map<string, RefSeq>(
-      refSeqs.map((refSeq) => [
-        refSeq.name,
-        { refName: refSeq.name, id: refSeq._id, aliases: refSeq.aliases ?? [] },
-      ]),
-    )
-    this.refSeqMaps.set(assemblyName, refSeqMap)
-    return refSeqMap
-  }
-
-  async getRefNameAliases(assemblyName: string): Promise<RefNameAliases[]> {
-    console.warn(
-      `[apollo-debug] CollaborationServerDriver.getRefNameAliases: assemblyName=${assemblyName}`,
-    )
-    const refSeqMap = await this.getRefSeqMapping(assemblyName)
-    const result = [...refSeqMap.values()].map((refSeq) => ({
-      refName: refSeq.refName,
-      aliases: [...new Set([refSeq.id, ...refSeq.aliases])],
-      uniqueId: `alias-${refSeq.id}`,
-    }))
-    console.warn(
-      `[apollo-debug] CollaborationServerDriver.getRefNameAliases: returning ${result.length} aliases`,
-    )
-    return result
-  }
-
-  async getRefSeqId(assemblyName: string, refName: string) {
-    const refSeqMap = await this.getRefSeqMapping(assemblyName)
-    if (!refSeqMap) {
-      return
-    }
-    const refSeq = refSeqMap.get(refName)
-    return refSeq?.id
+  async getRefNameAliases(_assemblyName: string): Promise<RefNameAliases[]> {
+    return []
   }
 
   async getRegions(assemblyName: string): Promise<Region[]> {
-    console.warn(
-      `[apollo-debug] CollaborationServerDriver.getRegions: assemblyName=${assemblyName}`,
-    )
     const { assemblyManager } = getSession(this.clientStore)
     const assembly = assemblyManager.get(assemblyName)
     if (!assembly) {
       throw new Error(`Could not find assembly with name "${assemblyName}"`)
     }
-    const baseURL = this.getBaseURL()
-    console.warn(
-      `[apollo-debug] CollaborationServerDriver.getRegions: baseURL=${baseURL}`,
-    )
-    const url = new URL('refSeqs', baseURL)
-    const searchParams = new URLSearchParams({ assembly: assemblyName })
-    url.search = searchParams.toString()
-    const uri = url.toString()
-    console.warn(
-      `[apollo-debug] CollaborationServerDriver.getRegions: fetching ${uri}`,
-    )
-
-    const response = await fetch(uri)
-    console.warn(
-      `[apollo-debug] CollaborationServerDriver.getRegions: response status=${response.status}`,
-    )
-    if (!response.ok) {
-      let errorMessage
-      try {
-        errorMessage = await response.text()
-      } catch {
-        errorMessage = ''
-      }
-      throw new Error(
-        `getRegions failed: ${response.status} (${response.statusText})${
-          errorMessage ? ` (${errorMessage})` : ''
-        }`,
-      )
-    }
-    const refSeqs = await response.json()
-    console.warn(
-      `[apollo-debug] CollaborationServerDriver.getRegions: got ${refSeqs.length} refSeqs`,
-    )
-    return refSeqs.map((refSeq: { name: string; length: number }) => ({
-      refName: refSeq.name,
-      start: 0,
-      end: refSeq.length,
-    }))
+    await assemblyManager.waitForAssembly(assemblyName)
+    return assembly.regions ?? []
   }
 
   async getAnalysisTools() {
@@ -383,5 +233,4 @@ export class CollaborationServerDriver extends BackendDriver {
       return sequenceMetadata?.apollo === true
     })
   }
-
 }

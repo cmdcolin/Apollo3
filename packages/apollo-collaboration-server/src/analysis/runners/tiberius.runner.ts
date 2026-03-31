@@ -87,7 +87,6 @@ export class TiberiusRunner implements AnalysisRunner, OnModuleInit {
     }
 
     const { params } = context.job
-    const refSeqId = typeof params.refSeqId === 'string' ? params.refSeqId : ''
     const refSeqName =
       typeof params.refSeqName === 'string' ? params.refSeqName : ''
     const start = Number(params.start ?? 0)
@@ -112,7 +111,8 @@ export class TiberiusRunner implements AnalysisRunner, OnModuleInit {
     }
 
     const sequence = await this.sequenceService.getSequence({
-      refSeq: refSeqId,
+      assembly: assemblyName,
+      refSeq: refSeqName,
       start,
       end,
     })

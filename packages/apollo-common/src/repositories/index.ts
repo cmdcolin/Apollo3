@@ -28,7 +28,6 @@ export type {
 export type { CheckRepository, CheckRow } from './CheckRepository.js'
 export type { FeatureRepository, FeatureRow } from './FeatureRepository.js'
 export type { FileRepository, FileRow } from './FileRepository.js'
-export type { RefSeqRepository, RefSeqRow } from './RefSeqRepository.js'
 export type {
   TextSearchAdapterConfigRepository,
   TextSearchAdapterConfigRow,

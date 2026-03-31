@@ -60,7 +60,10 @@ const config = {
   external: ['node:fs', 'node:stream', 'node:path', 'node:url'],
   plugins: [globalExternals(createGlobalMap(globals)), rebuildLogPlugin],
   ...(isWatch || isDev
-    ? { outfile: 'dist/jbrowse-plugin-apollo.umd.development.js' }
+    ? {
+        outfile: 'dist/jbrowse-plugin-apollo.umd.development.js',
+        minify: false,
+      }
     : {
         outfile: 'dist/jbrowse-plugin-apollo.umd.production.min.js',
         sourcemap: true,

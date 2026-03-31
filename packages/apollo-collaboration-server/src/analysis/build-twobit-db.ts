@@ -3,6 +3,8 @@ import path from 'node:path'
 
 import type { Logger } from '@nestjs/common'
 
+import { readSequencesFromSource } from '../assemblies/assemblies.service.js'
+
 import { extractAssemblyFasta } from './fasta-extract.js'
 import { runCommand } from './run-command.js'
 import type { BuildDbContext } from './runner.js'
@@ -22,9 +24,13 @@ export async function buildTwoBitDb(
   logger.log(
     `Extracting FASTA for assembly ${context.assemblyId} → ${fastaPath}`,
   )
-  const refSeqs = await context.db.refSeq.findByAssembly(context.assemblyId)
+  const assembly = await context.db.assembly.findById(context.assemblyId)
+  if (!assembly?.sequenceSource) {
+    throw new Error(`Assembly "${context.assemblyId}" has no sequence source`)
+  }
+  const refSeqs = await readSequencesFromSource(assembly.sequenceSource)
   await extractAssemblyFasta(
-    context.assemblyId,
+    assembly.name,
     fastaPath,
     context.sequenceService,
     refSeqs,

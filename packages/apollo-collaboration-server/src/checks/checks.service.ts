@@ -8,7 +8,6 @@ import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common'
 
 import type { FeatureRangeSearchDto } from '../features/dto/feature-schemas.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
-import { RefSeqsService } from '../refSeqs/refSeqs.service.js'
 import { SequenceService } from '../sequence/sequence.service.js'
 
 function collectAllIds(tree: NestedFeature): string[] {
@@ -26,7 +25,6 @@ function collectAllIds(tree: NestedFeature): string[] {
 @Injectable()
 export class ChecksService {
   constructor(
-    @Inject(RefSeqsService) private readonly refSeqsService: RefSeqsService,
     @Inject(forwardRef(() => SequenceService))
     private readonly sequenceService: Readonly<SequenceService>,
     @Inject(DatabaseService) private readonly db: DatabaseService,
@@ -36,23 +34,17 @@ export class ChecksService {
 
   async find({ assembly }: { assembly?: string }) {
     if (assembly) {
-      const refSeqs = await this.refSeqsService.findAll({ assembly })
-      const refSeqIds = refSeqs.map((refSeq) => refSeq._id)
-      return this.db.check.findByRefSeqIds(refSeqIds)
+      return this.db.check.findByAssembly(assembly)
     }
-    return this.db.check.findByRefSeqIds([])
+    return this.db.check.findByAssembly('')
   }
 
   async getChecks() {
     return this.db.checkConfig.findAll()
   }
 
-  async getChecksForAssembly(refSeqId: string) {
-    const refSeq = await this.db.refSeq.findById(refSeqId)
-    if (!refSeq) {
-      throw new Error(`Could not find refSeq ${refSeqId}`)
-    }
-    const assembly = await this.db.assembly.findById(refSeq.assembly)
+  async getChecksForAssembly(assemblyId: string) {
+    const assembly = await this.db.assembly.findById(assemblyId)
     if (!assembly || !assembly.checks || assembly.checks.length === 0) {
       return []
     }
@@ -80,7 +72,9 @@ export class ChecksService {
     const allIds = collectAllIds(tree)
     const snapshot = tree as AnnotationFeatureSnapshot
 
-    const checks = await this.getChecksForAssembly(featureRow.refSeq)
+    const checks = await this.getChecksForAssembly(featureRow.assembly)
+    const assembly = await this.db.assembly.findById(featureRow.assembly)
+    const assemblyName = assembly?.name ?? ''
     this.logger.debug(
       `Running ${checks.length} checks on feature ${featureId} (${allRows.length} rows)`,
     )
@@ -92,6 +86,7 @@ export class ChecksService {
           snapshot,
           (start: number, end: number) => {
             return this.sequenceService.getSequence({
+              assembly: assemblyName,
               start,
               end,
               refSeq: featureRow.refSeq,
@@ -107,6 +102,7 @@ export class ChecksService {
             name: r.name,
             cause: r.cause,
             featureId: r.featureId,
+            assembly: featureRow.assembly,
             refSeq: r.refSeq,
             start: r.start,
             end: r.end,
@@ -133,6 +129,7 @@ export class ChecksService {
 
   async findByRange(searchDto: FeatureRangeSearchDto) {
     return this.db.check.findByRange(
+      searchDto.assembly,
       searchDto.refSeq,
       searchDto.start,
       searchDto.end,

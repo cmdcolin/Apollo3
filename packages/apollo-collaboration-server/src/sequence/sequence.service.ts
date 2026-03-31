@@ -21,21 +21,18 @@ export class SequenceService {
 
   private readonly logger = new Logger(SequenceService.name)
 
-  async getSequence({ end, refSeq: refSeqId, start }: GetSequenceDto) {
-    const refSeq = await this.db.refSeq.findById(refSeqId)
-    if (!refSeq) {
-      throw new Error(`RefSeq "${refSeqId}" not found`)
+  async getSequence({ assembly, end, refSeq, start }: GetSequenceDto) {
+    const assemblyRow = await this.db.assembly.findByName(assembly)
+    if (!assemblyRow) {
+      throw new Error(`Assembly "${assembly}" not found`)
     }
-
-    const { assembly, name } = refSeq
-    const assemblyRow = await this.db.assembly.findById(assembly)
-    const source = assemblyRow?.sequenceSource
+    const source = assemblyRow.sequenceSource
     if (!source) {
       throw new Error(`Assembly "${assembly}" has no sequence source`)
     }
 
     const adapter = this.buildAdapter(source)
-    const sequence = await adapter.getSequence(name, start, end)
+    const sequence = await adapter.getSequence(refSeq, start, end)
     if (sequence === undefined) {
       throw new Error('Sequence not found')
     }

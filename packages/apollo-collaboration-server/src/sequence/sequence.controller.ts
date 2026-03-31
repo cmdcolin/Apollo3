@@ -1,6 +1,7 @@
-import { Controller, Get, Inject, Logger, Query, Req } from '@nestjs/common'
+import { Controller, Get, Inject, Logger, NotFoundException, Query, Req } from '@nestjs/common'
 
 import { PermissionService } from '../permissions/permission.service.js'
+import { DatabaseService } from '../mikro-orm/database.service.js'
 import type { RequestWithUser } from '../authentication/request-with-user.js'
 import { Role } from '../authentication/role.enum.js'
 import { Public } from '../authentication/roles.guard.js'
@@ -15,6 +16,7 @@ export class SequenceController {
     @Inject(SequenceService) private readonly sequenceService: SequenceService,
     @Inject(PermissionService)
     private readonly permissionService: PermissionService,
+    @Inject(DatabaseService) private readonly db: DatabaseService,
   ) {}
 
   private readonly logger = new Logger(SequenceController.name)
@@ -25,9 +27,13 @@ export class SequenceController {
     @Req() req: RequestWithUser,
   ) {
     this.logger.debug(`getSequence: ${JSON.stringify(request)}`)
-    await this.permissionService.checkRefSeqPermission(
+    const assembly = await this.db.assembly.findByName(request.assembly)
+    if (!assembly) {
+      throw new NotFoundException(`Assembly "${request.assembly}" not found`)
+    }
+    await this.permissionService.checkIfUserHasPermissionForAssembly(
       req.user,
-      request.refSeq,
+      assembly._id,
       Role.ReadOnly,
     )
     return this.sequenceService.getSequence(request)

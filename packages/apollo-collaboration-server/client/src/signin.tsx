@@ -4,11 +4,29 @@ import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress'
 import Container from '@mui/material/Container'
 import FormControlLabel from '@mui/material/FormControlLabel'
+import IconButton from '@mui/material/IconButton'
+import InputAdornment from '@mui/material/InputAdornment'
 import Paper from '@mui/material/Paper'
 import Radio from '@mui/material/Radio'
 import RadioGroup from '@mui/material/RadioGroup'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
+function VisibilityIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+    </svg>
+  )
+}
+
+function VisibilityOffIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>
+    </svg>
+  )
+}
+import type React from 'react'
 import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import useSWR from 'swr'
@@ -90,6 +108,69 @@ function getReturnUrl() {
   return '/'
 }
 
+function PasswordField(
+  props: Omit<React.ComponentProps<typeof TextField>, 'type'>,
+) {
+  const [show, setShow] = useState(false)
+  return (
+    <TextField
+      {...props}
+      type={show ? 'text' : 'password'}
+      InputProps={{
+        ...props.InputProps,
+        endAdornment: (
+          <InputAdornment position="end">
+            <IconButton
+              aria-label={show ? 'Hide password' : 'Show password'}
+              onClick={() => {
+                setShow((s) => !s)
+              }}
+              edge="end"
+              size="small"
+            >
+              {show ? (
+                <VisibilityOffIcon />
+              ) : (
+                <VisibilityIcon />
+              )}
+            </IconButton>
+          </InputAdornment>
+        ),
+      }}
+    />
+  )
+}
+
+const oidcButtonSx = {
+  backgroundColor: '#fff',
+  borderColor: '#dadce0',
+  color: '#3c4043',
+  justifyContent: 'flex-start',
+  gap: 0.5,
+  px: 2,
+  '&:hover': { backgroundColor: '#f8f9fa', borderColor: '#dadce0' },
+}
+
+function OidcButton({
+  provider,
+  redirectUri,
+}: {
+  provider: OidcProviderInfo
+  redirectUri: string
+}) {
+  return (
+    <Button
+      variant="outlined"
+      fullWidth
+      href={`/auth/oidc/${provider.name}?redirect_uri=${encodeURIComponent(redirectUri)}`}
+      startIcon={getProviderIcon(provider.name)}
+      sx={oidcButtonSx}
+    >
+      Sign in using {provider.displayName}
+    </Button>
+  )
+}
+
 function SetupSection({ oidc }: { oidc: OidcProviderInfo[] }) {
   const currentUrl = globalThis.location.href
   const hasOidc = oidc.length > 0
@@ -169,24 +250,11 @@ function SetupSection({ oidc }: { oidc: OidcProviderInfo[] }) {
       {method === 'oauth' ? (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           {oidc.map((provider) => (
-            <Button
+            <OidcButton
               key={provider.name}
-              variant="outlined"
-              fullWidth
-              href={`/auth/oidc/${provider.name}?redirect_uri=${encodeURIComponent(currentUrl)}`}
-              startIcon={getProviderIcon(provider.name)}
-              sx={{
-                backgroundColor: '#fff',
-                borderColor: '#dadce0',
-                color: '#3c4043',
-                justifyContent: 'flex-start',
-                gap: 0.5,
-                px: 2,
-                '&:hover': { backgroundColor: '#f8f9fa', borderColor: '#dadce0' },
-              }}
-            >
-              Sign in using {provider.displayName}
-            </Button>
+              provider={provider}
+              redirectUri={currentUrl}
+            />
           ))}
         </Box>
       ) : method === 'local' ? (
@@ -196,6 +264,7 @@ function SetupSection({ oidc }: { oidc: OidcProviderInfo[] }) {
             label="Email"
             type="email"
             size="small"
+            autoComplete="email"
             value={email}
             onChange={(e) => {
               setEmail(e.target.value)
@@ -211,20 +280,20 @@ function SetupSection({ oidc }: { oidc: OidcProviderInfo[] }) {
               setError('')
             }}
           />
-          <TextField
+          <PasswordField
             label="Password"
-            type="password"
             size="small"
+            autoComplete="new-password"
             value={password}
             onChange={(e) => {
               setPassword(e.target.value)
               setError('')
             }}
           />
-          <TextField
+          <PasswordField
             label="Confirm password"
-            type="password"
             size="small"
+            autoComplete="new-password"
             value={confirmPassword}
             onChange={(e) => {
               setConfirmPassword(e.target.value)
@@ -251,12 +320,67 @@ function SetupSection({ oidc }: { oidc: OidcProviderInfo[] }) {
   )
 }
 
+function PasswordLoginForm({
+  email,
+  password,
+  loginError,
+  onEmailChange,
+  onPasswordChange,
+  onSubmit,
+}: {
+  email: string
+  password: string
+  loginError: string
+  onEmailChange: (v: string) => void
+  onPasswordChange: (v: string) => void
+  onSubmit: () => void
+}) {
+  return (
+    <>
+      {loginError ? <Alert severity="error">{loginError}</Alert> : null}
+      <TextField
+        label="Email"
+        type="email"
+        size="small"
+        autoComplete="email"
+        value={email}
+        onChange={(e) => {
+          onEmailChange(e.target.value)
+        }}
+      />
+      <PasswordField
+        label="Password"
+        size="small"
+        autoComplete="current-password"
+        value={password}
+        onChange={(e) => {
+          onPasswordChange(e.target.value)
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            onSubmit()
+          }
+        }}
+      />
+      <Button variant="contained" onClick={onSubmit}>
+        Sign in
+      </Button>
+    </>
+  )
+}
+
 function LoginSection() {
-  const { data: loginTypes, error: typesError, isLoading } = useSWR<LoginTypes>('/auth/types', fetchJson)
-  const { data: setupData } = useSWR<{ active: boolean }>('/auth/setup-active', fetchJson)
+  const { data: loginTypes, error: typesError, isLoading } =
+    useSWR<LoginTypes>('/auth/types', fetchJson)
+  const { data: setupData } = useSWR<{ active: boolean }>(
+    '/auth/setup-active',
+    fetchJson,
+  )
   const oidc = loginTypes?.oidc ?? []
   const passwordLogin = loginTypes?.passwordLogin
   const setupActive = setupData?.active ?? false
+  const hasOidc = oidc.length > 0
+  const hasAnyMethod = hasOidc || passwordLogin
   const currentUrl = globalThis.location.href
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -278,126 +402,64 @@ function LoginSection() {
     }
   }
 
-  if (isLoading) {
-    return (
-      <Box sx={{ textAlign: 'center', py: 3 }}>
-        <CircularProgress />
-      </Box>
-    )
-  }
-
-  if (typesError) {
-    return (
-      <Alert severity="error">
-        Failed to load login methods: {String(typesError)}
-      </Alert>
-    )
-  }
-
-  if (setupActive) {
-    return <SetupSection oidc={oidc} />
-  }
-
-  const hasOidc = oidc.length > 0
-  const hasAnyMethod = hasOidc || passwordLogin
-
-  const passwordForm = (
-    <>
-      {loginError ? <Alert severity="error">{loginError}</Alert> : null}
-      <TextField
-        label="Email"
-        type="email"
-        size="small"
-        value={email}
-        onChange={(e) => {
-          setEmail(e.target.value)
-          setLoginError('')
-        }}
-      />
-      <TextField
-        label="Password"
-        type="password"
-        size="small"
-        value={password}
-        onChange={(e) => {
-          setPassword(e.target.value)
-          setLoginError('')
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            // eslint-disable-next-line @typescript-eslint/no-floating-promises
-            handlePasswordLogin()
-          }
-        }}
-      />
-      <Button
-        variant="contained"
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        onClick={() => handlePasswordLogin()}
-      >
-        Sign in
-      </Button>
-    </>
-  )
-
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-      <Typography variant="h6">Sign in</Typography>
-
-      {oidc.map((provider) => (
-        <Button
-          key={provider.name}
-          variant="outlined"
-          fullWidth
-          href={`/auth/oidc/${provider.name}?redirect_uri=${encodeURIComponent(currentUrl)}`}
-          startIcon={getProviderIcon(provider.name)}
-          sx={{
-            backgroundColor: '#fff',
-            borderColor: '#dadce0',
-            color: '#3c4043',
-            justifyContent: 'flex-start',
-            gap: 0.5,
-            px: 2,
-            '&:hover': { backgroundColor: '#f8f9fa', borderColor: '#dadce0' },
-          }}
-        >
-          Sign in using {provider.displayName}
-        </Button>
-      ))}
-
-      {passwordLogin ? (
-        hasOidc ? (
-          showPasswordForm ? (
-            passwordForm
-          ) : (
-            <Button
-              variant="outlined"
-              fullWidth
-              onClick={() => {
-                setShowPasswordForm(true)
-              }}
-              sx={{
-                backgroundColor: '#fff',
-                borderColor: '#dadce0',
-                color: '#3c4043',
-                justifyContent: 'flex-start',
-                px: 2,
-                '&:hover': { backgroundColor: '#f8f9fa', borderColor: '#dadce0' },
-              }}
-            >
-              Sign in with password
-            </Button>
-          )
-        ) : (
-          passwordForm
-        )
-      ) : null}
-
-      {!hasAnyMethod ? (
-        <Typography variant="body2" color="text.secondary">
-          No login providers configured. Contact your administrator.
-        </Typography>
-      ) : null}
+      {isLoading ? (
+        <Box sx={{ textAlign: 'center', py: 3 }}>
+          <CircularProgress />
+        </Box>
+      ) : typesError ? (
+        <Alert severity="error">
+          Failed to load login methods: {String(typesError)}
+        </Alert>
+      ) : setupActive ? (
+        <SetupSection oidc={oidc} />
+      ) : (
+        <>
+          <Typography variant="h6">Sign in</Typography>
+          {oidc.map((provider) => (
+            <OidcButton
+              key={provider.name}
+              provider={provider}
+              redirectUri={currentUrl}
+            />
+          ))}
+          {passwordLogin ? (
+            hasOidc && !showPasswordForm ? (
+              <Button
+                variant="outlined"
+                fullWidth
+                onClick={() => {
+                  setShowPasswordForm(true)
+                }}
+                sx={oidcButtonSx}
+              >
+                Sign in with password
+              </Button>
+            ) : (
+              <PasswordLoginForm
+                email={email}
+                password={password}
+                loginError={loginError}
+                onEmailChange={(v) => {
+                  setEmail(v)
+                  setLoginError('')
+                }}
+                onPasswordChange={(v) => {
+                  setPassword(v)
+                  setLoginError('')
+                }}
+                onSubmit={handlePasswordLogin}
+              />
+            )
+          ) : null}
+          {!hasAnyMethod ? (
+            <Typography variant="body2" color="text.secondary">
+              No login providers configured. Contact your administrator.
+            </Typography>
+          ) : null}
+        </>
+      )}
     </Box>
   )
 }
@@ -411,28 +473,28 @@ function SignInPage() {
     }
   }, [user])
 
-  if (!checked || user) {
-    return (
-      <Nav>
-        <Container maxWidth="xs" sx={{ mt: 4, textAlign: 'center' }}>
-          <CircularProgress />
-        </Container>
-      </Nav>
-    )
-  }
-
   return (
     <Nav>
       <Container maxWidth="xs" sx={{ mt: 4, textAlign: 'center' }}>
-        <Typography variant="h4" gutterBottom>
-          Welcome to Apollo
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 4 }}>
-          Collaborative genome annotation editor
-        </Typography>
-        <Paper variant="outlined" sx={{ p: 3 }}>
-          <LoginSection />
-        </Paper>
+        {!checked || user ? (
+          <CircularProgress />
+        ) : (
+          <>
+            <Typography variant="h4" gutterBottom>
+              Welcome to Apollo
+            </Typography>
+            <Typography
+              variant="subtitle1"
+              color="text.secondary"
+              sx={{ mb: 4 }}
+            >
+              Collaborative genome annotation editor
+            </Typography>
+            <Paper variant="outlined" sx={{ p: 3 }}>
+              <LoginSection />
+            </Paper>
+          </>
+        )}
       </Container>
     </Nav>
   )

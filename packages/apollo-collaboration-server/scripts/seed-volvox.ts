@@ -72,12 +72,6 @@ if (!assemblyRes.ok) {
 const assembly = (await assemblyRes.json()) as { _id: string }
 const assemblyId = assembly._id
 
-const refSeqsRes = await fetch(`${API_BASE}/refSeqs?assembly=${assemblyId}`, {
-  headers,
-})
-const refSeqs = (await refSeqsRes.json()) as { _id: string; name: string }[]
-const refSeqIdMap = new Map(refSeqs.map((rs) => [rs.name, rs._id]))
-
 const gff3Text = readFileSync(gff3Path, 'utf8')
 const features = parseStringSync(gff3Text, { parseSequences: false })
 
@@ -90,15 +84,11 @@ for (const featureGroup of features) {
   if (!line.seq_id || !line.type) {
     continue
   }
-  const refSeqId = refSeqIdMap.get(line.seq_id)
-  if (!refSeqId) {
-    continue
-  }
-  const snapshot = gff3LineToSnapshot(line, refSeqId)
+  const snapshot = gff3LineToSnapshot(line, line.seq_id)
   const res = await fetch(`${API_BASE}/features`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ addedFeature: snapshot, assemblyId }),
+    body: JSON.stringify({ addedFeature: snapshot, assemblyId: 'volvox' }),
   })
   if (!res.ok) {
     console.warn(`Feature POST failed: ${res.status} ${await res.text()}`)
@@ -250,15 +240,7 @@ if (!assembly2Res.ok) {
     `POST /assemblies (volvox2) failed: ${assembly2Res.status} ${await assembly2Res.text()}`,
   )
 }
-const assembly2 = (await assembly2Res.json()) as { _id: string }
-const assembly2Id = assembly2._id
-
-const refSeqs2Res = await fetch(
-  `${API_BASE}/refSeqs?assembly=${assembly2Id}`,
-  { headers },
-)
-const refSeqs2 = (await refSeqs2Res.json()) as { _id: string; name: string }[]
-const refSeqIdMap2 = new Map(refSeqs2.map((rs) => [rs.name, rs._id]))
+await assembly2Res.json()
 
 let count2 = 0
 for (const featureGroup of features) {
@@ -269,15 +251,11 @@ for (const featureGroup of features) {
   if (!line.seq_id || !line.type) {
     continue
   }
-  const refSeqId = refSeqIdMap2.get(line.seq_id)
-  if (!refSeqId) {
-    continue
-  }
-  const snapshot = gff3LineToSnapshot(line, refSeqId)
+  const snapshot = gff3LineToSnapshot(line, line.seq_id)
   const res = await fetch(`${API_BASE}/features`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ addedFeature: snapshot, assemblyId: assembly2Id }),
+    body: JSON.stringify({ addedFeature: snapshot, assemblyId: 'volvox2' }),
   })
   if (!res.ok) {
     console.warn(

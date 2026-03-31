@@ -14,7 +14,6 @@ import type {
   CheckRepository,
   CheckResultRepository,
   FeatureRepository,
-  RefSeqRepository,
   UserRepository,
 } from './repositories/index.js'
 
@@ -40,7 +39,6 @@ export interface ServerDataStore {
   typeName: 'Server'
   featureRepository: FeatureRepository
   assemblyRepository: AssemblyRepository
-  refSeqRepository: RefSeqRepository
   checkRepository: CheckRepository
   checkResultRepository: CheckResultRepository
   userRepository: UserRepository

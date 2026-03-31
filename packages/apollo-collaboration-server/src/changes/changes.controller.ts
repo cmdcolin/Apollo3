@@ -1,8 +1,5 @@
 import { Controller, Get, Inject, Param } from '@nestjs/common'
-import {
-  FeatureHistoryEntity,
-  RefSeqEntity,
-} from '@apollo-annotation/entities'
+import { FeatureHistoryEntity } from '@apollo-annotation/entities'
 import { EntityManager } from '@mikro-orm/core'
 
 import { Roles } from '../authentication/roles.guard.js'
@@ -26,17 +23,14 @@ export class ChangesController {
       { orderBy: { changedAt: 'DESC' }, limit: 1000 },
     )
 
-    // Resolve refSeq → assembly name in one query with populate
-    const refSeqIds = [...new Set(rows.map((r) => r.refSeq))]
-    const refSeqs = await em.find(
-      RefSeqEntity,
-      { _id: { $in: refSeqIds } },
-      { populate: ['assembly'] },
+    const assemblyIds = [...new Set(rows.filter((r) => r.assembly).map((r) => r.assembly as string))]
+    const assemblies = await Promise.all(
+      assemblyIds.map((id) => this.db.assembly.findById(id)),
     )
-    const refSeqToAssembly = new Map<string, string>()
-    for (const rs of refSeqs) {
-      if (typeof rs.assembly === 'object' && rs.assembly.name) {
-        refSeqToAssembly.set(rs._id, rs.assembly.name)
+    const assemblyIdToName = new Map<string, string>()
+    for (const a of assemblies) {
+      if (a) {
+        assemblyIdToName.set(a._id, a.name)
       }
     }
 
@@ -64,7 +58,7 @@ export class ChangesController {
         sequence: first.sequence,
         user: first.changedBy ?? 'unknown',
         createdAt: first.changedAt.toISOString(),
-        assembly: refSeqToAssembly.get(first.refSeq),
+        assembly: first.assembly ? assemblyIdToName.get(first.assembly) : undefined,
         changeTypes,
         featureTypes,
         featureIds,

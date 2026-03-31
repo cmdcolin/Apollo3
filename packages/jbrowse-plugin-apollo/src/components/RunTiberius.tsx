@@ -140,21 +140,10 @@ export function RunTiberius({
     }
 
     try {
-      const refSeqId = await backendDriver.getRefSeqId(
-        region.assemblyName,
-        region.refName,
-      )
-      if (!refSeqId) {
-        setErrorMessage(`Could not find refSeq for "${region.refName}"`)
-        setStatus('failed')
-        return
-      }
-
       const result = await backendDriver.submitAnalysisJob({
         tool: 'tiberius',
         assemblyName: region.assemblyName,
         params: {
-          refSeqId,
           refSeqName: region.refName,
           start: region.start,
           end: region.end,

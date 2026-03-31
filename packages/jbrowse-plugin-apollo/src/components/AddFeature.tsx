@@ -24,7 +24,6 @@ import {
 } from '@mui/material'
 import React, { useState } from 'react'
 
-import { CollaborationServerDriver } from '../BackendDrivers'
 import type { FeatureService } from '../FeatureService'
 import { isOntologyClass } from '../OntologyManager'
 import type { ApolloSessionModel } from '../session'
@@ -103,25 +102,7 @@ export function AddFeature({
     event.preventDefault()
     setErrorMessage('')
 
-    const backendDriver = session.apolloDataStore.getBackendDriver(
-      region.assemblyName,
-    )
-    if (!backendDriver) {
-      setErrorMessage('No backend driver found')
-      return
-    }
-    let refSeqId = region.refName
-    if (backendDriver instanceof CollaborationServerDriver) {
-      const backendRefSeqId = await backendDriver.getRefSeqId(
-        region.assemblyName,
-        region.refName,
-      )
-      if (!backendRefSeqId) {
-        setErrorMessage(`Could not find refSeq for "${region.refName}"`)
-        return
-      }
-      refSeqId = backendRefSeqId
-    }
+    const refSeqId = region.refName
 
     if (type === NewFeature.GENE_AND_SUBFEATURES) {
       const mRNA = makeCodingMrna(

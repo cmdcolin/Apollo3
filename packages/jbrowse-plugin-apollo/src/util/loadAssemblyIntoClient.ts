@@ -39,7 +39,7 @@ export async function loadAssemblyIntoClient(
 
       const ref =
         assembly.refSeqs.get(feature.refSeq) ??
-        assembly.addRefSeq(feature.refSeq, feature.refSeq)
+        assembly.addRefSeq(feature.refSeq)
       if (!ref.features.has(feature._id)) {
         ref.addFeature(feature)
       }
@@ -49,7 +49,7 @@ export async function loadAssemblyIntoClient(
       sequenceFeatureCount++
       // sequence feature
       let ref = assembly.refSeqs.get(seqLine.id)
-      ref ??= assembly.addRefSeq(seqLine.id, seqLine.id, seqLine.description)
+      ref ??= assembly.addRefSeq(seqLine.id, seqLine.description)
       if (seqLine.description && !ref.description) {
         ref.setDescription(seqLine.description)
       }

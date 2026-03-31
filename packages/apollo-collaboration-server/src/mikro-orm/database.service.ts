@@ -9,7 +9,6 @@ import type {
   FeatureRepository,
   FileRepository,
   OrganismRepository,
-  RefSeqRepository,
   TextSearchAdapterConfigRepository,
   TrackConfigRepository,
   UserRepository,
@@ -25,12 +24,10 @@ import {
   MikroOrmFeatureRepository,
   MikroOrmFileRepository,
   MikroOrmOrganismRepository,
-  MikroOrmRefSeqRepository,
   MikroOrmTextSearchAdapterConfigRepository,
   MikroOrmTrackConfigRepository,
   MikroOrmUserRepository,
   MongoFeatureRepository,
-  RefSeqEntity,
 } from '@apollo-annotation/entities'
 import { EntityManager } from '@mikro-orm/core'
 import { Inject, Injectable } from '@nestjs/common'
@@ -42,7 +39,6 @@ export interface TransactionScope {
   assemblyPermission: AssemblyPermissionRepository
   organism: OrganismRepository
   feature: FeatureRepository
-  refSeq: RefSeqRepository
   checkConfig: CheckRepository
   check: CheckResultRepository
   file: FileRepository
@@ -69,7 +65,6 @@ export class DatabaseService {
   readonly assemblyPermission: AssemblyPermissionRepository
   readonly organism: OrganismRepository
   readonly feature: FeatureRepository
-  readonly refSeq: RefSeqRepository
   readonly user: UserRepository
   readonly file: FileRepository
   readonly check: CheckResultRepository
@@ -85,7 +80,6 @@ export class DatabaseService {
     this.assemblyPermission = new MikroOrmAssemblyPermissionRepository(em)
     this.organism = new MikroOrmOrganismRepository(em)
     this.feature = createFeatureRepository(em, this.dbType)
-    this.refSeq = new MikroOrmRefSeqRepository(em)
     this.user = new MikroOrmUserRepository(em)
     this.file = new MikroOrmFileRepository(em)
     this.check = new MikroOrmCheckResultRepository(em)
@@ -94,22 +88,6 @@ export class DatabaseService {
     this.trackConfig = new MikroOrmTrackConfigRepository(em)
     this.textSearchAdapterConfig =
       new MikroOrmTextSearchAdapterConfigRepository(em)
-  }
-
-  async getAssemblyNameByRefSeq(refSeqId: string) {
-    const refSeq = await this.em.findOne(
-      RefSeqEntity,
-      { _id: refSeqId },
-      { populate: ['assembly'] },
-    )
-    if (!refSeq) {
-      return undefined
-    }
-    const asm = refSeq.assembly
-    if (typeof asm === 'object' && asm.name) {
-      return asm.name
-    }
-    return undefined
   }
 
   async transactional<T>(callback: (scope: TransactionScope) => Promise<T>) {
@@ -121,7 +99,6 @@ export class DatabaseService {
         assemblyPermission: new MikroOrmAssemblyPermissionRepository(txEm),
         organism: new MikroOrmOrganismRepository(txEm),
         feature: createFeatureRepository(txEm, this.dbType),
-        refSeq: new MikroOrmRefSeqRepository(txEm),
         checkConfig: new MikroOrmCheckRepository(txEm),
         check: new MikroOrmCheckResultRepository(txEm),
         file: new MikroOrmFileRepository(txEm),

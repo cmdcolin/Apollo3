@@ -25,12 +25,12 @@ export const ApolloAssembly = types
   })
   .views((self) => ({
     getByRefName(refName: string) {
-      return [...self.refSeqs.values()].find((val) => val.name === refName)
+      return self.refSeqs.get(refName)
     },
   }))
   .actions((self) => ({
-    addRefSeq(id: string, name: string, description?: string) {
-      return self.refSeqs.put({ _id: id, name, description })
+    addRefSeq(name: string, description?: string) {
+      return self.refSeqs.put({ _id: name, name, description })
     },
     addComment(comment: string) {
       return self.comments.push(comment)

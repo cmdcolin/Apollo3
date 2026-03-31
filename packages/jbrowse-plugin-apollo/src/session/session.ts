@@ -26,6 +26,7 @@ import {
 } from '@jbrowse/mobx-state-tree'
 import DownloadIcon from '@mui/icons-material/Download'
 import EditIcon from '@mui/icons-material/Edit'
+import HomeIcon from '@mui/icons-material/Home'
 import FactCheckIcon from '@mui/icons-material/FactCheck'
 import FileOpenIcon from '@mui/icons-material/FileOpen'
 import LockIcon from '@mui/icons-material/Lock'
@@ -381,6 +382,31 @@ export function extendSession(
                         },
                       ],
                     )
+                  },
+                },
+              ],
+            },
+            {
+              label: 'Pages',
+              type: 'subMenu' as const,
+              icon: HomeIcon,
+              subMenu: [
+                {
+                  label: 'Home',
+                  onClick: (session: ApolloSessionModel) => {
+                    globalThis.location.href = new URL(
+                      '/ui/',
+                      getBaseURL(session),
+                    ).href
+                  },
+                },
+                {
+                  label: 'Assemblies',
+                  onClick: (session: ApolloSessionModel) => {
+                    globalThis.location.href = new URL(
+                      '/ui/assemblies/',
+                      getBaseURL(session),
+                    ).href
                   },
                 },
               ],

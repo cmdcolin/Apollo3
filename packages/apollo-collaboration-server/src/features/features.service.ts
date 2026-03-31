@@ -48,11 +48,13 @@ function doesIntersect2(s1: number, e1: number, s2: number, e2: number) {
 function flattenNestedFeature(
   feature: NestedFeature,
   refSeq: string,
+  assemblyId: string,
   parentId?: string,
 ) {
   const rows: FeatureRow[] = []
   const row: FeatureRow = {
     _id: feature._id,
+    assembly: assemblyId,
     refSeq,
     parentId,
     type: feature.type,
@@ -64,7 +66,7 @@ function flattenNestedFeature(
   rows.push(row)
   if (feature.children) {
     for (const child of Object.values(feature.children)) {
-      const childRows = flattenNestedFeature(child, refSeq, feature._id)
+      const childRows = flattenNestedFeature(child, refSeq, assemblyId, feature._id)
       for (const cr of childRows) {
         rows.push(cr)
       }
@@ -111,20 +113,26 @@ export class FeaturesService {
   }
 
   async getFeatureCount(featureCountRequest: FeatureCountRequest) {
-    const { assemblyId, end, refSeqId, start } = featureCountRequest
+    const { assemblyId: assemblyIdOrName, end, refSeq, start } = featureCountRequest
+
+    let resolvedAssemblyId: string | undefined
+    if (assemblyIdOrName) {
+      const assembly = await this.db.assembly.findByName(assemblyIdOrName)
+        ?? await this.db.assembly.findById(assemblyIdOrName)
+      resolvedAssemblyId = assembly?._id
+    }
 
     let count = 0
-    if (refSeqId) {
+    if (resolvedAssemblyId && refSeq) {
       count = await this.db.feature.countByRange(
-        refSeqId,
+        resolvedAssemblyId,
+        refSeq,
         start ?? 0,
         end ?? Number.MAX_SAFE_INTEGER,
       )
-    } else if (assemblyId) {
-      const refSeqs = await this.db.refSeq.findByAssembly(assemblyId)
-      const refSeqIds = refSeqs.map((rs) => rs._id)
-      count = await this.db.feature.countByRangeMultiple(
-        refSeqIds,
+    } else if (resolvedAssemblyId) {
+      count = await this.db.feature.countByAssembly(
+        resolvedAssemblyId,
         start ?? 0,
         end ?? Number.MAX_SAFE_INTEGER,
       )
@@ -138,15 +146,17 @@ export class FeaturesService {
 
   async getByIndexedId(getByIndexedIdRequest: GetByIndexedIdRequest) {
     const { assemblies, id, topLevel } = getByIndexedIdRequest
-    let refSeqIds: string[] | undefined
+    let assemblyId: string | undefined
     if (assemblies) {
-      const assemblyIds = assemblies.split(',')
-      const refSeqs = await this.db.refSeq.findByAssemblies(assemblyIds)
-      refSeqIds = refSeqs.map((rs) => rs._id)
+      const assemblyNames = assemblies.split(',')
+      const assemblyRows = await this.db.assembly.findByNames(assemblyNames)
+      if (assemblyRows.length > 0) {
+        assemblyId = assemblyRows[0]._id
+      }
     }
     const topLevelFeatures = await this.db.feature.findByIndexedId(
       id,
-      refSeqIds,
+      assemblyId,
     )
     if (topLevelFeatures.length === 0) {
       return []
@@ -206,6 +216,7 @@ export class FeaturesService {
 
   async findFeaturesByRange(searchDto: FeatureRangeSearchDto) {
     const roots = await this.db.feature.findRootsByRange(
+      searchDto.assembly,
       searchDto.refSeq,
       searchDto.start,
       searchDto.end,
@@ -226,10 +237,14 @@ export class FeaturesService {
     const { assemblies, term } = searchDto
     const assemblyNames = assemblies.split(',')
     const assemblyRows = await this.db.assembly.findByNames(assemblyNames)
-    const assemblyIds = assemblyRows.map((a) => a._id)
-    const refSeqs = await this.db.refSeq.findByAssemblies(assemblyIds)
-    const refSeqIds = refSeqs.map((rs) => rs._id)
-    return this.db.feature.searchText(refSeqIds, term)
+    const results: FeatureRow[] = []
+    for (const assembly of assemblyRows) {
+      const matches = await this.db.feature.searchText(assembly._id, term)
+      for (const m of matches) {
+        results.push(m)
+      }
+    }
+    return results
   }
 
   // --- Mutation helpers ---
@@ -239,11 +254,11 @@ export class FeaturesService {
     if (!feature) {
       throw new NotFoundException(`Feature not found: ${featureId}`)
     }
-    const name = await this.db.getAssemblyNameByRefSeq(feature.refSeq)
-    if (!name) {
+    const assembly = await this.db.assembly.findById(feature.assembly)
+    if (!assembly) {
       throw new NotFoundException(`Assembly not found for feature: ${featureId}`)
     }
-    return name
+    return assembly.name
   }
 
   private async getRootFeatureTrees(featureIds: string[]) {
@@ -353,17 +368,15 @@ export class FeaturesService {
   async addFeature(dto: AddFeatureDto, user: DecodedJWT) {
     const { addedFeature, assemblyId, parentFeatureId } = dto
 
+    // The client sends the assembly name (e.g. "volvox"), but refSeqs are
+    // stored with the assembly _id.  Resolve name → _id when needed.
+    const assembly = await this.db.assembly.findByName(assemblyId)
+    const resolvedAssemblyId = assembly?._id ?? assemblyId
+
     const sequence = await this.db.transactional(async (scope) => {
       const seq = await scope.counter.getNextSequenceValue('changeCounter')
       return mutationContext.run({ sequence: seq, user: user.email }, async () => {
-        const refSeqs = await scope.refSeq.findByAssembly(assemblyId)
-        const refSeq = refSeqs.find((rs) => rs.name === addedFeature.refSeq || rs._id === addedFeature.refSeq)
-        if (!refSeq) {
-          throw new BadRequestException(
-            `RefSeq not found: ${addedFeature.refSeq} in assembly ${assemblyId}`,
-          )
-        }
-        const rows = flattenNestedFeature(addedFeature, refSeq._id)
+        const rows = flattenNestedFeature(addedFeature, addedFeature.refSeq, resolvedAssemblyId)
         if (parentFeatureId && rows.length > 0) {
           rows[0].parentId = parentFeatureId
         }
@@ -490,6 +503,7 @@ export class FeaturesService {
 
         const leftRow: FeatureRow = {
           _id: leftExonId,
+          assembly: exon.assembly,
           refSeq: exon.refSeq,
           parentId: exon.parentId,
           type: exon.type,
@@ -502,6 +516,7 @@ export class FeaturesService {
         }
         const rightRow: FeatureRow = {
           _id: rightExonId,
+          assembly: exon.assembly,
           refSeq: exon.refSeq,
           parentId: exon.parentId,
           type: exon.type,
@@ -722,6 +737,7 @@ export class FeaturesService {
 
         const leftRow: FeatureRow = {
           _id: leftTranscriptId,
+          assembly: transcript.assembly,
           refSeq: transcript.refSeq,
           parentId: transcript.parentId,
           type: transcript.type,
@@ -734,6 +750,7 @@ export class FeaturesService {
         }
         const rightRow: FeatureRow = {
           _id: rightTranscriptId,
+          assembly: transcript.assembly,
           refSeq: transcript.refSeq,
           parentId: transcript.parentId,
           type: transcript.type,
@@ -817,11 +834,24 @@ export class FeaturesService {
     const affectedFeatureIds: string[] = []
     const deletedFeatureIds: string[] = []
     const [firstRecord] = historyRecords
-    const firstRefSeq: string = firstRecord.refSeq
 
-    const assemblyId = await this.db.getAssemblyNameByRefSeq(firstRefSeq)
-    if (!assemblyId) {
-      throw new NotFoundException(`Assembly not found for refSeq: ${firstRefSeq}`)
+    let assemblyId: string
+    if (firstRecord.assembly) {
+      const assembly = await this.db.assembly.findById(firstRecord.assembly)
+      if (!assembly) {
+        throw new NotFoundException(`Assembly not found: ${firstRecord.assembly}`)
+      }
+      assemblyId = assembly.name
+    } else {
+      const feature = await this.db.feature.findById(firstRecord.featureId)
+      if (!feature) {
+        throw new NotFoundException(`Feature not found: ${firstRecord.featureId}`)
+      }
+      const assembly = await this.db.assembly.findById(feature.assembly)
+      if (!assembly) {
+        throw new NotFoundException(`Assembly not found for feature: ${firstRecord.featureId}`)
+      }
+      assemblyId = assembly.name
     }
 
     const undoSequence = await this.db.transactional(async (scope) => {
@@ -853,6 +883,7 @@ export class FeaturesService {
               // Feature was deleted — undo by re-creating it
               await scope.feature.create({
                 _id: record.featureId,
+                assembly: record.assembly ?? firstRecord.assembly ?? '',
                 refSeq: record.refSeq,
                 parentId: record.parentId ?? undefined,
                 type: record.type,

@@ -10,10 +10,6 @@ export function assemblyId() {
   return `asm-${nanoid(ID_LENGTH)}`
 }
 
-export function refSeqId() {
-  return `rs-${nanoid(ID_LENGTH)}`
-}
-
 export function userId() {
   return `u-${nanoid(ID_LENGTH)}`
 }

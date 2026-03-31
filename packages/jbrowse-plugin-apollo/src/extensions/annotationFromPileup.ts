@@ -56,24 +56,9 @@ export function annotationFromPileup(pluggableElement: PluggableElementType) {
         }
         return assembly
       },
-      getRefSeqId(assembly: Assembly) {
+      getRefSeqId(_assembly: Assembly) {
         const firstRegion = self.getFirstRegion()
-        const { refName } = firstRegion
-        const { refNameAliases } = assembly
-        if (!refNameAliases) {
-          throw new Error(`Could not find aliases for ${assembly.name}`)
-        }
-        const newRefNames = [...Object.entries(refNameAliases)]
-          .filter(([id, refName]) => id !== refName)
-          .map(([id, refName]) => ({
-            _id: id,
-            name: refName,
-          }))
-        const refSeqId = newRefNames.find((item) => item.name === refName)?._id
-        if (!refSeqId) {
-          throw new Error(`Could not find refSeqId named ${refName}`)
-        }
-        return refSeqId
+        return firstRegion.refName
       },
       getAnnotationFeature() {
         const feature = self.contextMenuFeature

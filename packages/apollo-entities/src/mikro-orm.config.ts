@@ -12,7 +12,6 @@ import { FeatureEntity } from './entities/FeatureEntity.js'
 import { FeatureHistoryEntity } from './entities/FeatureHistoryEntity.js'
 import { FileEntity } from './entities/FileEntity.js'
 import { OrganismEntity } from './entities/OrganismEntity.js'
-import { RefSeqEntity } from './entities/RefSeqEntity.js'
 import { TextSearchAdapterConfigEntity } from './entities/TextSearchAdapterConfigEntity.js'
 import { TrackConfigEntity } from './entities/TrackConfigEntity.js'
 import { UserEntity } from './entities/UserEntity.js'
@@ -30,7 +29,6 @@ const allEntities = [
   FeatureEntity,
   FeatureHistoryEntity,
   FileEntity,
-  RefSeqEntity,
   TextSearchAdapterConfigEntity,
   TrackConfigEntity,
   UserEntity,

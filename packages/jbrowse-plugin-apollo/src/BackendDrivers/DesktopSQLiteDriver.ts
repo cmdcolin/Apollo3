@@ -2,10 +2,8 @@
 import {
   type FeatureRow,
   type NestedFeature,
-  type RefSeqRow,
   assembleFeatureTrees,
   assemblyId,
-  refSeqId,
 } from '@apollo-annotation/common'
 import type {
   AnnotationFeatureSnapshot,
@@ -123,24 +121,6 @@ export class DesktopSQLiteDriver extends BackendDriver {
       name: assemblyName,
       displayName: assemblyName,
     })
-
-    const { assemblyManager } = getSession(this.clientStore)
-    const assembly = assemblyManager.get(assemblyName)
-    const regions = assembly?.regions ?? []
-
-    const refSeqRows: RefSeqRow[] = []
-    for (const region of regions) {
-      const newRefSeqId = refSeqId()
-      refSeqRows.push({
-        _id: newRefSeqId,
-        assembly: newAssemblyId,
-        name: region.refName,
-        length: region.end - region.start,
-      })
-    }
-    if (refSeqRows.length > 0) {
-      await dataStore.refSeqRepository.createMany(refSeqRows)
-    }
   }
 
   private async importGFF3(
@@ -166,26 +146,6 @@ export class DesktopSQLiteDriver extends BackendDriver {
       displayName: assemblyName,
     })
 
-    const { assemblyManager } = getSession(this.clientStore)
-    const assembly = assemblyManager.get(assemblyName)
-    const regions = assembly?.regions ?? []
-
-    const refSeqMap = new Map<string, string>()
-    const refSeqRows: RefSeqRow[] = []
-    for (const region of regions) {
-      const newRefSeqId = refSeqId()
-      refSeqMap.set(region.refName, newRefSeqId)
-      refSeqRows.push({
-        _id: newRefSeqId,
-        assembly: newAssemblyId,
-        name: region.refName,
-        length: region.end - region.start,
-      })
-    }
-    if (refSeqRows.length > 0) {
-      await dataStore.refSeqRepository.createMany(refSeqRows)
-    }
-
     const allFeatureRows: FeatureRow[] = []
     for (const item of gff3Result) {
       if (!Array.isArray(item) || item.length === 0) {
@@ -195,12 +155,9 @@ export class DesktopSQLiteDriver extends BackendDriver {
       if (!firstLoc.seq_id) {
         continue
       }
-      const refSeqId = refSeqMap.get(firstLoc.seq_id)
-      if (!refSeqId) {
-        continue
-      }
-      const snapshot = gff3ToAnnotationFeature(item, refSeqId)
-      const rows = flattenFeatureSnapshot(snapshot, refSeqId)
+      const refSeqName = firstLoc.seq_id
+      const snapshot = gff3ToAnnotationFeature(item, refSeqName)
+      const rows = flattenFeatureSnapshot(snapshot, newAssemblyId, refSeqName)
       for (const row of rows) {
         allFeatureRows.push(row)
       }
@@ -236,16 +193,9 @@ export class DesktopSQLiteDriver extends BackendDriver {
       return []
     }
 
-    const refSeqRow = await dataStore.refSeqRepository.findByNameAndAssembly(
-      region.refName,
-      assemblyRow._id,
-    )
-    if (!refSeqRow) {
-      return []
-    }
-
     const rootRows = await dataStore.featureRepository.findRootsByRange(
-      refSeqRow._id,
+      assemblyRow._id,
+      region.refName,
       region.start,
       region.end,
     )
@@ -276,24 +226,13 @@ export class DesktopSQLiteDriver extends BackendDriver {
   }
 
   async getRegions(assemblyName: string): Promise<Region[]> {
-    const orm = await this.getOrmForAssembly(assemblyName)
-    const dataStore = createLocalDataStore(orm.em)
-
-    const assemblyRow =
-      await dataStore.assemblyRepository.findByName(assemblyName)
-    if (!assemblyRow) {
-      return []
+    const { assemblyManager } = getSession(this.clientStore)
+    const assembly = assemblyManager.get(assemblyName)
+    if (!assembly) {
+      throw new Error(`Could not find assembly with name "${assemblyName}"`)
     }
-
-    const refSeqs = await dataStore.refSeqRepository.findByAssembly(
-      assemblyRow._id,
-    )
-    return refSeqs.map((rs) => ({
-      assemblyName,
-      refName: rs.name,
-      start: 0,
-      end: rs.length,
-    }))
+    await assemblyManager.waitForAssembly(assemblyName)
+    return assembly.regions ?? []
   }
 
   getAssemblies() {
@@ -306,41 +245,8 @@ export class DesktopSQLiteDriver extends BackendDriver {
     })
   }
 
-  async getRefNameAliases(assemblyName: string): Promise<RefNameAliases[]> {
-    const orm = await this.getOrmForAssembly(assemblyName)
-    const dataStore = createLocalDataStore(orm.em)
-
-    const assemblyRow =
-      await dataStore.assemblyRepository.findByName(assemblyName)
-    if (!assemblyRow) {
-      return []
-    }
-
-    const refSeqs = await dataStore.refSeqRepository.findByAssembly(
-      assemblyRow._id,
-    )
-    return refSeqs.map((rs) => ({
-      refName: rs.name,
-      aliases: [rs._id, ...(rs.aliases ?? [])],
-      uniqueId: `alias-${rs._id}`,
-    }))
-  }
-
-  private async buildRefNameToIdMap(assemblyName: string, orm: MikroORM) {
-    const dataStore = createLocalDataStore(orm.em)
-    const assemblyRow =
-      await dataStore.assemblyRepository.findByName(assemblyName)
-    if (!assemblyRow) {
-      return new Map<string, string>()
-    }
-    const refSeqs = await dataStore.refSeqRepository.findByAssembly(
-      assemblyRow._id,
-    )
-    const map = new Map<string, string>()
-    for (const rs of refSeqs) {
-      map.set(rs.name, rs._id)
-    }
-    return map
+  async getRefNameAliases(_assemblyName: string): Promise<RefNameAliases[]> {
+    return []
   }
 
   async searchFeatures(
@@ -356,11 +262,7 @@ export class DesktopSQLiteDriver extends BackendDriver {
       if (!assemblyRow) {
         continue
       }
-      const refSeqs = await dataStore.refSeqRepository.findByAssembly(
-        assemblyRow._id,
-      )
-      const refSeqIds = refSeqs.map((rs) => rs._id)
-      const rows = await dataStore.featureRepository.searchText(refSeqIds, term)
+      const rows = await dataStore.featureRepository.searchText(assemblyRow._id, term)
       const nestedFeatures = assembleFeatureTrees(rows)
       for (const f of nestedFeatures) {
         results.push(nestedToSnapshot(f))
@@ -372,12 +274,14 @@ export class DesktopSQLiteDriver extends BackendDriver {
 
 function flattenFeatureSnapshot(
   snapshot: AnnotationFeatureSnapshot,
+  assembly: string,
   refSeq: string,
   parentId?: string,
 ) {
   const rows: FeatureRow[] = []
   const row: FeatureRow = {
     _id: snapshot._id,
+    assembly,
     refSeq,
     parentId,
     type: snapshot.type,
@@ -389,7 +293,7 @@ function flattenFeatureSnapshot(
   rows.push(row)
   if (snapshot.children) {
     for (const child of Object.values(snapshot.children)) {
-      const childRows = flattenFeatureSnapshot(child, refSeq, snapshot._id)
+      const childRows = flattenFeatureSnapshot(child, assembly, refSeq, snapshot._id)
       for (const cr of childRows) {
         rows.push(cr)
       }

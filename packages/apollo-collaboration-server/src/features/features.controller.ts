@@ -5,6 +5,7 @@ import {
   Get,
   Inject,
   Logger,
+  NotFoundException,
   Param,
   ParseBoolPipe,
   Patch,
@@ -15,6 +16,7 @@ import {
 } from '@nestjs/common'
 
 import { PermissionService } from '../permissions/permission.service.js'
+import { DatabaseService } from '../mikro-orm/database.service.js'
 import type { RequestWithUser } from '../authentication/request-with-user.js'
 import { Role } from '../authentication/role.enum.js'
 import { Public, Roles } from '../authentication/roles.guard.js'
@@ -48,6 +50,7 @@ export class FeaturesController {
     @Inject(FeaturesService) private readonly featuresService: FeaturesService,
     @Inject(PermissionService)
     private readonly permissionService: PermissionService,
+    @Inject(DatabaseService) private readonly db: DatabaseService,
   ) {}
   private readonly logger = new Logger(FeaturesController.name)
 
@@ -63,18 +66,25 @@ export class FeaturesController {
   @Get('getFeatures')
   @UsePipes(new ZodValidationPipe(featureRangeSearchSchema))
   async getFeaturesByRange(
-    @Query() request: { refSeq: string; start: number; end: number },
+    @Query() request: { assembly: string; refSeq: string; start: number; end: number },
     @Req() req: RequestWithUser,
   ) {
     this.logger.debug(
-      `getFeatures endpoint: refSeq: ${request.refSeq}, start: ${request.start}, end: ${request.end}`,
+      `getFeatures endpoint: assembly: ${request.assembly}, refSeq: ${request.refSeq}, start: ${request.start}, end: ${request.end}`,
     )
-    await this.permissionService.checkRefSeqPermission(
+    const assembly = await this.db.assembly.findByName(request.assembly)
+    if (!assembly) {
+      throw new NotFoundException(`Assembly "${request.assembly}" not found`)
+    }
+    await this.permissionService.checkIfUserHasPermissionForAssembly(
       req.user,
-      request.refSeq,
+      assembly._id,
       Role.ReadOnly,
     )
-    return this.featuresService.findFeaturesByRange(request)
+    return this.featuresService.findFeaturesByRange({
+      ...request,
+      assembly: assembly._id,
+    })
   }
 
   @Roles(Role.ReadOnly)
@@ -95,7 +105,7 @@ export class FeaturesController {
     @Query()
     featureCountRequest: {
       assemblyId?: string
-      refSeqId?: string
+      refSeq?: string
       start?: number
       end?: number
     },

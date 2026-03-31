@@ -3,6 +3,7 @@ import path from 'node:path'
 
 import { Inject, Injectable, Logger } from '@nestjs/common'
 
+import { readSequencesFromSource } from '../../assemblies/assemblies.service.js'
 import { DatabaseService } from '../../mikro-orm/database.service.js'
 import { extractAssemblyFasta } from '../fasta-extract.js'
 import { runCommand } from '../run-command.js'
@@ -94,9 +95,13 @@ export class LocalBlastRunner implements AnalysisRunner {
     this.logger.log(
       `Extracting FASTA for assembly ${context.assemblyId} → ${fastaPath}`,
     )
-    const refSeqs = await context.db.refSeq.findByAssembly(context.assemblyId)
+    const assembly = await context.db.assembly.findById(context.assemblyId)
+    if (!assembly?.sequenceSource) {
+      throw new Error(`Assembly "${context.assemblyId}" has no sequence source`)
+    }
+    const refSeqs = await readSequencesFromSource(assembly.sequenceSource)
     await extractAssemblyFasta(
-      context.assemblyId,
+      assembly.name,
       fastaPath,
       context.sequenceService,
       refSeqs,

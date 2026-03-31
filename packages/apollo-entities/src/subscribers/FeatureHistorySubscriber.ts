@@ -13,8 +13,10 @@ import { FeatureHistoryEntity } from '../entities/FeatureHistoryEntity.js'
 
 type FeatureEntityInstance = InferEntity<typeof FeatureEntity>
 
-function getRefSeqId(entity: { refSeq: string | { _id: string } }) {
-  return typeof entity.refSeq === 'string' ? entity.refSeq : entity.refSeq._id
+function getAssemblyId(entity: { assembly: string | { _id: string } }) {
+  return typeof entity.assembly === 'string'
+    ? entity.assembly
+    : entity.assembly._id
 }
 
 function getParentId(entity: {
@@ -37,7 +39,8 @@ function recordFromEntity(
   const record = em.create(FeatureHistoryEntity, {
     _id: historyId(),
     featureId: entity._id,
-    refSeq: getRefSeqId(entity),
+    assembly: getAssemblyId(entity),
+    refSeq: entity.refSeq,
     parentId: getParentId(entity),
     type: entity.type,
     min: entity.min,

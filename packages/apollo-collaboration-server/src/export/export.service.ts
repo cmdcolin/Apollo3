@@ -9,6 +9,7 @@ import { annotationFeatureToGFF3 } from '@apollo-annotation/shared'
 import { util as gffUtil } from '@gmod/gff'
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common'
 
+import { readSequencesFromSource } from '../assemblies/assemblies.service.js'
 import { DatabaseService } from '../mikro-orm/database.service.js'
 import { SequenceService } from '../sequence/sequence.service.js'
 
@@ -47,19 +48,19 @@ export class ExportService {
     }
     const assemblyId = assembly._id
     const { fastaWidth = 80, includeFASTA } = opts
-    const refSeqs = await this.db.refSeq.findByAssembly(assemblyId)
-    const refSeqNames = Object.fromEntries(
-      refSeqs.map((rs) => [rs._id, rs.name]),
-    )
+    if (!assembly.sequenceSource) {
+      throw new NotFoundException(`Assembly "${assemblyName}" has no sequence source`)
+    }
+    const refSeqs = await readSequencesFromSource(assembly.sequenceSource)
 
     const tmpFile = path.join(tmpdir(), `apollo-export-${Date.now()}.gff3`)
     const fh = await open(tmpFile, 'w')
 
     await this.writeGFF3Header(fh, refSeqs)
-    await this.writeGFF3Features(fh, refSeqs, refSeqNames)
+    await this.writeGFF3Features(fh, assemblyId, refSeqs)
 
     if (includeFASTA) {
-      await this.writeFasta(fh, refSeqs, fastaWidth)
+      await this.writeFasta(fh, assemblyName, refSeqs, fastaWidth)
     }
 
     await fh.close()
@@ -84,12 +85,13 @@ export class ExportService {
 
   private async writeGFF3Features(
     fh: FileHandle,
-    refSeqs: { _id: string; length: number }[],
-    refSeqNames: Record<string, string>,
+    assemblyId: string,
+    refSeqs: { name: string; length: number }[],
   ) {
     for (const refSeq of refSeqs) {
       const rootFeatures = await this.db.feature.findRootsByRange(
-        refSeq._id,
+        assemblyId,
+        refSeq.name,
         0,
         refSeq.length,
       )
@@ -100,11 +102,7 @@ export class ExportService {
       const descendants = await this.db.feature.findDescendantsOfMany(rootIds)
       const trees = assembleFeatureTrees([...rootFeatures, ...descendants])
       for (const tree of trees) {
-        const gff3Feature = annotationFeatureToGFF3(
-          tree,
-          undefined,
-          refSeqNames,
-        )
+        const gff3Feature = annotationFeatureToGFF3(tree)
         await fh.write(gffUtil.formatFeature(gff3Feature))
       }
     }
@@ -112,20 +110,16 @@ export class ExportService {
 
   private async writeFasta(
     fh: FileHandle,
-    refSeqs: {
-      _id: string
-      name: string
-      description?: string
-      length: number
-    }[],
+    assemblyName: string,
+    refSeqs: { name: string; length: number }[],
     fastaWidth: number,
   ) {
     await fh.write('##FASTA\n')
     for (const refSeq of refSeqs) {
-      const description = refSeq.description ? ` ${refSeq.description}` : ''
-      await fh.write(`>${refSeq.name}${description}\n`)
+      await fh.write(`>${refSeq.name}\n`)
       const sequence = await this.sequenceService.getSequence({
-        refSeq: refSeq._id,
+        assembly: assemblyName,
+        refSeq: refSeq.name,
         start: 0,
         end: refSeq.length,
       })

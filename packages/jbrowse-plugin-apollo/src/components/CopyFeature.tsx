@@ -21,7 +21,6 @@ import {
   type SelectChangeEvent,
   TextField,
 } from '@mui/material'
-import type ObjectID from 'bson-objectid'
 import type { IKeyValueMap } from 'mobx'
 import React, { useEffect, useState } from 'react'
 
@@ -63,14 +62,9 @@ function generateNewIds(
       children[newChild._id] = newChild
     }
   }
-  const referenceSeq =
-    typeof feature.refSeq === 'string'
-      ? feature.refSeq
-      : (feature.refSeq as unknown as ObjectID).toHexString()
 
   return {
     ...feature,
-    refSeq: referenceSeq,
     children: feature.children && children,
     _id: newId,
   }
@@ -109,13 +103,8 @@ export function CopyFeature({
       if (!assembly) {
         return
       }
-      const { refNameAliases } = assembly
-      if (!refNameAliases) {
-        return
-      }
-      const newRefNames = [...Object.entries(refNameAliases)]
-        .filter(([id, refName]) => id !== refName)
-        .map(([id, refName]) => ({ _id: id, name: refName }))
+      const regions = assembly.regions ?? []
+      const newRefNames = regions.map((r) => ({ _id: r.refName, name: r.refName }))
       setRefNames(newRefNames)
       setSelectedRefSeqId(newRefNames[0]?._id || '')
     }
@@ -141,8 +130,7 @@ export function CopyFeature({
       setErrorMessage(`Assembly not found: ${selectedAssemblyId}.`)
       return
     }
-    const canonicalRefName = assembly.getCanonicalRefName(selectedRefSeqId)
-    const region = assembly.regions?.find((r) => r.refName === canonicalRefName)
+    const region = assembly.regions?.find((r) => r.refName === selectedRefSeqId)
     if (!region) {
       setErrorMessage(`RefSeq not found: ${selectedRefSeqId}.`)
       return
@@ -225,21 +213,9 @@ export function CopyFeature({
         children[newChild._id] = newChild
       }
     }
-    const refSeq =
-      typeof feature.refSeq === 'string'
-        ? feature.refSeq
-        : (feature.refSeq as unknown as ObjectID).toHexString()
-
-    const id =
-      typeof feature._id === 'string'
-        ? feature._id
-        : (feature._id as unknown as ObjectID).toHexString()
-
     return {
       ...feature,
-      refSeq,
       children: feature.children && children,
-      _id: id,
     }
   }
 

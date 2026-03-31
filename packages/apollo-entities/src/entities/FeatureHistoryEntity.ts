@@ -6,6 +6,7 @@ export const FeatureHistoryEntity = defineEntity({
   properties: {
     _id: p.string().primary(),
     featureId: p.string(),
+    assembly: p.string().nullable(),
     refSeq: p.string(),
     parentId: p.string().nullable(),
     type: p.string(),

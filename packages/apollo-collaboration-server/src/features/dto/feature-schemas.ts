@@ -60,6 +60,7 @@ export const undoSchema = z.object({
 })
 
 export const featureRangeSearchSchema = z.object({
+  assembly: z.string(),
   refSeq: z.string(),
   start: z.coerce.number().int(),
   end: z.coerce.number().int(),
@@ -72,7 +73,7 @@ export const featureIdsSearchSchema = z.object({
 
 export const featureCountSchema = z.object({
   assemblyId: z.string().optional(),
-  refSeqId: z.string().optional(),
+  refSeq: z.string().optional(),
   start: z.coerce.number().int().optional(),
   end: z.coerce.number().int().optional(),
 })

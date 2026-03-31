@@ -1,6 +1,7 @@
-import { Controller, Get, Inject, Logger, Param, Query } from '@nestjs/common'
+import { Controller, Get, Inject, Logger, NotFoundException, Param, Query } from '@nestjs/common'
 
 import type { FeatureRangeSearchDto } from '../features/dto/feature-schemas.js'
+import { DatabaseService } from '../mikro-orm/database.service.js'
 import { Role } from '../authentication/role.enum.js'
 import { Roles } from '../authentication/roles.guard.js'
 
@@ -11,6 +12,7 @@ import { ChecksService } from './checks.service.js'
 export class ChecksController {
   constructor(
     @Inject(ChecksService) private readonly checksService: ChecksService,
+    @Inject(DatabaseService) private readonly db: DatabaseService,
   ) {}
   private readonly logger = new Logger(ChecksController.name)
 
@@ -25,17 +27,19 @@ export class ChecksController {
     return this.checksService.getChecks()
   }
 
-  /**
-   * Get all possible checkResults for given range (refSeq, start, end)
-   * @param searchDto - range
-   * @returns an array of checkResult -documents
-   */
   @Get('range')
-  getFeatures(@Query() request: FeatureRangeSearchDto) {
+  async getFeatures(@Query() request: FeatureRangeSearchDto) {
     this.logger.debug(
-      `Get checkResults for refSeq: "${request.refSeq}", start: ${request.start}, end: ${request.end}`,
+      `Get checkResults for assembly: "${request.assembly}", refSeq: "${request.refSeq}", start: ${request.start}, end: ${request.end}`,
     )
-    return this.checksService.findByRange(request)
+    const assembly = await this.db.assembly.findByName(request.assembly)
+    if (!assembly) {
+      throw new NotFoundException(`Assembly "${request.assembly}" not found`)
+    }
+    return this.checksService.findByRange({
+      ...request,
+      assembly: assembly._id,
+    })
   }
 
   /**

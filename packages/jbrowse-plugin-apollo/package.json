@@ -23,7 +23,7 @@
     "clean": "rimraf dist",
     "prepack": "NODE_ENV=production pnpm build",
     "prepublishOnly": "pnpm test",
-    "setup": "rimraf .jbrowse && jbrowse create .jbrowse && sed -i 's/<title>JBrowse<\\/title>/<title>Apollo<\\/title>/' .jbrowse/index.html && cp ../apollo-collaboration-server/public/favicon.ico .jbrowse/favicon.ico",
+    "setup": "rimraf .jbrowse && jbrowse create .jbrowse && node scripts/patch-jbrowse-index.mjs && cp ../apollo-collaboration-server/public/favicon.ico .jbrowse/favicon.ico",
     "start": "pnpm -w run build:shared && pnpm clean && node --experimental-strip-types esbuild.mts --watch",
     "test": "node --experimental-vm-modules ./node_modules/.bin/jest",
     "test:ci": "node --experimental-vm-modules ./node_modules/.bin/jest --coverage",
