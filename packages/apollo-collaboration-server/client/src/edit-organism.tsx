@@ -118,7 +118,7 @@ function OrganismAdminPage() {
   const displayName = organism ? organismLabel(organism) : organismId
 
   return (
-    <Nav current="organisms">
+    <Nav current="organisms" requireAuth>
       <Container>
         <Breadcrumbs sx={{ mb: 2 }}>
           <Link underline="hover" color="inherit" href="/ui/organisms/">

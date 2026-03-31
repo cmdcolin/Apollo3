@@ -286,30 +286,42 @@ function NavBar({ current, user }: { current?: Page; user?: CurrentUser }) {
 export function Nav({
   current,
   children,
+  requireAuth = false,
 }: {
   current?: Page
   children: React.ReactNode
+  requireAuth?: boolean
 }) {
   const { user, checked, error } = useCurrentUser()
+
+  let content
+  if (error) {
+    content = (
+      <Container maxWidth="sm" sx={{ mt: 4 }}>
+        <Alert severity="error">
+          Failed to check authentication: {String(error)}
+        </Alert>
+      </Container>
+    )
+  } else if (!checked) {
+    content = (
+      <Container maxWidth="xs" sx={{ mt: 4, textAlign: 'center' }}>
+        <CircularProgress />
+      </Container>
+    )
+  } else if (requireAuth && !user) {
+    globalThis.location.href = '/ui/signin/'
+    content = null
+  } else {
+    content = children
+  }
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider value={user}>
         <NavBar current={current} user={user ?? undefined} />
-        {error ? (
-          <Container maxWidth="sm" sx={{ mt: 4 }}>
-            <Alert severity="error">
-              Failed to check authentication: {String(error)}
-            </Alert>
-          </Container>
-        ) : checked ? (
-          children
-        ) : (
-          <Container maxWidth="xs" sx={{ mt: 4, textAlign: 'center' }}>
-            <CircularProgress />
-          </Container>
-        )}
+        {content}
       </AuthProvider>
     </ThemeProvider>
   )
@@ -322,5 +334,9 @@ export function AdminNav({
   current: Page
   children: React.ReactNode
 }) {
-  return <Nav current={current}>{children}</Nav>
+  return (
+    <Nav current={current} requireAuth>
+      {children}
+    </Nav>
+  )
 }

@@ -252,7 +252,7 @@ function AssemblyAdminPage() {
   }))
 
   return (
-    <Nav current="assemblies">
+    <Nav current="assemblies" requireAuth>
       <Container>
         <Breadcrumbs sx={{ mb: 2 }}>
           <Link underline="hover" color="inherit" href="/ui/assemblies/">

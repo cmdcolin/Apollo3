@@ -181,7 +181,7 @@ function RecentChangesPage() {
   }
 
   return (
-    <Nav current="changes">
+    <Nav current="changes" requireAuth>
       <Container maxWidth="xl">
         <Typography variant="h4" gutterBottom>
           {activeGeneId ? 'Gene History' : 'Recent Changes'}

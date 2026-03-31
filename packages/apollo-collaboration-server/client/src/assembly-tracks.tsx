@@ -88,7 +88,7 @@ function AssemblyTracksPage() {
 
   if (!assemblyName) {
     return (
-      <Nav current="assemblies">
+      <Nav current="assemblies" requireAuth>
         <Container>
           <Alert severity="error">No assembly name in URL</Alert>
         </Container>
@@ -98,7 +98,7 @@ function AssemblyTracksPage() {
 
   if (assemblyError) {
     return (
-      <Nav current="assemblies">
+      <Nav current="assemblies" requireAuth>
         <Container>
           <Alert severity="error">
             {assemblyError instanceof Error
@@ -112,7 +112,7 @@ function AssemblyTracksPage() {
 
   if (isLoading || !assembly) {
     return (
-      <Nav current="assemblies">
+      <Nav current="assemblies" requireAuth>
         <Container>
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
             <CircularProgress />
@@ -123,7 +123,7 @@ function AssemblyTracksPage() {
   }
 
   return (
-    <Nav current="assemblies">
+    <Nav current="assemblies" requireAuth>
       <Container>
         <Breadcrumbs sx={{ mb: 2 }}>
           <Link underline="hover" color="inherit" href="/ui/assemblies/">

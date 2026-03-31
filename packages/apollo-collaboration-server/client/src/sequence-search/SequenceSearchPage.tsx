@@ -103,28 +103,19 @@ export function SequenceSearchPage({ tool }: { tool: string }) {
   }, [])
 
   useEffect(() => {
-    if (user) {
-      void loadAssemblies()
-    }
-  }, [user, loadAssemblies])
+    void loadAssemblies()
+  }, [loadAssemblies])
 
   useEffect(() => {
-    if (user) {
-      void loadDatabases()
-    }
-  }, [user, loadDatabases])
+    void loadDatabases()
+  }, [loadDatabases])
 
-  if (!user) {
-    globalThis.location.href = '/ui/signin/'
-    return null
-  }
-
-  const canSubmit = user.role === 'admin' || user.role === 'user'
+  const canSubmit = user?.role === 'admin' || user?.role === 'user'
   const assemblyName =
     assemblies.find((a) => a._id === search.assemblyId)?.name ?? ''
 
   return (
-    <Nav current={toolPage(tool)}>
+    <Nav current={toolPage(tool)} requireAuth>
       <Container maxWidth="lg">
         <Typography variant="h4" sx={{ mb: 3 }}>
           {TOOL_LABELS[tool] ?? tool}
