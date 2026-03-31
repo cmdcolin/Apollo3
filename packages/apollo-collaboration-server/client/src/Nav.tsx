@@ -4,6 +4,8 @@ import Badge from '@mui/material/Badge'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
+import CircularProgress from '@mui/material/CircularProgress'
+import Container from '@mui/material/Container'
 import CssBaseline from '@mui/material/CssBaseline'
 import ListItemText from '@mui/material/ListItemText'
 import ListSubheader from '@mui/material/ListSubheader'
@@ -14,7 +16,12 @@ import Typography from '@mui/material/Typography'
 import { ThemeProvider } from '@mui/material/styles'
 import { useRef, useState } from 'react'
 
-import { type CurrentUser, useCurrentUser, useDashboard } from './hooks.js'
+import {
+  AuthProvider,
+  type CurrentUser,
+  useCurrentUser,
+  useDashboard,
+} from './hooks.js'
 import logoUrl from './apollo_logo.svg'
 
 const theme = createJBrowseTheme({
@@ -279,13 +286,21 @@ export function Nav({
   current?: Page
   children: React.ReactNode
 }) {
-  const { user } = useCurrentUser()
+  const { user, checked } = useCurrentUser()
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <NavBar current={current} user={user} />
-      {children}
+      <AuthProvider value={user}>
+        <NavBar current={current} user={user ?? undefined} />
+        {checked ? (
+          children
+        ) : (
+          <Container maxWidth="xs" sx={{ mt: 4, textAlign: 'center' }}>
+            <CircularProgress />
+          </Container>
+        )}
+      </AuthProvider>
     </ThemeProvider>
   )
 }

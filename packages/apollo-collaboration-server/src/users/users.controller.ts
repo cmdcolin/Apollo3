@@ -6,7 +6,6 @@ import {
   Controller,
   Delete,
   Get,
-  HttpStatus,
   Inject,
   Logger,
   NotFoundException,
@@ -37,25 +36,26 @@ export class UsersController {
 
   @Public()
   @Get('me')
-  async getMe(
-    @Req() req: RequestWithUser,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    if (!req.user) {
-      res.status(HttpStatus.NO_CONTENT).send()
+  async getMe(@Req() req: RequestWithUser, @Res() res: Response) {
+    if (!req.user?.id) {
+      res.status(204).send()
       return
     }
-    const user = req.user.id
-      ? await this.usersService.findById(req.user.id)
-      : undefined
-    const dbRole = user?.role ?? req.user?.role
-    return {
-      username: req.user?.username,
-      email: req.user?.email,
-      role: dbRole,
-      pendingApproval: user?.pendingApproval ?? false,
-      needsRelogin: dbRole !== req.user?.role,
+    // req.user is the JWT payload (role at token-issue time).
+    // Fetch the DB record to get the current role — an admin may have
+    // changed it since the token was issued.
+    const user = await this.usersService.findById(req.user.id)
+    if (!user) {
+      res.status(204).send()
+      return
     }
+    res.json({
+      username: req.user.username,
+      email: req.user.email,
+      role: user.role,
+      pendingApproval: user.pendingApproval ?? false,
+      needsRelogin: user.role !== req.user.role,
+    })
   }
 
   @Post()

@@ -89,6 +89,32 @@ echo "--- Health check"
 HEALTH=$(curl -sf "$BASE_URL/health" | json_field "['status']")
 assert_eq "health status" "ok" "$HEALTH"
 
+# --- Auth endpoint response tests (no double-send) ---
+echo ""
+echo "--- Auth endpoint responses"
+ME_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/users/me" -H 'Accept: application/json')
+assert_eq "GET /users/me (no auth) status" "204" "$ME_STATUS"
+
+assert_http_status "GET /auth/types returns 200" "200" \
+  "$BASE_URL/auth/types" -H 'Accept: application/json'
+assert_http_status "GET /auth/setup-active returns 200" "200" \
+  "$BASE_URL/auth/setup-active" -H 'Accept: application/json'
+
+LOGOUT_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/auth/logout" -H 'Accept: application/json')
+assert_eq "GET /auth/logout redirects (302)" "302" "$LOGOUT_STATUS"
+
+assert_http_status "POST /auth/login bad credentials returns 401" "401" \
+  -X POST "$BASE_URL/auth/login" \
+  -H 'Content-Type: application/json' -H 'Accept: application/json' \
+  -d '{"email":"nobody@example.com","password":"wrongpassword"}'
+
+assert_http_status "GET /auth/setup bad token returns 400" "400" \
+  "$BASE_URL/auth/setup?token=badtoken" -H 'Accept: application/json'
+
+# Check server log for double-send errors
+HEADERS_SENT=$(grep -c 'ERR_HTTP_HEADERS_SENT' /tmp/apollo-integration-test.log 2>/dev/null) || HEADERS_SENT=0
+assert_eq "no ERR_HTTP_HEADERS_SENT in server log" "0" "$HEADERS_SENT"
+
 # --- Auth ---
 echo ""
 echo "--- Authentication"

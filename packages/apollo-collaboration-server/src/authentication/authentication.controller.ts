@@ -10,7 +10,6 @@ import {
   Param,
   Post,
   Query,
-  Redirect,
   Req,
   Res,
 } from '@nestjs/common'
@@ -35,13 +34,12 @@ export class AuthenticationController {
   ) {}
 
   @Get('setup')
-  @Redirect('/?setup=active')
-  setupAdmin(@Query('token') token: string) {
+  setupAdmin(@Query('token') token: string, @Res() res: Response) {
     if (!token || !this.authService.validateAndActivateSetup(token)) {
       throw new BadRequestException('Invalid or expired setup token')
     }
     this.logger.log('Setup mode activated — next login will become admin')
-    return { url: '/?setup=active' }
+    res.redirect('/?setup=active')
   }
 
   @Get('setup-active')
@@ -57,20 +55,18 @@ export class AuthenticationController {
   // --- Generic OIDC login ---
 
   @Get('oidc/:provider')
-  @Redirect()
   oidcLogin(
     @Param('provider') providerName: string,
     @Query('redirect_uri') redirectUri: string | undefined,
     @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
+    @Res() res: Response,
   ) {
     const provider = this.oidcService.getProvider(providerName)
     if (!provider) {
       throw new BadRequestException(`Unknown OIDC provider "${providerName}"`)
     }
-    const serverUrl = this.authService.getServerUrl()
-    const base = serverUrl.endsWith('/') ? serverUrl : `${serverUrl}/`
-    const callbackUrl = `${base}auth/oidc/${providerName}/callback`
+    const baseUrl = this.authService.getServerUrl()
+    const callbackUrl = `${baseUrl}auth/oidc/${providerName}/callback`
 
     const state = randomBytes(32).toString('hex')
     const session = req.session as Record<string, unknown>
@@ -82,15 +78,14 @@ export class AuthenticationController {
       callbackUrl,
       state,
     )
-    return { url: authUrl.href }
+    res.redirect(authUrl.href)
   }
 
   @Get('oidc/:provider/callback')
-  @Redirect()
   async oidcCallback(
     @Param('provider') providerName: string,
     @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
+    @Res() res: Response,
   ) {
     const provider = this.oidcService.getProvider(providerName)
     if (!provider) {
@@ -104,13 +99,12 @@ export class AuthenticationController {
     }
     delete session.oidcState
 
-    const serverUrl = this.authService.getServerUrl()
-    const base = serverUrl.endsWith('/') ? serverUrl : `${serverUrl}/`
+    const baseUrl = this.authService.getServerUrl()
     const callbackUrl = new URL(
       `auth/oidc/${providerName}/callback`,
-      base,
+      baseUrl,
     )
-    callbackUrl.search = new URL(req.url, base).search
+    callbackUrl.search = new URL(req.url, baseUrl).search
 
     const { email, name } = await this.oidcService.handleCallback(
       provider,
@@ -125,8 +119,8 @@ export class AuthenticationController {
 
     const url = redirectUri
       ? this.authService.getSafeRedirectUrl(redirectUri)
-      : serverUrl
-    return { url }
+      : baseUrl
+    res.redirect(url)
   }
 
   // --- Setup account (first admin) ---
@@ -170,8 +164,8 @@ export class AuthenticationController {
   }
 
   @Get('logout')
-  @Redirect('/')
-  logout(@Res({ passthrough: true }) res: Response) {
+  logout(@Res() res: Response) {
     res.clearCookie(AUTH_COOKIE_NAME, COOKIE_BASE)
+    res.redirect('/')
   }
 }

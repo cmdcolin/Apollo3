@@ -2,7 +2,6 @@ import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
-import CircularProgress from '@mui/material/CircularProgress'
 import Container from '@mui/material/Container'
 import Link from '@mui/material/Link'
 import List from '@mui/material/List'
@@ -13,7 +12,7 @@ import Typography from '@mui/material/Typography'
 import { createRoot } from 'react-dom/client'
 
 import { Nav } from './Nav.js'
-import { type CurrentUser, useCurrentUser, useDashboard } from './hooks.js'
+import { type CurrentUser, useAuth, useDashboard } from './hooks.js'
 
 function PendingApproval({ user, adminEmail }: { user: CurrentUser; adminEmail?: string }) {
   return (
@@ -78,63 +77,59 @@ function LoggedInContent({ user }: { user: CurrentUser }) {
   )
 }
 
-function IndexPage() {
-  const { user, checked } = useCurrentUser()
+function IndexContent() {
+  const user = useAuth()
   const dashboard = useDashboard(!!user)
-
-  if (!checked) {
-    return (
-      <Nav>
-        <Container maxWidth="xs" sx={{ mt: 4, textAlign: 'center' }}>
-          <CircularProgress />
-        </Container>
-      </Nav>
-    )
-  }
 
   const isPendingApproval = user?.pendingApproval === true
   const isReadOnly = user?.role === 'readOnly' && !isPendingApproval
 
   return (
+    <Container maxWidth="xs" sx={{ mt: 4, textAlign: 'center' }}>
+      <Typography variant="h4" gutterBottom>
+        {user ? `Welcome, ${user.username}` : 'Welcome to Apollo'}
+      </Typography>
+      <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 4 }}>
+        Collaborative genome annotation editor
+      </Typography>
+      {user?.needsRelogin ? (
+        <Alert severity="success" sx={{ mb: 2, textAlign: 'left' }}>
+          Your access has been updated to <strong>{user.role}</strong>. Sign
+          out and back in to apply it.
+        </Alert>
+      ) : null}
+      {isReadOnly ? (
+        <Alert severity="info" sx={{ mb: 2, textAlign: 'left' }}>
+          You have read-only access. Contact an admin to request write
+          permissions.
+        </Alert>
+      ) : null}
+      {user ? (
+        <Paper variant="outlined" sx={{ p: 3 }}>
+          {isPendingApproval ? (
+            <PendingApproval user={user} adminEmail={dashboard.adminEmail} />
+          ) : (
+            <LoggedInContent user={user} />
+          )}
+        </Paper>
+      ) : (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Button variant="contained" fullWidth href="/ui/signin/">
+            Sign in
+          </Button>
+          <Button variant="contained" color="secondary" fullWidth href="/ui/assemblies/">
+            Browse public data
+          </Button>
+        </Box>
+      )}
+    </Container>
+  )
+}
+
+function IndexPage() {
+  return (
     <Nav>
-      <Container maxWidth="xs" sx={{ mt: 4, textAlign: 'center' }}>
-        <Typography variant="h4" gutterBottom>
-          {user ? `Welcome, ${user.username}` : 'Welcome to Apollo'}
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 4 }}>
-          Collaborative genome annotation editor
-        </Typography>
-        {user?.needsRelogin ? (
-          <Alert severity="success" sx={{ mb: 2, textAlign: 'left' }}>
-            Your access has been updated to <strong>{user.role}</strong>. Sign
-            out and back in to apply it.
-          </Alert>
-        ) : null}
-        {isReadOnly ? (
-          <Alert severity="info" sx={{ mb: 2, textAlign: 'left' }}>
-            You have read-only access. Contact an admin to request write
-            permissions.
-          </Alert>
-        ) : null}
-        {user ? (
-          <Paper variant="outlined" sx={{ p: 3 }}>
-            {isPendingApproval ? (
-              <PendingApproval user={user} adminEmail={dashboard.adminEmail} />
-            ) : (
-              <LoggedInContent user={user} />
-            )}
-          </Paper>
-        ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Button variant="contained" fullWidth href="/ui/signin/">
-              Sign in
-            </Button>
-            <Button variant="contained" color="secondary" fullWidth href="/ui/assemblies/">
-              Browse public data
-            </Button>
-          </Box>
-        )}
-      </Container>
+      <IndexContent />
     </Nav>
   )
 }

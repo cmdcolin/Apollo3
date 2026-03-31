@@ -29,18 +29,18 @@ export class GlobalExceptionsFilter extends BaseExceptionFilter {
 
       if (preferred === 'html') {
         const response = ctx.getResponse<Response>()
-        const status =
-          exception instanceof HttpException ? exception.getStatus() : 500
-        const message =
-          exception instanceof HttpException
-            ? exception.message
-            : 'Internal Server Error'
-        const params = new URLSearchParams({
-          status: String(status),
-          message,
-        })
-        response.redirect(`/error/?${params.toString()}`)
-        return
+        if (!response.headersSent) {
+          const message =
+            exception instanceof HttpException
+              ? exception.message
+              : 'Internal Server Error'
+          const params = new URLSearchParams({
+            status: String(status),
+            message,
+          })
+          response.redirect(`/error/?${params.toString()}`)
+          return
+        }
       }
     }
 

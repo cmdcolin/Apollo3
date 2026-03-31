@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 
 const jsonHeaders = { Accept: 'application/json' }
 
@@ -33,6 +33,13 @@ export function useCurrentUser() {
   }, [])
 
   return { user, checked }
+}
+
+const AuthContext = createContext<CurrentUser | null>(null)
+export const AuthProvider = AuthContext.Provider
+
+export function useAuth() {
+  return useContext(AuthContext)
 }
 
 export interface DashboardData {

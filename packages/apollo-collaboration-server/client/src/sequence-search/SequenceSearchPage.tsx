@@ -9,9 +9,9 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { Nav } from '../Nav.js'
 import { fetchJson } from '../fetchUtil.js'
+import { useAuth } from '../hooks.js'
 
 import { useAnalysisSearch } from './hooks/useAnalysisSearch.js'
-import { useCurrentUser } from './hooks/useCurrentUser.js'
 import { SearchResults } from './results/SearchResults.js'
 import { LocalToolSearchTab } from './tabs/LocalToolSearchTab.js'
 import {
@@ -70,7 +70,7 @@ function getInitialAssembly() {
 }
 
 export function SequenceSearchPage({ tool }: { tool: string }) {
-  const user = useCurrentUser()
+  const user = useAuth()
   const [assemblies, setAssemblies] = useState<Assembly[]>([])
   const [analysisDbs, setAnalysisDbs] = useState<AnalysisDb[]>([])
   const [loadError, setLoadError] = useState<string>()
@@ -103,14 +103,23 @@ export function SequenceSearchPage({ tool }: { tool: string }) {
   }, [])
 
   useEffect(() => {
-    void loadAssemblies()
-  }, [loadAssemblies])
+    if (user) {
+      void loadAssemblies()
+    }
+  }, [user, loadAssemblies])
 
   useEffect(() => {
-    void loadDatabases()
-  }, [loadDatabases])
+    if (user) {
+      void loadDatabases()
+    }
+  }, [user, loadDatabases])
 
-  const canSubmit = user?.role === 'admin' || user?.role === 'user'
+  if (!user) {
+    globalThis.location.href = '/ui/signin/'
+    return null
+  }
+
+  const canSubmit = user.role === 'admin' || user.role === 'user'
   const assemblyName =
     assemblies.find((a) => a._id === search.assemblyId)?.name ?? ''
 

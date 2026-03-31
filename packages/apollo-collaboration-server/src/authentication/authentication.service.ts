@@ -97,7 +97,8 @@ export class AuthenticationService {
   }
 
   getServerUrl() {
-    return this.configService.get('URL', { infer: true })
+    const url = this.configService.get('URL', { infer: true })
+    return url.endsWith('/') ? url : `${url}/`
   }
 
   getSafeRedirectUrl(redirectUri: string) {
