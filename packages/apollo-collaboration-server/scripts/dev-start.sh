@@ -151,5 +151,17 @@ if [ "$NEED_SEED" = true ]; then
   fi
 fi
 
+# Wait for NestJS to be ready before starting Vite, so its message prints first
+if ! grep -q 'NestJS API server running' "$SERVER_LOG" 2>/dev/null; then
+  max_wait=60 waited=0
+  while [ $waited -lt $max_wait ]; do
+    if grep -q 'NestJS API server running' "$SERVER_LOG" 2>/dev/null; then
+      break
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+fi
+
 echo "[start] Starting Vite dev server (UI at http://localhost:$VITE_PORT)..."
 exec pnpm --silent --filter @apollo-annotation/web-ui dev
