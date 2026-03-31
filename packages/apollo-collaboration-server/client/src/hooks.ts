@@ -1,6 +1,8 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext } from 'react'
 
-const jsonHeaders = { Accept: 'application/json' }
+import useSWR from 'swr'
+
+import { fetchJson } from './fetchUtil.js'
 
 export interface CurrentUser {
   username: string
@@ -10,29 +12,19 @@ export interface CurrentUser {
   needsRelogin?: boolean
 }
 
+const jsonHeaders = { Accept: 'application/json' }
+
+async function fetchCurrentUser(url: string) {
+  const res = await fetch(url, { headers: jsonHeaders })
+  if (res.status === 200) {
+    return res.json() as Promise<CurrentUser>
+  }
+  return null
+}
+
 export function useCurrentUser() {
-  const [user, setUser] = useState<CurrentUser | null>(null)
-  const [checked, setChecked] = useState(false)
-
-  useEffect(() => {
-    fetch('/users/me', { headers: jsonHeaders })
-      .then((r) => {
-        if (r.status === 200) {
-          return r.json() as Promise<CurrentUser>
-        }
-        return null
-      })
-      .then((data) => {
-        setUser(data)
-        setChecked(true)
-      })
-      .catch((error: unknown) => {
-        console.error('Failed to fetch current user:', error)
-        setChecked(true)
-      })
-  }, [])
-
-  return { user, checked }
+  const { data, isLoading } = useSWR('/users/me', fetchCurrentUser)
+  return { user: data ?? null, checked: !isLoading }
 }
 
 const AuthContext = createContext<CurrentUser | null>(null)
@@ -50,28 +42,9 @@ export interface DashboardData {
 }
 
 export function useDashboard(isAuthenticated: boolean) {
-  const [data, setData] = useState<DashboardData>({})
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      return
-    }
-    fetch('/users/dashboard', { headers: jsonHeaders })
-      .then((r) => {
-        if (r.ok) {
-          return r.json() as Promise<DashboardData>
-        }
-        return null
-      })
-      .then((d) => {
-        if (d) {
-          setData(d)
-        }
-      })
-      .catch(() => {
-        /* ignore */
-      })
-  }, [isAuthenticated])
-
-  return data
+  const { data } = useSWR<DashboardData>(
+    isAuthenticated ? '/users/dashboard' : null,
+    fetchJson,
+  )
+  return data ?? {}
 }

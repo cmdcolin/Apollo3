@@ -11,11 +11,11 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
+import useSWR from 'swr'
 
 import { Nav } from './Nav.js'
+import { fetchJson } from './fetchUtil.js'
 import { useCurrentUser } from './hooks.js'
-
-const jsonHeaders = { Accept: 'application/json' }
 
 function GoogleIcon() {
   return (
@@ -72,40 +72,13 @@ interface LoginTypes {
 }
 
 function useLoginTypes() {
-  const [types, setTypes] = useState<LoginTypes>({ oidc: [] })
-  const [loaded, setLoaded] = useState(false)
-
-  useEffect(() => {
-    fetch('/auth/types', { headers: jsonHeaders })
-      .then((r) => r.json() as Promise<LoginTypes>)
-      .then((data) => {
-        setTypes(data)
-        setLoaded(true)
-      })
-      .catch((error: unknown) => {
-        console.error('Failed to fetch login types:', error)
-        setLoaded(true)
-      })
-  }, [])
-
-  return { ...types, loaded }
+  const { data, isLoading } = useSWR<LoginTypes>('/auth/types', fetchJson)
+  return { oidc: data?.oidc ?? [], passwordLogin: data?.passwordLogin, loaded: !isLoading }
 }
 
 function useSetupActive() {
-  const [active, setActive] = useState(false)
-
-  useEffect(() => {
-    fetch('/auth/setup-active', { headers: jsonHeaders })
-      .then((r) => r.json() as Promise<{ active: boolean }>)
-      .then((data) => {
-        setActive(data.active)
-      })
-      .catch(() => {
-        /* ignore */
-      })
-  }, [])
-
-  return active
+  const { data } = useSWR<{ active: boolean }>('/auth/setup-active', fetchJson)
+  return data?.active ?? false
 }
 
 async function parseErrorMessage(response: Response) {
