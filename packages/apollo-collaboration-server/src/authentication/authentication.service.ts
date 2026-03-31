@@ -19,7 +19,7 @@ import { Role } from './role.enum.js'
 import { OidcService } from './oidc.service.js'
 import { safeRedirectUrl } from './redirect.js'
 
-function validatePassword(password: string) {
+export function validatePassword(password: string) {
   if (password.length < 8) {
     throw new BadRequestException('Password must be at least 8 characters')
   }

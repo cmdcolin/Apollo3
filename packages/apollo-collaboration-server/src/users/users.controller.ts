@@ -18,6 +18,7 @@ import {
 import type { Response } from 'express'
 
 import type { RequestWithUser } from '../authentication/request-with-user.js'
+import { validatePassword } from '../authentication/authentication.service.js'
 import { Role } from '../authentication/role.enum.js'
 import { Public, Roles } from '../authentication/roles.guard.js'
 
@@ -94,14 +95,7 @@ export class UsersController {
     @Param('id') id: string,
     @Body() body: { password: string },
   ) {
-    if (body.password.length < 8) {
-      throw new BadRequestException('Password must be at least 8 characters')
-    }
-    if (body.password.length > 72) {
-      throw new BadRequestException(
-        'Password must be at most 72 characters (bcrypt limit)',
-      )
-    }
+    validatePassword(body.password)
     const { hash } = await import('bcryptjs')
     const user = await this.usersService.findById(id)
     if (!user) {

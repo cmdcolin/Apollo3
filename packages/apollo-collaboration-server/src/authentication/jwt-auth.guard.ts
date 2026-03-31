@@ -1,4 +1,4 @@
-import type { DecodedJWT, JWTPayload } from '@apollo-annotation/shared'
+import type { DecodedJWT } from '@apollo-annotation/shared'
 import {
   type CanActivate,
   type ExecutionContext,
@@ -42,9 +42,9 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException()
     }
 
-    let payload: JWTPayload
+    let payload: DecodedJWT
     try {
-      payload = this.jwtService.verify<JWTPayload>(token)
+      payload = this.jwtService.verify<DecodedJWT>(token)
     } catch {
       if (isPublic) {
         return true
@@ -63,9 +63,7 @@ export class JwtAuthGuard implements CanActivate {
     request.user = {
       ...payload,
       role: user.role,
-      iat: 0,
-      exp: 0,
-    } satisfies DecodedJWT
+    }
 
     this.activeUsers.touch(payload.id)
     return true
