@@ -18,6 +18,7 @@ export interface CheckResultRepository {
   ): Promise<CheckResultRow[]>
   findByRefSeqIds(refSeqIds: string[]): Promise<CheckResultRow[]>
   findByFeatureId(featureId: string): Promise<CheckResultRow[]>
+  findByFeatureIds(featureIds: string[]): Promise<CheckResultRow[]>
   create(row: CheckResultRow): Promise<CheckResultRow>
   createMany(rows: CheckResultRow[]): Promise<CheckResultRow[]>
   deleteByIds(ids: string[]): Promise<number>

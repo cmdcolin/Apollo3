@@ -273,13 +273,7 @@ export class FeaturesService {
     const rootIds = rootFeatures.map((r) => r._id)
     const descendants = await this.db.feature.findDescendantsOfMany(rootIds)
     const allIds = [...rootIds, ...descendants.map((d) => d._id)]
-    const checkResults: CheckResultData[] = []
-    for (const fid of allIds) {
-      const results = await this.db.check.findByFeatureId(fid)
-      for (const r of results) {
-        checkResults.push(r)
-      }
-    }
+    const checkResults = await this.db.check.findByFeatureIds(allIds)
     result.checkResults = checkResults
 
     const userSessionId = makeUserSessionId(user)
@@ -374,6 +368,9 @@ export class FeaturesService {
           rows[0].parentId = parentFeatureId
         }
         await scope.feature.createMany(rows)
+        if (parentFeatureId) {
+          await this.propagateAncestorBounds(parentFeatureId, scope.feature)
+        }
         return seq
       })
     })
@@ -654,6 +651,7 @@ export class FeaturesService {
           max: newMax,
           attributes: mrgChildAttr,
         })
+        mrgChild = { ...mrgChild, min: newMin, max: newMax, attributes: mrgChildAttr }
         merged = true
       }
     }
@@ -870,7 +868,20 @@ export class FeaturesService {
           }
         }
 
-        // Propagate bounds for any restored/updated features
+        // When undoing an insert (feature was deleted above), propagate bounds
+        // from its parent — mirroring what deleteFeature does. Skip if the
+        // parent was also removed in this same undo operation.
+        const deletedSet = new Set(deletedFeatureIds)
+        for (const record of historyRecords) {
+          if (
+            record.changeType === 'insert' &&
+            record.parentId &&
+            !deletedSet.has(record.parentId)
+          ) {
+            affectedFeatureIds.push(record.parentId)
+          }
+        }
+
         for (const fid of affectedFeatureIds) {
           await this.propagateAncestorBounds(fid, scope.feature)
         }
@@ -879,7 +890,6 @@ export class FeaturesService {
       })
     })
 
-    const allAffected = [...affectedFeatureIds, ...deletedFeatureIds]
     const features = affectedFeatureIds.length > 0
       ? await this.getRootFeatureTrees(affectedFeatureIds)
       : []
@@ -890,6 +900,6 @@ export class FeaturesService {
       changeSequence: undoSequence,
       assemblyId,
     }
-    return this.broadcastAndCheck(result, user, allAffected)
+    return this.broadcastAndCheck(result, user, affectedFeatureIds)
   }
 }

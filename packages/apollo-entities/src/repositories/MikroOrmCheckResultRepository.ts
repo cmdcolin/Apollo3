@@ -78,6 +78,18 @@ export class MikroOrmCheckResultRepository implements CheckResultRepository {
     return entities.map((x) => toRow(x))
   }
 
+  async findByFeatureIds(featureIds: string[]) {
+    if (featureIds.length === 0) {
+      return []
+    }
+    const entities = await this.em.find(
+      CheckResultEntity,
+      { featureId: { $in: featureIds } },
+      {},
+    )
+    return entities.map((x) => toRow(x))
+  }
+
   async findByRefSeqIds(refSeqIds: string[]) {
     const filter = refSeqIds.length > 0 ? { refSeq: { $in: refSeqIds } } : {}
     const entities = await this.em.find(CheckResultEntity, filter, {})
