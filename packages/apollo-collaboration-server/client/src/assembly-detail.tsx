@@ -1,3 +1,4 @@
+import type React from 'react'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Breadcrumbs from '@mui/material/Breadcrumbs'
@@ -37,11 +38,23 @@ function getAssemblyName() {
 }
 
 const assemblyName = getAssemblyName()
+const encodedName = assemblyName ? encodeURIComponent(assemblyName) : undefined
+
+function Field({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <Typography variant="body1">
+      <strong>{label}:</strong> {children}
+    </Typography>
+  )
+}
 
 function AssemblyDetailPage() {
-  const encodedName = assemblyName
-    ? encodeURIComponent(assemblyName)
-    : undefined
   const {
     data: assembly,
     error: assemblyError,
@@ -52,129 +65,103 @@ function AssemblyDetailPage() {
   )
   const { data: currentUser } = useSWR<User | null>('/users/me', fetchJson)
 
-  if (!assemblyName) {
-    return (
-      <Nav current="assemblies">
-        <Container>
+  return (
+    <Nav current="assemblies">
+      <Container>
+        {!assemblyName ? (
           <Alert severity="error">No assembly name in URL</Alert>
-        </Container>
-      </Nav>
-    )
-  }
-
-  if (assemblyError) {
-    return (
-      <Nav current="assemblies">
-        <Container>
+        ) : assemblyError ? (
           <Alert severity="error">
             {assemblyError instanceof Error
               ? assemblyError.message
               : 'Unknown error'}
           </Alert>
-        </Container>
-      </Nav>
-    )
-  }
-
-  if (isLoading || !assembly) {
-    return (
-      <Nav current="assemblies">
-        <Container>
+        ) : isLoading || !assembly ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
             <CircularProgress />
           </Box>
-        </Container>
-      </Nav>
-    )
-  }
-
-  return (
-    <Nav current="assemblies">
-      <Container>
-        <Breadcrumbs sx={{ mb: 2 }}>
-          <Link underline="hover" color="inherit" href="/ui/assemblies/">
-            Assemblies
-          </Link>
-          <Typography color="text.primary">{assembly.displayName}</Typography>
-        </Breadcrumbs>
-
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="body1">
-            <strong>Name:</strong> {assembly.name}
-          </Typography>
-          {assembly.displayName !== assembly.name ? (
-            <Typography variant="body1">
-              <strong>Display name:</strong> {assembly.displayName}
-            </Typography>
-          ) : null}
-          {assembly.description ? (
-            <Typography variant="body1">
-              <strong>Description:</strong> {assembly.description}
-            </Typography>
-          ) : null}
-          {assembly.organism ? (
-            <Typography variant="body1">
-              <strong>Organism:</strong>{' '}
-              <Link href={`/ui/organisms/${assembly.organism}`}>
-                {assembly.organismDisplayName ?? assembly.organism}
+        ) : (
+          <>
+            <Breadcrumbs sx={{ mb: 2 }}>
+              <Link underline="hover" color="inherit" href="/ui/assemblies/">
+                Assemblies
               </Link>
-            </Typography>
-          ) : null}
-          <Typography variant="body1">
-            <strong>Visibility:</strong>{' '}
-            <Chip
-              label={assembly.visibility ?? 'private'}
-              size="small"
-              color={assembly.visibility === 'public' ? 'success' : 'default'}
-              variant="outlined"
-            />
-          </Typography>
-        </Box>
+              <Typography color="text.primary">{assembly.displayName}</Typography>
+            </Breadcrumbs>
 
-        <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-          <Button
-            variant="contained"
-            size="small"
-            href={`/jbrowse/?assemblies=${encodeURIComponent(assembly.name)}`}
-          >
-            Open in JBrowse
-          </Button>
-          {currentUser ? (
-            <>
-              <Button
-                variant="outlined"
-                size="small"
-                href={`/ui/sequence-search/?assembly=${encodeURIComponent(assembly.name)}`}
-              >
-                Sequence Search
-              </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                href={`/ui/assembly-checks/${assembly.name}`}
-              >
-                Checks
-              </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                href={`/ui/assembly-tracks/${assembly.name}`}
-              >
-                Tracks
-              </Button>
-            </>
-          ) : null}
-          {currentUser?.role === 'admin' ? (
-            <Button
-              variant="outlined"
-              size="small"
-              href={`/ui/edit-assembly/${assembly.name}`}
-            >
-              Edit assembly
-            </Button>
-          ) : null}
-        </Box>
+            <Box sx={{ mb: 3 }}>
+              <Field label="Name">{assembly.name}</Field>
+              {assembly.displayName !== assembly.name ? (
+                <Field label="Display name">{assembly.displayName}</Field>
+              ) : null}
+              {assembly.description ? (
+                <Field label="Description">{assembly.description}</Field>
+              ) : null}
+              {assembly.organism ? (
+                <Field label="Organism">
+                  <Link href={`/ui/organisms/${assembly.organism}`}>
+                    {assembly.organismDisplayName ?? assembly.organism}
+                  </Link>
+                </Field>
+              ) : null}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                <Typography variant="body1" component="span">
+                  <strong>Visibility:</strong>
+                </Typography>
+                <Chip
+                  label={assembly.visibility ?? 'private'}
+                  size="small"
+                  color={assembly.visibility === 'public' ? 'success' : 'default'}
+                  variant="outlined"
+                />
+              </Box>
+            </Box>
 
+            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+              <Button
+                variant="contained"
+                size="small"
+                href={`/jbrowse/?assemblies=${encodeURIComponent(assembly.name)}`}
+              >
+                Open in JBrowse
+              </Button>
+              {currentUser ? (
+                <>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    href={`/ui/sequence-search/?assembly=${encodeURIComponent(assembly.name)}`}
+                  >
+                    Sequence Search
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    href={`/ui/assembly-checks/${assembly.name}`}
+                  >
+                    Checks
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    href={`/ui/assembly-tracks/${assembly.name}`}
+                  >
+                    Tracks
+                  </Button>
+                </>
+              ) : null}
+              {currentUser?.role === 'admin' ? (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  href={`/ui/edit-assembly/${assembly.name}`}
+                >
+                  Edit assembly
+                </Button>
+              ) : null}
+            </Box>
+          </>
+        )}
       </Container>
     </Nav>
   )
