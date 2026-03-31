@@ -6,12 +6,13 @@ import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common
 import { ConfigModule } from '@nestjs/config'
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
 import { ServeStaticModule } from '@nestjs/serve-static'
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
+import { ThrottlerModule } from '@nestjs/throttler'
 import Joi from 'joi'
 
 import { AnalysisModule } from './analysis/analysis.module.js'
 import { AssembliesModule } from './assemblies/assemblies.module.js'
 import { AuthenticationModule } from './authentication/authentication.module.js'
+import { AuthAwareThrottlerGuard } from './authentication/auth-aware-throttler.guard.js'
 import { RemoteUserMiddleware } from './authentication/remote-user.middleware.js'
 import { SlidingWindowInterceptor } from './authentication/sliding-window.interceptor.js'
 import { ChangesModule } from './changes/changes.module.js'
@@ -183,7 +184,7 @@ const validationSchema = Joi.object({
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: AuthAwareThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: SlidingWindowInterceptor },
   ],
 })

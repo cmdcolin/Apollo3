@@ -183,6 +183,21 @@ export class AssembliesService {
     return readSequencesFromSource(assembly.sequenceSource)
   }
 
+  async findOneByIdOrNameForUser(
+    idOrName: string,
+    user: { id?: string; role?: string } | undefined,
+  ) {
+    let assembly = await this.db.assembly.findById(idOrName)
+    assembly ??= await this.db.assembly.findByName(idOrName)
+    if (!assembly) {
+      throw new NotFoundException(`Assembly "${idOrName}" not found`)
+    }
+    if (!user && assembly.visibility !== 'public') {
+      throw new ForbiddenException()
+    }
+    return assembly
+  }
+
   async remove(id: string) {
     return this.db.assembly.deleteById(id)
   }

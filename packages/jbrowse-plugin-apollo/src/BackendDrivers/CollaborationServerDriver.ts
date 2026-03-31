@@ -153,13 +153,29 @@ export class CollaborationServerDriver extends BackendDriver {
   }
 
   async getRegions(assemblyName: string): Promise<Region[]> {
-    const { assemblyManager } = getSession(this.clientStore)
-    const assembly = assemblyManager.get(assemblyName)
-    if (!assembly) {
-      throw new Error(`Could not find assembly with name "${assemblyName}"`)
+    const baseURL = this.getBaseURL()
+    const url = new URL(`assemblies/${assemblyName}/sequences`, baseURL)
+    console.warn(
+      `[apollo-debug] CollaborationServerDriver.getRegions: fetching ${url.toString()}`,
+    )
+    const response = await fetch(url.toString())
+    if (!response.ok) {
+      const errorMessage = await createFetchErrorMessage(
+        response,
+        'getRegions failed',
+      )
+      throw new Error(errorMessage)
     }
-    await assemblyManager.waitForAssembly(assemblyName)
-    return assembly.regions ?? []
+    const sequences = (await response.json()) as { name: string; length: number }[]
+    console.warn(
+      `[apollo-debug] CollaborationServerDriver.getRegions: got ${sequences.length} sequences`,
+    )
+    return sequences.map(({ length, name }) => ({
+      assemblyName,
+      refName: name,
+      start: 0,
+      end: length,
+    }))
   }
 
   async getAnalysisTools() {

@@ -65,30 +65,18 @@ and eliminates a synchronization point between the database and filesystem.
 
 ### Migration script
 
-- `migrate-mongo-to-mikroorm.ts` still reads MongoDB refSeqs collection to
-  build a name mapping (ObjectId -> name), but no longer creates RefSeqEntity
-  rows. Features and check results are migrated with refSeq names and assembly
-  FKs.
+- `migrate-mongo-to-mikroorm.ts` still reads MongoDB refSeqs collection to build
+  a name mapping (ObjectId -> name), but no longer creates RefSeqEntity rows.
+  Features and check results are migrated with refSeq names and assembly FKs.
 
 ### Test changes
 
 - Entity tests: removed RefSeqEntity/MikroOrmRefSeqRepository usage, tests
   create assemblies directly and use refSeq names as plain strings
 - `features.service.spec.ts`: same pattern
-- CLI integration tests: removed `refseq get`/`refseq add-alias` usage,
-  updated feature commands to use new required flags
+- CLI integration tests: removed `refseq get`/`refseq add-alias` usage, updated
+  feature commands to use new required flags
 - Playwright helpers: use refSeq names from GFF3 directly
-
-## Remaining Work
-
-- **Schema migration**: Existing SQLite/PostgreSQL databases still have a
-  `ref_seq` table that should be dropped. No automated migration exists yet.
-- **E2E test run**: The Playwright tests have been updated but not yet run
-  end-to-end against a live server.
-- **RefSeq aliases**: The old system stored refName aliases on RefSeq rows.
-  This is no longer needed: the database always uses canonical names (matching
-  the FASTA/TwoBit file), and display-level aliasing is handled by JBrowse's
-  `refNameAliases` adapter config.
 
 ## Verification
 
