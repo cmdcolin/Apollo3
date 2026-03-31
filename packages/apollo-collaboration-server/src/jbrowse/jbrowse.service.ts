@@ -68,7 +68,19 @@ export class JBrowseService {
           ],
         },
       },
-      ApolloPlugin: { hasRole: false, baseURL: url },
+      ApolloPlugin: {
+        hasRole: false,
+        baseURL: url,
+        ontologies: [
+          {
+            name: 'Sequence Ontology',
+            source: {
+              uri: feature_type_ontology_location,
+              locationType: 'UriLocation',
+            },
+          },
+        ],
+      },
     }
     if (!role) {
       return configuration
@@ -77,8 +89,8 @@ export class JBrowseService {
       return {
         ...configuration,
         ApolloPlugin: {
+          ...configuration.ApolloPlugin,
           hasRole: true,
-          baseURL: url,
           role: 'none',
           userId,
           userSessionId,
@@ -93,22 +105,13 @@ export class JBrowseService {
     return {
       ...configuration,
       ApolloPlugin: {
+        ...configuration.ApolloPlugin,
         hasRole: true,
-        baseURL: url,
         role,
         readOnly,
         availableAnalysisTools,
         userId,
         userSessionId,
-        ontologies: [
-          {
-            name: 'Sequence Ontology',
-            source: {
-              uri: feature_type_ontology_location,
-              locationType: 'UriLocation',
-            },
-          },
-        ],
       },
     }
   }
