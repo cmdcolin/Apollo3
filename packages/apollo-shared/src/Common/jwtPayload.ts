@@ -1,5 +1,3 @@
-import jwtDecode from 'jwt-decode'
-
 export interface JWTPayload {
   username: string
   email: string
@@ -12,14 +10,6 @@ export interface DecodedJWT extends JWTPayload {
   exp: number
 }
 
-export function makeUserSessionId(userOrToken: DecodedJWT | string): string {
-  const user =
-    typeof userOrToken === 'string'
-      ? jwtDecode<DecodedJWT>(userOrToken)
-      : userOrToken
+export function makeUserSessionId(user: DecodedJWT) {
   return `${user.id}-${user.iat}`
-}
-
-export function getDecodedToken(token: string): DecodedJWT {
-  return jwtDecode<DecodedJWT>(token)
 }

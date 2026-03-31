@@ -27,32 +27,3 @@ declare module 'bson-objectid' {
     toString(): string
   }
 }
-
-declare module 'jwt-decode' {
-  export class InvalidTokenError extends Error {}
-
-  export interface JwtDecodeOptions {
-    header?: boolean
-  }
-
-  export interface JwtHeader {
-    type?: string
-    alg?: string
-  }
-
-  export interface JwtPayload {
-    iss?: string
-    sub?: string
-    aud?: string[] | string
-    exp?: number
-    nbf?: number
-    iat?: number
-    jti?: string
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters, @typescript-eslint/no-unnecessary-type-constraint
-  export default function jwtDecode<T extends unknown>(
-    token: string,
-    options?: JwtDecodeOptions,
-  ): T
-}

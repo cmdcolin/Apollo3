@@ -1,5 +1,5 @@
 import type { AssemblyRow } from '@apollo-annotation/common'
-import type { DecodedJWT } from '@apollo-annotation/shared'
+import { type DecodedJWT, makeUserSessionId } from '@apollo-annotation/shared'
 import { Inject, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
@@ -32,8 +32,7 @@ export class JBrowseService {
   async getConfiguration(user: DecodedJWT | undefined, requestOrigin?: string) {
     const role = user?.role
     const userId = user?.id
-    const userSessionId =
-      userId && user.iat ? `${userId}-${user.iat}` : undefined
+    const userSessionId = user ? makeUserSessionId(user) : undefined
     const url = requestOrigin ?? this.configService.get('URL', { infer: true })
     const feature_type_ontology_location =
       this.configService.get('FEATURE_TYPE_ONTOLOGY_LOCATION', {
