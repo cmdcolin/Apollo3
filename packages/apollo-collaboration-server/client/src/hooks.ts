@@ -23,8 +23,8 @@ async function fetchCurrentUser(url: string) {
 }
 
 export function useCurrentUser() {
-  const { data, isLoading } = useSWR('/users/me', fetchCurrentUser)
-  return { user: data ?? null, checked: !isLoading }
+  const { data, error, isLoading } = useSWR('/users/me', fetchCurrentUser)
+  return { user: data ?? null, checked: !isLoading, error }
 }
 
 const AuthContext = createContext<CurrentUser | null>(null)
@@ -42,9 +42,9 @@ export interface DashboardData {
 }
 
 export function useDashboard(isAuthenticated: boolean) {
-  const { data } = useSWR<DashboardData>(
+  const { data, error } = useSWR<DashboardData>(
     isAuthenticated ? '/users/dashboard' : null,
     fetchJson,
   )
-  return data ?? {}
+  return { data: data ?? {}, error }
 }

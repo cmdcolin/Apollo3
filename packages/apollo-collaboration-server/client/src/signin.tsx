@@ -72,8 +72,8 @@ interface LoginTypes {
 }
 
 function useLoginTypes() {
-  const { data, isLoading } = useSWR<LoginTypes>('/auth/types', fetchJson)
-  return { oidc: data?.oidc ?? [], passwordLogin: data?.passwordLogin, loaded: !isLoading }
+  const { data, error, isLoading } = useSWR<LoginTypes>('/auth/types', fetchJson)
+  return { oidc: data?.oidc ?? [], passwordLogin: data?.passwordLogin, loaded: !isLoading, error }
 }
 
 function useSetupActive() {
@@ -262,7 +262,7 @@ function SetupSection({ oidc }: { oidc: OidcProviderInfo[] }) {
 }
 
 function LoginSection() {
-  const { oidc, passwordLogin, loaded } = useLoginTypes()
+  const { oidc, passwordLogin, loaded, error: typesError } = useLoginTypes()
   const setupActive = useSetupActive()
   const currentUrl = globalThis.location.href
   const [email, setEmail] = useState('')
@@ -290,6 +290,14 @@ function LoginSection() {
       <Box sx={{ textAlign: 'center', py: 3 }}>
         <CircularProgress />
       </Box>
+    )
+  }
+
+  if (typesError) {
+    return (
+      <Alert severity="error">
+        Failed to load login methods: {String(typesError)}
+      </Alert>
     )
   }
 

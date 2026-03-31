@@ -35,7 +35,7 @@ function PendingApproval({ user, adminEmail }: { user: CurrentUser; adminEmail?:
 }
 
 function LoggedInContent({ user }: { user: CurrentUser }) {
-  const dashboard = useDashboard(true)
+  const { data: dashboard } = useDashboard(true)
 
   return (
     <Box>
@@ -79,7 +79,7 @@ function LoggedInContent({ user }: { user: CurrentUser }) {
 
 function IndexContent() {
   const user = useAuth()
-  const dashboard = useDashboard(!!user)
+  const { data: dashboard } = useDashboard(!!user)
 
   const isPendingApproval = user?.pendingApproval === true
   const isReadOnly = user?.role === 'readOnly' && !isPendingApproval

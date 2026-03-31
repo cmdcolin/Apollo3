@@ -16,6 +16,8 @@ import Typography from '@mui/material/Typography'
 import { ThemeProvider } from '@mui/material/styles'
 import { useRef, useState } from 'react'
 
+import Alert from '@mui/material/Alert'
+
 import {
   AuthProvider,
   type CurrentUser,
@@ -201,7 +203,7 @@ function NavMenu({
 }
 
 function NavBar({ current, user }: { current?: Page; user?: CurrentUser }) {
-  const dashboard = useDashboard(!!user)
+  const { data: dashboard } = useDashboard(!!user)
   const pendingCount = dashboard.pendingCount ?? 0
 
   return (
@@ -286,14 +288,20 @@ export function Nav({
   current?: Page
   children: React.ReactNode
 }) {
-  const { user, checked } = useCurrentUser()
+  const { user, checked, error } = useCurrentUser()
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider value={user}>
         <NavBar current={current} user={user ?? undefined} />
-        {checked ? (
+        {error ? (
+          <Container maxWidth="sm" sx={{ mt: 4 }}>
+            <Alert severity="error">
+              Failed to check authentication: {String(error)}
+            </Alert>
+          </Container>
+        ) : checked ? (
           children
         ) : (
           <Container maxWidth="xs" sx={{ mt: 4, textAlign: 'center' }}>
