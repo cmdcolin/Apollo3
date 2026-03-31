@@ -73,19 +73,22 @@ interface LoginTypes {
 
 function useLoginTypes() {
   const [types, setTypes] = useState<LoginTypes>({ oidc: [] })
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     fetch('/auth/types', { headers: jsonHeaders })
       .then((r) => r.json() as Promise<LoginTypes>)
       .then((data) => {
         setTypes(data)
+        setLoaded(true)
       })
       .catch((error: unknown) => {
         console.error('Failed to fetch login types:', error)
+        setLoaded(true)
       })
   }, [])
 
-  return types
+  return { ...types, loaded }
 }
 
 function useSetupActive() {
@@ -286,7 +289,7 @@ function SetupSection({ oidc }: { oidc: OidcProviderInfo[] }) {
 }
 
 function LoginSection() {
-  const { oidc, passwordLogin } = useLoginTypes()
+  const { oidc, passwordLogin, loaded } = useLoginTypes()
   const setupActive = useSetupActive()
   const currentUrl = globalThis.location.href
   const [email, setEmail] = useState('')
@@ -307,6 +310,14 @@ function LoginSection() {
     } else {
       setLoginError('Invalid email or password')
     }
+  }
+
+  if (!loaded) {
+    return (
+      <Box sx={{ textAlign: 'center', py: 3 }}>
+        <CircularProgress />
+      </Box>
+    )
   }
 
   if (setupActive) {
