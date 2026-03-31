@@ -20,7 +20,7 @@ if (!gff3Path || !faPath || !faiPath) {
 const port = process.env.PORT ?? '3999'
 const API_BASE = `http://127.0.0.1:${port}`
 const email = process.env.ADMIN_EMAIL ?? 'admin@apollo-dev.example'
-const password = process.env.ADMIN_PASSWORD ?? 'devpass'
+const password = process.env.ADMIN_PASSWORD ?? 'devpass1'
 
 const tokenRes = await fetch(`${API_BASE}/auth/login`, {
   method: 'POST',

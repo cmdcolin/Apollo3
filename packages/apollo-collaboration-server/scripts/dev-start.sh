@@ -111,9 +111,11 @@ trap cleanup EXIT INT TERM
 
 # Seed volvox data into in-memory DB after server is ready
 if [ "$PERSIST" = false ]; then
+  # Wait for our server's SETUP_TOKEN to appear in the log — this proves *our*
+  # new process is up, not a stale server that might be on the same port.
   max_wait=60 waited=0
   while [ $waited -lt $max_wait ]; do
-    if curl -sf "$API_BASE/health" >/dev/null 2>&1; then
+    if grep -q 'SETUP_TOKEN=' "$SERVER_LOG" 2>/dev/null; then
       break
     fi
     sleep 1
@@ -124,15 +126,13 @@ if [ "$PERSIST" = false ]; then
   else
     # Create a dev admin account via the setup flow so the seed script can authenticate
     DEV_ADMIN_EMAIL="admin@apollo-dev.example"
-    DEV_ADMIN_PASSWORD="devpass"
-    SETUP_TOKEN=$(grep -oP 'SETUP_TOKEN=\K.*' "$SERVER_LOG" 2>/dev/null || true)
-    if [ -n "$SETUP_TOKEN" ]; then
-      curl -sf "$API_BASE/auth/setup?token=$SETUP_TOKEN" -o /dev/null || true
-      curl -sf -X POST "$API_BASE/auth/setup-account" \
-        -H 'Content-Type: application/json' \
-        -d "{\"email\":\"$DEV_ADMIN_EMAIL\",\"username\":\"admin\",\"password\":\"$DEV_ADMIN_PASSWORD\"}" \
-        -o /dev/null || true
-    fi
+    DEV_ADMIN_PASSWORD="devpass1"
+    SETUP_TOKEN=$(grep -oP 'SETUP_TOKEN=\K.*' "$SERVER_LOG")
+    curl -sf "$API_BASE/auth/setup?token=$SETUP_TOKEN" -o /dev/null
+    curl -sf -X POST "$API_BASE/auth/setup-account" \
+      -H 'Content-Type: application/json' \
+      -d "{\"email\":\"$DEV_ADMIN_EMAIL\",\"username\":\"admin\",\"password\":\"$DEV_ADMIN_PASSWORD\"}" \
+      -o /dev/null
     echo "[start] You can login as admin with: $DEV_ADMIN_EMAIL / $DEV_ADMIN_PASSWORD"
     echo "[start] Server ready (${waited}s), seeding volvox assembly..."
     ADMIN_EMAIL="$DEV_ADMIN_EMAIL" ADMIN_PASSWORD="$DEV_ADMIN_PASSWORD" \

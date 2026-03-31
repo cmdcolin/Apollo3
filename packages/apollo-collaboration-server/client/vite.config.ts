@@ -42,6 +42,13 @@ export default defineConfig({
   server: {
     port: VITE_PORT,
     proxy: {
+      // The JBrowse config.json embeds the logo URL using the request origin
+      // (localhost:5173 in dev), so requests for it must be proxied to the
+      // backend where the /apollo_logo.svg endpoint lives.
+      '/apollo_logo.svg': BACKEND,
+      // favicon.ico is served by the backend's express.static public/ dir;
+      // proxy it so browsers don't get the Vite SPA fallback HTML.
+      '/favicon.ico': BACKEND,
       '/analysis': BACKEND,
       '/assemblies': BACKEND,
       '/auth': BACKEND,
